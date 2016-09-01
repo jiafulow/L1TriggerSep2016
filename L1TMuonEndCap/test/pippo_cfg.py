@@ -16,8 +16,9 @@ process.source = cms.Source("PoolSource",
 process.options = cms.untracked.PSet()
 
 process.load('L1TriggerSep2016.L1TMuonEndCap.simEmtfDigis_cfi')
+process.simEmtfDigisData.verbosity = 2
 
-process.p = cms.Path(process.simEmtfDigis)
+process.p = cms.Path(process.simEmtfDigisData)
 
 process.schedule = cms.Schedule(process.p)
 

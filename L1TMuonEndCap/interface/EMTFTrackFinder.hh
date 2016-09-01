@@ -3,12 +3,11 @@
 
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
-#include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Framework/interface/ConsumesCollector.h"
+#include "FWCore/ParameterSet/interface/ParameterSet.h"
 
-#include "DataFormats/CSCDigi/interface/CSCCorrelatedLCTDigiCollection.h"
-#include "DataFormats/RPCDigi/interface/RPCDigiCollection.h"
-
+//#include "DataFormats/CSCDigi/interface/CSCCorrelatedLCTDigiCollection.h"
+//#include "DataFormats/RPCDigi/interface/RPCDigiCollection.h"
 #include "DataFormats/L1TMuon/interface/EMTFHitExtra.h"
 #include "DataFormats/L1TMuon/interface/EMTFTrackExtra.h"
 #include "DataFormats/L1TMuon/interface/RegionalMuonCand.h"
@@ -28,8 +27,10 @@ public:
   );
 
 private:
-  edm::EDGetTokenT<CSCCorrelatedLCTDigiCollection> tokenCSC_;
-  edm::EDGetTokenT<RPCDigiCollection>              tokenRPC_;
+  edm::EDGetToken tokenCSC_;
+  edm::EDGetToken tokenRPC_;
+  int verbose_;
+
 };
 
 #endif

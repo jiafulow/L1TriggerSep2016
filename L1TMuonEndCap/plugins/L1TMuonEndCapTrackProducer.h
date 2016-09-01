@@ -11,8 +11,6 @@
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
-//#include "FWCore/Utilities/interface/Exception.h"
-//#include "FWCore/MessageLogger/interface/MessageLogger.h"
 
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFTrackFinder.hh"
 
