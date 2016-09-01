@@ -1,0 +1,7 @@
+<library file="*.cc" name="L1TriggerSep2016L1TMuonEndCapPlugins">
+  <use name="FWCore/Framework"/>
+  <use name="FWCore/ParameterSet"/>
+  <use name="FWCore/PluginManager"/>
+  <use name="L1TriggerSep2016/L1TMuonEndCap"/>
+  <flags EDM_PLUGIN="1"/>
+</library>
