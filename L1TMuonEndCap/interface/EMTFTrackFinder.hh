@@ -1,16 +1,35 @@
 #ifndef L1TMuonEndCap_EMTFTrackFinder_hh
 #define L1TMuonEndCap_EMTFTrackFinder_hh
 
-namespace L1TMuonEndCap {
+#include "FWCore/Framework/interface/Event.h"
+#include "FWCore/Framework/interface/EventSetup.h"
+#include "FWCore/ParameterSet/interface/ParameterSet.h"
+#include "FWCore/Framework/interface/ConsumesCollector.h"
 
-  class EMTFTrackFinder {
-  public:
-    EMTFTrackFinder();
-    ~EMTFTrackFinder();
+#include "DataFormats/CSCDigi/interface/CSCCorrelatedLCTDigiCollection.h"
+#include "DataFormats/RPCDigi/interface/RPCDigiCollection.h"
 
-  private:
-  };
+#include "DataFormats/L1TMuon/interface/EMTFHitExtra.h"
+#include "DataFormats/L1TMuon/interface/EMTFTrackExtra.h"
+#include "DataFormats/L1TMuon/interface/RegionalMuonCand.h"
+#include "DataFormats/L1TMuon/interface/RegionalMuonCandFwd.h"
 
-}  // namespace L1TMuonEndCap
+
+class EMTFTrackFinder {
+public:
+  EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollector&& iConsumes);
+  ~EMTFTrackFinder();
+
+  void process(
+      const edm::Event& iEvent, const edm::EventSetup& iSetup,
+      l1t::EMTFHitExtraCollection& out_hits,
+      l1t::EMTFTrackExtraCollection& out_tracks,
+      l1t::RegionalMuonCandBxCollection& out_cands
+  );
+
+private:
+  edm::EDGetTokenT<CSCCorrelatedLCTDigiCollection> tokenCSC_;
+  edm::EDGetTokenT<RPCDigiCollection>              tokenRPC_;
+};
 
 #endif

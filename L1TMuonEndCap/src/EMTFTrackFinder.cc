@@ -1,14 +1,22 @@
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFTrackFinder.hh"
 
-namespace L1TMuonEndCap {
 
-  EMTFTrackFinder::EMTFTrackFinder() {
+EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollector&& iConsumes) :
+    tokenCSC_(iConsumes.consumes<CSCCorrelatedLCTDigiCollection>(iConfig.getParameter<edm::InputTag>("CSCInput"))),
+    tokenRPC_(iConsumes.consumes<RPCDigiCollection>(iConfig.getParameter<edm::InputTag>("RPCInput")))
+{
 
-  }
+}
 
-  EMTFTrackFinder::~EMTFTrackFinder() {
+EMTFTrackFinder::~EMTFTrackFinder() {
 
-  }
+}
 
-}  // namespace L1TMuonEndCap
+void EMTFTrackFinder::process(
+    const edm::Event& iEvent, const edm::EventSetup& iSetup,
+    l1t::EMTFHitExtraCollection& out_hits,
+    l1t::EMTFTrackExtraCollection& out_tracks,
+    l1t::RegionalMuonCandBxCollection& out_cands
+) {
 
+}
