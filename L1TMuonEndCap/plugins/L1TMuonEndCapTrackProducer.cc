@@ -3,7 +3,9 @@
 
 using namespace L1TMuonEndCap;
 
-L1TMuonEndCapTrackProducer::L1TMuonEndCapTrackProducer(const edm::ParameterSet& iConfig) {
+L1TMuonEndCapTrackProducer::L1TMuonEndCapTrackProducer(const edm::ParameterSet& iConfig) :
+    track_finder_(new EMTFTrackFinder())
+{
 
 }
 

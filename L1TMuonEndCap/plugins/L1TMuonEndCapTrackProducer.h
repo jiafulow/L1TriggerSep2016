@@ -15,6 +15,8 @@
 //#include "FWCore/Utilities/interface/Exception.h"
 //#include "FWCore/MessageLogger/interface/MessageLogger.h"
 
+#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFTrackFinder.hh"
+
 
 namespace L1TMuonEndCap {
 
@@ -34,6 +36,9 @@ namespace L1TMuonEndCap {
     //virtual void endRun(edm::Run const&, edm::EventSetup const&);
     //virtual void beginLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&);
     //virtual void endLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&);
+
+  private:
+    std::unique_ptr<EMTFTrackFinder> track_finder_;
   };
 
 }  // namespace L1TMuonEndCap
