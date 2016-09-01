@@ -1,7 +1,7 @@
 #ifndef __L1TMUON_TRIGGERPRIMITIVE_H__
 #define __L1TMUON_TRIGGERPRIMITIVE_H__
-// 
-// Class: l1t::MuonTriggerPrimitive
+//
+// Class: L1TMuon::TriggerPrimitive
 //
 // Info: This class implements a unifying layer between DT, CSC and RPC
 //       trigger primitives (TPs) such that TPs from different subsystems
@@ -23,6 +23,8 @@
 
 //DetId
 #include "DataFormats/DetId/interface/DetId.h"
+//Global point (created on the fly)
+#include "DataFormats/GeometryVector/interface/GlobalPoint.h"
 
 // DT digi types
 class DTChamberId;
@@ -38,29 +40,13 @@ class RPCDigiL1Link;
 class RPCDetId;
 
 
-#include <map>
-#include "DataFormats/Common/interface/Ref.h"
-#include "DataFormats/Common/interface/Ptr.h"
+namespace L1TMuon {
 
-namespace l1t {
-
-  class MuonTriggerPrimitive;
-
-  typedef std::vector<MuonTriggerPrimitive> MuonTriggerPrimitiveCollection;  
-  typedef edm::Ref<MuonTriggerPrimitiveCollection> MuonTriggerPrimitiveRef;
-  typedef std::vector<MuonTriggerPrimitiveRef> MuonTriggerPrimitiveList;
-  typedef edm::Ptr<MuonTriggerPrimitive> MuonTriggerPrimitivePtr;
-  typedef std::map<unsigned,MuonTriggerPrimitiveList> MuonTriggerPrimitiveStationMap;
-
-
-
-
-
-  class MuonTriggerPrimitive {
+  class TriggerPrimitive {
   public:
     // define the subsystems that we have available
     enum subsystem_type{kDT,kCSC,kRPC,kNSubsystems};
-    
+
     // define the data we save locally from each subsystem type
     // variables in these structs keep their colloquial meaning
     // within a subsystem
@@ -74,8 +60,8 @@ namespace l1t {
 
     struct CSCData {
       CSCData() : trknmb(0), valid(0), quality(0), keywire(0), strip(0),
-		  pattern(0), bend(0), bx(0), mpclink(0), bx0(0), syncErr(0),
-		  cscID(0) {}
+                  pattern(0), bend(0), bx(0), mpclink(0), bx0(0), syncErr(0),
+                  cscID(0) {}
       uint16_t trknmb;
       uint16_t valid;
       uint16_t quality;
@@ -85,16 +71,16 @@ namespace l1t {
       uint16_t bend;
       uint16_t bx;
       uint16_t mpclink;
-      uint16_t bx0; 
+      uint16_t bx0;
       uint16_t syncErr;
       uint16_t cscID;
     };
 
     struct DTData {
       DTData() : bx(0), wheel(0), sector(0), station(0), radialAngle(0),
-		 bendingAngle(0), qualityCode(0), Ts2TagCode(0), BxCntCode(0),
-		 theta_bti_group(0), segment_number(0), theta_code(0),
-		 theta_quality(0) {}
+                 bendingAngle(0), qualityCode(0), Ts2TagCode(0), BxCntCode(0),
+                 theta_bti_group(0), segment_number(0), theta_code(0),
+                 theta_quality(0) {}
       // from ChambPhDigi (corresponds to a TRACO)
       // this gives us directly the phi
       int bx; // relative? bx number
@@ -116,46 +102,52 @@ namespace l1t {
       int theta_code;
       int theta_quality;
     };
-    
-    //Persistency
-    MuonTriggerPrimitive(): _subsystem(kNSubsystems) {}
-      
-    //DT      
-    MuonTriggerPrimitive(const DTChamberId&,		     
-		     const L1MuDTChambPhDigi&,
-		     const int segment_number);
-    MuonTriggerPrimitive(const DTChamberId&,		     
-		     const L1MuDTChambThDigi&,
-		     const int segment_number);
-    MuonTriggerPrimitive(const DTChamberId&,		     
-		     const L1MuDTChambPhDigi&,
-		     const L1MuDTChambThDigi&,
-		     const int theta_bti_group);    
-    //CSC
-    MuonTriggerPrimitive(const CSCDetId&,
-		     const CSCCorrelatedLCTDigi&);
-    //RPC
-    MuonTriggerPrimitive(const RPCDetId& detid,
-		     const unsigned strip,
-		     const unsigned layer,
-		     const uint16_t bx);
-    
-    //copy
-    MuonTriggerPrimitive(const MuonTriggerPrimitive&);
 
-    MuonTriggerPrimitive& operator=(const MuonTriggerPrimitive& tp);
-    bool operator==(const MuonTriggerPrimitive& tp) const;
+    //Persistency
+    TriggerPrimitive(): _subsystem(kNSubsystems) {}
+
+    //DT
+    TriggerPrimitive(const DTChamberId&,
+                     const L1MuDTChambPhDigi&,
+                     const int segment_number);
+    TriggerPrimitive(const DTChamberId&,
+                     const L1MuDTChambThDigi&,
+                     const int segment_number);
+    TriggerPrimitive(const DTChamberId&,
+                     const L1MuDTChambPhDigi&,
+                     const L1MuDTChambThDigi&,
+                     const int theta_bti_group);
+    //CSC
+    TriggerPrimitive(const CSCDetId&,
+                     const CSCCorrelatedLCTDigi&);
+    //RPC
+    TriggerPrimitive(const RPCDetId& detid,
+                     const unsigned strip,
+                     const unsigned layer,
+                     const uint16_t bx);
+
+    //copy
+    TriggerPrimitive(const TriggerPrimitive&);
+
+    TriggerPrimitive& operator=(const TriggerPrimitive& tp);
+    bool operator==(const TriggerPrimitive& tp) const;
 
     // return the subsystem we belong to
-    const subsystem_type subsystem() const { return _subsystem; }    
+    const subsystem_type subsystem() const { return _subsystem; }
 
     const double getCMSGlobalEta() const { return _eta; }
     void   setCMSGlobalEta(const double eta) { _eta = eta; }
-    const double getCMSGlobalPhi() const { return _phi; }    
+    const double getCMSGlobalPhi() const { return _phi; }
     void   setCMSGlobalPhi(const double phi) { _phi = phi; }
+    const double getCMSGlobalRho() const { return _rho; }
+    void   setCMSGlobalRho(const double rho) { _rho = rho; }
 
-    // this is the relative bending angle with respect to the 
-    // current phi position. 
+    const GlobalPoint getCMSGlobalPoint() const { double theta = 2. * atan( exp(-_eta) );
+      return GlobalPoint( GlobalPoint::Cylindrical( _rho, _phi, _rho/tan(theta)) ); };
+
+
+    // this is the relative bending angle with respect to the
+    // current phi position.
     // The total angle of the track is phi + bendAngle
     void setThetaBend(const double theta) { _theta = theta; }
     double getThetaBend() const { return _theta; }
@@ -166,46 +158,46 @@ namespace l1t {
     // accessors to raw subsystem data
     const DTData  getDTData()  const { return _dt;  }
     const CSCData getCSCData() const { return _csc; }
-    const RPCData getRPCData() const { return _rpc; }      
-    
-    // consistent accessors to common information    
+    const RPCData getRPCData() const { return _rpc; }
+
+    // consistent accessors to common information
     const int getBX() const;
     const int getStrip() const;
     const int getWire() const;
     const int getPattern() const;
     const DetId rawId() const {return _id;};
     const int Id() const;
-    
-    const unsigned getGlobalSector() const { return _globalsector; } 
-    const unsigned getSubSector() const { return _subsector; } 
-    
+
+    const unsigned getGlobalSector() const { return _globalsector; }
+    const unsigned getSubSector() const { return _subsector; }
+
     void print(std::ostream&) const;
-    
+
   private:
     // Translate to 'global' position information at the level of 60
     // degree sectors. Use CSC sectors as a template
-    void calculateDTGlobalSector(const DTChamberId& chid, 
-				 unsigned& global_sector, 
-				 unsigned& subsector );
-    void calculateCSCGlobalSector(const CSCDetId& chid, 
-				  unsigned& global_sector, 
-				  unsigned& subsector );
-    void calculateRPCGlobalSector(const RPCDetId& chid, 
-				  unsigned& global_sector, 
-				  unsigned& subsector );
-      
+    void calculateDTGlobalSector(const DTChamberId& chid,
+                                 unsigned& global_sector,
+                                 unsigned& subsector );
+    void calculateCSCGlobalSector(const CSCDetId& chid,
+                                  unsigned& global_sector,
+                                  unsigned& subsector );
+    void calculateRPCGlobalSector(const RPCDetId& chid,
+                                  unsigned& global_sector,
+                                  unsigned& subsector );
+
     DTData  _dt;
     CSCData _csc;
     RPCData _rpc;
-    
+
     DetId _id;
-    
+
     subsystem_type _subsystem;
 
     unsigned _globalsector; // [1,6] in 60 degree sectors
-    unsigned _subsector; // [1,2] in 30 degree partitions of a sector 
-    double _eta,_phi; // global pseudorapidity, phi
-    double _theta; // bend angle with respect to ray from (0,0,0)    
+    unsigned _subsector; // [1,2] in 30 degree partitions of a sector
+    double _eta,_phi,_rho; // global pseudorapidity, phi, rho
+    double _theta; // bend angle with respect to ray from (0,0,0)
   };
 
 }

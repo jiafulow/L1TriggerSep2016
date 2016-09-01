@@ -11,22 +11,22 @@
 #include "DataFormats/MuonDetId/interface/CSCDetId.h"
 #include "DataFormats/MuonDetId/interface/RPCDetId.h"
 
-using namespace l1t;
+using namespace L1TMuon;
 
 namespace {
   const char subsystem_names[][4] = {"DT","CSC","RPC"};
 }
 
 //constructors from DT data
-MuonTriggerPrimitive::MuonTriggerPrimitive(const DTChamberId& detid,
-				   const L1MuDTChambPhDigi& digi_phi,
-				   const int segment_number):
+TriggerPrimitive::TriggerPrimitive(const DTChamberId& detid,
+                                   const L1MuDTChambPhDigi& digi_phi,
+                                   const int segment_number):
   _id(detid),
-  _subsystem(MuonTriggerPrimitive::kDT) {
+  _subsystem(TriggerPrimitive::kDT) {
   calculateDTGlobalSector(detid,_globalsector,_subsector);
   // fill in information from theta trigger
   _dt.theta_bti_group = -1;
-  _dt.segment_number = segment_number;  
+  _dt.segment_number = segment_number;
   _dt.theta_code = -1;
   _dt.theta_quality = -1;
   // now phi trigger
@@ -41,11 +41,11 @@ MuonTriggerPrimitive::MuonTriggerPrimitive(const DTChamberId& detid,
   _dt.BxCntCode = digi_phi.BxCnt();
 }
 
-MuonTriggerPrimitive::MuonTriggerPrimitive(const DTChamberId& detid,
-				   const L1MuDTChambThDigi& digi_th,
-				   const int theta_bti_group):
+TriggerPrimitive::TriggerPrimitive(const DTChamberId& detid,
+                                   const L1MuDTChambThDigi& digi_th,
+                                   const int theta_bti_group):
   _id(detid),
-  _subsystem(MuonTriggerPrimitive::kDT) {
+  _subsystem(TriggerPrimitive::kDT) {
   calculateDTGlobalSector(detid,_globalsector,_subsector);
   // fill in information from theta trigger
   _dt.theta_bti_group = theta_bti_group;
@@ -64,12 +64,12 @@ MuonTriggerPrimitive::MuonTriggerPrimitive(const DTChamberId& detid,
   _dt.BxCntCode = -1;
 }
 
-MuonTriggerPrimitive::MuonTriggerPrimitive(const DTChamberId& detid,
-				   const L1MuDTChambPhDigi& digi_phi,
-				   const L1MuDTChambThDigi& digi_th,
-				   const int theta_bti_group):
+TriggerPrimitive::TriggerPrimitive(const DTChamberId& detid,
+                                   const L1MuDTChambPhDigi& digi_phi,
+                                   const L1MuDTChambThDigi& digi_th,
+                                   const int theta_bti_group):
   _id(detid),
-  _subsystem(MuonTriggerPrimitive::kDT) {
+  _subsystem(TriggerPrimitive::kDT) {
   calculateDTGlobalSector(detid,_globalsector,_subsector);
   // fill in information from theta trigger
   _dt.theta_bti_group = theta_bti_group;
@@ -85,14 +85,14 @@ MuonTriggerPrimitive::MuonTriggerPrimitive(const DTChamberId& detid,
   _dt.bendingAngle = digi_phi.phiB();
   _dt.qualityCode = digi_phi.code();
   _dt.Ts2TagCode = digi_phi.Ts2Tag();
-  _dt.BxCntCode = digi_phi.BxCnt();    
+  _dt.BxCntCode = digi_phi.BxCnt();
 }
 
 //constructor from CSC data
-MuonTriggerPrimitive::MuonTriggerPrimitive(const CSCDetId& detid,
-				   const CSCCorrelatedLCTDigi& digi):
+TriggerPrimitive::TriggerPrimitive(const CSCDetId& detid,
+                                   const CSCCorrelatedLCTDigi& digi):
   _id(detid),
-  _subsystem(MuonTriggerPrimitive::kCSC) {
+  _subsystem(TriggerPrimitive::kCSC) {
   calculateCSCGlobalSector(detid,_globalsector,_subsector);
   _csc.trknmb  = digi.getTrknmb();
   _csc.valid   = digi.isValid();
@@ -109,32 +109,33 @@ MuonTriggerPrimitive::MuonTriggerPrimitive(const CSCDetId& detid,
 }
 
 // constructor from RPC data
-MuonTriggerPrimitive::MuonTriggerPrimitive(const RPCDetId& detid,
-				   const unsigned strip,
-				   const unsigned layer,
-				   const uint16_t bx):
+TriggerPrimitive::TriggerPrimitive(const RPCDetId& detid,
+                                   const unsigned strip,
+                                   const unsigned layer,
+                                   const uint16_t bx):
   _id(detid),
-  _subsystem(MuonTriggerPrimitive::kRPC) {
+  _subsystem(TriggerPrimitive::kRPC) {
   calculateRPCGlobalSector(detid,_globalsector,_subsector);
   _rpc.strip = strip;
   _rpc.layer = layer;
   _rpc.bx = bx;
 }
 
-MuonTriggerPrimitive::MuonTriggerPrimitive(const MuonTriggerPrimitive& tp):
+TriggerPrimitive::TriggerPrimitive(const TriggerPrimitive& tp):
   _dt(tp._dt),
   _csc(tp._csc),
   _rpc(tp._rpc),
   _id(tp._id),
-  _subsystem(tp._subsystem),  
+  _subsystem(tp._subsystem),
   _globalsector(tp._globalsector),
   _subsector(tp._subsector),
   _eta(tp._eta),
   _phi(tp._phi),
+  _rho(tp._rho),
   _theta(tp._theta){
 }
 
-MuonTriggerPrimitive& MuonTriggerPrimitive::operator=(const MuonTriggerPrimitive& tp) {
+TriggerPrimitive& TriggerPrimitive::operator=(const TriggerPrimitive& tp) {
   this->_dt = tp._dt;
   this->_csc = tp._csc;
   this->_rpc = tp._rpc;
@@ -144,45 +145,47 @@ MuonTriggerPrimitive& MuonTriggerPrimitive::operator=(const MuonTriggerPrimitive
   this->_subsector = tp._subsector;
   this->_eta = tp._eta;
   this->_phi = tp._phi;
+  this->_rho = tp._rho;
+  this->_theta = tp._theta;
   return *this;
 }
 
-bool MuonTriggerPrimitive::operator==(const MuonTriggerPrimitive& tp) const {
-  return ( this->_dt.bx == tp._dt.bx && 
-	   this->_dt.wheel == tp._dt.wheel && 
-	   this->_dt.sector == tp._dt.sector && 
-	   this->_dt.station == tp._dt.station && 
-	   this->_dt.radialAngle == tp._dt.radialAngle && 
-	   this->_dt.bendingAngle == tp._dt.bendingAngle &&
-	   this->_dt.qualityCode == tp._dt.qualityCode && 
-	   this->_dt.Ts2TagCode == tp._dt.Ts2TagCode && 
-	   this->_dt.BxCntCode == tp._dt.BxCntCode && 
-	   this->_dt.theta_bti_group == tp._dt.theta_bti_group && 
-	   this->_dt.segment_number == tp._dt.segment_number && 
-	   this->_dt.theta_code == tp._dt.theta_code && 
-	   this->_dt.theta_quality == tp._dt.theta_quality && 
-	   this->_csc.trknmb == tp._csc.trknmb &&
-	   this->_csc.valid == tp._csc.valid &&
-	   this->_csc.quality == tp._csc.quality &&
-	   this->_csc.keywire == tp._csc.keywire &&
-	   this->_csc.strip == tp._csc.strip &&
-	   this->_csc.pattern == tp._csc.pattern &&
-	   this->_csc.bend == tp._csc.bend &&
-	   this->_csc.bx == tp._csc.bx &&
-	   this->_csc.mpclink == tp._csc.mpclink &&
-	   this->_csc.bx0 == tp._csc.bx0 &&
-	   this->_csc.syncErr == tp._csc.syncErr &&
-	   this->_csc.cscID == tp._csc.cscID &&
-	   this->_rpc.strip == tp._rpc.strip &&
-	   this->_rpc.layer == tp._rpc.layer &&
-	   this->_rpc.bx == tp._rpc.bx &&
-	   this->_id == tp._id &&
-	   this->_subsystem == tp._subsystem &&
-	   this->_globalsector == tp._globalsector &&
-	   this->_subsector == tp._subsector );	     
+bool TriggerPrimitive::operator==(const TriggerPrimitive& tp) const {
+  return ( this->_dt.bx == tp._dt.bx &&
+           this->_dt.wheel == tp._dt.wheel &&
+           this->_dt.sector == tp._dt.sector &&
+           this->_dt.station == tp._dt.station &&
+           this->_dt.radialAngle == tp._dt.radialAngle &&
+           this->_dt.bendingAngle == tp._dt.bendingAngle &&
+           this->_dt.qualityCode == tp._dt.qualityCode &&
+           this->_dt.Ts2TagCode == tp._dt.Ts2TagCode &&
+           this->_dt.BxCntCode == tp._dt.BxCntCode &&
+           this->_dt.theta_bti_group == tp._dt.theta_bti_group &&
+           this->_dt.segment_number == tp._dt.segment_number &&
+           this->_dt.theta_code == tp._dt.theta_code &&
+           this->_dt.theta_quality == tp._dt.theta_quality &&
+           this->_csc.trknmb == tp._csc.trknmb &&
+           this->_csc.valid == tp._csc.valid &&
+           this->_csc.quality == tp._csc.quality &&
+           this->_csc.keywire == tp._csc.keywire &&
+           this->_csc.strip == tp._csc.strip &&
+           this->_csc.pattern == tp._csc.pattern &&
+           this->_csc.bend == tp._csc.bend &&
+           this->_csc.bx == tp._csc.bx &&
+           this->_csc.mpclink == tp._csc.mpclink &&
+           this->_csc.bx0 == tp._csc.bx0 &&
+           this->_csc.syncErr == tp._csc.syncErr &&
+           this->_csc.cscID == tp._csc.cscID &&
+           this->_rpc.strip == tp._rpc.strip &&
+           this->_rpc.layer == tp._rpc.layer &&
+           this->_rpc.bx == tp._rpc.bx &&
+           this->_id == tp._id &&
+           this->_subsystem == tp._subsystem &&
+           this->_globalsector == tp._globalsector &&
+           this->_subsector == tp._subsector );
 }
 
-const int MuonTriggerPrimitive::getBX() const {
+const int TriggerPrimitive::getBX() const {
   switch(_subsystem) {
   case kDT:
     return _dt.bx;
@@ -191,14 +194,14 @@ const int MuonTriggerPrimitive::getBX() const {
   case kRPC:
     return _rpc.bx;
   default:
-    throw cms::Exception("Invalid Subsytem") 
+    throw cms::Exception("Invalid Subsytem")
       << "The specified subsystem for this track stub is out of range"
       << std::endl;
   }
   return -1;
 }
 
-const int MuonTriggerPrimitive::getStrip() const {
+const int TriggerPrimitive::getStrip() const {
   switch(_subsystem) {
   case kDT:
     return -1;
@@ -207,14 +210,14 @@ const int MuonTriggerPrimitive::getStrip() const {
   case kRPC:
     return _rpc.strip;
   default:
-    throw cms::Exception("Invalid Subsytem") 
+    throw cms::Exception("Invalid Subsytem")
       << "The specified subsystem for this track stub is out of range"
       << std::endl;
   }
   return -1;
 }
 
-const int MuonTriggerPrimitive::getWire() const {
+const int TriggerPrimitive::getWire() const {
   switch(_subsystem) {
   case kDT:
     return -1;
@@ -223,14 +226,14 @@ const int MuonTriggerPrimitive::getWire() const {
   case kRPC:
     return -1;
   default:
-    throw cms::Exception("Invalid Subsytem") 
+    throw cms::Exception("Invalid Subsytem")
       << "The specified subsystem for this track stub is out of range"
       << std::endl;
   }
   return -1;
 }
 
-const int MuonTriggerPrimitive::getPattern() const {
+const int TriggerPrimitive::getPattern() const {
   switch(_subsystem) {
   case kDT:
     return -1;
@@ -239,13 +242,13 @@ const int MuonTriggerPrimitive::getPattern() const {
   case kRPC:
     return -1;
   default:
-    throw cms::Exception("Invalid Subsytem") 
+    throw cms::Exception("Invalid Subsytem")
       << "The specified subsystem for this track stub is out of range"
       << std::endl;
   }
   return -1;
 }
-const int MuonTriggerPrimitive::Id() const {
+const int TriggerPrimitive::Id() const {
   switch(_subsystem) {
   case kDT:
     return -1;
@@ -254,32 +257,32 @@ const int MuonTriggerPrimitive::Id() const {
   case kRPC:
     return -1;
   default:
-    throw cms::Exception("Invalid Subsytem") 
+    throw cms::Exception("Invalid Subsytem")
       << "The specified subsystem for this track stub is out of range"
       << std::endl;
   }
   return -1;
 }
 
-void MuonTriggerPrimitive::calculateDTGlobalSector(const DTChamberId& chid, 
-					       unsigned& global_sector, 
-					       unsigned& subsector ) {
+void TriggerPrimitive::calculateDTGlobalSector(const DTChamberId& chid,
+                                               unsigned& global_sector,
+                                               unsigned& subsector ) {
 }
 
-void MuonTriggerPrimitive::calculateCSCGlobalSector(const CSCDetId& chid, 
-						unsigned& global_sector, 
-						unsigned& subsector ) {
+void TriggerPrimitive::calculateCSCGlobalSector(const CSCDetId& chid,
+                                                unsigned& global_sector,
+                                                unsigned& subsector ) {
 }
 
-void MuonTriggerPrimitive::calculateRPCGlobalSector(const RPCDetId& chid, 
-						unsigned& global_sector, 
-						unsigned& subsector ) {
+void TriggerPrimitive::calculateRPCGlobalSector(const RPCDetId& chid,
+                                                unsigned& global_sector,
+                                                unsigned& subsector ) {
 }
 
-void MuonTriggerPrimitive::print(std::ostream& out) const {
+void TriggerPrimitive::print(std::ostream& out) const {
   unsigned idx = (unsigned) _subsystem;
   out << subsystem_names[idx] << " Trigger Primitive" << std::endl;
-  out << "eta: " << _eta << " phi: " << _phi 
+  out << "eta: " << _eta << " phi: " << _phi
       << " bend: " << _theta << std::endl;
   switch(_subsystem) {
   case kDT:
@@ -317,8 +320,8 @@ void MuonTriggerPrimitive::print(std::ostream& out) const {
     out << "Layer         : " << _rpc.layer << std::endl;
     break;
   default:
-    throw cms::Exception("Invalid Subsytem") 
+    throw cms::Exception("Invalid Subsytem")
       << "The specified subsystem for this track stub is out of range"
       << std::endl;
-  }     
+  }
 }
