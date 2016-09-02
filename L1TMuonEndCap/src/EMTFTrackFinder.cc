@@ -27,18 +27,16 @@ EMTFTrackFinder::~EMTFTrackFinder() {
 
 void EMTFTrackFinder::process(
     const edm::Event& iEvent, const edm::EventSetup& iSetup,
-    l1t::EMTFHitExtraCollection& out_hits,
-    l1t::EMTFTrackExtraCollection& out_tracks,
-    l1t::RegionalMuonCandBxCollection& out_cands
+    EMTFHitExtraCollection& out_hits,
+    EMTFTrackExtraCollection& out_tracks
 ) {
 
   out_hits.clear();
   out_tracks.clear();
-  out_cands.clear();
 
   // ___________________________________________________________________________
   // Extract trigger primitives
-  L1TMuon::TriggerPrimitiveCollection muon_primitives;
+  TriggerPrimitiveCollection muon_primitives;
 
   EMTFSubsystemCollector collector;
   collector.extractPrimitives<L1TMuonEndCap::CSCTag>(iEvent, tokenCSC_, muon_primitives);
@@ -63,11 +61,6 @@ void EMTFTrackFinder::process(
     sector_processor.reset(isector);
     sector_processor.process(muon_primitives, out_hits, out_tracks);
   }
-
-  // ___________________________________________________________________________
-  // Put into uGMT format
-
-  //FIXME: implement this
 
   return;
 }

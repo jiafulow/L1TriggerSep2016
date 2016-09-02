@@ -17,9 +17,9 @@ void EMTFSingleBXSectorProcessor::reset(int sector, int bx) {
 }
 
 void EMTFSingleBXSectorProcessor::process(
-    const L1TMuon::TriggerPrimitiveCollection& muon_primitives,
-    l1t::EMTFHitExtraCollection& out_hits,
-    l1t::EMTFTrackExtraCollection& out_tracks
+    const TriggerPrimitiveCollection& muon_primitives,
+    EMTFHitExtraCollection& out_hits,
+    EMTFTrackExtraCollection& out_tracks
 ) {
 
   //FIXME: implement this

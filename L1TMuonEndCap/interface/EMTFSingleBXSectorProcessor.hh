@@ -3,10 +3,7 @@
 
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/MuonTriggerPrimitive.h"
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/MuonTriggerPrimitiveFwd.h"
-#include "DataFormats/L1TMuon/interface/EMTFHitExtra.h"
-#include "DataFormats/L1TMuon/interface/EMTFTrackExtra.h"
+#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFCommon.hh"
 
 
 class EMTFSingleBXSectorProcessor {
@@ -17,9 +14,9 @@ public:
   void reset(int sector, int bx);
 
   void process(
-      const L1TMuon::TriggerPrimitiveCollection& muon_primitives,
-      l1t::EMTFHitExtraCollection& out_hits,
-      l1t::EMTFTrackExtraCollection& out_tracks
+      const TriggerPrimitiveCollection& muon_primitives,
+      EMTFHitExtraCollection& out_hits,
+      EMTFTrackExtraCollection& out_tracks
   );
 
   int sector() const { return sector_; }

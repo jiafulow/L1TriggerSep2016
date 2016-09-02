@@ -3,6 +3,7 @@
 
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
+#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFCommon.hh"
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFSingleBXSectorProcessor.hh"
 
 
@@ -14,9 +15,9 @@ public:
   void reset(int sector);
 
   void process(
-      const L1TMuon::TriggerPrimitiveCollection& muon_primitives,
-      l1t::EMTFHitExtraCollection& out_hits,
-      l1t::EMTFTrackExtraCollection& out_tracks
+      const TriggerPrimitiveCollection& muon_primitives,
+      EMTFHitExtraCollection& out_hits,
+      EMTFTrackExtraCollection& out_tracks
   );
 
   int sector() const { return sector_; }

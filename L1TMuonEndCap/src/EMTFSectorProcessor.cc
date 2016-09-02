@@ -20,9 +20,9 @@ void EMTFSectorProcessor::reset(int sector) {
 }
 
 void EMTFSectorProcessor::process(
-    const L1TMuon::TriggerPrimitiveCollection& muon_primitives,
-    l1t::EMTFHitExtraCollection& out_hits,
-    l1t::EMTFTrackExtraCollection& out_tracks
+    const TriggerPrimitiveCollection& muon_primitives,
+    EMTFHitExtraCollection& out_hits,
+    EMTFTrackExtraCollection& out_tracks
 ) {
 
   EMTFSingleBXSectorProcessor sector_processor_bx_minus2(config_);

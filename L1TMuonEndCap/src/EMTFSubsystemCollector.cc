@@ -8,7 +8,7 @@
 template<> void EMTFSubsystemCollector::extractPrimitives<L1TMuonEndCap::CSCTag>(
     const edm::Event& iEvent,
     const edm::EDGetToken& token,
-    L1TMuon::TriggerPrimitiveCollection& out
+    TriggerPrimitiveCollection& out
 ) {
   edm::Handle<L1TMuonEndCap::CSCTag::digi_collection> cscDigis;
   if (!token.isUninitialized())
@@ -30,7 +30,7 @@ template<> void EMTFSubsystemCollector::extractPrimitives<L1TMuonEndCap::CSCTag>
 template<> void EMTFSubsystemCollector::extractPrimitives<L1TMuonEndCap::RPCTag>(
     const edm::Event& iEvent,
     const edm::EDGetToken& token,
-    L1TMuon::TriggerPrimitiveCollection& out
+    TriggerPrimitiveCollection& out
 ) {
   edm::Handle<L1TMuonEndCap::RPCTag::digi_collection> rpcDigis;
   if (!token.isUninitialized())

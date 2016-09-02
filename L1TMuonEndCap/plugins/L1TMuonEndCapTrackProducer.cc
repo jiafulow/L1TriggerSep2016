@@ -1,14 +1,21 @@
 #include "L1TMuonEndCapTrackProducer.h"
 
+#include "DataFormats/L1TMuon/interface/RegionalMuonCand.h"
+#include "DataFormats/L1TMuon/interface/RegionalMuonCandFwd.h"
+
+//using l1t::EMTFHitExtraCollection;
+//using l1t::EMTFTrackExtraCollection;
+using l1t::RegionalMuonCandBxCollection;
+
 
 L1TMuonEndCapTrackProducer::L1TMuonEndCapTrackProducer(const edm::ParameterSet& iConfig) :
     track_finder_(new EMTFTrackFinder(iConfig, consumesCollector())),
     config_(iConfig)
 {
   // Make output products
-  produces<l1t::EMTFHitExtraCollection>      ("EMTF");
-  produces<l1t::EMTFTrackExtraCollection>    ("EMTF");
-  produces<l1t::RegionalMuonCandBxCollection>("EMTF");
+  produces<EMTFHitExtraCollection>      ("EMTF");
+  produces<EMTFTrackExtraCollection>    ("EMTF");
+  produces<RegionalMuonCandBxCollection>("EMTF");
 }
 
 L1TMuonEndCapTrackProducer::~L1TMuonEndCapTrackProducer() {
@@ -17,12 +24,12 @@ L1TMuonEndCapTrackProducer::~L1TMuonEndCapTrackProducer() {
 
 void L1TMuonEndCapTrackProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   // Create pointers to output products
-  std::unique_ptr<l1t::EMTFHitExtraCollection>       out_hits  (new l1t::EMTFHitExtraCollection);
-  std::unique_ptr<l1t::EMTFTrackExtraCollection>     out_tracks(new l1t::EMTFTrackExtraCollection);
-  std::unique_ptr<l1t::RegionalMuonCandBxCollection> out_cands (new l1t::RegionalMuonCandBxCollection);
+  std::unique_ptr<EMTFHitExtraCollection>       out_hits  (new EMTFHitExtraCollection);
+  std::unique_ptr<EMTFTrackExtraCollection>     out_tracks(new EMTFTrackExtraCollection);
+  std::unique_ptr<RegionalMuonCandBxCollection> out_cands (new RegionalMuonCandBxCollection);
 
   // Run
-  track_finder_->process(iEvent, iSetup, *out_hits, *out_tracks, *out_cands);
+  track_finder_->process(iEvent, iSetup, *out_hits, *out_tracks);
 
   // Fill the output products
   iEvent.put(std::move(out_hits)  , "EMTF");

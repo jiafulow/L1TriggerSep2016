@@ -6,12 +6,7 @@
 #include "FWCore/Framework/interface/ConsumesCollector.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
-//#include "DataFormats/CSCDigi/interface/CSCCorrelatedLCTDigiCollection.h"
-//#include "DataFormats/RPCDigi/interface/RPCDigiCollection.h"
-#include "DataFormats/L1TMuon/interface/EMTFHitExtra.h"
-#include "DataFormats/L1TMuon/interface/EMTFTrackExtra.h"
-#include "DataFormats/L1TMuon/interface/RegionalMuonCand.h"
-#include "DataFormats/L1TMuon/interface/RegionalMuonCandFwd.h"
+#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFCommon.hh"
 
 
 class EMTFTrackFinder {
@@ -21,9 +16,8 @@ public:
 
   void process(
       const edm::Event& iEvent, const edm::EventSetup& iSetup,
-      l1t::EMTFHitExtraCollection& out_hits,
-      l1t::EMTFTrackExtraCollection& out_tracks,
-      l1t::RegionalMuonCandBxCollection& out_cands
+      EMTFHitExtraCollection& out_hits,
+      EMTFTrackExtraCollection& out_tracks
   );
 
 private:
