@@ -11,7 +11,7 @@
 #include "DataFormats/MuonDetId/interface/CSCDetId.h"
 #include "DataFormats/MuonDetId/interface/RPCDetId.h"
 
-using namespace L1TMuon;
+using namespace L1TMuonEndCap;
 
 namespace {
   const char subsystem_names[][4] = {"DT","CSC","RPC"};

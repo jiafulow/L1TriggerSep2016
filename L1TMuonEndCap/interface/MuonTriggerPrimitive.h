@@ -40,7 +40,7 @@ class RPCDigiL1Link;
 class RPCDetId;
 
 
-namespace L1TMuon {
+namespace L1TMuonEndCap {
 
   class TriggerPrimitive {
   public:
