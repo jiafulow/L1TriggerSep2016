@@ -27,6 +27,7 @@ public:
   );
 
 private:
+  const edm::ParameterSet& config_;
   edm::EDGetToken tokenCSC_;
   edm::EDGetToken tokenRPC_;
   int verbose_;
