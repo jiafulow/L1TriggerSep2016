@@ -13,6 +13,7 @@
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFTrackFinder.hh"
+#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFMicroGMTConverter.hh"
 
 
 // Class declaration
@@ -34,7 +35,8 @@ private:
   //virtual void endLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&);
 
 private:
-  std::unique_ptr<EMTFTrackFinder> track_finder_;
+  std::unique_ptr<EMTFTrackFinder>       track_finder_;
+  std::unique_ptr<EMTFMicroGMTConverter> uGMT_converter_;
 
   const edm::ParameterSet& config_;
 };
