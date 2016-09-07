@@ -17,7 +17,7 @@
 // Author: L. Gray (FNAL)
 //
 
-#include <boost/cstdint.hpp>
+#include <cstdint>
 #include <vector>
 #include <iostream>
 
