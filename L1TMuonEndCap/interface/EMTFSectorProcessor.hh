@@ -4,7 +4,6 @@
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFCommon.hh"
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFSingleBXSectorProcessor.hh"
 
 
 class EMTFSectorProcessor {
@@ -23,8 +22,10 @@ public:
   int sector() const { return sector_; }
 
 private:
-  const edm::ParameterSet& config_;
+  const edm::ParameterSet config_;
   int verbose_;
+
+  int minBX_, maxBX_, bxWindow_;
 
   int sector_;
 };

@@ -7,8 +7,8 @@ L1TMuonEndCapTrackProducer::L1TMuonEndCapTrackProducer(const edm::ParameterSet& 
     config_(iConfig)
 {
   // Make output products
-  produces<EMTFHitExtraCollection>           ("EMTF");
-  produces<EMTFTrackExtraCollection>         ("EMTF");
+  produces<EMTFHitExtraCollection>           ("");
+  produces<EMTFTrackExtraCollection>         ("");
   produces<l1t::RegionalMuonCandBxCollection>("EMTF");
 }
 
@@ -18,9 +18,9 @@ L1TMuonEndCapTrackProducer::~L1TMuonEndCapTrackProducer() {
 
 void L1TMuonEndCapTrackProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   // Create pointers to output products
-  std::unique_ptr<EMTFHitExtraCollection>            out_hits  (new EMTFHitExtraCollection);
-  std::unique_ptr<EMTFTrackExtraCollection>          out_tracks(new EMTFTrackExtraCollection);
-  std::unique_ptr<l1t::RegionalMuonCandBxCollection> out_cands (new l1t::RegionalMuonCandBxCollection);
+  auto out_hits   = std::make_unique<EMTFHitExtraCollection>();
+  auto out_tracks = std::make_unique<EMTFTrackExtraCollection>();
+  auto out_cands  = std::make_unique<l1t::RegionalMuonCandBxCollection>();
 
   // Run
   track_finder_->process(iEvent, iSetup, *out_hits, *out_tracks);
@@ -29,8 +29,8 @@ void L1TMuonEndCapTrackProducer::produce(edm::Event& iEvent, const edm::EventSet
   uGMT_converter_->convert_many(*out_tracks, *out_cands);
 
   // Fill the output products
-  iEvent.put(std::move(out_hits)  , "EMTF");
-  iEvent.put(std::move(out_tracks), "EMTF");
+  iEvent.put(std::move(out_hits)  , "");
+  iEvent.put(std::move(out_tracks), "");
   iEvent.put(std::move(out_cands) , "EMTF");
 }
 
