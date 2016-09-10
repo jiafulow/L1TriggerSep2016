@@ -9,8 +9,6 @@
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFSubsystemCollector.hh"
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFSectorProcessor.hh"
 
-#define NUM_SECTORS 12
-
 
 EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollector&& iConsumes) :
     config_(iConfig),
@@ -18,7 +16,8 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
     tokenRPC_(iConsumes.consumes<RPCDigiCollection>(iConfig.getParameter<edm::InputTag>("RPCInput"))),
     verbose_(iConfig.getUntrackedParameter<int>("verbosity"))
 {
-
+  useCSC_      = iConfig.getParameter<bool>("CSCEnable");
+  useRPC_      = iConfig.getParameter<bool>("RPCEnable");
 }
 
 EMTFTrackFinder::~EMTFTrackFinder() {
@@ -39,8 +38,10 @@ void EMTFTrackFinder::process(
   TriggerPrimitiveCollection muon_primitives;
 
   EMTFSubsystemCollector collector;
-  collector.extractPrimitives<L1TMuonEndCap::CSCTag>(iEvent, tokenCSC_, muon_primitives);
-  collector.extractPrimitives<L1TMuonEndCap::RPCTag>(iEvent, tokenRPC_, muon_primitives);
+  if (useCSC_)
+    collector.extractPrimitives<L1TMuonEndCap::CSCTag>(iEvent, tokenCSC_, muon_primitives);
+  if (useRPC_)
+    collector.extractPrimitives<L1TMuonEndCap::RPCTag>(iEvent, tokenRPC_, muon_primitives);
 
   // Check trigger primitives
   if (verbose_ > 2) {

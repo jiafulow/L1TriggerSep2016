@@ -26,6 +26,7 @@ private:
   edm::EDGetToken tokenRPC_;
   int verbose_;
 
+  bool useCSC_, useRPC_;
 };
 
 #endif

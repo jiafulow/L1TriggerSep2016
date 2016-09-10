@@ -16,5 +16,8 @@ typedef L1TMuonEndCap::EMTFHitExtraCollection   EMTFHitExtraCollection;
 typedef L1TMuonEndCap::EMTFTrackExtra           EMTFTrackExtra;
 typedef L1TMuonEndCap::EMTFTrackExtraCollection EMTFTrackExtraCollection;
 
+// Constants
+#define NUM_SECTORS 12
+
 #endif
 

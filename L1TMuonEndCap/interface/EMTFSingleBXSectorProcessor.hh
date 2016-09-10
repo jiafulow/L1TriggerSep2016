@@ -36,6 +36,8 @@ private:
   const edm::ParameterSet config_;
   int verbose_;
 
+  bool includeNeighbor_;
+
   int sector_;
   int bx_;
 };

@@ -5,7 +5,8 @@ EMTFSingleBXSectorProcessor::EMTFSingleBXSectorProcessor(const edm::ParameterSet
     config_(iConfig),
     verbose_(iConfig.getUntrackedParameter<int>("verbosity"))
 {
-
+  const edm::ParameterSet spPCParams16 = config_.getParameter<edm::ParameterSet>("spPCParams16");
+  includeNeighbor_ = spPCParams16.getParameter<bool>("IncludeNeighbor");
 }
 
 EMTFSingleBXSectorProcessor::~EMTFSingleBXSectorProcessor() {

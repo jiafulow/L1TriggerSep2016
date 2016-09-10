@@ -18,6 +18,7 @@ EMTFSectorProcessor::~EMTFSectorProcessor() {
 }
 
 void EMTFSectorProcessor::reset(int sector) {
+  assert(0 <= sector && sector < 12);
   sector_ = sector;
 }
 

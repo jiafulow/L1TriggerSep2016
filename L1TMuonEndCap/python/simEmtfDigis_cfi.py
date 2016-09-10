@@ -14,9 +14,13 @@ simEmtfDigis = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
     RPCInput = cms.InputTag('simMuonRPCDigis'),
     #GEMInput = cms.InputTag('simMuonGEMPadDigis'),
 
+    # Run with CSC, RPC
+    CSCEnable = cms.bool(True),
+    RPCEnable = cms.bool(False),
+
     # Sector processor primitive-conversion parameters
     spPCParams16 = cms.PSet(
-
+        IncludeNeighbor = cms.bool(True),
     ),
 
     # Sector processor pattern-recognition parameters
