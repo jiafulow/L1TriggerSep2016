@@ -5,12 +5,14 @@
 
 
 // Specialized for CSC
-template<> void EMTFSubsystemCollector::extractPrimitives<L1TMuonEndCap::CSCTag>(
+template<>
+void EMTFSubsystemCollector::extractPrimitives(
+    CSCTag tag,
     const edm::Event& iEvent,
     const edm::EDGetToken& token,
     TriggerPrimitiveCollection& out
 ) {
-  edm::Handle<L1TMuonEndCap::CSCTag::digi_collection> cscDigis;
+  edm::Handle<CSCTag::digi_collection> cscDigis;
   if (!token.isUninitialized())
       iEvent.getByToken(token, cscDigis);
 
@@ -27,12 +29,14 @@ template<> void EMTFSubsystemCollector::extractPrimitives<L1TMuonEndCap::CSCTag>
 }
 
 // Specialized for RPC
-template<> void EMTFSubsystemCollector::extractPrimitives<L1TMuonEndCap::RPCTag>(
+template<>
+void EMTFSubsystemCollector::extractPrimitives(
+    RPCTag tag,
     const edm::Event& iEvent,
     const edm::EDGetToken& token,
     TriggerPrimitiveCollection& out
 ) {
-  edm::Handle<L1TMuonEndCap::RPCTag::digi_collection> rpcDigis;
+  edm::Handle<RPCTag::digi_collection> rpcDigis;
   if (!token.isUninitialized())
       iEvent.getByToken(token, rpcDigis);
 

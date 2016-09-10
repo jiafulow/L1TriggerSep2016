@@ -39,9 +39,9 @@ void EMTFTrackFinder::process(
 
   EMTFSubsystemCollector collector;
   if (useCSC_)
-    collector.extractPrimitives<L1TMuonEndCap::CSCTag>(iEvent, tokenCSC_, muon_primitives);
+    collector.extractPrimitives(CSCTag(), iEvent, tokenCSC_, muon_primitives);
   if (useRPC_)
-    collector.extractPrimitives<L1TMuonEndCap::RPCTag>(iEvent, tokenRPC_, muon_primitives);
+    collector.extractPrimitives(RPCTag(), iEvent, tokenRPC_, muon_primitives);
 
   // Check trigger primitives
   if (verbose_ > 2) {

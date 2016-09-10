@@ -2,7 +2,6 @@
 #define L1TMuonEndCap_EMTFSubsystemCollector_hh
 
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFCommon.hh"
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFSubsystemTag.hh"
 
 
 // Forward declarations
@@ -15,8 +14,9 @@ namespace edm {
 // Class declaration
 struct EMTFSubsystemCollector {
 
-  template<class T>
+  template<typename T>
   void extractPrimitives(
+    T tag,
     const edm::Event& iEvent,
     const edm::EDGetToken& token,
     TriggerPrimitiveCollection& out
