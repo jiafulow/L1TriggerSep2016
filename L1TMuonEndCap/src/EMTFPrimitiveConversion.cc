@@ -5,6 +5,7 @@
 #include "DataFormats/MuonDetId/interface/RPCDetId.h"
 
 using CSCData = TriggerPrimitive::CSCData;
+using RPCData = TriggerPrimitive::RPCData;
 using EMTFHitData = EMTFHitExtra::EMTFHitData;
 
 
@@ -16,97 +17,16 @@ EMTFPrimitiveConversion::~EMTFPrimitiveConversion() {
 
 }
 
-void EMTFPrimitiveConversion::convert(
-    int sector, int bx, bool includeNeighbor,
-    const TriggerPrimitiveCollection& muon_primitives,
-    EMTFHitExtraCollection& conv_hits
+// Specialized for CSC
+template<>
+EMTFHitExtra EMTFPrimitiveConversion::convert(
+    CSCTag tag,
+    int sector, bool is_neighbor,
+    const TriggerPrimitive& muon_primitive
 ) {
+  sector_      = sector;
+  is_neighbor_ = is_neighbor;
 
-  includeNeighbor_ = includeNeighbor;
-  sector_          = sector;
-  bx_              = bx;
-
-  conv_hits.clear();
-
-  TriggerPrimitiveCollection::const_iterator tp_it  = muon_primitives.begin();
-  TriggerPrimitiveCollection::const_iterator tp_end = muon_primitives.end();
-
-  for (; tp_it != tp_end; ++tp_it) {
-
-    if (tp_it->subsystem() == TriggerPrimitive::kCSC) {
-      const CSCDetId tp_detId = tp_it->detId<CSCDetId>();
-      const CSCData& tp_data  = tp_it->getCSCData();
-
-      int is_neighbor = 0;
-
-      int tp_endcap    = tp_detId.endcap();
-      int tp_sector    = tp_detId.triggerSector();
-      int tp_station   = tp_detId.station();
-      int tp_chamber   = tp_detId.chamber();
-
-      // station 1 --> subsector 1 or 2
-      // station 2,3,4 --> subsector 0
-      int tp_subsector = (tp_station != 1) ? 0 : ((tp_chamber%6 > 2) ? 1 : 2);
-
-      if (
-          is_in_sector_csc(tp_endcap, tp_sector, tp_subsector, tp_station, tp_data.cscID, is_neighbor) &&
-          is_in_bx_csc(tp_data.bx)
-      ) {
-
-        const EMTFHitExtra& conv_hit = make_emtf_hit(*tp_it, is_neighbor);
-        conv_hits.push_back(conv_hit);
-      }
-
-    } else if (tp_it->subsystem() == TriggerPrimitive::kRPC) {
-
-    }
-
-  }  // end loop over muon_primitives
-
-}
-
-bool EMTFPrimitiveConversion::is_in_sector_csc(
-    int tp_endcap, int tp_sector, int tp_subsector, int tp_station, int tp_csc_ID,
-    int& is_neighbor
-) const {
-  static const std::vector<int> neighboring = {
-    5, 0, 1, 2, 3, 4,
-    11, 6, 7, 8, 9, 10
-  };
-
-  tp_sector = (tp_endcap - 1) * 6 + (tp_sector - 1);
-  is_neighbor = false;
-
-  // Match sector
-  if (sector_ == tp_sector)
-    return true;
-
-  // Match neighbor sector
-  if (includeNeighbor_) {
-    if (neighboring.at(sector_) == tp_sector) {
-      if (tp_station == 1) {
-        if ((tp_subsector == 2) && (tp_csc_ID == 3 || tp_csc_ID == 6 || tp_csc_ID == 9))
-          is_neighbor = true;
-
-      } else {
-        if (tp_csc_ID == 3 || tp_csc_ID == 9)
-          is_neighbor = true;
-      }
-
-      if (is_neighbor)
-        return true;
-    }
-  }
-
-  return false;
-}
-
-bool EMTFPrimitiveConversion::is_in_bx_csc(int tp_bx) const {
-  tp_bx -= 6;
-  return (bx_ == tp_bx);
-}
-
-EMTFHitExtra EMTFPrimitiveConversion::make_emtf_hit(const TriggerPrimitive& muon_primitive, int is_neighbor) const {
   const CSCDetId tp_detId = muon_primitive.detId<CSCDetId>();
   const CSCData& tp_data  = muon_primitive.getCSCData();
 
@@ -146,5 +66,25 @@ EMTFHitExtra EMTFPrimitiveConversion::make_emtf_hit(const TriggerPrimitive& muon
 
   EMTFHitExtra conv_hit;
   conv_hit.setData(data);
+  return conv_hit;
+}
+
+// Specialized for CSC
+template<>
+EMTFHitExtra EMTFPrimitiveConversion::convert(
+    RPCTag tag,
+    int sector, bool is_neighbor,
+    const TriggerPrimitive& muon_primitive
+) {
+  sector_      = sector;
+  is_neighbor_ = is_neighbor;
+
+  //const RPCDetId tp_detId = muon_primitive.detId<RPCDetId>();
+  //const RPCData& tp_data  = muon_primitive.getRPCData();
+
+  //FIXME: implement this
+
+  EMTFHitExtra conv_hit;
+  //conv_hit.setData(data);
   return conv_hit;
 }
