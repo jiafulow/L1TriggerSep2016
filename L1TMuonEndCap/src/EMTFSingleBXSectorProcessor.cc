@@ -1,5 +1,7 @@
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFSingleBXSectorProcessor.hh"
 
+#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPrimitiveConversion.hh"
+
 
 EMTFSingleBXSectorProcessor::EMTFSingleBXSectorProcessor(const edm::ParameterSet& iConfig) :
     config_(iConfig),
@@ -25,7 +27,12 @@ void EMTFSingleBXSectorProcessor::process(
     EMTFTrackExtraCollection& out_tracks
 ) {
 
-  //FIXME: implement this
+  EMTFHitExtraCollection conv_hits;
+
+  EMTFPrimitiveConversion prim_conv;
+  prim_conv.convert(sector_, bx_, includeNeighbor_, muon_primitives, conv_hits);
+
+  out_hits.insert(out_hits.end(), conv_hits.begin(), conv_hits.end());
 
   return;
 }

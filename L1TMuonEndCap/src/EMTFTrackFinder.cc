@@ -45,6 +45,7 @@ void EMTFTrackFinder::process(
 
   // Check trigger primitives
   if (verbose_ > 2) {
+    std::cout << "Num of TriggerPrimitive: " << muon_primitives.size() << std::endl;
     std::ostringstream o;
     for (const auto& p : muon_primitives) {
       p.print(o);
@@ -61,6 +62,13 @@ void EMTFTrackFinder::process(
   for (int isector = 0; isector < NUM_SECTORS; isector++) {
     sector_processor.reset(isector);
     sector_processor.process(muon_primitives, out_hits, out_tracks);
+  }
+
+  if (verbose_ > 1) {
+    std::cout << "Num of EMTFHitExtra: " << out_hits.size() << std::endl;
+    for (const auto& h : out_hits) {
+      std::cout << h.getData().bx+3 << " " << h.getData().endcap << " " << h.getData().sector << " " << h.getData().subsector << " " << h.getData().station << " " << h.getData().valid << " " << h.getData().quality << " " << h.getData().pattern << " " << h.getData().wire << " " << h.getData().csc_ID << " " << h.getData().bend << " " << h.getData().strip << " neigh? " << h.getData().neighbor << std::endl;
+    }
   }
 
   return;
