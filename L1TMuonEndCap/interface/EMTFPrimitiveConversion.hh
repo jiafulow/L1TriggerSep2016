@@ -6,19 +6,20 @@
 
 class EMTFPrimitiveConversion {
 public:
-  EMTFPrimitiveConversion();
-  ~EMTFPrimitiveConversion();
+  void configure(int endcap, int sector) {
+    endcap_ = endcap;
+    sector_ = sector;
+  }
 
   template<typename T>
   EMTFHitExtra convert(
       T tag,
-      int sector, bool is_neighbor,
+      bool is_neighbor,
       const TriggerPrimitive& muon_primitive
   );
 
 private:
-  int sector_;
-  bool is_neighbor_;
+  int endcap_, sector_;
 };
 
 #endif

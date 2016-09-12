@@ -1,25 +1,25 @@
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFSectorProcessor.hh"
 
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFSingleBXSectorProcessor.hh"
+#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPrimitiveSelection.hh"
+#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPrimitiveConversion.hh"
 
 
-EMTFSectorProcessor::EMTFSectorProcessor(const edm::ParameterSet& iConfig) :
-    config_(iConfig),
-    verbose_(iConfig.getUntrackedParameter<int>("verbosity"))
-{
-    const edm::ParameterSet spPRParams16 = config_.getParameter<edm::ParameterSet>("spPRParams16");
-    minBX_    = spPRParams16.getParameter<int>("MinBX");
-    maxBX_    = spPRParams16.getParameter<int>("MaxBX");
-    bxWindow_ = spPRParams16.getParameter<int>("BXWindow");
-}
+void EMTFSectorProcessor::configure(
+    int endcap, int sector,
+    int minBX, int maxBX, int bxWindow,
+    bool includeNeighbor
+) {
+  assert(MIN_ENDCAP <= endcap && endcap <= MAX_ENDCAP);
+  assert(MIN_TRIGSECTOR <= sector && sector <= MAX_TRIGSECTOR);
 
-EMTFSectorProcessor::~EMTFSectorProcessor() {
-
-}
-
-void EMTFSectorProcessor::reset(int sector) {
-  assert(0 <= sector && sector < 12);
+  endcap_ = endcap;
   sector_ = sector;
+
+  minBX_    = minBX;
+  maxBX_    = maxBX;
+  bxWindow_ = bxWindow;
+
+  includeNeighbor_ = includeNeighbor;
 }
 
 void EMTFSectorProcessor::process(
@@ -28,23 +28,53 @@ void EMTFSectorProcessor::process(
     EMTFTrackExtraCollection& out_tracks
 ) {
 
-  EMTFSingleBXSectorProcessor single_bx_sector_processor(config_);
-  std::queue<EMTFSingleBXSectorProcessor> prev_single_bx_sector_processors;
+  int driftBX = bxWindow_ - 1;
 
-  int waitBX = bxWindow_ - 1;
+  for (int ibx = minBX_; ibx <= maxBX_ + driftBX; ibx++) {
+    process_single_bx(ibx, muon_primitives, out_hits, out_tracks);
+  }
 
-  for (int ibx = minBX_; ibx < maxBX_ + waitBX; ibx++) {
-    single_bx_sector_processor.reset(sector(), ibx);
-    single_bx_sector_processor.process(
-        prev_single_bx_sector_processors,
-        muon_primitives, out_hits, out_tracks
-    );
+  return;
+}
 
-    prev_single_bx_sector_processors.push(single_bx_sector_processor);
-    if (ibx >= waitBX) {
-      prev_single_bx_sector_processors.pop();
+void EMTFSectorProcessor::process_single_bx(
+    int bx,
+    const TriggerPrimitiveCollection& muon_primitives,
+    EMTFHitExtraCollection& out_hits,
+    EMTFTrackExtraCollection& out_tracks
+) {
+
+  EMTFHitExtraCollection conv_hits;
+
+  EMTFPrimitiveSelection prim_sel;
+  prim_sel.configure(endcap_, sector_, bx, includeNeighbor_);
+
+  EMTFPrimitiveConversion prim_conv;
+  prim_conv.configure(endcap_, sector_);
+
+  TriggerPrimitiveCollection::const_iterator tp_it  = muon_primitives.begin();
+  TriggerPrimitiveCollection::const_iterator tp_end = muon_primitives.end();
+
+  for (; tp_it != tp_end; ++tp_it) {
+    int selected_csc = prim_sel.select(CSCTag(), *tp_it);
+    int selected_rpc = prim_sel.select(RPCTag(), *tp_it);
+
+    if (selected_csc) {
+      bool is_neighbor = (selected_csc == 2);
+      const EMTFHitExtra& conv_hit = prim_conv.convert(CSCTag(), is_neighbor, *tp_it);
+      conv_hits.push_back(conv_hit);
+
+    } else if (selected_rpc) {
+      bool is_neighbor = (selected_rpc == 2);
+      const EMTFHitExtra& conv_hit = prim_conv.convert(RPCTag(), is_neighbor, *tp_it);
+      conv_hits.push_back(conv_hit);
     }
   }
+
+
+
+
+  out_hits.insert(out_hits.end(), conv_hits.begin(), conv_hits.end());
 
   return;
 }

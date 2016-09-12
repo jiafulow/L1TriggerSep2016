@@ -18,6 +18,14 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
 {
   useCSC_      = iConfig.getParameter<bool>("CSCEnable");
   useRPC_      = iConfig.getParameter<bool>("RPCEnable");
+
+  const edm::ParameterSet spPRParams16 = config_.getParameter<edm::ParameterSet>("spPRParams16");
+  minBX_    = spPRParams16.getParameter<int>("MinBX");
+  maxBX_    = spPRParams16.getParameter<int>("MaxBX");
+  bxWindow_ = spPRParams16.getParameter<int>("BXWindow");
+
+  const edm::ParameterSet spPCParams16 = config_.getParameter<edm::ParameterSet>("spPCParams16");
+  includeNeighbor_ = spPCParams16.getParameter<bool>("IncludeNeighbor");
 }
 
 EMTFTrackFinder::~EMTFTrackFinder() {
@@ -34,7 +42,7 @@ void EMTFTrackFinder::process(
   out_tracks.clear();
 
   // ___________________________________________________________________________
-  // Extract trigger primitives
+  // Extract all trigger primitives
   TriggerPrimitiveCollection muon_primitives;
 
   EMTFSubsystemCollector collector;
@@ -57,11 +65,18 @@ void EMTFTrackFinder::process(
   // ___________________________________________________________________________
   // Run each sector processor
 
-  EMTFSectorProcessor sector_processor(config_);
+  EMTFSectorProcessor sector_processor;
 
-  for (int isector = 0; isector < NUM_SECTORS; isector++) {
-    sector_processor.reset(isector);
-    sector_processor.process(muon_primitives, out_hits, out_tracks);
+  for (int iendcap = MIN_ENDCAP; iendcap <= MAX_ENDCAP; iendcap++) {
+    for (int isector = MIN_TRIGSECTOR; isector <= MAX_TRIGSECTOR; isector++) {
+      sector_processor.configure(
+          iendcap, isector,
+          minBX_, maxBX_, bxWindow_,
+          includeNeighbor_
+      );
+
+      sector_processor.process(muon_primitives, out_hits, out_tracks);
+    }
   }
 
   if (verbose_ > 1) {
@@ -70,6 +85,9 @@ void EMTFTrackFinder::process(
       std::cout << h.getData().bx+3 << " " << h.getData().endcap << " " << h.getData().sector << " " << h.getData().subsector << " " << h.getData().station << " " << h.getData().valid << " " << h.getData().quality << " " << h.getData().pattern << " " << h.getData().wire << " " << h.getData().csc_ID << " " << h.getData().bend << " " << h.getData().strip << " neigh? " << h.getData().neighbor << std::endl;
     }
   }
+
+
+  //assert(muon_primitives.size() == out_hits.size());
 
   return;
 }

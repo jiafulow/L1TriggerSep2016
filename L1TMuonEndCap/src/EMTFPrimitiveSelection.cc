@@ -8,25 +8,12 @@ using CSCData = TriggerPrimitive::CSCData;
 using RPCData = TriggerPrimitive::RPCData;
 
 
-EMTFPrimitiveSelection::EMTFPrimitiveSelection() {
-
-}
-
-EMTFPrimitiveSelection::~EMTFPrimitiveSelection() {
-
-}
-
 // Specialized for CSC
 template<>
 int EMTFPrimitiveSelection::select(
     CSCTag tag,
-    int sector, int bx, bool includeNeighbor,
     const TriggerPrimitive& muon_primitive
 ) {
-  includeNeighbor_ = includeNeighbor;
-  sector_          = sector;
-  bx_              = bx;
-
   int selected = 0;
 
   if (muon_primitive.subsystem() == TriggerPrimitive::kCSC) {
@@ -45,14 +32,10 @@ int EMTFPrimitiveSelection::select(
     // station 2,3,4 --> subsector 0
     int tp_subsector = (tp_station != 1) ? 0 : ((tp_chamber%6 > 2) ? 1 : 2);
 
-    // positive endcap --> sectors 0-5
-    // negative endcap --> sectors 6-11
-    tp_sector = (tp_endcap - 1) * 6 + (tp_sector - 1);
-
     if (is_in_bx_csc(tp_bx)) {
-      if (is_in_sector_csc(tp_sector)) {
+      if (is_in_sector_csc(tp_endcap, tp_sector)) {
         selected = 1;
-      } else if (is_in_neighbor_sector_csc(tp_sector, tp_subsector, tp_station, tp_csc_ID)) {
+      } else if (is_in_neighbor_sector_csc(tp_endcap, tp_sector, tp_subsector, tp_station, tp_csc_ID)) {
         selected = 2;
       }
     }
@@ -65,13 +48,8 @@ int EMTFPrimitiveSelection::select(
 template<>
 int EMTFPrimitiveSelection::select(
     RPCTag tag,
-    int sector, int bx, bool includeNeighbor,
     const TriggerPrimitive& muon_primitive
 ) {
-  includeNeighbor_ = includeNeighbor;
-  sector_          = sector;
-  bx_              = bx;
-
   int selected = 0;
 
   if (muon_primitive.subsystem() == TriggerPrimitive::kRPC) {
@@ -80,18 +58,14 @@ int EMTFPrimitiveSelection::select(
 
     int tp_region  = tp_detId.region();  // 0 for Barrel, +/-1 for +/- Endcap
     int tp_sector  = tp_detId.sector();
-    int tp_endcap  = (tp_region == 1) ? 1 : 2;
+    int tp_endcap  = (tp_region == -1) ? 2 : tp_region;
 
     int tp_bx      = tp_data.bx;
 
-    // positive endcap --> sectors 0-5
-    // negative endcap --> sectors 6-11
-    tp_sector = (tp_endcap - 1) * 6 + (tp_sector - 1);
-
     if (is_in_bx_rpc(tp_bx)) {
-      if (is_in_sector_rpc(tp_sector)) {
+      if (is_in_sector_rpc(tp_endcap, tp_sector)) {
         selected = 1;
-      } else if (is_in_neighbor_sector_rpc(tp_sector)) {
+      } else if (is_in_neighbor_sector_rpc(tp_endcap, tp_sector)) {
         selected = 2;
       }
     }
@@ -101,20 +75,19 @@ int EMTFPrimitiveSelection::select(
 }
 
 // CSC functions
-bool EMTFPrimitiveSelection::is_in_sector_csc(int tp_sector) const {
-  return (sector_ == tp_sector);
+bool EMTFPrimitiveSelection::is_in_sector_csc(int tp_endcap, int tp_sector) const {
+  return ((endcap_ == tp_endcap) && (sector_ == tp_sector));
 }
 
 bool EMTFPrimitiveSelection::is_in_neighbor_sector_csc(
-    int tp_sector, int tp_subsector, int tp_station, int tp_csc_ID
+    int tp_endcap, int tp_sector, int tp_subsector, int tp_station, int tp_csc_ID
 ) const {
-  static const std::vector<int> neighboring = {
-    5, 0, 1, 2, 3, 4,
-    11, 6, 7, 8, 9, 10
+  static const std::map<int, int> neighboring = {
+    {1,6}, {2,1}, {3,2}, {4,3}, {5,4}, {6,5}
   };
 
   if (includeNeighbor_) {
-    if (neighboring.at(sector_) == tp_sector) {
+    if ((endcap_ == tp_endcap) && (neighboring.at(sector_) == tp_sector)) {
       if (tp_station == 1) {
         if ((tp_subsector == 2) && (tp_csc_ID == 3 || tp_csc_ID == 6 || tp_csc_ID == 9))
           return true;
@@ -134,12 +107,12 @@ bool EMTFPrimitiveSelection::is_in_bx_csc(int tp_bx) const {
 }
 
 // RPC functions
-bool EMTFPrimitiveSelection::is_in_sector_rpc(int tp_sector) const {
-  return (sector_ == tp_sector);
+bool EMTFPrimitiveSelection::is_in_sector_rpc(int tp_endcap, int tp_sector) const {
+  return ((endcap_ == tp_endcap) && (sector_ == tp_sector));
 }
 
 bool EMTFPrimitiveSelection::is_in_neighbor_sector_rpc(
-    int tp_sector
+    int tp_endcap, int tp_sector
 ) const {
   return false;
 }

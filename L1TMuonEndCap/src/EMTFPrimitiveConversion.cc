@@ -9,24 +9,13 @@ using RPCData = TriggerPrimitive::RPCData;
 using EMTFHitData = EMTFHitExtra::EMTFHitData;
 
 
-EMTFPrimitiveConversion::EMTFPrimitiveConversion() {
-
-}
-
-EMTFPrimitiveConversion::~EMTFPrimitiveConversion() {
-
-}
-
 // Specialized for CSC
 template<>
 EMTFHitExtra EMTFPrimitiveConversion::convert(
     CSCTag tag,
-    int sector, bool is_neighbor,
+    bool is_neighbor,
     const TriggerPrimitive& muon_primitive
 ) {
-  sector_      = sector;
-  is_neighbor_ = is_neighbor;
-
   const CSCDetId tp_detId = muon_primitive.detId<CSCDetId>();
   const CSCData& tp_data  = muon_primitive.getCSCData();
 
@@ -69,16 +58,13 @@ EMTFHitExtra EMTFPrimitiveConversion::convert(
   return conv_hit;
 }
 
-// Specialized for CSC
+// Specialized for RPC
 template<>
 EMTFHitExtra EMTFPrimitiveConversion::convert(
     RPCTag tag,
-    int sector, bool is_neighbor,
+    bool is_neighbor,
     const TriggerPrimitive& muon_primitive
 ) {
-  sector_      = sector;
-  is_neighbor_ = is_neighbor;
-
   //const RPCDetId tp_detId = muon_primitive.detId<RPCDetId>();
   //const RPCData& tp_data  = muon_primitive.getRPCData();
 

@@ -22,7 +22,14 @@ typedef L1TMuonEndCap::CSCTag CSCTag;
 typedef L1TMuonEndCap::RPCTag RPCTag;
 
 // Constants
-#define NUM_SECTORS 12
+
+// from DataFormats/MuonDetId/interface/CSCDetId.h
+#define MIN_ENDCAP 1
+#define MAX_ENDCAP 2
+
+// from DataFormats/MuonDetId/interface/CSCTriggerNumbering.h
+#define MIN_TRIGSECTOR 1
+#define MAX_TRIGSECTOR 6
 
 #endif
 

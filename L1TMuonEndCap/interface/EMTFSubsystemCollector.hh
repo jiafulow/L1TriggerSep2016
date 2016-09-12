@@ -12,8 +12,8 @@ namespace edm {
 
 
 // Class declaration
-struct EMTFSubsystemCollector {
-
+class EMTFSubsystemCollector {
+public:
   template<typename T>
   void extractPrimitives(
     T tag,

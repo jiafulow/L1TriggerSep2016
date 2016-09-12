@@ -8,12 +8,21 @@
 
 class EMTFSectorProcessor {
 public:
-  EMTFSectorProcessor(const edm::ParameterSet& iConfig);
-  ~EMTFSectorProcessor();
 
-  void reset(int sector);
+  void configure(
+      int endcap, int sector,
+      int minBX, int maxBX, int bxWindow,
+      bool includeNeighbor
+  );
 
   void process(
+      const TriggerPrimitiveCollection& muon_primitives,
+      EMTFHitExtraCollection& out_hits,
+      EMTFTrackExtraCollection& out_tracks
+  );
+
+  void process_single_bx(
+      int bx,
       const TriggerPrimitiveCollection& muon_primitives,
       EMTFHitExtraCollection& out_hits,
       EMTFTrackExtraCollection& out_tracks
@@ -22,12 +31,11 @@ public:
   int sector() const { return sector_; }
 
 private:
-  const edm::ParameterSet config_;
-  int verbose_;
+  int endcap_, sector_;
 
   int minBX_, maxBX_, bxWindow_;
 
-  int sector_;
+  bool includeNeighbor_;
 };
 
 #endif
