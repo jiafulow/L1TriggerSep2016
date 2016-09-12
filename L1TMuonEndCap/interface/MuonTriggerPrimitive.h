@@ -55,7 +55,7 @@ namespace L1TMuonEndCap {
       RPCData() : strip(0), layer(0), bx(0) {}
       unsigned strip;
       unsigned layer;
-      uint16_t bx;
+      int16_t bx;
     };
 
     struct CSCData {
@@ -124,7 +124,7 @@ namespace L1TMuonEndCap {
     TriggerPrimitive(const RPCDetId& detid,
                      const unsigned strip,
                      const unsigned layer,
-                     const uint16_t bx);
+                     const int16_t bx);
 
     //copy
     TriggerPrimitive(const TriggerPrimitive&);

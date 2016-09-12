@@ -112,7 +112,7 @@ TriggerPrimitive::TriggerPrimitive(const CSCDetId& detid,
 TriggerPrimitive::TriggerPrimitive(const RPCDetId& detid,
                                    const unsigned strip,
                                    const unsigned layer,
-                                   const uint16_t bx):
+                                   const int16_t bx):
   _id(detid),
   _subsystem(TriggerPrimitive::kRPC) {
   calculateRPCGlobalSector(detid,_globalsector,_subsector);
