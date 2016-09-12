@@ -106,6 +106,13 @@ TriggerPrimitive::TriggerPrimitive(const CSCDetId& detid,
   _csc.bx0     = digi.getBX0();
   _csc.syncErr = digi.getSyncErr();
   _csc.cscID   = digi.getCSCID();
+
+  // Use ME1/1a --> ring 4 convention
+  if (detid.station() == 1 && detid.ring() == 1 && digi.getStrip() >= 128) {
+    _id = CSCDetId(detid.endcap(), detid.station(), 4, detid.chamber(), detid.layer());
+    _csc.strip = digi.getStrip() - 128;
+    _csc.cscID = digi.getCSCID() + 9;
+  }
 }
 
 // constructor from RPC data
