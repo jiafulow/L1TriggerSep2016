@@ -12,7 +12,7 @@ public:
   void configure(
       int endcap, int sector,
       int minBX, int maxBX, int bxWindow,
-      bool includeNeighbor
+      bool includeNeighbor, bool duplicateWires
   );
 
   void process(
@@ -35,7 +35,7 @@ private:
 
   int minBX_, maxBX_, bxWindow_;
 
-  bool includeNeighbor_;
+  bool includeNeighbor_, duplicateWires_;
 };
 
 #endif

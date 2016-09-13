@@ -26,6 +26,7 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
 
   const edm::ParameterSet spPCParams16 = config_.getParameter<edm::ParameterSet>("spPCParams16");
   includeNeighbor_ = spPCParams16.getParameter<bool>("IncludeNeighbor");
+  duplicateWires_  = spPCParams16.getParameter<bool>("DuplicateWires");
 }
 
 EMTFTrackFinder::~EMTFTrackFinder() {
@@ -72,7 +73,7 @@ void EMTFTrackFinder::process(
       sector_processor.configure(
           iendcap, isector,
           minBX_, maxBX_, bxWindow_,
-          includeNeighbor_
+          includeNeighbor_, duplicateWires_
       );
 
       sector_processor.process(muon_primitives, out_hits, out_tracks);
@@ -82,7 +83,10 @@ void EMTFTrackFinder::process(
   if (verbose_ > 1) {
     std::cout << "Num of EMTFHitExtra: " << out_hits.size() << std::endl;
     for (const auto& h : out_hits) {
-      std::cout << h.getData().bx+3 << " " << h.getData().endcap << " " << h.getData().sector << " " << h.getData().subsector << " " << h.getData().station << " " << h.getData().valid << " " << h.getData().quality << " " << h.getData().pattern << " " << h.getData().wire << " " << h.getData().csc_ID << " " << h.getData().bend << " " << h.getData().strip << " neigh? " << h.getData().neighbor << std::endl;
+      int bx      = h.bx + 3;
+      int station = (h.pcs_station == 0 && h.subsector == 1) ? 1 : h.pcs_station;
+      int csc_ID  = h.pcs_chamber + 1;
+      std::cout << bx << " " << h.endcap << " " << h.sector << " " << h.subsector << " " << station << " " << h.valid << " " << h.quality << " " << h.pattern << " " << h.wire << " " << csc_ID << " " << h.bend << " " << h.strip << std::endl;
     }
   }
 

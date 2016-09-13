@@ -14,9 +14,17 @@ public:
   template<typename T>
   EMTFHitExtra convert(
       T tag,
-      bool is_neighbor,
+      int selected,
       const TriggerPrimitive& muon_primitive
   );
+
+  // CSC functions
+  void convert_csc_me11(EMTFHitExtra& conv_hit);
+
+  void convert_csc(EMTFHitExtra& conv_hit);
+
+  // RPC functions
+  void convert_rpc(EMTFHitExtra& conv_hit);
 
 private:
   int endcap_, sector_;

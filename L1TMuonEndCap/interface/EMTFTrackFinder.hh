@@ -30,7 +30,7 @@ private:
 
   int minBX_, maxBX_, bxWindow_;
 
-  bool includeNeighbor_;
+  bool includeNeighbor_, duplicateWires_;
 
 };
 

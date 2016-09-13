@@ -21,6 +21,7 @@ simEmtfDigis = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
     # Sector processor primitive-conversion parameters
     spPCParams16 = cms.PSet(
         IncludeNeighbor = cms.bool(True),
+        DuplicateWires = cms.bool(True),
     ),
 
     # Sector processor pattern-recognition parameters
