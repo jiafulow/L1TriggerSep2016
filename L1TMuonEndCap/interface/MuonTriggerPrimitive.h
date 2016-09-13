@@ -156,6 +156,10 @@ namespace L1TMuonEndCap {
       IDType detId() const { return IDType(_id); }
 
     // accessors to raw subsystem data
+    void setDTData(const DTData& dt) { _dt = dt; }
+    void setCSCData(const CSCData& csc) { _csc = csc; }
+    void setRPCData(const RPCData& rpc) { _rpc = rpc; }
+
     const DTData  getDTData()  const { return _dt;  }
     const CSCData getCSCData() const { return _csc; }
     const RPCData getRPCData() const { return _rpc; }
