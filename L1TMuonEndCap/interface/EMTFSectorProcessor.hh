@@ -6,10 +6,15 @@
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFCommon.hh"
 
 
+class EMTFSectorProcessorLUT;
+
 class EMTFSectorProcessor {
 public:
+  explicit EMTFSectorProcessor();
+  ~EMTFSectorProcessor();
 
   void configure(
+      const EMTFSectorProcessorLUT* lut,
       int endcap, int sector,
       int minBX, int maxBX, int bxWindow,
       bool includeNeighbor, bool duplicateWires
@@ -31,6 +36,8 @@ public:
   int sector() const { return sector_; }
 
 private:
+  const EMTFSectorProcessorLUT* lut_;
+
   int endcap_, sector_;
 
   int minBX_, maxBX_, bxWindow_;

@@ -1,5 +1,6 @@
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFSectorProcessor.hh"
 
+#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFSectorProcessorLUT.hh"
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPrimitiveSelection.hh"
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPrimitiveConversion.hh"
 
@@ -7,13 +8,24 @@
 #define NUM_RPC_CHAMBERS 6*9  // ??
 
 
+EMTFSectorProcessor::EMTFSectorProcessor() {
+
+}
+
+EMTFSectorProcessor::~EMTFSectorProcessor() {
+
+}
+
 void EMTFSectorProcessor::configure(
+    const EMTFSectorProcessorLUT* lut,
     int endcap, int sector,
     int minBX, int maxBX, int bxWindow,
     bool includeNeighbor, bool duplicateWires
 ) {
   assert(MIN_ENDCAP <= endcap && endcap <= MAX_ENDCAP);
   assert(MIN_TRIGSECTOR <= sector && sector <= MAX_TRIGSECTOR);
+
+  lut_ = lut;
 
   endcap_ = endcap;
   sector_ = sector;
@@ -32,9 +44,9 @@ void EMTFSectorProcessor::process(
     EMTFTrackExtraCollection& out_tracks
 ) {
 
-  int driftBX = bxWindow_ - 1;
+  int delayBX = bxWindow_ - 1;
 
-  for (int ibx = minBX_; ibx <= maxBX_ + driftBX; ibx++) {
+  for (int ibx = minBX_; ibx <= maxBX_ + delayBX; ibx++) {
     process_single_bx(ibx, muon_primitives, out_hits, out_tracks);
   }
 
@@ -117,7 +129,7 @@ void EMTFSectorProcessor::process_single_bx(
   EMTFHitExtraCollection conv_hits;
 
   EMTFPrimitiveConversion prim_conv;
-  prim_conv.configure(endcap_, sector_);
+  prim_conv.configure(lut_, endcap_, sector_);
 
   std::map<int, std::vector<TriggerPrimitive> >::const_iterator map_tp_it  = selected_csc_map.begin();
   std::map<int, std::vector<TriggerPrimitive> >::const_iterator map_tp_end = selected_csc_map.end();

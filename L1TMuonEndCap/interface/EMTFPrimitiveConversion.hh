@@ -4,9 +4,12 @@
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFCommon.hh"
 
 
+class EMTFSectorProcessorLUT;
+
 class EMTFPrimitiveConversion {
 public:
-  void configure(int endcap, int sector) {
+  void configure(const EMTFSectorProcessorLUT* lut, int endcap, int sector) {
+    lut_    = lut;
     endcap_ = endcap;
     sector_ = sector;
   }
@@ -27,6 +30,8 @@ public:
   void convert_rpc(EMTFHitExtra& conv_hit);
 
 private:
+  const EMTFSectorProcessorLUT* lut_;
+
   int endcap_, sector_;
 };
 

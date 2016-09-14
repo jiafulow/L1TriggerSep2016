@@ -3,14 +3,12 @@
 #include <iostream>
 #include <sstream>
 
-#include "FWCore/Utilities/interface/Exception.h"
-#include "FWCore/MessageLogger/interface/MessageLogger.h"
-
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFSubsystemCollector.hh"
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFSectorProcessor.hh"
 
 
 EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollector&& iConsumes) :
+    sector_processor_(new EMTFSectorProcessor()),
+    sector_processor_lut_(new EMTFSectorProcessorLUT()),
     config_(iConfig),
     tokenCSC_(iConsumes.consumes<CSCCorrelatedLCTDigiCollection>(iConfig.getParameter<edm::InputTag>("CSCInput"))),
     tokenRPC_(iConsumes.consumes<RPCDigiCollection>(iConfig.getParameter<edm::InputTag>("RPCInput"))),
@@ -18,6 +16,8 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
 {
   useCSC_      = iConfig.getParameter<bool>("CSCEnable");
   useRPC_      = iConfig.getParameter<bool>("RPCEnable");
+
+  ph_th_lut_   = iConfig.getParameter<std::string>("PhThLUT");
 
   const edm::ParameterSet spPRParams16 = config_.getParameter<edm::ParameterSet>("spPRParams16");
   minBX_    = spPRParams16.getParameter<int>("MinBX");
@@ -66,17 +66,18 @@ void EMTFTrackFinder::process(
   // ___________________________________________________________________________
   // Run each sector processor
 
-  EMTFSectorProcessor sector_processor;
+  sector_processor_lut_->read(ph_th_lut_);
 
   for (int iendcap = MIN_ENDCAP; iendcap <= MAX_ENDCAP; iendcap++) {
     for (int isector = MIN_TRIGSECTOR; isector <= MAX_TRIGSECTOR; isector++) {
-      sector_processor.configure(
+      sector_processor_->configure(
+          sector_processor_lut_.get(),
           iendcap, isector,
           minBX_, maxBX_, bxWindow_,
           includeNeighbor_, duplicateWires_
       );
 
-      sector_processor.process(muon_primitives, out_hits, out_tracks);
+      sector_processor_->process(muon_primitives, out_hits, out_tracks);
     }
   }
 

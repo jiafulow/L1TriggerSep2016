@@ -18,6 +18,9 @@ simEmtfDigis = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
     CSCEnable = cms.bool(True),
     RPCEnable = cms.bool(False),
 
+    # LUT files
+    PhThLUT = cms.string('ph_lut_v1'),
+
     # Sector processor primitive-conversion parameters
     spPCParams16 = cms.PSet(
         IncludeNeighbor = cms.bool(True),

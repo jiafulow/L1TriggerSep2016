@@ -4,6 +4,8 @@
 #include "DataFormats/MuonDetId/interface/CSCDetId.h"
 #include "DataFormats/MuonDetId/interface/RPCDetId.h"
 
+#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFSectorProcessorLUT.hh"
+
 using CSCData = TriggerPrimitive::CSCData;
 using RPCData = TriggerPrimitive::RPCData;
 
@@ -105,6 +107,7 @@ void EMTFPrimitiveConversion::convert_csc_me11(EMTFHitExtra& conv_hit) {
 
   // Defined as in firmware
   int fw_endcap  = (conv_hit.endcap-1);
+  int fw_sector  = (conv_hit.sector-1);
   int fw_station = (conv_hit.subsector-1);
   int fw_cscid   = is_neighbor ? 12 : (is_me11a ? (conv_hit.csc_ID-1-9) : (conv_hit.csc_ID-1));
   int fw_hstrip  = conv_hit.strip;  // it is half-strip, despite the name
@@ -216,6 +219,7 @@ void EMTFPrimitiveConversion::convert_csc_me11(EMTFHitExtra& conv_hit) {
   if (th_tmp > th_coverage)
     th_tmp = th_coverage;  // limit at the top
 
+  // theta precision: 0.285 degree
   int th = th_tmp + ph_th_params[4];
 
   // Protect against invalid value
@@ -364,6 +368,7 @@ void EMTFPrimitiveConversion::convert_csc(EMTFHitExtra& conv_hit) {
 
   // Defined as in firmware
   int fw_endcap  = (conv_hit.endcap-1);
+  int fw_sector  = (conv_hit.sector-1);
   int fw_station = (conv_hit.station);
   int fw_cscid   = is_neighbor ? (fw_station == 1 ? conv_hit.csc_ID-1+12 : ((conv_hit.csc_ID-1-1)%2) + 9) : (conv_hit.csc_ID-1);
   int fw_hstrip  = conv_hit.strip;  // it is half-strip, despite the name
@@ -457,6 +462,7 @@ void EMTFPrimitiveConversion::convert_csc(EMTFHitExtra& conv_hit) {
 
   int th_tmp = th_orig;
 
+  // theta precision: 0.285 degree
   int th = th_tmp + ph_th_params[1];
 
   // Protect against invalid value
