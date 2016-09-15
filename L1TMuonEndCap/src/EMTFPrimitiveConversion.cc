@@ -36,10 +36,19 @@ EMTFHitExtra EMTFPrimitiveConversion::convert(
   if (tp_station == 1 && tp_ring == 1)
     assert(tp_data.strip <= 128);  // using ME1/1a --> ring 4 convention
 
+  //
   int pcs_station  = selected / 9;
   int pcs_chamber  = selected % 9;
 
+  bool is_me1      = (tp_station == 1);
   bool is_me11     = (tp_station == 1 && (tp_ring == 1 || tp_ring == 4));
+  bool is_me11a    = (tp_station == 1 && tp_ring == 4);
+  bool is_neighbor = (pcs_station == 5);
+
+  int cscn_ID      = is_me11a ? tp_csc_ID - 9 : tp_csc_ID;
+  if (is_neighbor) {
+    cscn_ID = is_me1 ? (cscn_ID/3 + 12) : (cscn_ID <= 3 ? 10 : 11);
+  }
 
 
   EMTFHitExtra conv_hit;
@@ -50,6 +59,7 @@ EMTFHitExtra EMTFPrimitiveConversion::convert(
   conv_hit.sector      = tp_sector;
   conv_hit.subsector   = tp_subsector;
   conv_hit.csc_ID      = tp_csc_ID;
+  conv_hit.cscn_ID     = cscn_ID;
 
   conv_hit.bx          = tp_bx - 6;
   conv_hit.subsystem   = TriggerPrimitive::kCSC;
@@ -89,6 +99,11 @@ EMTFHitExtra EMTFPrimitiveConversion::convert(
   return conv_hit;
 }
 
+const EMTFSectorProcessorLUT& EMTFPrimitiveConversion::lut() const {
+  assert(lut_ != nullptr);
+  return *lut_;
+}
+
 // CSC functions
 void EMTFPrimitiveConversion::convert_csc_me11(EMTFHitExtra& conv_hit) {
   assert(conv_hit.station == 1);
@@ -103,13 +118,12 @@ void EMTFPrimitiveConversion::convert_csc_me11(EMTFHitExtra& conv_hit) {
   assert(conv_hit.pattern <= 10);
 
   bool is_me11a = (conv_hit.station == 1 && conv_hit.ring == 4);
-  bool is_neighbor = (conv_hit.pcs_station == 5);
 
   // Defined as in firmware
   int fw_endcap  = (conv_hit.endcap-1);
   int fw_sector  = (conv_hit.sector-1);
   int fw_station = (conv_hit.subsector-1);
-  int fw_cscid   = is_neighbor ? 12 : (is_me11a ? (conv_hit.csc_ID-1-9) : (conv_hit.csc_ID-1));
+  int fw_cscid   = (conv_hit.cscn_ID-1);
   int fw_hstrip  = conv_hit.strip;  // it is half-strip, despite the name
   int fw_wg      = conv_hit.wire;   // it is wiregroup, despite the name
 
@@ -132,32 +146,6 @@ void EMTFPrimitiveConversion::convert_csc_me11(EMTFHitExtra& conv_hit) {
       ph_coverage = 20;
   }
 
-  // CLCT pattern correction array
-  //{0.0, 0.0, -0.60,  0.60, -0.64,  0.64, -0.23,  0.23, -0.21,  0.21, 0.0}
-  // 0    0    -5      +5    -5      +5    -2      +2    -2      +2    0
-  static const int clct_pat_corr_lut[11] = {
-    0, 0, -5, +5, -5, +5, -2, +2, -2, +2, 0
-  };
-
-  // Programmable parameters for initial position and displacement
-  // [0] = ph_init_b
-  // [1] = ph_disp_b
-  // [2] = ph_init_a
-  // [3] = ph_disp_a
-  // [4] = th_init
-  // [5] = th_disp
-  static const int ph_th_params[6] = {
-    0, 0, 0, 0, 0, 0  //FIXME
-  };
-
-  // Theta LUT, takes wiregroup, returns theta
-  static const int th_mem[128] = {0};
-
-  // Theta correction LUT, for ME1/1 only
-  // takes index: {wiregroup(2 MS bits), half-strip(5-bit for these chambers)}
-  // returns theta correction for tilted wires
-  static const int th_corr_mem[128] = {0};
-
   int th_negative = 50;
   int th_coverage = 45;
 
@@ -168,7 +156,7 @@ void EMTFPrimitiveConversion::convert_csc_me11(EMTFHitExtra& conv_hit) {
   int eighth_strip = fw_hstrip << 2;
 
   // Apply phi correction from CLCT pattern number
-  int clct_pat_corr = clct_pat_corr_lut[conv_hit.pattern];
+  int clct_pat_corr = lut().get_ph_patt_corr(conv_hit.pattern);
   eighth_strip += (clct_pat_corr >> 1);  // uses only 2 bits of pattern correction
 
   // Multiplicative factor for phi
@@ -182,31 +170,24 @@ void EMTFPrimitiveConversion::convert_csc_me11(EMTFHitExtra& conv_hit) {
   // zone phi precision: 0.53333 deg
   // full phi precision: 0.01666 deg
   int ph_tmp = (eighth_strip * factor) >> 10;
-  int fph = 0;     // initial ph for this chamber scaled to 0.1333 deg
-  int ph_hit = 0;
 
   if (ph_reverse)
     ph_tmp = -ph_tmp;
 
-  if (is_me11a)
-    fph = ph_th_params[2] + ph_tmp;
-  else
-    fph = ph_th_params[0] + ph_tmp;
+  int fph = lut().get_ph_init(fw_endcap, fw_sector, fw_station, fw_cscid, is_me11a);
+  fph = fph + ph_tmp;
 
-  if (is_me11a)
-    ph_hit = (ph_th_params[2+1] >> 1) + (ph_tmp >> 5) + ph_coverage;
-  else
-    ph_hit = (ph_th_params[0+1] >> 1) + (ph_tmp >> 5) + ph_coverage;
-
+  int ph_hit = lut().get_ph_disp(fw_endcap, fw_sector, fw_station, fw_cscid, is_me11a);
+  ph_hit = (ph_hit >> 1) + (ph_tmp >> 5) + ph_coverage;
 
   // ___________________________________________________________________________
   // th conversion
 
   int th_orig_index = (fw_wg & 0x7f);
-  int th_orig = th_mem[th_orig_index];
+  int th_orig = lut().get_th_lut(fw_endcap, fw_sector, fw_station, fw_cscid, th_orig_index, is_me11a);
 
   int th_corr_index = (((fw_wg >> 4) & 0x3) << 5) + ((eighth_strip >> 4) & 0x1f);
-  int th_corr = th_corr_mem[th_corr_index];
+  int th_corr = lut().get_th_corr_lut(fw_endcap, fw_sector, fw_station, fw_cscid, th_corr_index, is_me11a);
   if (ph_reverse)
     th_corr = -th_corr;
 
@@ -220,7 +201,8 @@ void EMTFPrimitiveConversion::convert_csc_me11(EMTFHitExtra& conv_hit) {
     th_tmp = th_coverage;  // limit at the top
 
   // theta precision: 0.285 degree
-  int th = th_tmp + ph_th_params[4];
+  int th = lut().get_th_init(fw_endcap, fw_sector, fw_station, fw_cscid, is_me11a);
+  th = th + th_tmp;
 
   // Protect against invalid value
   if (th == 0)
@@ -331,16 +313,8 @@ void EMTFPrimitiveConversion::convert_csc_me11(EMTFHitExtra& conv_hit) {
     }
   }
 
-  static const int ph_offsets[6][9] = {
-    {39,57,76,39,58,76,41,60,79},
-    {95,114,132,95,114,133,98,116,135},
-    {38,76,113,39,58,76,95,114,132},
-    {38,76,113,39,58,76,95,114,132},
-    {38,76,113,38,57,76,95,113,132},
-    {21,21,23,1,21,1,21,1,20}
-  };
-
-  int zone_hit = ph_offsets[pcs_station][pcs_chamber] + ph_hit;
+  int zone_hit = lut().get_ph_zone_offset(pcs_station, pcs_chamber);
+  zone_hit += ph_hit;
 
   // ___________________________________________________________________________
   // Output
@@ -364,13 +338,11 @@ void EMTFPrimitiveConversion::convert_csc(EMTFHitExtra& conv_hit) {
   assert(conv_hit.valid == true);
   assert(conv_hit.pattern <= 10);
 
-  bool is_neighbor = (conv_hit.pcs_station == 5);
-
   // Defined as in firmware
   int fw_endcap  = (conv_hit.endcap-1);
   int fw_sector  = (conv_hit.sector-1);
   int fw_station = (conv_hit.station);
-  int fw_cscid   = is_neighbor ? (fw_station == 1 ? conv_hit.csc_ID-1+12 : ((conv_hit.csc_ID-1-1)%2) + 9) : (conv_hit.csc_ID-1);
+  int fw_cscid   = (conv_hit.cscn_ID-1);
   int fw_hstrip  = conv_hit.strip;  // it is half-strip, despite the name
   int fw_wg      = conv_hit.wire;   // it is wiregroup, despite the name
 
@@ -397,27 +369,9 @@ void EMTFPrimitiveConversion::convert_csc(EMTFHitExtra& conv_hit) {
   if (
       (fw_station <= 1) || // ME1
       (fw_station >= 2 && ((fw_cscid >= 3 && fw_cscid <= 8) || fw_cscid == 10))  // ME2,3,4/2
-  )
+  ) {
     is_10degree = true;
-
-  // CLCT pattern correction array
-  //{0.0, 0.0, -0.60,  0.60, -0.64,  0.64, -0.23,  0.23, -0.21,  0.21, 0.0}
-  // 0    0    -5      +5    -5      +5    -2      +2    -2      +2    0
-  static const int clct_pat_corr_lut[11] = {
-    0, 0, -5, +5, -5, +5, -2, +2, -2, +2, 0
-  };
-
-  // Programmable parameters for initial position and displacement
-  // [0] = ph_init
-  // [1] = th_init
-  // [2] = ph_disp
-  // [3] = th_disp
-  static const int ph_th_params[4] = {
-    0, 0, 0, 0 //FIXME
-  };
-
-  // Theta LUT, takes wiregroup, returns theta
-  static const int th_mem[128] = {0};
+  }
 
   // ___________________________________________________________________________
   // ph conversion
@@ -426,7 +380,7 @@ void EMTFPrimitiveConversion::convert_csc(EMTFHitExtra& conv_hit) {
   int eighth_strip = 0;
 
   // Apply phi correction from CLCT pattern number
-  int clct_pat_corr = clct_pat_corr_lut[conv_hit.pattern];
+  int clct_pat_corr = lut().get_ph_patt_corr(conv_hit.pattern);
 
   if (is_10degree) {
     eighth_strip = fw_hstrip << 2;  // full precision, uses only 2 bits of pattern correction
@@ -445,25 +399,27 @@ void EMTFPrimitiveConversion::convert_csc(EMTFHitExtra& conv_hit) {
   // zone phi precision: 0.53333 deg
   // full phi precision: 0.01666 deg
   int ph_tmp = (eighth_strip * factor) >> 10;
-  int fph = 0;     // initial ph for this chamber scaled to 0.1333 deg
-  int ph_hit = 0;
 
   if (ph_reverse)
     ph_tmp = -ph_tmp;
 
-  fph = ph_th_params[0] + ph_tmp;
-  ph_hit = (ph_th_params[2] >> 1) + (ph_tmp >> 5) + ph_coverage;
+  int fph = lut().get_ph_init(fw_endcap, fw_sector, fw_station, fw_cscid, false);
+  fph = fph + ph_tmp;
+
+  int ph_hit = lut().get_ph_disp(fw_endcap, fw_sector, fw_station, fw_cscid, false);
+  ph_hit = (ph_hit >> 1) + (ph_tmp >> 5) + ph_coverage;
 
   // ___________________________________________________________________________
   // th conversion
 
   int th_orig_index = (fw_wg & 0x7f);
-  int th_orig = th_mem[th_orig_index];
+  int th_orig = lut().get_th_lut(fw_endcap, fw_sector, fw_station, fw_cscid, th_orig_index, false);
 
   int th_tmp = th_orig;
 
   // theta precision: 0.285 degree
-  int th = th_tmp + ph_th_params[1];
+  int th = lut().get_th_init(fw_endcap, fw_sector, fw_station, fw_cscid, false);
+  th = th + th_tmp;
 
   // Protect against invalid value
   if (th == 0)
@@ -574,16 +530,8 @@ void EMTFPrimitiveConversion::convert_csc(EMTFHitExtra& conv_hit) {
     }
   }
 
-  static const int ph_offsets[6][9] = {
-    {39,57,76,39,58,76,41,60,79},
-    {95,114,132,95,114,133,98,116,135},
-    {38,76,113,39,58,76,95,114,132},
-    {38,76,113,39,58,76,95,114,132},
-    {38,76,113,38,57,76,95,113,132},
-    {21,21,23,1,21,1,21,1,20}
-  };
-
-  int zone_hit = ph_offsets[pcs_station][pcs_chamber] + ph_hit;
+  int zone_hit = lut().get_ph_zone_offset(pcs_station, pcs_chamber);
+  zone_hit += ph_hit;
 
   // ___________________________________________________________________________
   // Output

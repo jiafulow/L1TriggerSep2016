@@ -21,6 +21,8 @@ public:
       const TriggerPrimitive& muon_primitive
   );
 
+  const EMTFSectorProcessorLUT& lut() const;
+
   // CSC functions
   void convert_csc_me11(EMTFHitExtra& conv_hit);
 
