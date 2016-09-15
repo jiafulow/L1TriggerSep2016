@@ -85,9 +85,14 @@ void EMTFTrackFinder::process(
     std::cout << "Num of EMTFHitExtra: " << out_hits.size() << std::endl;
     for (const auto& h : out_hits) {
       int bx      = h.bx + 3;
-      int station = (h.pcs_station == 0 && h.subsector == 1) ? 1 : h.pcs_station;
-      int csc_ID  = h.pcs_chamber + 1;
+      int station = (h.pc_station == 0 && h.subsector == 1) ? 1 : h.pc_station;
+      int csc_ID  = h.pc_chamber + 1;
       std::cout << bx << " " << h.endcap << " " << h.sector << " " << h.subsector << " " << station << " " << h.valid << " " << h.quality << " " << h.pattern << " " << h.wire << " " << csc_ID << " " << h.bend << " " << h.strip << std::endl;
+    }
+
+    std::cout << "Primitive conversion: " << std::endl;
+    for (const auto& h : out_hits) {
+      std::cout << h.pc_station << " " << h.pc_chamber << " " << h.phi_fp << " " << h.theta_fp << " " << (1ul<<h.ph_hit) << " " << h.phzvl << std::endl;
     }
   }
 

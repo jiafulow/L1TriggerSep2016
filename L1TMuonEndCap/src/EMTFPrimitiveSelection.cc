@@ -134,7 +134,7 @@ int EMTFPrimitiveSelection::get_index_csc(int tp_subsector, int tp_station, int 
     } else if (tp_station == 1) {  // ME1/1b, ME1/2, ME1/3
       selected = (5) * 9 + (tp_csc_ID-1)/3;
     } else {  // ME2,3,4
-      selected = (5) * 9 + (tp_station) * 2 - 1 + (tp_csc_ID-1==6);
+      selected = (5) * 9 + (tp_station) * 2 - 1 + (tp_csc_ID-1 < 3 ? 0 : 1);
     }
   }
 

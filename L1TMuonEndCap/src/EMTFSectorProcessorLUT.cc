@@ -21,65 +21,68 @@ EMTFSectorProcessorLUT::~EMTFSectorProcessorLUT() {
 void EMTFSectorProcessorLUT::read(const std::string& ph_th_lut) {
   if (ok_)  return;
 
-  std::string ph_th_lut_dir = "L1Trigger/L1TMuon/data/emtf_luts/" + ph_th_lut + "/";
+  //std::string ph_th_lut_dir = "L1Trigger/L1TMuon/data/emtf_luts/" + ph_th_lut + "/";
+  std::string ph_th_lut_dir = "L1TriggerSep2016/L1TMuonEndCap/data/emtf_luts/" + ph_th_lut + "/";
 
-  read_file(ph_th_lut_dir+"ph_init_neighbor.txt",      ph_init_neighbor_);
-  read_file(ph_th_lut_dir+"ph_disp_neighbor.txt",      ph_disp_neighbor_);
-  read_file(ph_th_lut_dir+"th_init_neighbor.txt",      th_init_neighbor_);
-  read_file(ph_th_lut_dir+"th_disp_neighbor.txt",      th_disp_neighbor_);
-  read_file(ph_th_lut_dir+"th_lut_st1_neighbor.txt",   th_lut_st1_neighbor_);
-  read_file(ph_th_lut_dir+"th_lut_st234_neighbor.txt", th_lut_st234_neighbor_);
-  read_file(ph_th_lut_dir+"th_corr_neighbor.txt",      th_corr_neighbor_);
+  read_file(ph_th_lut_dir+"ph_init_neighbor.txt",     ph_init_neighbor_);
+  read_file(ph_th_lut_dir+"ph_disp_neighbor.txt",     ph_disp_neighbor_);
+  read_file(ph_th_lut_dir+"th_init_neighbor.txt",     th_init_neighbor_);
+  read_file(ph_th_lut_dir+"th_disp_neighbor.txt",     th_disp_neighbor_);
+  read_file(ph_th_lut_dir+"th_lut_neighbor.txt",      th_lut_neighbor_);
+  read_file(ph_th_lut_dir+"th_corr_lut_neighbor.txt", th_corr_lut_neighbor_);
 
-  if (ph_init_neighbor_.size() != 12*5*16) {  // [sector_12][station_5][chamber_15,ME11a]
+  if (ph_init_neighbor_.size() != 2*6*61) {  // [endcap_2][sector_6][chamber_61]
     throw cms::Exception("EMTFSectorProcessorLUT")
-        << "Expected ph_init_neighbor_ to get " << 12*5*16 << " values, "
+        << "Expected ph_init_neighbor_ to get " << 2*6*61 << " values, "
         << "got " << ph_init_neighbor_.size() << " values.";
   }
 
-  if (ph_disp_neighbor_.size() != 12*61) {  // [sector_12][ME1sub1_15,ME1sub2_12,ME2_11,ME3_11,ME4_11,extra_1?]
+  if (ph_disp_neighbor_.size() != 2*6*61) {  // [endcap_2][sector_6][chamber_61]
     throw cms::Exception("EMTFSectorProcessorLUT")
-        << "Expected ph_disp_neighbor_ to get " << 12*61 << " values, "
+        << "Expected ph_disp_neighbor_ to get " << 2*6*61 << " values, "
         << "got " << ph_disp_neighbor_.size() << " values.";
   }
 
-  if (th_init_neighbor_.size() != 12*61) {  // [sector_12][ME1sub1_15,ME1sub2_12,ME2_11,ME3_11,ME4_11,extra_1?]
+  if (th_init_neighbor_.size() != 2*6*61) {  // [endcap_2][sector_6][chamber_61]
     throw cms::Exception("EMTFSectorProcessorLUT")
-        << "Expected th_init_neighbor_ to get " << 12*61 << " values, "
+        << "Expected th_init_neighbor_ to get " << 2*6*61 << " values, "
         << "got " << th_init_neighbor_.size() << " values.";
   }
 
-  if (th_disp_neighbor_.size() != 12*61) {  // [sector_12][ME1sub1_15,ME1sub2_12,ME2_11,ME3_11,ME4_11,extra_1?]
+  if (th_disp_neighbor_.size() != 2*6*61) {  // [endcap_2][sector_6][chamber_61]
     throw cms::Exception("EMTFSectorProcessorLUT")
-        << "Expected th_disp_neighbor_ to get " << 12*61 << " values, "
+        << "Expected th_disp_neighbor_ to get " << 2*6*61 << " values, "
         << "got " << th_disp_neighbor_.size() << " values.";
   }
 
-  if (th_lut_st1_neighbor_.size() != 2*12*16*64) {  // [subsector_2][sector_12][chamber_15,ME11a][wire]
+  if (th_lut_neighbor_.size() != 2*6*61*128) {  // [endcap_2][sector_6][chamber_61][wire_128]
     throw cms::Exception("EMTFSectorProcessorLUT")
-        << "Expected th_lut_st1_neighbor_ to get " << 2*12*16*64 << " values, "
-        << "got " << th_lut_st1_neighbor_.size() << " values.";
+        << "Expected th_lut_neighbor_ to get " << 2*6*61*128 << " values, "
+        << "got " << th_lut_neighbor_.size() << " values.";
   }
 
-  if (th_lut_st234_neighbor_.size() != 3*12*11*112) {  // [station_3][sector_12][chamber_11][wire]
+  if (th_corr_lut_neighbor_.size() != 2*6*7*128) {  // [endcap_2][sector_6][chamber_61][strip_wire_128]
     throw cms::Exception("EMTFSectorProcessorLUT")
-        << "Expected th_lut_st234_neighbor_ to get " << 3*12*11*112 << " values, "
-        << "got " << th_lut_st234_neighbor_.size() << " values.";
-  }
-
-  if (th_corr_neighbor_.size() != 2*12*4*96) {  // [subsector_2][sector_12][chamber_ME11_4][strip_wire]
-    throw cms::Exception("EMTFSectorProcessorLUT")
-        << "Expected th_corr_neighbor_ to get " << 2*12*4*96 << " values, "
-        << "got " << th_corr_neighbor_.size() << " values.";
+        << "Expected th_corr_lut_neighbor_ to get " << 2*6*7*128 << " values, "
+        << "got " << th_corr_lut_neighbor_.size() << " values.";
   }
 
   ph_patt_corr_ = {
-    0, 0, -5, +5, -5, +5, -2, +2, -2, +2, 0
+    0, 0, 5, 5, 5, 5, 2, 2, 2, 2, 0
   };
   if (ph_patt_corr_.size() != 11) {
     throw cms::Exception("EMTFSectorProcessorLUT")
         << "Expected ph_patt_corr_ to get " << 11 << " values, "
         << "got " << ph_patt_corr_.size() << " values.";
+  }
+
+  ph_patt_corr_sign_ = {
+    0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0
+  };
+  if (ph_patt_corr_sign_.size() != 11) {
+    throw cms::Exception("EMTFSectorProcessorLUT")
+        << "Expected ph_patt_corr_sign_ to get " << 11 << " values, "
+        << "got " << ph_patt_corr_sign_.size() << " values.";
   }
 
   ph_zone_offset_ = {
@@ -100,121 +103,66 @@ void EMTFSectorProcessorLUT::read(const std::string& ph_th_lut) {
   return;
 }
 
-uint32_t EMTFSectorProcessorLUT::get_ph_init(int fw_endcap, int fw_sector, int fw_station, int fw_cscid, bool is_me11a) const {
-  if (fw_station <= 1) {
-    fw_station = (fw_cscid == 12) ? 0 : fw_station;  // if neighbor, else
-
-    if (is_me11a) {
-      fw_cscid = (fw_cscid == 12) ? 15 : fw_cscid + 9;  // if neighbor, else
-    }
-  }
-
-  size_t index = fw_endcap * 6 + fw_sector;
-  index = index * 5 + fw_station;
-  index = index * 16 + fw_cscid;
+uint32_t EMTFSectorProcessorLUT::get_ph_init(int fw_endcap, int fw_sector, int pc_lut_id) const {
+  size_t index = (fw_endcap * 6 + fw_sector) * 61 + pc_lut_id;
   return ph_init_neighbor_.at(index);
 }
 
-uint32_t EMTFSectorProcessorLUT::get_ph_disp(int fw_endcap, int fw_sector, int fw_station, int fw_cscid, bool is_me11a) const {
-  //FIXME: ME1/1a? ME1 substation?
-  int x = fw_cscid;
-  if (fw_station == 1) {
-    x += 15;
-  } else if (fw_station == 2) {
-    x += 15+12;
-  } else if (fw_station == 3) {
-    x += 15+12+11;
-  } else if (fw_station == 4) {
-    x += 15+12+11+11;
-  }
-
-  size_t index = fw_endcap * 6 + fw_sector;
-  index = index * 61 + x;
+uint32_t EMTFSectorProcessorLUT::get_ph_disp(int fw_endcap, int fw_sector, int pc_lut_id) const {
+  size_t index = (fw_endcap * 6 + fw_sector) * 61 + pc_lut_id;
   return ph_disp_neighbor_.at(index);
 }
 
-uint32_t EMTFSectorProcessorLUT::get_th_init(int fw_endcap, int fw_sector, int fw_station, int fw_cscid, bool is_me11a) const {
-  //FIXME: ME1/1a? ME1 substation?
-  int x = fw_cscid;
-  if (fw_station == 1) {
-    x += 15;
-  } else if (fw_station == 2) {
-    x += 15+12;
-  } else if (fw_station == 3) {
-    x += 15+12+11;
-  } else if (fw_station == 4) {
-    x += 15+12+11+11;
-  }
-
-  size_t index = fw_endcap * 6 + fw_sector;
-  index = index * 61 + x;
+uint32_t EMTFSectorProcessorLUT::get_th_init(int fw_endcap, int fw_sector, int pc_lut_id) const {
+  size_t index = (fw_endcap * 6 + fw_sector) * 61 + pc_lut_id;
   return th_init_neighbor_.at(index);
 }
 
-uint32_t EMTFSectorProcessorLUT::get_th_disp(int fw_endcap, int fw_sector, int fw_station, int fw_cscid, bool is_me11a) const {
-  //FIXME: ME1/1a? ME1 substation?
-  int x = fw_cscid;
-  if (fw_station == 1) {
-    x += 15;
-  } else if (fw_station == 2) {
-    x += 15+12;
-  } else if (fw_station == 3) {
-    x += 15+12+11;
-  } else if (fw_station == 4) {
-    x += 15+12+11+11;
-  }
-
-  size_t index = fw_endcap * 6 + fw_sector;
-  index = index * 61 + x;
+uint32_t EMTFSectorProcessorLUT::get_th_disp(int fw_endcap, int fw_sector, int pc_lut_id) const {
+  size_t index = (fw_endcap * 6 + fw_sector) * 61 + pc_lut_id;
   return th_disp_neighbor_.at(index);
 }
 
-uint32_t EMTFSectorProcessorLUT::get_th_lut(int fw_endcap, int fw_sector, int fw_station, int fw_cscid, int wire, bool is_me11a) const {
-  if (fw_station <= 1) {
-    fw_station = (fw_cscid == 12) ? 0 : fw_station;  // if neighbor, else
-
-    if (is_me11a) {
-      fw_cscid = (fw_cscid == 12) ? 15 : fw_cscid + 9;  // if neighbor, else
-    }
-
-    size_t index = fw_station;
-    index = index * 12 + fw_endcap * 6 + fw_sector;
-    index = index * 16 + fw_cscid;
-    index = index * 64 + wire;
-    return th_lut_st1_neighbor_.at(index);
-
-  } else {
-    size_t index = fw_station-2;
-    index = index * 12 + fw_endcap * 6 + fw_sector;
-    index = index * 11 + fw_cscid;
-    index = index * 112 + wire;
-    return th_lut_st234_neighbor_.at(index);
-  }
+uint32_t EMTFSectorProcessorLUT::get_th_lut(int fw_endcap, int fw_sector, int pc_lut_id, int pc_wire_id) const {
+  size_t index = ((fw_endcap * 6 + fw_sector) * 61 + pc_lut_id) * 128 + pc_wire_id;
+  return th_lut_neighbor_.at(index);
 }
 
-uint32_t EMTFSectorProcessorLUT::get_th_corr_lut(int fw_endcap, int fw_sector, int fw_station, int fw_cscid, int strip_wire, bool is_me11a) const {
-  if (fw_station <= 1 && (fw_cscid <= 3 || fw_cscid == 12)) {  // ME1/1
-    fw_station = (fw_cscid == 12) ? 0 : fw_station;  // if neighbor, else
+uint32_t EMTFSectorProcessorLUT::get_th_corr_lut(int fw_endcap, int fw_sector, int pc_lut_id, int pc_wire_strip_id) const {
+  int pc_lut_id2 = pc_lut_id;
 
-    int x = (fw_cscid == 12) ? 4 : fw_cscid;  // if neighbor, else
+  // Make ME1/1a the same as ME1/1b
+  if ((9 <= pc_lut_id2 && pc_lut_id2 < 12) || (25 <= pc_lut_id2 && pc_lut_id2 < 28))
+    pc_lut_id2 -= 9;
+  // Make ME1/1a neighbor the same as ME1/1b
+  if (pc_lut_id2 == 15)
+    pc_lut_id2 -= 3;
 
-    size_t index = fw_station;
-    index = index * 12 + fw_endcap * 6 + fw_sector;
-    index = index * 4 + x;
-    index = index * 96 + strip_wire;
-    return th_corr_neighbor_.at(index);
-
+  if (pc_lut_id2 <= 3) {
+    pc_lut_id2 -= 0;
+  } else if (pc_lut_id2 == 12) {
+    pc_lut_id2 -= 9;
+  } else if (16 <= pc_lut_id2 && pc_lut_id2 < 19) {
+    pc_lut_id2 -= 12;
   } else {
-    return 0;
+    throw cms::Exception("EMTFSectorProcessorLUT")
+      << "get_th_corr_lut(): out of range pc_lut_id: " << pc_lut_id;
   }
+
+  size_t index = ((fw_endcap * 6 + fw_sector) * 7 + pc_lut_id2) * 128 + pc_wire_strip_id;
+  return th_corr_lut_neighbor_.at(index);
 }
 
-int32_t EMTFSectorProcessorLUT::get_ph_patt_corr(int pattern) const {
+uint32_t EMTFSectorProcessorLUT::get_ph_patt_corr(int pattern) const {
   return ph_patt_corr_.at(pattern);
 }
 
-uint32_t EMTFSectorProcessorLUT::get_ph_zone_offset(int pcs_station, int pcs_chamber) const {
-  size_t index = pcs_station * 9 + pcs_chamber;
+uint32_t EMTFSectorProcessorLUT::get_ph_patt_corr_sign(int pattern) const {
+  return ph_patt_corr_sign_.at(pattern);
+}
+
+uint32_t EMTFSectorProcessorLUT::get_ph_zone_offset(int pc_station, int pc_chamber) const {
+  size_t index = pc_station * 9 + pc_chamber;
   return ph_zone_offset_.at(index);
 }
 

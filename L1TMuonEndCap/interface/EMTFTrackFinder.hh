@@ -30,8 +30,8 @@ private:
   std::unique_ptr<EMTFSectorProcessorLUT> sector_processor_lut_;
 
   const edm::ParameterSet config_;
-  edm::EDGetToken tokenCSC_;
-  edm::EDGetToken tokenRPC_;
+  const edm::EDGetToken tokenCSC_;
+  const edm::EDGetToken tokenRPC_;
   int verbose_;
 
   bool useCSC_, useRPC_;
