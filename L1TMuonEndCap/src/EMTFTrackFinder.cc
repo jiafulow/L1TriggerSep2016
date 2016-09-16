@@ -83,11 +83,13 @@ void EMTFTrackFinder::process(
 
   if (verbose_ > 1) {
     std::cout << "Num of EMTFHitExtra: " << out_hits.size() << std::endl;
+    std::cout << "bx e s ss st vf ql cp wg id bd hs" << std::endl;
     for (const auto& h : out_hits) {
       int bx      = h.bx + 3;
       int station = (h.pc_station == 0 && h.subsector == 1) ? 1 : h.pc_station;
-      int csc_ID  = h.pc_chamber + 1;
-      std::cout << bx << " " << h.endcap << " " << h.sector << " " << h.subsector << " " << station << " " << h.valid << " " << h.quality << " " << h.pattern << " " << h.wire << " " << csc_ID << " " << h.bend << " " << h.strip << std::endl;
+      int chamber = h.pc_chamber + 1;
+      int strip   = (h.station == 1 && h.ring == 4) ? h.strip + 128 : h.strip;  // ME1/1a
+      std::cout << bx << " " << h.endcap << " " << h.sector << " " << h.subsector << " " << station << " " << h.valid << " " << h.quality << " " << h.pattern << " " << h.wire << " " << chamber << " " << h.bend << " " << strip << std::endl;
     }
 
     std::cout << "Primitive conversion: " << std::endl;

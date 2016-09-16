@@ -24,8 +24,6 @@ public:
   const EMTFSectorProcessorLUT& lut() const;
 
   // CSC functions
-  void convert_csc_me11(EMTFHitExtra& conv_hit);
-
   void convert_csc(EMTFHitExtra& conv_hit);
 
   // RPC functions
