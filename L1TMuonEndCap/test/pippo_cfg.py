@@ -27,14 +27,25 @@ process.source = cms.Source("PoolSource",
     fileNames = cms.untracked.vstring(options.inputFiles),
 )
 
+# Output module
+process.out = cms.OutputModule("PoolOutputModule",
+    fileName = cms.untracked.string(options.outputFile),
+    outputCommands = cms.untracked.vstring(
+        "drop *",
+        "keep *_simEmtfDigis_*_*",
+        "keep *_simEmtfDigisData_*_*",
+    )
+)
+
 process.options = cms.untracked.PSet()
 
 
 # simEmtfDigis
-process.load('L1TriggerSep2016.L1TMuonEndCap.simEmtfDigis_cfi')
+process.load("L1TriggerSep2016.L1TMuonEndCap.simEmtfDigis_cfi")
 process.simEmtfDigisData.verbosity = 2
 
 process.p = cms.Path(process.simEmtfDigisData)
+process.e = cms.EndPath(process.out)
 
-process.schedule = cms.Schedule(process.p)
+process.schedule = cms.Schedule(process.p, process.e)
 

@@ -1,0 +1,6 @@
+<environment>
+  <bin name="TestL1TriggerSep2016L1TMuonEndCap" file="TestDriver.cpp">
+    <flags TEST_RUNNER_ARGS=" /bin/bash L1TriggerSep2016/L1TMuonEndCap/test runtests.sh"/>
+    <use name="FWCore/Utilities"/>
+  </bin>
+</environment>
