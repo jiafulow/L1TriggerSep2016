@@ -20,9 +20,12 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
   ph_th_lut_   = iConfig.getParameter<std::string>("PhThLUT");
 
   const edm::ParameterSet spPRParams16 = config_.getParameter<edm::ParameterSet>("spPRParams16");
-  minBX_    = spPRParams16.getParameter<int>("MinBX");
-  maxBX_    = spPRParams16.getParameter<int>("MaxBX");
-  bxWindow_ = spPRParams16.getParameter<int>("BXWindow");
+  minBX_           = spPRParams16.getParameter<int>("MinBX");
+  maxBX_           = spPRParams16.getParameter<int>("MaxBX");
+  bxWindow_        = spPRParams16.getParameter<int>("BXWindow");
+  zoneBoundaries1_ = spPRParams16.getParameter<std::vector<int> >("ZoneBoundaries1");
+  zoneBoundaries2_ = spPRParams16.getParameter<std::vector<int> >("ZoneBoundaries2");
+  zoneOverlap_     = spPRParams16.getParameter<int>("ZoneOverlap");
 
   const edm::ParameterSet spPCParams16 = config_.getParameter<edm::ParameterSet>("spPCParams16");
   includeNeighbor_ = spPCParams16.getParameter<bool>("IncludeNeighbor");
@@ -68,12 +71,13 @@ void EMTFTrackFinder::process(
 
   sector_processor_lut_->read(ph_th_lut_);
 
-  for (int iendcap = MIN_ENDCAP; iendcap <= MAX_ENDCAP; iendcap++) {
-    for (int isector = MIN_TRIGSECTOR; isector <= MAX_TRIGSECTOR; isector++) {
+  for (int iendcap = MIN_ENDCAP; iendcap <= MAX_ENDCAP; ++iendcap) {
+    for (int isector = MIN_TRIGSECTOR; isector <= MAX_TRIGSECTOR; ++isector) {
       sector_processor_->configure(
           sector_processor_lut_.get(),
           iendcap, isector,
           minBX_, maxBX_, bxWindow_,
+          zoneBoundaries1_, zoneBoundaries2_, zoneOverlap_,
           includeNeighbor_, duplicateWires_
       );
 

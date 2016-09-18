@@ -10,6 +10,22 @@ using CSCData = TriggerPrimitive::CSCData;
 using RPCData = TriggerPrimitive::RPCData;
 
 
+void EMTFPrimitiveConversion::configure(
+    const EMTFSectorProcessorLUT* lut,
+    int endcap, int sector,
+    const std::vector<int>& zoneBoundaries1, const std::vector<int>& zoneBoundaries2, int zoneOverlap
+) {
+  lut_ = lut;
+
+  endcap_ = endcap;
+  sector_ = sector;
+
+  zoneBoundaries1_ = zoneBoundaries1;
+  zoneBoundaries2_ = zoneBoundaries2;
+  zoneOverlap_     = zoneOverlap;
+}
+
+
 // Specialized for CSC
 template<>
 EMTFHitExtra EMTFPrimitiveConversion::convert(
@@ -35,12 +51,12 @@ EMTFHitExtra EMTFPrimitiveConversion::convert(
 
   // Check using ME1/1a --> ring 4 convention
   if (tp_station == 1 && tp_ring == 1) {
-    assert(tp_data.strip <= 128);
+    assert(tp_data.strip < 128);
     assert(1 <= tp_csc_ID && tp_csc_ID <= 3);
   }
   if (tp_station == 1 && tp_ring == 4) {
-    assert(tp_data.strip <= 128);
-    assert(10 <= tp_csc_ID && tp_csc_ID <= 12);
+    assert(tp_data.strip < 128);
+    assert(1 <= tp_csc_ID && tp_csc_ID <= 3);
   }
 
   // Check input data
@@ -54,16 +70,18 @@ EMTFHitExtra EMTFPrimitiveConversion::convert(
   int pc_station   = selected / 9;
   int pc_chamber   = selected % 9;
 
-  bool is_me1      = (tp_station == 1);
-  bool is_me11a    = (tp_station == 1 && tp_ring == 4);
   bool is_neighbor = (pc_station == 5);
 
-  int cscn_ID      = is_me11a ? tp_csc_ID - 9 : tp_csc_ID;
+  int cscn_ID      = tp_csc_ID;
   if (is_neighbor) {
-    cscn_ID = is_me1 ? (cscn_ID/3 + 12) : (cscn_ID <= 3 ? 10 : 11);
-  }
-  if (is_neighbor && is_me1) {
-    assert(tp_subsector == 2);
+    // station 1 has 3 neighbor chambers: 13, 14, 15
+    // station 2,3,4 have 2 neighbor chambers: 10, 11
+    cscn_ID = (pc_chamber < 3) ? (pc_chamber + 12) : (((pc_chamber-1)%2) + 9);
+    cscn_ID += 1;
+
+    if (tp_station == 1) {  // ME1
+      assert(tp_subsector == 2);
+    }
   }
 
   // Create a converted hit
@@ -268,23 +286,23 @@ void EMTFPrimitiveConversion::convert_csc(EMTFHitExtra& conv_hit) {
 
   // ph zone boundaries for chambers that cover more than one zone
   // hardcoded boundaries must match boundaries in ph_th_match module
-  int ph_zone_bnd1 = 127;
+  int ph_zone_bnd1 = zoneBoundaries2_.at(3);  // = 127
   if (fw_station <= 1 && (fw_cscid <= 2 || fw_cscid == 12))  // ME1/1
-    ph_zone_bnd1 = 41;
+    ph_zone_bnd1 = zoneBoundaries2_.at(0);  // = 41
   else if (fw_station == 2 && (fw_cscid <= 2 || fw_cscid == 9))  // ME2/1
-    ph_zone_bnd1 = 41;
+    ph_zone_bnd1 = zoneBoundaries2_.at(0);  // = 41
   else if (fw_station == 2 && ((fw_cscid >= 3 && fw_cscid <= 8) || fw_cscid == 10))  // ME2/2
-    ph_zone_bnd1 = 87;
+    ph_zone_bnd1 = zoneBoundaries2_.at(2);  // = 87
   else if (fw_station == 3 && ((fw_cscid >= 3 && fw_cscid <= 8) || fw_cscid == 10))  // ME3/2
-    ph_zone_bnd1 = 49;
+    ph_zone_bnd1 = zoneBoundaries2_.at(1);  // = 49
   else if (fw_station == 4 && ((fw_cscid >= 3 && fw_cscid <= 8) || fw_cscid == 10))  // ME4/2
-    ph_zone_bnd1 = 49;
+    ph_zone_bnd1 = zoneBoundaries2_.at(1);  // = 49
 
-  int ph_zone_bnd2 = 127;
+  int ph_zone_bnd2 = zoneBoundaries2_.at(3);  // = 127
   if (fw_station == 3 && ((fw_cscid >= 3 && fw_cscid <= 8) || fw_cscid == 10))  // ME3/2
-    ph_zone_bnd2 = 87;
+    ph_zone_bnd2 = zoneBoundaries2_.at(2);  // = 87
 
-  int zone_overlap = 2;
+  int zone_overlap = zoneOverlap_;
 
   // Check which zones ph hits should be applied to
   int phzvl = 0;
@@ -306,59 +324,60 @@ void EMTFPrimitiveConversion::convert_csc(EMTFHitExtra& conv_hit) {
   if (fw_station <= 1) {  // station 1
     if (fw_cscid <= 2 || fw_cscid == 12) {  // ring 1
       if (phzvl & (1<<0))
-        zone_contrib |= (1<<0);  // zone 0
+        zone_contrib |= (1<<0);  // zone 0: [-,41+2]
       if (phzvl & (1<<1))
-        zone_contrib |= (1<<1);  // zone 1
+        zone_contrib |= (1<<1);  // zone 1: [41-1,127+2]
 
     } else if (fw_cscid <= 5 || fw_cscid == 13) {  // ring 2
       if (phzvl & (1<<0))
-        zone_contrib |= (1<<2);  // zone 2
+        zone_contrib |= (1<<2);  // zone 2: [-,127+2]
 
     } else if (fw_cscid <= 8 || fw_cscid == 14) {  // ring 3
       if (true)
-        zone_contrib |= (1<<3);  // zone 3
+        zone_contrib |= (1<<3);  // zone 3: [-,-]
     }
 
   } else if (fw_station == 2) {  // station 2
     if (fw_cscid <= 2 || fw_cscid == 9) {  // ring 1
       if (phzvl & (1<<0))
-        zone_contrib |= (1<<0);  // zone 0
+        zone_contrib |= (1<<0);  // zone 0: [-,41+2]
       if (phzvl & (1<<1))
-        zone_contrib |= (1<<1);  // zone 1
+        zone_contrib |= (1<<1);  // zone 1: [41-1,127+2]
 
     } else if (fw_cscid <= 8 || fw_cscid == 10) {  // ring 2
       if (phzvl & (1<<0))
-        zone_contrib |= (1<<2);  // zone 2
+        zone_contrib |= (1<<2);  // zone 2: [-,87+2]
       if (phzvl & (1<<1))
-        zone_contrib |= (1<<3);  // zone 3
+        zone_contrib |= (1<<3);  // zone 3: [87-1,127+2]
     }
 
   } else if (fw_station == 3) {  // station 3
     if (fw_cscid <= 2 || fw_cscid == 9) {  // ring 1
       if (phzvl & (1<<0))
-        zone_contrib |= (1<<0);  // zone 0
+        zone_contrib |= (1<<0);  // zone 0: [-,127+2]
 
     } else if (fw_cscid <= 8 || fw_cscid == 10) {  // ring 2
       if (phzvl & (1<<0))
-        zone_contrib |= (1<<1);  // zone 1
+        zone_contrib |= (1<<1);  // zone 1: [-,49+2]
       if (phzvl & (1<<1))
-        zone_contrib |= (1<<2);  // zone 2
+        zone_contrib |= (1<<2);  // zone 2: [49-1,87+2]
       if (phzvl & (1<<2))
-        zone_contrib |= (1<<3);  // zone 3
+        zone_contrib |= (1<<3);  // zone 3: [87-1,-]
     }
 
   } else if (fw_station == 4) {  // station 4
     if (fw_cscid <= 2 || fw_cscid == 9) {  // ring 1
       if (phzvl & (1<<0))
-        zone_contrib |= (1<<0);  // zone 0
+        zone_contrib |= (1<<0);  // zone 0: [-,127+2]
 
     } else if (fw_cscid <= 8 || fw_cscid == 10) {  // ring 2
       if (phzvl & (1<<0))
-        zone_contrib |= (1<<1);  // zone 1
+        zone_contrib |= (1<<1);  // zone 1: [-,49+2]
       if (phzvl & (1<<1))
-        zone_contrib |= (1<<2);  // zone 2
+        zone_contrib |= (1<<2);  // zone 2: [49-1,127+2]
     }
   }
+  assert(zone_contrib > 0);
 
   int zone_hit = lut().get_ph_zone_offset(pc_station, pc_chamber);
   zone_hit += ph_hit;

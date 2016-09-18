@@ -8,11 +8,11 @@ class EMTFSectorProcessorLUT;
 
 class EMTFPrimitiveConversion {
 public:
-  void configure(const EMTFSectorProcessorLUT* lut, int endcap, int sector) {
-    lut_    = lut;
-    endcap_ = endcap;
-    sector_ = sector;
-  }
+  void configure(
+      const EMTFSectorProcessorLUT* lut,
+      int endcap, int sector,
+      const std::vector<int>& zoneBoundaries1, const std::vector<int>& zoneBoundaries2, int zoneOverlap
+  );
 
   template<typename T>
   EMTFHitExtra convert(
@@ -33,6 +33,9 @@ private:
   const EMTFSectorProcessorLUT* lut_;
 
   int endcap_, sector_;
+
+  std::vector<int> zoneBoundaries1_, zoneBoundaries2_;
+  int zoneOverlap_;
 };
 
 #endif

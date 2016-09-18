@@ -32,6 +32,9 @@ simEmtfDigis = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
         MinBX = cms.int32(-3),
         MaxBX = cms.int32(+4),
         BXWindow = cms.int32(3),
+        ZoneBoundaries1 = cms.vint32(0,42,50,88),
+        ZoneBoundaries2 = cms.vint32(41,49,87,127),
+        ZoneOverlap = cms.int32(2),
     ),
 
     # Sector processor pt-assignment parameters

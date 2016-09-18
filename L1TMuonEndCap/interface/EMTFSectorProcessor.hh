@@ -1,8 +1,6 @@
 #ifndef L1TMuonEndCap_EMTFSectorProcessor_hh
 #define L1TMuonEndCap_EMTFSectorProcessor_hh
 
-#include "FWCore/ParameterSet/interface/ParameterSet.h"
-
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFCommon.hh"
 
 
@@ -17,6 +15,7 @@ public:
       const EMTFSectorProcessorLUT* lut,
       int endcap, int sector,
       int minBX, int maxBX, int bxWindow,
+      const std::vector<int>& zoneBoundaries1, const std::vector<int>& zoneBoundaries2, int zoneOverlap,
       bool includeNeighbor, bool duplicateWires
   );
 
@@ -41,6 +40,8 @@ private:
   int endcap_, sector_;
 
   int minBX_, maxBX_, bxWindow_;
+  std::vector<int> zoneBoundaries1_, zoneBoundaries2_;
+  int zoneOverlap_;
 
   bool includeNeighbor_, duplicateWires_;
 };
