@@ -35,6 +35,18 @@ simEmtfDigis = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
         ZoneBoundaries1 = cms.vint32(0,42,50,88),
         ZoneBoundaries2 = cms.vint32(41,49,87,127),
         ZoneOverlap = cms.int32(2),
+        PatternDefinitions = cms.vstring(
+            # straightness, hits in ME1, hits in ME2, hits in ME3, hits in ME4
+            "4,15:15,7:7,7:7,7:7",
+            "3,16:16,7:7,7:6,7:6",
+            "3,14:14,7:7,8:7,8:7",
+            "2,18:17,7:7,7:5,7:5",
+            "2,13:12,7:7,10:7,10:7",  # should be 9:7 in ME3,4
+            "1,22:19,7:7,7:0,7:0",
+            "1,11:8,7:7,14:7,14:7",
+            "0,30:23,7:7,7:0,7:0",
+            "0,7:0,7:7,14:7,14:7",
+        )
     ),
 
     # Sector processor pt-assignment parameters

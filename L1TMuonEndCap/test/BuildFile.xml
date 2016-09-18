@@ -3,4 +3,9 @@
     <flags TEST_RUNNER_ARGS=" /bin/bash L1TriggerSep2016/L1TMuonEndCap/test runtests.sh"/>
     <use name="FWCore/Utilities"/>
   </bin>
+
+  <bin name="TestEMTFPhiMemoryImage" file="TestEMTFPhiMemoryImage.cpp">
+    <use name="L1TriggerSep2016/L1TMuonEndCap"/>
+    <use name="cppunit"/>
+  </bin>
 </environment>

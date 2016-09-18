@@ -1,10 +1,18 @@
 #ifndef L1TMuonEndCap_EMTFSectorProcessor_hh
 #define L1TMuonEndCap_EMTFSectorProcessor_hh
 
+#include <deque>
+#include <map>
+#include <string>
+#include <vector>
+
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFCommon.hh"
 
+#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFSectorProcessorLUT.hh"
+#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPrimitiveSelection.hh"
+#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPrimitiveConversion.hh"
+#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPatternRecognition.hh"
 
-class EMTFSectorProcessorLUT;
 
 class EMTFSectorProcessor {
 public:
@@ -16,6 +24,7 @@ public:
       int endcap, int sector,
       int minBX, int maxBX, int bxWindow,
       const std::vector<int>& zoneBoundaries1, const std::vector<int>& zoneBoundaries2, int zoneOverlap,
+      const std::vector<std::string>& pattDefinitions,
       bool includeNeighbor, bool duplicateWires
   );
 
@@ -29,7 +38,9 @@ public:
       int bx,
       const TriggerPrimitiveCollection& muon_primitives,
       EMTFHitExtraCollection& out_hits,
-      EMTFTrackExtraCollection& out_tracks
+      EMTFTrackExtraCollection& out_tracks,
+      std::deque<EMTFHitExtraCollection>& extended_conv_hits,
+      std::map<EMTFPatternId, int>& patt_lifetime_map
   );
 
   int sector() const { return sector_; }
@@ -42,6 +53,7 @@ private:
   int minBX_, maxBX_, bxWindow_;
   std::vector<int> zoneBoundaries1_, zoneBoundaries2_;
   int zoneOverlap_;
+  std::vector<std::string> pattDefinitions_;
 
   bool includeNeighbor_, duplicateWires_;
 };

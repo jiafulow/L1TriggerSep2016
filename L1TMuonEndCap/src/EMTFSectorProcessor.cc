@@ -1,9 +1,5 @@
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFSectorProcessor.hh"
 
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFSectorProcessorLUT.hh"
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPrimitiveSelection.hh"
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPrimitiveConversion.hh"
-
 #define NUM_CSC_CHAMBERS 6*9
 #define NUM_RPC_CHAMBERS 6*9  // ??
 
@@ -21,6 +17,7 @@ void EMTFSectorProcessor::configure(
     int endcap, int sector,
     int minBX, int maxBX, int bxWindow,
     const std::vector<int>& zoneBoundaries1, const std::vector<int>& zoneBoundaries2, int zoneOverlap,
+    const std::vector<std::string>& pattDefinitions,
     bool includeNeighbor, bool duplicateWires
 ) {
   assert(MIN_ENDCAP <= endcap && endcap <= MAX_ENDCAP);
@@ -38,6 +35,7 @@ void EMTFSectorProcessor::configure(
   zoneBoundaries1_ = zoneBoundaries1;
   zoneBoundaries2_ = zoneBoundaries2;
   zoneOverlap_     = zoneOverlap;
+  pattDefinitions_ = pattDefinitions;
 
   includeNeighbor_ = includeNeighbor;
   duplicateWires_ = duplicateWires;
@@ -49,10 +47,20 @@ void EMTFSectorProcessor::process(
     EMTFTrackExtraCollection& out_tracks
 ) {
 
-  int delayBX = bxWindow_ - 1;
+  // List of converted hits, extended from previous BXs
+  std::deque<EMTFHitExtraCollection> extended_conv_hits;
+
+  // Map of pattern detector --> lifetime, tracked across BXs
+  std::map<EMTFPatternId, int> patt_lifetime_map;
+
+  int delayBX = bxWindow_ - 1;  // = 2
 
   for (int ibx = minBX_; ibx <= maxBX_ + delayBX; ++ibx) {
-    process_single_bx(ibx, muon_primitives, out_hits, out_tracks);
+    process_single_bx(ibx, muon_primitives, out_hits, out_tracks, extended_conv_hits, patt_lifetime_map);
+
+    if (ibx >= minBX_ + delayBX) {
+      extended_conv_hits.pop_front();
+    }
   }
 
   return;
@@ -62,7 +70,9 @@ void EMTFSectorProcessor::process_single_bx(
     int bx,
     const TriggerPrimitiveCollection& muon_primitives,
     EMTFHitExtraCollection& out_hits,
-    EMTFTrackExtraCollection& out_tracks
+    EMTFTrackExtraCollection& out_tracks,
+    std::deque<EMTFHitExtraCollection>& extended_conv_hits,
+    std::map<EMTFPatternId, int>& patt_lifetime_map
 ) {
   // Instantiate stuff
   EMTFPrimitiveSelection prim_sel;
@@ -74,6 +84,9 @@ void EMTFSectorProcessor::process_single_bx(
       endcap_, sector_,
       zoneBoundaries1_, zoneBoundaries2_, zoneOverlap_
   );
+
+  EMTFPatternRecognition patt_recog;
+  patt_recog.configure(minBX_, maxBX_, bxWindow_, pattDefinitions_);
 
   std::map<int, std::vector<TriggerPrimitive> > selected_csc_map;
   std::map<int, std::vector<TriggerPrimitive> > selected_rpc_map;
@@ -171,8 +184,10 @@ void EMTFSectorProcessor::process_single_bx(
     }
   }
 
+  // Perform pattern recognition
+  extended_conv_hits.push_back(conv_hits);
 
-
+  patt_recog.detect(extended_conv_hits, patt_lifetime_map);
 
 
   out_hits.insert(out_hits.end(), conv_hits.begin(), conv_hits.end());

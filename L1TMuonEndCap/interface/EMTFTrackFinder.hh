@@ -41,6 +41,7 @@ private:
   int minBX_, maxBX_, bxWindow_;
   std::vector<int> zoneBoundaries1_, zoneBoundaries2_;
   int zoneOverlap_;
+  std::vector<std::string> pattDefinitions_;
 
   bool includeNeighbor_, duplicateWires_;
 
