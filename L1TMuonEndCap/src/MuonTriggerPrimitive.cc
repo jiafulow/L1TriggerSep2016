@@ -111,7 +111,6 @@ TriggerPrimitive::TriggerPrimitive(const CSCDetId& detid,
   if (detid.station() == 1 && detid.ring() == 1 && digi.getStrip() >= 128) {
     _id = CSCDetId(detid.endcap(), detid.station(), 4, detid.chamber(), detid.layer());
     _csc.strip = digi.getStrip() - 128;
-    _csc.cscID = digi.getCSCID() + 9;
   }
 }
 
