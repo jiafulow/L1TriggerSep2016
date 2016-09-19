@@ -60,4 +60,8 @@ private:
   value_type _buffer[_layers][_units];
 };
 
+// _____________________________________________________________________________
+// Output streams
+std::ostream& operator<<(std::ostream& o, const EMTFPhiMemoryImage& p);
+
 #endif

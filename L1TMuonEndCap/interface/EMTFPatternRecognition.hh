@@ -11,6 +11,7 @@ public:
   typedef std::tuple<int, int, int>  pattern_id_t;
 
   void configure(
+      int endcap, int sector, int bx,
       int minBX, int maxBX, int bxWindow,
       const std::vector<std::string>& pattDefinitions
   );
@@ -33,6 +34,8 @@ public:
   );
 
 private:
+  int endcap_, sector_, bx_;
+
   int minBX_, maxBX_, bxWindow_;
 
   std::vector<EMTFPhiMemoryImage> patterns_;

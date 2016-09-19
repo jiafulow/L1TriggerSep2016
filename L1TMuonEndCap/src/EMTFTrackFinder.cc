@@ -74,6 +74,8 @@ void EMTFTrackFinder::process(
 
   for (int iendcap = MIN_ENDCAP; iendcap <= MAX_ENDCAP; ++iendcap) {
     for (int isector = MIN_TRIGSECTOR; isector <= MAX_TRIGSECTOR; ++isector) {
+      //if (!(iendcap == 1 && isector == 6))  continue;  // debug
+
       sector_processor_->configure(
           sector_processor_lut_.get(),
           iendcap, isector,

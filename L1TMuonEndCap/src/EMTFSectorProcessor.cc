@@ -86,7 +86,11 @@ void EMTFSectorProcessor::process_single_bx(
   );
 
   EMTFPatternRecognition patt_recog;
-  patt_recog.configure(minBX_, maxBX_, bxWindow_, pattDefinitions_);
+  patt_recog.configure(
+      endcap_, sector_, bx,
+      minBX_, maxBX_, bxWindow_,
+      pattDefinitions_
+  );
 
   std::map<int, std::vector<TriggerPrimitive> > selected_csc_map;
   std::map<int, std::vector<TriggerPrimitive> > selected_rpc_map;

@@ -1,19 +1,28 @@
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPatternRecognition.hh"
 
+#include <iostream>
 #include <iterator>
-#include <string>
 #include <regex>
+#include <string>
+
+#include "helper.h"  // to_hex, to_binary
 
 #define NUM_ZONES 4
 #define NUM_ZONE_HITS 160
 #define NUM_PATTERNS 9
 #define PATTERN_KEY_ZHIT 7
+#define PATTERN_PADDING_EXTRA_W_ST1 15-7
 
 
 void EMTFPatternRecognition::configure(
+    int endcap, int sector, int bx,
     int minBX, int maxBX, int bxWindow,
     const std::vector<std::string>& pattDefinitions
 ) {
+  endcap_ = endcap;
+  sector_ = sector;
+  bx_     = bx;
+
   minBX_           = minBX;
   maxBX_           = maxBX;
   bxWindow_        = bxWindow;
@@ -38,18 +47,27 @@ void EMTFPatternRecognition::configure(
     // Get the 9 integers
     // straightness, hits in ME1, hits in ME2, hits in ME3, hits in ME4
     int straightness = to_integer(imatch++);
-    int st1_min      = to_integer(imatch++);
     int st1_max      = to_integer(imatch++);
-    int st2_min      = to_integer(imatch++);
+    int st1_min      = to_integer(imatch++);
     int st2_max      = to_integer(imatch++);
-    int st3_min      = to_integer(imatch++);
+    int st2_min      = to_integer(imatch++);
     int st3_max      = to_integer(imatch++);
-    int st4_min      = to_integer(imatch++);
+    int st3_min      = to_integer(imatch++);
     int st4_max      = to_integer(imatch++);
+    int st4_min      = to_integer(imatch++);
 
     // There can only be one zone hit in the key station in the pattern
     // and it has to be this magic number
     assert(st2_min == PATTERN_KEY_ZHIT && st2_max == PATTERN_KEY_ZHIT);
+
+    // There is extra "padding" in st1 w.r.t st2,3,4
+    // Add the extra padding to st2,3,4
+    st2_max += PATTERN_PADDING_EXTRA_W_ST1;
+    st2_min += PATTERN_PADDING_EXTRA_W_ST1;
+    st3_max += PATTERN_PADDING_EXTRA_W_ST1;
+    st3_min += PATTERN_PADDING_EXTRA_W_ST1;
+    st4_max += PATTERN_PADDING_EXTRA_W_ST1;
+    st4_min += PATTERN_PADDING_EXTRA_W_ST1;
 
     // Create a pattern
     EMTFPhiMemoryImage pattern;
@@ -62,6 +80,17 @@ void EMTFPatternRecognition::configure(
     for (int i = st4_min; i <= st4_max; i++)
       pattern.set_bit(3, i);
 
+    // Remove the extra padding
+    pattern.rotr(PATTERN_PADDING_EXTRA_W_ST1);
+
+    if (false) {  // debug
+      std::cout << "Pattern definition: " << straightness << " "
+          << st4_min << " " << st4_max << " "
+          << st3_min << " " << st3_max << " "
+          << st2_min << " " << st2_max << " "
+          << st1_min << " " << st1_max << std::endl;
+      std::cout << pattern << std::endl;
+    }
     patterns_.push_back(pattern);
     straightnesses_.push_back(straightness);
   }
@@ -78,10 +107,6 @@ void EMTFPatternRecognition::configure(
   //// width of zero padding for station copies
   //const int padding_w_st3 = full_pat_w_st3 / 2;  // = 7
   //const int padding_w_st1 = full_pat_w_st1 / 2;  // = 15
-
-  // Don't need to explicitly pad with zeroes in EMTFPhiMemoryImage because
-  // it has 192 bits allocated. 160 bits are used; the most-significant
-  // 32 bits are unused and can be treated as implicitly padded zeroes.
 }
 
 void EMTFPatternRecognition::detect(
@@ -106,7 +131,7 @@ void EMTFPatternRecognition::detect(
 
     for (int izone = NUM_ZONES; izone >= 1; --izone) {
       std::cout << "zone: " << izone << std::endl;
-      zone_images.at(izone-1).print(std::cout);
+      std::cout << zone_images.at(izone-1) << std::endl;
     }
   }
 
@@ -121,10 +146,11 @@ void EMTFPatternRecognition::detect(
     zone_roads.push_back(roads);
   }
 
-  // Debug
-  for (const auto& roads : zone_roads) {
-    for (const auto& road : roads) {
-      std::cout << "road " << road.zone << " " << road.key_zhit << " " << road.pattern << " " << road.straightness << " " << road.layer_code << " " << road.quality_code << std::endl;
+  if (true) {  // debug
+    for (const auto& roads : zone_roads) {
+      for (const auto& road : roads) {
+        std::cout << "pattern: z: " << road.zone << " ph: " << road.key_zhit+1 << " q: " << to_hex(road.quality_code) << " ly: " << to_binary(road.layer_code, 3) << " str: " << to_binary(road.straightness, 3) << std::endl;
+      }
     }
   }
 
@@ -235,6 +261,10 @@ void EMTFPatternRecognition::detect_single_zone(
         );
 
         EMTFRoadExtra road;
+        road.endcap   = endcap_;
+        road.sector   = sector_;
+        road.bx       = bx_;
+
         road.zone     = std::get<0>(patt_id);
         road.key_zhit = std::get<1>(patt_id);
         road.pattern  = std::get<2>(patt_id);

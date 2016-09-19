@@ -170,13 +170,21 @@ unsigned int EMTFPhiMemoryImage::op_and(const EMTFPhiMemoryImage& other) const {
   //   bit 0: st3 or st4 hit
   //   bit 1: st2 hit
   //   bit 2: st1 hit
-  unsigned int layer = (b_st1 << 2) | (b_st2 << 1) | (b_st3 << 0) | (b_st4 << 0);
-  return layer;
+  unsigned int ly = (b_st1 << 2) | (b_st2 << 1) | (b_st3 << 0) | (b_st4 << 0);
+  return ly;
 }
 
 void EMTFPhiMemoryImage::print(std::ostream& out) const {
-  out << std::bitset<160-128>(_buffer[3][2]) << std::bitset<128-64>(_buffer[3][1]) << std::bitset<64>(_buffer[3][0]) << std::endl;
-  out << std::bitset<160-128>(_buffer[2][2]) << std::bitset<128-64>(_buffer[2][1]) << std::bitset<64>(_buffer[2][0]) << std::endl;
-  out << std::bitset<160-128>(_buffer[1][2]) << std::bitset<128-64>(_buffer[1][1]) << std::bitset<64>(_buffer[1][0]) << std::endl;
-  out << std::bitset<160-128>(_buffer[0][2]) << std::bitset<128-64>(_buffer[0][1]) << std::bitset<64>(_buffer[0][0]) << std::endl;
+  constexpr int N = 160;
+  out << std::bitset<N-128>(_buffer[3][2]) << std::bitset<128-64>(_buffer[3][1]) << std::bitset<64>(_buffer[3][0]) << std::endl;
+  out << std::bitset<N-128>(_buffer[2][2]) << std::bitset<128-64>(_buffer[2][1]) << std::bitset<64>(_buffer[2][0]) << std::endl;
+  out << std::bitset<N-128>(_buffer[1][2]) << std::bitset<128-64>(_buffer[1][1]) << std::bitset<64>(_buffer[1][0]) << std::endl;
+  out << std::bitset<N-128>(_buffer[0][2]) << std::bitset<128-64>(_buffer[0][1]) << std::bitset<64>(_buffer[0][0]);
+}
+
+// _____________________________________________________________________________
+// Output streams
+std::ostream& operator<<(std::ostream& o, const EMTFPhiMemoryImage& patt) {
+  patt.print(o);
+  return o;
 }
