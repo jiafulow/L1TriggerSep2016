@@ -1,6 +1,8 @@
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPhiMemoryImage.hh"
 
 #include <stdexcept>
+#include <iostream>
+#include <bitset>
 
 #define UINT64_BITS 64
 
@@ -44,24 +46,24 @@ void EMTFPhiMemoryImage::reset() {
 void EMTFPhiMemoryImage::set_bit(unsigned int layer, unsigned int bit) {
   check_input(layer, bit);
 
-  unsigned int unit = bit / UINT64_BITS;
-  unsigned int mask = (1u << (bit % UINT64_BITS));
+  value_type unit = bit / UINT64_BITS;
+  value_type mask = (1ul << (bit % UINT64_BITS));
   _buffer[layer][unit] |= mask;
 }
 
 void EMTFPhiMemoryImage::clear_bit(unsigned int layer, unsigned int bit) {
   check_input(layer, bit);
 
-  unsigned int unit = bit / UINT64_BITS;
-  unsigned int mask = (1u << (bit % UINT64_BITS));
+  value_type unit = bit / UINT64_BITS;
+  value_type mask = (1ul << (bit % UINT64_BITS));
   _buffer[layer][unit] &= ~mask;
 }
 
 bool EMTFPhiMemoryImage::test_bit(unsigned int layer, unsigned int bit) const {
   check_input(layer, bit);
 
-  unsigned int unit = bit / UINT64_BITS;
-  unsigned int mask = (1u << (bit % UINT64_BITS));
+  value_type unit = bit / UINT64_BITS;
+  value_type mask = (1ul << (bit % UINT64_BITS));
   return _buffer[layer][unit] & mask;
 }
 
@@ -170,4 +172,11 @@ unsigned int EMTFPhiMemoryImage::op_and(const EMTFPhiMemoryImage& other) const {
   //   bit 2: st1 hit
   unsigned int layer = (b_st1 << 2) | (b_st2 << 1) | (b_st3 << 0) | (b_st4 << 0);
   return layer;
+}
+
+void EMTFPhiMemoryImage::print(std::ostream& out) const {
+  out << std::bitset<160-128>(_buffer[3][2]) << std::bitset<128-64>(_buffer[3][1]) << std::bitset<64>(_buffer[3][0]) << std::endl;
+  out << std::bitset<160-128>(_buffer[2][2]) << std::bitset<128-64>(_buffer[2][1]) << std::bitset<64>(_buffer[2][0]) << std::endl;
+  out << std::bitset<160-128>(_buffer[1][2]) << std::bitset<128-64>(_buffer[1][1]) << std::bitset<64>(_buffer[1][0]) << std::endl;
+  out << std::bitset<160-128>(_buffer[0][2]) << std::bitset<128-64>(_buffer[0][1]) << std::bitset<64>(_buffer[0][0]) << std::endl;
 }

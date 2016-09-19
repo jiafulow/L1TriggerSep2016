@@ -2,6 +2,7 @@
 #define L1TMuonEndCap_EMTFPhiMemoryImage_hh
 
 #include <cstdint>
+#include <iosfwd>
 
 // Originally written by Ivan Furic and Matt Carver (Univ of Florida)
 
@@ -41,6 +42,8 @@ public:
   //   bit 1: st2 hit
   //   bit 2: st1 hit
   unsigned int op_and(const EMTFPhiMemoryImage& other) const;
+
+  void print(std::ostream& out) const;
 
 private:
   void check_input(unsigned int layer, unsigned int bit) const;

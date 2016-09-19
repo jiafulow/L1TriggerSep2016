@@ -7,6 +7,7 @@
 #define NUM_ZONES 4
 #define NUM_ZONE_HITS 160
 #define NUM_PATTERNS 9
+#define PATTERN_KEY_ZHIT 7
 
 
 void EMTFPatternRecognition::configure(
@@ -20,6 +21,7 @@ void EMTFPatternRecognition::configure(
   patterns_.clear();
   straightnesses_.clear();
 
+  // Parse pattern definitions
   std::regex digits("(\\d+)");
 
   for (const auto& s: pattDefinitions) {
@@ -45,6 +47,10 @@ void EMTFPatternRecognition::configure(
     int st4_min      = to_integer(imatch++);
     int st4_max      = to_integer(imatch++);
 
+    // There can only be one zone hit in the key station in the pattern
+    // and it has to be this magic number
+    assert(st2_min == PATTERN_KEY_ZHIT && st2_max == PATTERN_KEY_ZHIT);
+
     // Create a pattern
     EMTFPhiMemoryImage pattern;
     for (int i = st1_min; i <= st1_max; i++)
@@ -61,20 +67,21 @@ void EMTFPatternRecognition::configure(
   }
   assert(patterns_.size() == NUM_PATTERNS);
 
-  // pattern half-width for stations 3,4
-  const int pat_w_st3 = 3;
-  // pattern half-width for station 1
-  const int pat_w_st1 = pat_w_st3 + 1;
-  // number of input bits for stations 3,4
-  const int full_pat_w_st3 = (1 << (pat_w_st3+1)) - 1;  // = 15
-  // number of input bits for station 1
-  const int full_pat_w_st1 = (1 << (pat_w_st1+1)) - 1;  // = 31
-  // width of zero padding for station copies
-  const int padding_w_st3 = full_pat_w_st3 / 2;  // = 7
-  const int padding_w_st1 = full_pat_w_st1 / 2;  // = 15
+  //// pattern half-width for stations 3,4
+  //const int pat_w_st3 = 3;
+  //// pattern half-width for station 1
+  //const int pat_w_st1 = pat_w_st3 + 1;
+  //// number of input bits for stations 3,4
+  //const int full_pat_w_st3 = (1 << (pat_w_st3+1)) - 1;  // = 15
+  //// number of input bits for station 1
+  //const int full_pat_w_st1 = (1 << (pat_w_st1+1)) - 1;  // = 31
+  //// width of zero padding for station copies
+  //const int padding_w_st3 = full_pat_w_st3 / 2;  // = 7
+  //const int padding_w_st1 = full_pat_w_st1 / 2;  // = 15
 
-  padding_w_st3_ = padding_w_st3;
-  padding_w_st1_ = padding_w_st1;
+  // Don't need to explicitly pad with zeroes in EMTFPhiMemoryImage because
+  // it has 192 bits allocated. 160 bits are used; the most-significant
+  // 32 bits are unused and can be treated as implicitly padded zeroes.
 }
 
 void EMTFPatternRecognition::detect(
@@ -86,16 +93,39 @@ void EMTFPatternRecognition::detect(
   std::vector<EMTFPhiMemoryImage> zone_images;
   make_zone_images(extended_conv_hits, zone_images);
 
-  // Perform pattern matching
+  if (true) {  // debug
+    for (const auto& conv_hits : extended_conv_hits) {
+      for (const auto& conv_hit : conv_hits) {
+        std::cout << "st: " << conv_hit.pc_station << " ch: " << conv_hit.pc_chamber
+            << " ph: " << conv_hit.phi_fp << " th: " << conv_hit.theta_fp
+            << " ph_hit: " << (1ul<<conv_hit.ph_hit) << " phzvl: " << conv_hit.phzvl
+            << " zone_hit: " << conv_hit.zone_hit << " zone_code: " << conv_hit.zone_code
+            << std::endl;
+      }
+    }
+
+    for (int izone = NUM_ZONES; izone >= 1; --izone) {
+      std::cout << "zone: " << izone << std::endl;
+      zone_images.at(izone-1).print(std::cout);
+    }
+  }
+
+  // Perform pattern recognition in each zone
   std::vector<EMTFRoadExtraCollection> zone_roads;
 
   for (int izone = 0; izone < NUM_ZONES; ++izone) {
     EMTFRoadExtraCollection roads;
 
-    const EMTFPhiMemoryImage& image = zone_images.at(izone);
-    detect_single_zone(izone, image, patt_lifetime_map, roads);
+    detect_single_zone(izone, zone_images.at(izone), patt_lifetime_map, roads);
 
     zone_roads.push_back(roads);
+  }
+
+  // Debug
+  for (const auto& roads : zone_roads) {
+    for (const auto& road : roads) {
+      std::cout << "road " << road.zone << " " << road.key_zhit << " " << road.pattern << " " << road.straightness << " " << road.layer_code << " " << road.quality_code << std::endl;
+    }
   }
 
 }
@@ -122,25 +152,16 @@ void EMTFPatternRecognition::make_zone_images(
     EMTFHitExtraCollection::const_iterator conv_hits_end = ext_conv_hits_it->end();
 
     for (; conv_hits_it != conv_hits_end; ++conv_hits_it) {
+      const EMTFHitExtra& conv_hit = *conv_hits_it;
 
       for (int izone = 0; izone < NUM_ZONES; ++izone) {
-        const EMTFHitExtra& conv_hit = *conv_hits_it;
-
-        if (conv_hit.ph_zone_contrib & (1<<izone)) {  // hit belongs to this zone
+        if (conv_hit.zone_code & (1<<izone)) {  // hit belongs to this zone
           unsigned int layer = conv_hit.station - 1;
-          unsigned int bit   = conv_hit.ph_zone_hit;
-
-          // Add padding of zeroes so that it's easier to pass to detectors
-          if (izone == 0) {
-            bit += padding_w_st1_;
-          } else {
-            bit += padding_w_st3_;
-          }
+          unsigned int bit   = conv_hit.zone_hit;
 
           EMTFPhiMemoryImage& image = zone_images.at(izone);  // pass by reference
           image.set_bit(layer, bit);
         }
-
       }
     }  // end loop over conv_hits
   }  // end loop over extended_conv_hits
@@ -148,36 +169,43 @@ void EMTFPatternRecognition::make_zone_images(
 
 void EMTFPatternRecognition::detect_single_zone(
     int zone,
-    const EMTFPhiMemoryImage& image,
+    EMTFPhiMemoryImage cloned_image,
     std::map<pattern_id_t, int>& patt_lifetime_map,
     EMTFRoadExtraCollection& roads
 ) {
   roads.clear();
 
-  for (int ipatt = 0; ipatt < NUM_PATTERNS; ++ipatt) {
-    EMTFPhiMemoryImage patt = patterns_.at(ipatt);  // clone
-    int straightness        = straightnesses_.at(ipatt);
-    int layer_code          = 0;
+  // The zone hit image is rotated/shifted before comparing with patterns
+  // First, rotate left/shift up to the zone hit in the key station
+  cloned_image.rotl(PATTERN_KEY_ZHIT);
 
-    for (int izhit = 0; izhit < NUM_ZONE_HITS; ++izhit) {
-      // In firmware, the zone phi image is rotated right/shift down to compare with patterns
-      // In emulator, the pattern is rotated left/shift up to compare with the zone phi image
-      // They should be the same!
+  for (int izhit = 0; izhit < NUM_ZONE_HITS; ++izhit) {
+    // The zone hit image is rotated/shift before comparing with patterns
+    // For every zone hit, rotate right/shift down by one
+    if (izhit > 0)
+      cloned_image.rotr(1);
 
-      layer_code = patt.op_and(image);  // kind of like AND operator
+    int max_quality_code = -1;
+    EMTFRoadExtra tmp_road;
 
+    // Compare with patterns
+    for (int ipatt = 0; ipatt < NUM_PATTERNS; ++ipatt) {
+      const EMTFPhiMemoryImage& patt = patterns_.at(ipatt);
       const pattern_id_t patt_id = std::make_tuple(zone, izhit, ipatt);
+
       bool is_lifetime_up = false;
+
+      int layer_code = patt.op_and(cloned_image);  // kind of like AND operator
 
       if (layer_code > 0) {
         // Starts counting at any hit in the pattern, even single
         auto ins = patt_lifetime_map.insert({patt_id, 1});
 
-        if (ins.second) {  // already exists
+        if (!ins.second) {  // already exists, increment counter
           ins.first->second += 1;
 
           // Is lifetime up?
-          if (ins.first->second == bxWindow_) {  // delayBX = bxWindow_ - 1
+          if (ins.first->second == bxWindow_) {  // = 3
             is_lifetime_up = true;
           }
         }
@@ -186,18 +214,24 @@ void EMTFPatternRecognition::detect_single_zone(
         patt_lifetime_map.erase(patt_id);  // erase if exists
       }
 
-      // Rotate
-      patt.rotl(1);
+      // If lifetime is up, and not single-layer hit patterns (stations 3&4 considered
+      // as a single layer), find quality of this pattern
+      if (
+        is_lifetime_up &&
+        ((layer_code != 1) && (layer_code != 2) && (layer_code != 4) && (layer_code != 0))
+      ) {
+        int straightness = straightnesses_.at(ipatt);
 
-      // If lifetime is up, find roads
-      if (is_lifetime_up) {
+        // This quality code scheme is giving almost-equal priority to
+        // more stations and better straightness
+        // Station 1 has higher weight, station 2 lower, stations 3&4 lowest
         int quality_code = (
-            ((straightness & (1<<2)) << 5) |
-            ((straightness & (1<<1)) << 3) |
-            ((straightness & (1<<0)) << 1) |
-            ((layer_code & (1<<2)) << 4) |
-            ((layer_code & (1<<1)) << 2) |
-            ((layer_code & (1<<0)) << 0)
+            (((straightness>>2) & 1) << 5) |
+            (((straightness>>1) & 1) << 3) |
+            (((straightness>>0) & 1) << 1) |
+            (((layer_code>>2)   & 1) << 4) |
+            (((layer_code>>1)   & 1) << 2) |
+            (((layer_code>>0)   & 1) << 0)
         );
 
         EMTFRoadExtra road;
@@ -208,10 +242,59 @@ void EMTFPatternRecognition::detect_single_zone(
         road.straightness = straightness;
         road.layer_code   = layer_code;
         road.quality_code = quality_code;
-        roads.push_back(road);
+
+        // Find max quality code in a given key_zhit
+        if (max_quality_code < road.quality_code) {
+          max_quality_code = road.quality_code;
+          tmp_road = road;
+        }
       }
 
     }  // end loop over zone hits
+
+    // Output road
+    if (max_quality_code != -1) {
+      roads.push_back(tmp_road);
+    }
+
   }  // end loop over patterns
 
+  // Ghost cancellation logic by considering neighbor patterns
+  std::vector<int> quality_codes(NUM_ZONE_HITS, 0);
+
+  for (unsigned iroad = 0; iroad < roads.size(); ++iroad) {
+    const EMTFRoadExtra& road = roads.at(iroad);
+    quality_codes.at(road.key_zhit) = road.quality_code;
+  }
+
+  std::vector<bool> mask_roads(roads.size(), true);
+
+  for (unsigned iroad = 0; iroad < roads.size(); ++iroad) {
+    const EMTFRoadExtra& road = roads.at(iroad);
+    int izhit = road.key_zhit;
+
+    // Center quality is the current one
+    int qc = quality_codes.at(izhit);
+
+    // Left and right qualities are the neighbors
+    // Protect against the right end and left end special cases
+    int ql = (izhit == (int) quality_codes.size()-1) ? 0 : quality_codes.at(izhit+1);
+    int qr = (izhit == 0) ? 0 : quality_codes.at(izhit-1);
+
+    // Cancellation conditions
+    if (qc <= ql || qc < qr) {  // this pattern is lower quality than neighbors
+      mask_roads.at(iroad) = false;  // cancel
+    }
+  }
+
+  EMTFRoadExtraCollection survived_roads;
+
+  for (unsigned iroad = 0; iroad < roads.size(); ++iroad) {
+    // Output road
+    if (mask_roads.at(iroad)) {
+      survived_roads.push_back(roads.at(iroad));
+    }
+  }
+
+  roads.swap(survived_roads);
 }

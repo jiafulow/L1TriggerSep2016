@@ -27,7 +27,7 @@ public:
 
   void detect_single_zone(
       int zone,
-      const EMTFPhiMemoryImage& image,
+      EMTFPhiMemoryImage cloned_image,
       std::map<pattern_id_t, int>& patt_lifetime_map,
       EMTFRoadExtraCollection& roads
   );
@@ -37,9 +37,6 @@ private:
 
   std::vector<EMTFPhiMemoryImage> patterns_;
   std::vector<int> straightnesses_;
-
-  int padding_w_st1_;
-  int padding_w_st3_;
 };
 
 typedef EMTFPatternRecognition::pattern_id_t EMTFPatternId;

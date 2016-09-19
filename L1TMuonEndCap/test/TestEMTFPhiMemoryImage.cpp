@@ -7,6 +7,7 @@
 class TestEMTFPhiMemoryImage: public CppUnit::TestFixture
 {
   CPPUNIT_TEST_SUITE(TestEMTFPhiMemoryImage);
+  CPPUNIT_TEST(test_bitset);
   CPPUNIT_TEST(test_rotation);
   CPPUNIT_TEST(test_out_of_range);
   CPPUNIT_TEST_SUITE_END();
@@ -17,6 +18,7 @@ public:
   void setUp() {}
   void tearDown() {}
 
+  void test_bitset();
   void test_rotation();
   void test_out_of_range();
 };
@@ -24,6 +26,47 @@ public:
 ///registration of the test so that the runner can find it
 CPPUNIT_TEST_SUITE_REGISTRATION(TestEMTFPhiMemoryImage);
 
+
+void TestEMTFPhiMemoryImage::test_bitset()
+{
+  EMTFPhiMemoryImage image;
+
+  image.set_bit(1, 31);
+  CPPUNIT_ASSERT_EQUAL(image.test_bit(1, 31), true);
+  CPPUNIT_ASSERT_EQUAL(image.get_word(1, 0), 1ul<<31);
+
+  image.clear_bit(1, 31);
+  CPPUNIT_ASSERT_EQUAL(image.test_bit(1, 31), false);
+  CPPUNIT_ASSERT_EQUAL(image.get_word(1, 0), 0ul);
+
+  image.set_bit(1, 31+64);
+  CPPUNIT_ASSERT_EQUAL(image.test_bit(1, 31+64), true);
+  CPPUNIT_ASSERT_EQUAL(image.get_word(1, 1), 1ul<<31);
+
+  image.clear_bit(1, 31+64);
+  CPPUNIT_ASSERT_EQUAL(image.test_bit(1, 31+64), false);
+  CPPUNIT_ASSERT_EQUAL(image.get_word(1, 1), 0ul);
+
+  image.set_bit(1, 31+128);
+  CPPUNIT_ASSERT_EQUAL(image.test_bit(1, 31+128), true);
+  CPPUNIT_ASSERT_EQUAL(image.get_word(1, 2), 1ul<<31);
+
+  image.clear_bit(1, 31+128);
+  CPPUNIT_ASSERT_EQUAL(image.test_bit(1, 31+128), false);
+  CPPUNIT_ASSERT_EQUAL(image.get_word(1, 2), 0ul);
+
+  image.set_bit(1, 57+64);
+  CPPUNIT_ASSERT_EQUAL(image.test_bit(1, 57+64), true);
+  CPPUNIT_ASSERT_EQUAL(image.get_word(1, 1), 1ul<<57);
+
+  image.clear_bit(1, 57+64);
+  CPPUNIT_ASSERT_EQUAL(image.test_bit(1, 57+64), false);
+  CPPUNIT_ASSERT_EQUAL(image.get_word(1, 1), 0ul);
+
+  image.set_bit(3, 99);
+  image.reset();
+  CPPUNIT_ASSERT_EQUAL(image.test_bit(3, 99), false);
+}
 
 void TestEMTFPhiMemoryImage::test_rotation()
 {

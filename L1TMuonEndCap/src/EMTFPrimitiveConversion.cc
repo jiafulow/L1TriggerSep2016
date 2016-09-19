@@ -202,7 +202,7 @@ void EMTFPrimitiveConversion::convert_csc(EMTFHitExtra& conv_hit) {
   }
   assert(pc_lut_id < 61);
 
-  if (false) {
+  if (false) {  // debug
     std::cout << "st: " << pc_station << " ch: " << pc_chamber
         << " lut_id: " << pc_lut_id
         << " ph_init: " << lut().get_ph_init(fw_endcap, fw_sector, pc_lut_id)
@@ -319,65 +319,65 @@ void EMTFPrimitiveConversion::convert_csc(EMTFHitExtra& conv_hit) {
     phzvl |= (1<<1);
   }
 
-  int zone_contrib = 0;
+  int zone_code = 0;
 
   if (fw_station <= 1) {  // station 1
     if (fw_cscid <= 2 || fw_cscid == 12) {  // ring 1
       if (phzvl & (1<<0))
-        zone_contrib |= (1<<0);  // zone 0: [-,41+2]
+        zone_code |= (1<<0);  // zone 0: [-,41+2]
       if (phzvl & (1<<1))
-        zone_contrib |= (1<<1);  // zone 1: [41-1,127+2]
+        zone_code |= (1<<1);  // zone 1: [41-1,127+2]
 
     } else if (fw_cscid <= 5 || fw_cscid == 13) {  // ring 2
       if (phzvl & (1<<0))
-        zone_contrib |= (1<<2);  // zone 2: [-,127+2]
+        zone_code |= (1<<2);  // zone 2: [-,127+2]
 
     } else if (fw_cscid <= 8 || fw_cscid == 14) {  // ring 3
       if (true)
-        zone_contrib |= (1<<3);  // zone 3: [-,-]
+        zone_code |= (1<<3);  // zone 3: [-,-]
     }
 
   } else if (fw_station == 2) {  // station 2
     if (fw_cscid <= 2 || fw_cscid == 9) {  // ring 1
       if (phzvl & (1<<0))
-        zone_contrib |= (1<<0);  // zone 0: [-,41+2]
+        zone_code |= (1<<0);  // zone 0: [-,41+2]
       if (phzvl & (1<<1))
-        zone_contrib |= (1<<1);  // zone 1: [41-1,127+2]
+        zone_code |= (1<<1);  // zone 1: [41-1,127+2]
 
     } else if (fw_cscid <= 8 || fw_cscid == 10) {  // ring 2
       if (phzvl & (1<<0))
-        zone_contrib |= (1<<2);  // zone 2: [-,87+2]
+        zone_code |= (1<<2);  // zone 2: [-,87+2]
       if (phzvl & (1<<1))
-        zone_contrib |= (1<<3);  // zone 3: [87-1,127+2]
+        zone_code |= (1<<3);  // zone 3: [87-1,127+2]
     }
 
   } else if (fw_station == 3) {  // station 3
     if (fw_cscid <= 2 || fw_cscid == 9) {  // ring 1
       if (phzvl & (1<<0))
-        zone_contrib |= (1<<0);  // zone 0: [-,127+2]
+        zone_code |= (1<<0);  // zone 0: [-,127+2]
 
     } else if (fw_cscid <= 8 || fw_cscid == 10) {  // ring 2
       if (phzvl & (1<<0))
-        zone_contrib |= (1<<1);  // zone 1: [-,49+2]
+        zone_code |= (1<<1);  // zone 1: [-,49+2]
       if (phzvl & (1<<1))
-        zone_contrib |= (1<<2);  // zone 2: [49-1,87+2]
+        zone_code |= (1<<2);  // zone 2: [49-1,87+2]
       if (phzvl & (1<<2))
-        zone_contrib |= (1<<3);  // zone 3: [87-1,-]
+        zone_code |= (1<<3);  // zone 3: [87-1,-]
     }
 
   } else if (fw_station == 4) {  // station 4
     if (fw_cscid <= 2 || fw_cscid == 9) {  // ring 1
       if (phzvl & (1<<0))
-        zone_contrib |= (1<<0);  // zone 0: [-,127+2]
+        zone_code |= (1<<0);  // zone 0: [-,127+2]
 
     } else if (fw_cscid <= 8 || fw_cscid == 10) {  // ring 2
       if (phzvl & (1<<0))
-        zone_contrib |= (1<<1);  // zone 1: [-,49+2]
+        zone_code |= (1<<1);  // zone 1: [-,49+2]
       if (phzvl & (1<<1))
-        zone_contrib |= (1<<2);  // zone 2: [49-1,127+2]
+        zone_code |= (1<<2);  // zone 2: [49-1,127+2]
     }
   }
-  assert(zone_contrib > 0);
+  assert(zone_code > 0);
 
   int zone_hit = lut().get_ph_zone_offset(pc_station, pc_chamber);
   zone_hit += ph_hit;
@@ -385,12 +385,12 @@ void EMTFPrimitiveConversion::convert_csc(EMTFHitExtra& conv_hit) {
   // ___________________________________________________________________________
   // Output
 
-  conv_hit.phi_fp          = fph;
-  conv_hit.theta_fp        = th;
-  conv_hit.phzvl           = phzvl;
-  conv_hit.ph_hit          = ph_hit;
-  conv_hit.ph_zone_hit     = zone_hit;
-  conv_hit.ph_zone_contrib = zone_contrib;
+  conv_hit.phi_fp     = fph;
+  conv_hit.theta_fp   = th;
+  conv_hit.phzvl      = phzvl;
+  conv_hit.ph_hit     = ph_hit;
+  conv_hit.zone_hit   = zone_hit;
+  conv_hit.zone_code  = zone_code;
 }
 
 // RPC functions
