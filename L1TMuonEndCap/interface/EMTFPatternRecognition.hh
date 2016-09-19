@@ -13,17 +13,20 @@ public:
   void configure(
       int endcap, int sector, int bx,
       int minBX, int maxBX, int bxWindow,
-      const std::vector<std::string>& pattDefinitions
+      const std::vector<std::string>& pattDefinitions, int maxRoadsPerZone
   );
+
+  void configure_details();
 
   void detect(
       const std::deque<EMTFHitExtraCollection>& extended_conv_hits,
       std::map<pattern_id_t, int>& patt_lifetime_map
   );
 
-  void make_zone_images(
+  void make_zone_image(
+      int zone,
       const std::deque<EMTFHitExtraCollection>& extended_conv_hits,
-      std::vector<EMTFPhiMemoryImage>& zone_images
+      EMTFPhiMemoryImage& image
   );
 
   void detect_single_zone(
@@ -33,10 +36,19 @@ public:
       EMTFRoadExtraCollection& roads
   );
 
+  void sort_single_zone(
+      int zone,
+      EMTFRoadExtraCollection& roads
+  );
+
+
 private:
   int endcap_, sector_, bx_;
 
   int minBX_, maxBX_, bxWindow_;
+
+  std::vector<std::string> pattDefinitions_;
+  int maxRoadsPerZone_;
 
   std::vector<EMTFPhiMemoryImage> patterns_;
   std::vector<int> straightnesses_;

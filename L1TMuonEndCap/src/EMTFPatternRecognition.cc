@@ -1,9 +1,7 @@
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPatternRecognition.hh"
 
-#include <iostream>
 #include <iterator>
 #include <regex>
-#include <string>
 
 #include "helper.h"  // to_hex, to_binary
 
@@ -17,7 +15,7 @@
 void EMTFPatternRecognition::configure(
     int endcap, int sector, int bx,
     int minBX, int maxBX, int bxWindow,
-    const std::vector<std::string>& pattDefinitions
+    const std::vector<std::string>& pattDefinitions, int maxRoadsPerZone
 ) {
   endcap_ = endcap;
   sector_ = sector;
@@ -27,13 +25,20 @@ void EMTFPatternRecognition::configure(
   maxBX_           = maxBX;
   bxWindow_        = bxWindow;
 
+  pattDefinitions_ = pattDefinitions;
+  maxRoadsPerZone_ = maxRoadsPerZone;
+
+  configure_details();
+}
+
+void EMTFPatternRecognition::configure_details() {
   patterns_.clear();
   straightnesses_.clear();
 
   // Parse pattern definitions
   std::regex digits("(\\d+)");
 
-  for (const auto& s: pattDefinitions) {
+  for (const auto& s: pattDefinitions_) {
     auto digits_begin = std::sregex_iterator(s.begin(), s.end(), digits);
     auto digits_end = std::sregex_iterator();
     //for (std::sregex_iterator imatch = digits_begin; imatch != digits_end; ++imatch) {
@@ -114,10 +119,6 @@ void EMTFPatternRecognition::detect(
     std::map<pattern_id_t, int>& patt_lifetime_map
 ) {
 
-  // Make zone images
-  std::vector<EMTFPhiMemoryImage> zone_images;
-  make_zone_images(extended_conv_hits, zone_images);
-
   if (true) {  // debug
     for (const auto& conv_hits : extended_conv_hits) {
       for (const auto& conv_hit : conv_hits) {
@@ -128,7 +129,16 @@ void EMTFPatternRecognition::detect(
             << std::endl;
       }
     }
+  }
 
+  // Make zone images
+  std::array<EMTFPhiMemoryImage, NUM_ZONES> zone_images;
+
+  for (int izone = 0; izone < NUM_ZONES; ++izone) {
+    make_zone_image(izone, extended_conv_hits, zone_images.at(izone));
+  }
+
+  if (false) {  // debug
     for (int izone = NUM_ZONES; izone >= 1; --izone) {
       std::cout << "zone: " << izone << std::endl;
       std::cout << zone_images.at(izone-1) << std::endl;
@@ -136,40 +146,41 @@ void EMTFPatternRecognition::detect(
   }
 
   // Perform pattern recognition in each zone
-  std::vector<EMTFRoadExtraCollection> zone_roads;
+  std::array<EMTFRoadExtraCollection, NUM_ZONES> zone_roads;
 
   for (int izone = 0; izone < NUM_ZONES; ++izone) {
-    EMTFRoadExtraCollection roads;
+    detect_single_zone(izone, zone_images.at(izone), patt_lifetime_map, zone_roads.at(izone));
+  }
 
-    detect_single_zone(izone, zone_images.at(izone), patt_lifetime_map, roads);
+  if (false) {  // debug
+    for (const auto& roads : zone_roads) {
+      for (const auto& road : roads) {
+        std::cout << "pattern: z: " << road.zone << " ph: " << road.key_zhit << " q: " << to_hex(road.quality_code) << " ly: " << to_binary(road.layer_code, 3) << " str: " << to_binary(road.straightness, 3) << std::endl;
+      }
+    }
+  }
 
-    zone_roads.push_back(roads);
+  // Sort patterns and select best three patterns in each zone
+  for (int izone = 0; izone < NUM_ZONES; ++izone) {
+    sort_single_zone(izone, zone_roads.at(izone));
   }
 
   if (true) {  // debug
     for (const auto& roads : zone_roads) {
       for (const auto& road : roads) {
-        std::cout << "pattern: z: " << road.zone << " ph: " << road.key_zhit+1 << " q: " << to_hex(road.quality_code) << " ly: " << to_binary(road.layer_code, 3) << " str: " << to_binary(road.straightness, 3) << std::endl;
+        std::cout << "pattern: z: " << road.zone << " ph: " << road.key_zhit << " q: " << to_hex(road.quality_code) << " ly: " << to_binary(road.layer_code, 3) << " str: " << to_binary(road.straightness, 3) << std::endl;
       }
     }
   }
 
 }
 
-void EMTFPatternRecognition::make_zone_images(
+void EMTFPatternRecognition::make_zone_image(
+    int zone,
     const std::deque<EMTFHitExtraCollection>& extended_conv_hits,
-    std::vector<EMTFPhiMemoryImage>& zone_images
+    EMTFPhiMemoryImage& image
 ) {
-  zone_images.clear();
-
-  // Prepare zone images
-  for (int izone = 0; izone < NUM_ZONES; ++izone) {
-    // Create a zone image
-    EMTFPhiMemoryImage image;
-    zone_images.push_back(image);
-  }
-
-  // Fill zone images
+  // Loop over converted hits and fill the zone image
   std::deque<EMTFHitExtraCollection>::const_iterator ext_conv_hits_it  = extended_conv_hits.begin();
   std::deque<EMTFHitExtraCollection>::const_iterator ext_conv_hits_end = extended_conv_hits.end();
 
@@ -180,14 +191,10 @@ void EMTFPatternRecognition::make_zone_images(
     for (; conv_hits_it != conv_hits_end; ++conv_hits_it) {
       const EMTFHitExtra& conv_hit = *conv_hits_it;
 
-      for (int izone = 0; izone < NUM_ZONES; ++izone) {
-        if (conv_hit.zone_code & (1<<izone)) {  // hit belongs to this zone
-          unsigned int layer = conv_hit.station - 1;
-          unsigned int bit   = conv_hit.zone_hit;
-
-          EMTFPhiMemoryImage& image = zone_images.at(izone);  // pass by reference
-          image.set_bit(layer, bit);
-        }
+      if (conv_hit.zone_code & (1<<zone)) {  // hit belongs to this zone
+        unsigned int layer = conv_hit.station - 1;
+        unsigned int bit   = conv_hit.zone_hit;
+        image.set_bit(layer, bit);
       }
     }  // end loop over conv_hits
   }  // end loop over extended_conv_hits
@@ -273,6 +280,9 @@ void EMTFPatternRecognition::detect_single_zone(
         road.layer_code   = layer_code;
         road.quality_code = quality_code;
 
+        road.ph_q     = road.quality_code;
+        road.ph_num   = (road.key_zhit >> 1);
+
         // Find max quality code in a given key_zhit
         if (max_quality_code < road.quality_code) {
           max_quality_code = road.quality_code;
@@ -288,6 +298,7 @@ void EMTFPatternRecognition::detect_single_zone(
     }
 
   }  // end loop over patterns
+
 
   // Ghost cancellation logic by considering neighbor patterns
   std::vector<int> quality_codes(NUM_ZONE_HITS, 0);
@@ -327,4 +338,35 @@ void EMTFPatternRecognition::detect_single_zone(
   }
 
   roads.swap(survived_roads);
+}
+
+void EMTFPatternRecognition::sort_single_zone(
+    int zone,
+    EMTFRoadExtraCollection& roads
+) {
+
+  // First, order by key_zhit
+  struct {
+    constexpr bool operator()(const EMTFRoadExtra& lhs, const EMTFRoadExtra& rhs) {
+      return lhs.key_zhit > rhs.key_zhit;
+    }
+  } greater_zhit_cmp;
+
+  std::sort(roads.begin(), roads.end(), greater_zhit_cmp);
+
+  // Second, sort by quality_code, but preserving the original order
+    struct {
+    constexpr bool operator()(const EMTFRoadExtra& lhs, const EMTFRoadExtra& rhs) {
+      return lhs.quality_code > rhs.quality_code;
+    }
+  } greater_quality_cmp;
+
+  std::stable_sort(roads.begin(), roads.end(), greater_quality_cmp);
+
+  // Finally, select 3 best
+  const size_t n = maxRoadsPerZone_;
+  if (roads.size() > n) {
+    roads.erase(roads.begin() + n, roads.end());
+  }
+  assert(roads.size() <= n);
 }

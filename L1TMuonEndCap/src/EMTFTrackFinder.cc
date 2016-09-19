@@ -27,6 +27,7 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
   zoneBoundaries2_ = spPRParams16.getParameter<std::vector<int> >("ZoneBoundaries2");
   zoneOverlap_     = spPRParams16.getParameter<int>("ZoneOverlap");
   pattDefinitions_ = spPRParams16.getParameter<std::vector<std::string> >("PatternDefinitions");
+  maxRoadsPerZone_ = spPRParams16.getParameter<int>("MaxRoadsPerZone");
 
   const edm::ParameterSet spPCParams16 = config_.getParameter<edm::ParameterSet>("spPCParams16");
   includeNeighbor_ = spPCParams16.getParameter<bool>("IncludeNeighbor");
@@ -81,7 +82,7 @@ void EMTFTrackFinder::process(
           iendcap, isector,
           minBX_, maxBX_, bxWindow_,
           zoneBoundaries1_, zoneBoundaries2_, zoneOverlap_,
-          pattDefinitions_,
+          pattDefinitions_, maxRoadsPerZone_,
           includeNeighbor_, duplicateWires_
       );
 

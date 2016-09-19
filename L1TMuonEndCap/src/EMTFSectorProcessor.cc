@@ -17,7 +17,7 @@ void EMTFSectorProcessor::configure(
     int endcap, int sector,
     int minBX, int maxBX, int bxWindow,
     const std::vector<int>& zoneBoundaries1, const std::vector<int>& zoneBoundaries2, int zoneOverlap,
-    const std::vector<std::string>& pattDefinitions,
+    const std::vector<std::string>& pattDefinitions, int maxRoadsPerZone,
     bool includeNeighbor, bool duplicateWires
 ) {
   assert(MIN_ENDCAP <= endcap && endcap <= MAX_ENDCAP);
@@ -36,6 +36,7 @@ void EMTFSectorProcessor::configure(
   zoneBoundaries2_ = zoneBoundaries2;
   zoneOverlap_     = zoneOverlap;
   pattDefinitions_ = pattDefinitions;
+  maxRoadsPerZone_ = maxRoadsPerZone;
 
   includeNeighbor_ = includeNeighbor;
   duplicateWires_ = duplicateWires;
@@ -89,7 +90,7 @@ void EMTFSectorProcessor::process_single_bx(
   patt_recog.configure(
       endcap_, sector_, bx,
       minBX_, maxBX_, bxWindow_,
-      pattDefinitions_
+      pattDefinitions_, maxRoadsPerZone_
   );
 
   std::map<int, std::vector<TriggerPrimitive> > selected_csc_map;

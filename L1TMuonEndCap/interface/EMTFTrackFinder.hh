@@ -42,6 +42,7 @@ private:
   std::vector<int> zoneBoundaries1_, zoneBoundaries2_;
   int zoneOverlap_;
   std::vector<std::string> pattDefinitions_;
+  int maxRoadsPerZone_;
 
   bool includeNeighbor_, duplicateWires_;
 
