@@ -1,5 +1,7 @@
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPrimitiveMatching.hh"
 
+#include "helper.h"  // to_hex, to_binary
+
 
 void EMTFPrimitiveMatching::configure(
     int endcap, int sector, int bx
@@ -18,9 +20,9 @@ void EMTFPrimitiveMatching::match(
   // Organize converted hits by (zone, station)
   std::array<EMTFHitExtraCollection, NUM_ZONES*NUM_STATIONS> zs_conv_hits;
 
-  bool use_zone_code_pm = true;
+  bool use_fs_zone_code = true;  // use zone code as in firmware find_segment module
 
-  // Loop over converted hits and fill the map
+  // Loop over converted hits and fill the array
   std::deque<EMTFHitExtraCollection>::const_iterator ext_conv_hits_it  = extended_conv_hits.begin();
   std::deque<EMTFHitExtraCollection>::const_iterator ext_conv_hits_end = extended_conv_hits.end();
 
@@ -35,8 +37,8 @@ void EMTFPrimitiveMatching::match(
       int istation = conv_hit.station-1;
 
       int zone_code = conv_hit.zone_code;  // decide based on original zone code
-      if (use_zone_code_pm)
-        zone_code = get_zone_code_pm(conv_hit);  // decide based on new zone code
+      if (use_fs_zone_code)
+        zone_code = get_fs_zone_code(conv_hit);  // decide based on new zone code
 
       for (int izone = 0; izone < NUM_ZONES; ++izone) {
         if (zone_code & (1<<izone)) {
@@ -48,75 +50,177 @@ void EMTFPrimitiveMatching::match(
     }  // end loop over conv_hits
   }  // end loop over extended_conv_hits
 
+  if (true) {  // debug
+    for (int izone = 0; izone < NUM_ZONES; ++izone) {
+      for (int istation = 0; istation < NUM_STATIONS; ++istation) {
+        int zs = (izone*4) + istation;
+        const int bw_fph = 13;
+        const int bpow = 7;  // (1 << bpow) is count of input ranks
+        for (const auto& conv_hit : zs_conv_hits.at(zs)) {
+          std::cout << "z: " << izone << " st: " << istation+1 << " cscid: " << conv_hit.csc_ID << " ph_seg: " << conv_hit.phi_fp << " ph_seg_red: " << (conv_hit.phi_fp>>((bw_fph-bpow-1)))<< std::endl;
+        }
+      }
+    }
+  }
 
-  zone_tracks.clear();
-  zone_tracks.resize(NUM_ZONES);
+
+  // Keep the best phi difference for every road by (zone, station)
+  std::array<std::vector<std::pair<int, int> >, NUM_ZONES*NUM_STATIONS> zs_phi_differences;
 
   // Get the best-matching hits by comparing phi difference between
   // pattern and segment
   for (int izone = 0; izone < NUM_ZONES; ++izone) {
-    const EMTFRoadExtraCollection& roads = zone_roads.at(izone);
-    int nroads = roads.size();
-
     for (int istation = 0; istation < NUM_STATIONS; ++istation) {
       const int zs = (izone*4) + istation;
-      const int bpow = 7;  // (1 << bpow) is count of input ranks
-      const int max_ph_diff = (istation == 0) ? 15 : 7;  // max phi difference
-      const int invalid_ph_diff = (istation == 0) ? 31 : 15;  // invalid difference
 
-      const EMTFHitExtraCollection& conv_hits = zs_conv_hits.at(zs);
-      int nchits = conv_hits.size();
+      match_single_zone_station(
+          istation + 1,
+          zone_roads.at(izone),
+          zs_conv_hits.at(zs),
+          zs_phi_differences.at(zs)
+      );
 
-      for (int iroad = 0; iroad < nroads; ++iroad) {
-        int ph_pat = roads.at(iroad).ph_num;  // ph detected in pattern
-        int ph_q   = roads.at(iroad).ph_q;
-        assert(ph_pat >= 0 && ph_q > 0);
-
-        std::vector<std::pair<int, int> > phi_differences;
-
-        for (int ichit = 0; ichit < nchits; ++ichit) {
-          int ph_seg     = conv_hits.at(ichit).phi_fp;  // ph from segments
-          int ph_seg_red = ph_seg >> bpow;  // remove unused low bits
-          assert(ph_seg >= 0);
-
-          // get abs difference
-          int ph_diff = (ph_pat > ph_seg_red) ? (ph_pat - ph_seg_red) : (ph_seg_red - ph_pat);
-
-          if (ph_diff > max_ph_diff) {
-            ph_diff = invalid_ph_diff;  // difference is too high, cannot be the same pattern
-          }
-
-          phi_differences.push_back(std::make_pair(ichit, ph_diff));  // make a key-value pair
-
-        }  // end loop over conv_hits
-
-        if (!phi_differences.empty()) {
-          // Find best phi difference
-          sort_ph_diff(phi_differences);
-
-          EMTFTrackExtra track = make_track(conv_hits, phi_differences.front());
-          zone_tracks.at(izone).push_back(track);
-        }
-
-      }  // end loop over roads
-
+      assert(zone_roads.at(izone).size() == zs_phi_differences.at(zs).size());
     }  // end loop over stations
   }  // end loop over zones
 
+  if (true) {  // debug
+    for (int izone = 0; izone < NUM_ZONES; ++izone) {
+      for (int istation = 0; istation < NUM_STATIONS; ++istation) {
+        int zs = (izone*4) + istation;
+        int i = 0;
+        for (const auto& ph_diff_pair : zs_phi_differences.at(zs)) {
+          std::cout << "z: " << izone << " r: " << zone_roads.at(izone).at(i).winner << " ph_num: " << zone_roads.at(izone).at(i).ph_num << " st: " << istation+1 << " ichit: " << ph_diff_pair.first << " ph_diff: " << ph_diff_pair.second << std::endl;
+          ++i;
+        }
+      }
+    }
+  }
+
+
+  // Build all tracks in each zone
+  zone_tracks.clear();
+  zone_tracks.resize(NUM_ZONES);
+
+  for (int izone = 0; izone < NUM_ZONES; ++izone) {
+    const EMTFRoadExtraCollection& roads = zone_roads.at(izone);
+    const int nroads = roads.size();
+
+    for (int iroad = 0; iroad < nroads; ++iroad) {
+      const EMTFRoadExtra& road = roads.at(iroad);
+
+      const int invalid_ph_diff = 31;
+
+      // Create a track
+      EMTFTrackExtra track;
+      track.endcap   = road.endcap;
+      track.sector   = road.sector;
+      track.bx       = road.bx;
+
+      track.mode      = 0;
+      track.num_xhits = 0;
+
+      track.xhits        .clear();
+      track.xhits_ph_diff.clear();
+      track.xhits_valid  .clear();
+
+      track.xhits        .resize(10, EMTFHitExtra());
+      track.xhits_ph_diff.resize(10, invalid_ph_diff);
+      track.xhits_valid  .resize(10, false);
+
+      for (int istation = 0; istation < NUM_STATIONS; ++istation) {
+        const int zs = (izone*4) + istation;
+
+        const EMTFHitExtraCollection& conv_hits = zs_conv_hits.at(zs);
+        int ichit   = zs_phi_differences.at(zs).at(iroad).first;
+        int ph_diff = zs_phi_differences.at(zs).at(iroad).second;
+
+        if (ph_diff != invalid_ph_diff) {
+          insert_hit(istation+1, ichit, ph_diff, conv_hits, track);
+        }
+      }
+
+      //track.road = static_cast<EMTFRoad>(road);
+      track.xroad = road;
+
+      // Output track
+      zone_tracks.at(izone).push_back(track);
+
+    }  // end loop over roads
+  }  // end loop over zones
+
+  if (true) {  // debug
+    for (const auto& tracks : zone_tracks) {
+      for (const auto& track : tracks) {
+        int i = 0;
+        for (const auto& xhit : track.xhits) {
+          if (track.xhits_valid.at(i)) {
+            int fs_segment = get_fs_segment(xhit);
+            std::cout << "match seg: z: " << track.road.zone << " pat: " << track.road.winner <<  " st: " << xhit.station
+                << " vi: " << to_binary(0b1, 2) << " hi: " << ((fs_segment>>4) & 0x3)
+                << " ci: " << ((fs_segment>>1) & 0x7) << " si: " << (fs_segment & 0x1)
+                << " ph: " << xhit.phi_fp << " th: " << xhit.theta_fp
+                << std::endl;
+          }
+          ++i;
+        }
+      }
+    }
+  }
+
 }
 
-unsigned int EMTFPrimitiveMatching::get_zone_code_pm(const EMTFHitExtra& conv_hit) const {
-  static const int zone_code_pm_table[4][3] = {  // [station][ring]
-    {0b0011, 0b0100, 0b1000},  // st1 r1: [z0,z1], r2: [z2], r3: [z3]
-    {0b0011, 0b1100, 0b0000},  // st2 r1: [z0,z1], r2: [z2,z3]
-    {0b0001, 0b1110, 0b0000},  // st3 r1: [z0], r2: [z1,z2,z3]
-    {0b0001, 0b0110, 0b0000}   // st4 r1: [z0], r2: [z1,z2]
-  };
+void EMTFPrimitiveMatching::match_single_zone_station(
+    int station,
+    const EMTFRoadExtraCollection& roads,
+    const EMTFHitExtraCollection& conv_hits,
+    std::vector<std::pair<int, int> >& phi_differences
+) const {
+  const int bw_fph = 13;
+  const int bpow = 7;  // (1 << bpow) is count of input ranks
+  const int max_ph_diff = (station == 1) ? 15 : 7;  // max phi difference
+  //const int invalid_ph_diff = (station == 1) ? 31 : 15;
+  const int invalid_ph_diff = 31;
 
-  unsigned istation = conv_hit.station-1;
-  unsigned iring    = (conv_hit.station == 1 && conv_hit.ring == 4) ? conv_hit.ring-4 : conv_hit.ring-1;
-  assert(istation < 4 && iring < 3);
-  return zone_code_pm_table[istation][iring];
+  const int nroads = roads.size();
+  const int nchits = conv_hits.size();
+
+  for (int iroad = 0; iroad < nroads; ++iroad) {
+    int ph_pat = roads.at(iroad).ph_num;  // ph detected in pattern
+    int ph_q   = roads.at(iroad).ph_q;
+    assert(ph_pat >= 0 && ph_q > 0);
+
+    std::vector<std::pair<int, int> > tmp_phi_differences;
+
+    for (int ichit = 0; ichit < nchits; ++ichit) {
+      int ph_seg     = conv_hits.at(ichit).phi_fp;  // ph from segments
+      int ph_seg_red = ph_seg >> (bw_fph-bpow-1);  // remove unused low bits
+      assert(ph_seg >= 0);
+
+      // Get abs difference
+      int ph_diff = (ph_pat > ph_seg_red) ? (ph_pat - ph_seg_red) : (ph_seg_red - ph_pat);
+
+      if (ph_diff > max_ph_diff) {
+        ph_diff = invalid_ph_diff;  // difference is too high, cannot be the same pattern
+      }
+
+      tmp_phi_differences.push_back(std::make_pair(ichit, ph_diff));  // make a key-value pair
+
+    }  // end loop over conv_hits
+
+    if (!tmp_phi_differences.empty()) {
+      // Find best phi difference
+      sort_ph_diff(tmp_phi_differences);
+
+      // Store the best phi difference
+      phi_differences.push_back(tmp_phi_differences.front());
+
+    } else {
+      // No segment found
+      phi_differences.push_back(std::make_pair(0, invalid_ph_diff));
+    }
+
+  }  // end loop over roads
 }
 
 void EMTFPrimitiveMatching::sort_ph_diff(std::vector<std::pair<int, int> >& phi_differences) const {
@@ -133,12 +237,130 @@ void EMTFPrimitiveMatching::sort_ph_diff(std::vector<std::pair<int, int> >& phi_
   // Maybe implement the firmware algorithm here?
 }
 
-EMTFTrackExtra EMTFPrimitiveMatching::make_track(
-    const EMTFHitExtraCollection& conv_hits,
-    std::pair<int, int> best_ph_diff
+void EMTFPrimitiveMatching::insert_hits(
+    int station, int ichit, int ph_diff, const EMTFHitExtraCollection& conv_hits,
+    EMTFTrackExtra& track
 ) const {
+  // First, insert the hit
+  insert_hit(station, ichit, ph_diff, conv_hits, track);
 
-  EMTFTrackExtra track;
+  const int nchits = conv_hits.size();
 
-  return track;
+  // Second, find possible duplicated hit, insert that too
+  for (int jchit = 0; jchit < nchits; ++jchit) {
+    if (jchit == ichit)
+      continue;
+
+    const EMTFHitExtra& conv_hit_i = conv_hits.at(ichit);
+    const EMTFHitExtra& conv_hit_j = conv_hits.at(jchit);
+
+    if (
+      (conv_hit_i.pc_station == conv_hit_j.pc_station) &&
+      (conv_hit_i.pc_chamber == conv_hit_j.pc_chamber) &&
+      (conv_hit_i.strip      == conv_hit_j.strip) &&
+      (conv_hit_i.pattern    == conv_hit_j.pattern)
+    ) {
+      // Must have the same phi_fp
+      assert(conv_hit_i.phi_fp == conv_hit_j.phi_fp);
+
+      insert_hit(station, jchit, ph_diff, conv_hits, track);
+    }
+  }
 }
+
+void EMTFPrimitiveMatching::insert_hit(
+    int station, int ichit, int ph_diff, const EMTFHitExtraCollection& conv_hits,
+    EMTFTrackExtra& track
+) const {
+  const EMTFHitExtra& conv_hit = conv_hits.at(ichit);
+  //const EMTFHit& conv_hit = static_cast<EMTFHit>(conv_hits.at(ichit));
+
+  int ibegin = 0, iend = 0;
+  switch (station) {
+  case 1:
+    ibegin = 0;
+    iend   = 4;
+    break;
+  case 2:
+    ibegin = 4;
+    iend   = 6;
+    break;
+  case 3:
+    ibegin = 6;
+    iend   = 8;
+    break;
+  case 4:
+    ibegin = 8;
+    iend   = 10;
+    break;
+  default:
+    break;
+  }
+
+  bool ins_success = false;
+  for (int i = ibegin; i < iend; ++i) {
+    if (track.xhits_valid.at(i) == true)
+      continue;
+
+    track.xhits.at(i)          = conv_hit;
+    track.xhits_ph_diff.at(i)  = ph_diff;
+    track.xhits_valid.at(i)    = true;
+    track.num_xhits           += 1;
+    track.mode                |= (1<<(4-station));
+
+    ins_success = true;
+    break;
+  }
+
+  assert(ins_success && "Failed to insert EMTFHitExtra into EMTFTrackExtra");
+}
+
+unsigned int EMTFPrimitiveMatching::get_fs_zone_code(const EMTFHitExtra& conv_hit) const {
+  static const int _table[4][3] = {  // [station][ring]
+    {0b0011, 0b0100, 0b1000},  // st1 r1: [z0,z1], r2: [z2], r3: [z3]
+    {0b0011, 0b1100, 0b0000},  // st2 r1: [z0,z1], r2: [z2,z3]
+    {0b0001, 0b1110, 0b0000},  // st3 r1: [z0], r2: [z1,z2,z3]
+    {0b0001, 0b0110, 0b0000}   // st4 r1: [z0], r2: [z1,z2]
+  };
+
+  unsigned istation = conv_hit.station-1;
+  unsigned iring    = (conv_hit.station == 1 && conv_hit.ring == 4) ? conv_hit.ring-4 : conv_hit.ring-1;
+  assert(istation < 4 && iring < 3);
+  return _table[istation][iring];
+}
+
+unsigned int EMTFPrimitiveMatching::get_fs_segment(const EMTFHitExtra& conv_hit) const {
+  bool is_neighbor = (conv_hit.pc_station == 5);
+  bool is_ring1    = (conv_hit.ring == 1);
+  bool is_me1      = (conv_hit.station == 1);
+  bool is_sub1     = (conv_hit.subsector == 1);
+
+  int fs_history = bx_ - conv_hit.bx;  // history id
+  int fs_chamber = -1;                 // chamber id
+  int fs_segment = 0;                  // segment id, not emulated
+
+  // For station 1
+  //   j = 0 is neighbor sector chamber
+  //   j = 1,2,3 are subsector 1 chambers
+  //   j = 4,5,6 are subsector 2 chambers
+  // For stations 2,3,4:
+  //   j = 0 is neighbor sector chamber
+  //   j = 1,2,3,4,5,6 are native sector chambers
+
+  if (is_me1) {
+    if (conv_hit.ring == 1 || conv_hit.ring == 4) {
+      fs_chamber = is_neighbor ? 0 : (is_sub1 ? conv_hit.csc_ID : conv_hit.csc_ID+3);
+    } else if (conv_hit.ring == 2) {
+      fs_chamber = is_neighbor ? 0 : (is_sub1 ? conv_hit.csc_ID-3 : conv_hit.csc_ID-3+3);
+    } else if (conv_hit.ring == 3) {
+      fs_chamber = is_neighbor ? 0 : (is_sub1 ? conv_hit.csc_ID-6 : conv_hit.csc_ID-6+3);
+    }
+  } else {
+    fs_chamber = is_neighbor ? 0 : (is_ring1 ? conv_hit.csc_ID : conv_hit.csc_ID-3);
+  }
+  assert(fs_chamber != -1);
+
+  fs_segment = ((fs_history & 0x3)<<4) | ((fs_chamber & 0x7)<<1) | (fs_segment & 0x1);
+  return fs_segment;
+}
+

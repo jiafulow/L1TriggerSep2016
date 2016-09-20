@@ -43,10 +43,13 @@ void EMTFSectorProcessor::configure(
 }
 
 void EMTFSectorProcessor::process(
+    EventNumber_t ievent,
     const TriggerPrimitiveCollection& muon_primitives,
     EMTFHitExtraCollection& out_hits,
     EMTFTrackExtraCollection& out_tracks
 ) const {
+
+  //if (!(endcap_ == 1 && sector_ == 2))  return;  // debug
 
   // List of converted hits, extended from previous BXs
   std::deque<EMTFHitExtraCollection> extended_conv_hits;
@@ -57,6 +60,10 @@ void EMTFSectorProcessor::process(
   int delayBX = bxWindow_ - 1;  // = 2
 
   for (int ibx = minBX_; ibx <= maxBX_ + delayBX; ++ibx) {
+    if (true) {  // debug
+      std::cout << "Endcap: " << endcap_ << " Sector: " << sector_ << " Event: " << ievent << " BX: " << ibx << std::endl;
+    }
+
     process_single_bx(ibx, muon_primitives, out_hits, out_tracks, extended_conv_hits, patt_lifetime_map);
 
     if (ibx >= minBX_ + delayBX) {

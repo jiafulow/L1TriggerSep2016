@@ -11,12 +11,19 @@
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFSubsystemTag.hh"
 
 
+typedef L1TMuonEndCap::EMTFHit             EMTFHit;
+typedef L1TMuonEndCap::EMTFHitCollection   EMTFHitCollection;
+typedef L1TMuonEndCap::EMTFRoad            EMTFRoad;
+typedef L1TMuonEndCap::EMTFRoadCollection  EMTFRoadCollection;
+typedef L1TMuonEndCap::EMTFTrack           EMTFTrack;
+typedef L1TMuonEndCap::EMTFTrackCollection EMTFTrackCollection;
+
 typedef L1TMuonEndCap::EMTFHitExtra             EMTFHitExtra;
 typedef L1TMuonEndCap::EMTFHitExtraCollection   EMTFHitExtraCollection;
-typedef L1TMuonEndCap::EMTFTrackExtra           EMTFTrackExtra;
-typedef L1TMuonEndCap::EMTFTrackExtraCollection EMTFTrackExtraCollection;
 typedef L1TMuonEndCap::EMTFRoadExtra            EMTFRoadExtra;
 typedef L1TMuonEndCap::EMTFRoadExtraCollection  EMTFRoadExtraCollection;
+typedef L1TMuonEndCap::EMTFTrackExtra           EMTFTrackExtra;
+typedef L1TMuonEndCap::EMTFTrackExtraCollection EMTFTrackExtraCollection;
 
 typedef L1TMuonEndCap::TriggerPrimitive           TriggerPrimitive;
 typedef L1TMuonEndCap::TriggerPrimitiveCollection TriggerPrimitiveCollection;

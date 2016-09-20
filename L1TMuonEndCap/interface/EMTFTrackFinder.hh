@@ -26,8 +26,8 @@ public:
   ) const;
 
 private:
-  std::unique_ptr<EMTFSectorProcessor> sector_processor_;
-  std::unique_ptr<EMTFSectorProcessorLUT> sector_processor_lut_;
+  EMTFSectorProcessorLUT sector_processor_lut_;
+  std::vector<EMTFSectorProcessor> sector_processors_;
 
   const edm::ParameterSet config_;
   const edm::EDGetToken tokenCSC_;

@@ -16,15 +16,28 @@ public:
     std::vector<EMTFTrackExtraCollection>& zone_tracks
   ) const;
 
-
-  unsigned int get_zone_code_pm(const EMTFHitExtra& conv_hit) const;
+  void match_single_zone_station(
+    int station,
+    const EMTFRoadExtraCollection& roads,
+    const EMTFHitExtraCollection& conv_hits,
+    std::vector<std::pair<int, int> >& phi_differences
+  ) const;
 
   void sort_ph_diff(std::vector<std::pair<int, int> >& phi_differences) const;
 
-  EMTFTrackExtra make_track(
-      const EMTFHitExtraCollection& conv_hits,
-      std::pair<int, int> best_ph_diff
+  void insert_hits(
+      int station, int ichit, int ph_diff, const EMTFHitExtraCollection& conv_hits,
+      EMTFTrackExtra& track
   ) const;
+
+  void insert_hit(
+      int station, int ichit, int ph_diff, const EMTFHitExtraCollection& conv_hits,
+      EMTFTrackExtra& track
+  ) const;
+
+  unsigned int get_fs_zone_code(const EMTFHitExtra& conv_hit) const;
+
+  unsigned int get_fs_segment(const EMTFHitExtra& conv_hit) const;
 
 private:
   int endcap_, sector_, bx_;

@@ -20,6 +20,8 @@ public:
   explicit EMTFSectorProcessor();
   ~EMTFSectorProcessor();
 
+  typedef unsigned long long EventNumber_t;
+
   void configure(
       const EMTFSectorProcessorLUT* lut,
       int endcap, int sector,
@@ -30,6 +32,7 @@ public:
   );
 
   void process(
+      EventNumber_t ievent,
       const TriggerPrimitiveCollection& muon_primitives,
       EMTFHitExtraCollection& out_hits,
       EMTFTrackExtraCollection& out_tracks

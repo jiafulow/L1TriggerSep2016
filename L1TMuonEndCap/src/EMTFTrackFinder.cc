@@ -7,8 +7,8 @@
 
 
 EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollector&& iConsumes) :
-    sector_processor_(new EMTFSectorProcessor()),
-    sector_processor_lut_(new EMTFSectorProcessorLUT()),
+    sector_processor_lut_(),
+    sector_processors_(),
     config_(iConfig),
     tokenCSC_(iConsumes.consumes<CSCCorrelatedLCTDigiCollection>(iConfig.getParameter<edm::InputTag>("CSCInput"))),
     tokenRPC_(iConsumes.consumes<RPCDigiCollection>(iConfig.getParameter<edm::InputTag>("RPCInput"))),
@@ -32,6 +32,29 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
   const edm::ParameterSet spPCParams16 = config_.getParameter<edm::ParameterSet>("spPCParams16");
   includeNeighbor_ = spPCParams16.getParameter<bool>("IncludeNeighbor");
   duplicateWires_  = spPCParams16.getParameter<bool>("DuplicateWires");
+
+  try {
+    // Configure sector processor LUT
+    sector_processor_lut_.read(ph_th_lut_);
+
+    // Configure sector processors
+    for (int endcap = MIN_ENDCAP; endcap <= MAX_ENDCAP; ++endcap) {
+      for (int sector = MIN_TRIGSECTOR; sector <= MAX_TRIGSECTOR; ++sector) {
+        sector_processors_.push_back(EMTFSectorProcessor());
+
+        sector_processors_.back().configure(
+            &sector_processor_lut_,
+            endcap, sector,
+            minBX_, maxBX_, bxWindow_,
+            zoneBoundaries1_, zoneBoundaries2_, zoneOverlap_,
+            pattDefinitions_, maxRoadsPerZone_,
+            includeNeighbor_, duplicateWires_
+        );
+      }
+    }
+  } catch (...) {
+    throw;
+  }
 }
 
 EMTFTrackFinder::~EMTFTrackFinder() {
@@ -71,22 +94,14 @@ void EMTFTrackFinder::process(
   // ___________________________________________________________________________
   // Run each sector processor
 
-  sector_processor_lut_->read(ph_th_lut_);
+  for (int endcap = MIN_ENDCAP; endcap <= MAX_ENDCAP; ++endcap) {
+    for (int sector = MIN_TRIGSECTOR; sector <= MAX_TRIGSECTOR; ++sector) {
+      int es = (endcap-1) * 6 + (sector-1);
 
-  for (int iendcap = MIN_ENDCAP; iendcap <= MAX_ENDCAP; ++iendcap) {
-    for (int isector = MIN_TRIGSECTOR; isector <= MAX_TRIGSECTOR; ++isector) {
-      //if (!(iendcap == 1 && isector == 6))  continue;  // debug
-
-      sector_processor_->configure(
-          sector_processor_lut_.get(),
-          iendcap, isector,
-          minBX_, maxBX_, bxWindow_,
-          zoneBoundaries1_, zoneBoundaries2_, zoneOverlap_,
-          pattDefinitions_, maxRoadsPerZone_,
-          includeNeighbor_, duplicateWires_
+      sector_processors_.at(es).process(
+          iEvent.id().event(), muon_primitives,
+          out_hits, out_tracks
       );
-
-      sector_processor_->process(muon_primitives, out_hits, out_tracks);
     }
   }
 
@@ -107,8 +122,6 @@ void EMTFTrackFinder::process(
     }
   }
 
-
-  //assert(muon_primitives.size() == out_hits.size());
 
   return;
 }

@@ -152,7 +152,7 @@ void EMTFPatternRecognition::detect(
     detect_single_zone(izone, zone_images.at(izone), patt_lifetime_map, zone_roads.at(izone));
   }
 
-  if (false) {  // debug
+  if (true) {  // debug
     for (const auto& roads : zone_roads) {
       for (const auto& road : roads) {
         std::cout << "pattern: z: " << road.zone << " ph: " << road.key_zhit << " q: " << to_hex(road.quality_code) << " ly: " << to_binary(road.layer_code, 3) << " str: " << to_binary(road.straightness, 3) << std::endl;
@@ -168,7 +168,7 @@ void EMTFPatternRecognition::detect(
   if (true) {  // debug
     for (const auto& roads : zone_roads) {
       for (const auto& road : roads) {
-        std::cout << "pattern: z: " << road.zone << " ph: " << road.key_zhit << " q: " << to_hex(road.quality_code) << " ly: " << to_binary(road.layer_code, 3) << " str: " << to_binary(road.straightness, 3) << std::endl;
+        std::cout << "z: " << road.zone << " r: " << road.winner << " ph_num: " << road.ph_num << " ph_q: " << to_hex(road.quality_code) << " ly: " << to_binary(road.layer_code, 3) << " str: " << to_binary(road.straightness, 3) << std::endl;
       }
     }
   }
@@ -267,6 +267,7 @@ void EMTFPatternRecognition::detect_single_zone(
             (((layer_code>>0)   & 1) << 0)
         );
 
+        // Create a road (fired pattern)
         EMTFRoadExtra road;
         road.endcap   = endcap_;
         road.sector   = sector_;
@@ -281,7 +282,7 @@ void EMTFPatternRecognition::detect_single_zone(
         road.quality_code = quality_code;
 
         road.ph_q     = road.quality_code;
-        road.ph_num   = (road.key_zhit >> 1);
+        road.ph_num   = road.key_zhit;
 
         // Find max quality code in a given key_zhit
         if (max_quality_code < road.quality_code) {
@@ -343,7 +344,8 @@ void EMTFPatternRecognition::detect_single_zone(
 void EMTFPatternRecognition::sort_single_zone(EMTFRoadExtraCollection& roads) const {
   // First, order by key_zhit
   struct {
-    constexpr bool operator()(const EMTFRoadExtra& lhs, const EMTFRoadExtra& rhs) {
+    typedef EMTFRoadExtra value_type;
+    constexpr bool operator()(const value_type& lhs, const value_type& rhs) {
       return lhs.key_zhit > rhs.key_zhit;
     }
   } greater_zhit_cmp;
@@ -352,7 +354,8 @@ void EMTFPatternRecognition::sort_single_zone(EMTFRoadExtraCollection& roads) co
 
   // Second, sort by quality_code, but preserving the original order
   struct {
-    constexpr bool operator()(const EMTFRoadExtra& lhs, const EMTFRoadExtra& rhs) {
+    typedef EMTFRoadExtra value_type;
+    constexpr bool operator()(const value_type& lhs, const value_type& rhs) {
       return lhs.quality_code > rhs.quality_code;
     }
   } greater_quality_cmp;
@@ -365,4 +368,10 @@ void EMTFPatternRecognition::sort_single_zone(EMTFRoadExtraCollection& roads) co
     roads.erase(roads.begin() + n, roads.end());
   }
   assert(roads.size() <= n);
+
+  // Assign the winner variable
+  const int nroads = roads.size();
+  for (int iroad = 0; iroad < nroads; ++iroad) {
+    roads.at(iroad).winner = iroad;
+  }
 }
