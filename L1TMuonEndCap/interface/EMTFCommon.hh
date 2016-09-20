@@ -34,5 +34,9 @@ typedef L1TMuonEndCap::RPCTag RPCTag;
 #define MIN_TRIGSECTOR 1
 #define MAX_TRIGSECTOR 6
 
+// Zones
+#define NUM_ZONES 4
+#define NUM_ZONE_HITS 160
+
 #endif
 

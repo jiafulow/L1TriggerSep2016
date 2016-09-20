@@ -20,26 +20,27 @@ public:
 
   void detect(
       const std::deque<EMTFHitExtraCollection>& extended_conv_hits,
-      std::map<pattern_id_t, int>& patt_lifetime_map
-  );
+      std::map<pattern_id_t, int>& patt_lifetime_map,
+      std::vector<EMTFRoadExtraCollection>& zone_roads
+  ) const;
 
   void make_zone_image(
       int zone,
       const std::deque<EMTFHitExtraCollection>& extended_conv_hits,
       EMTFPhiMemoryImage& image
-  );
+  ) const;
 
   void detect_single_zone(
       int zone,
       EMTFPhiMemoryImage cloned_image,
       std::map<pattern_id_t, int>& patt_lifetime_map,
       EMTFRoadExtraCollection& roads
-  );
+  ) const;
 
   void sort_single_zone(
       int zone,
       EMTFRoadExtraCollection& roads
-  );
+  ) const;
 
 
 private:

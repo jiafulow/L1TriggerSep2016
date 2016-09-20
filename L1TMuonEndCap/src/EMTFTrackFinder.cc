@@ -42,7 +42,7 @@ void EMTFTrackFinder::process(
     const edm::Event& iEvent, const edm::EventSetup& iSetup,
     EMTFHitExtraCollection& out_hits,
     EMTFTrackExtraCollection& out_tracks
-) {
+) const {
 
   out_hits.clear();
   out_tracks.clear();

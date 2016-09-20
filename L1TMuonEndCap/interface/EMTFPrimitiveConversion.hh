@@ -19,15 +19,15 @@ public:
       T tag,
       int selected,
       const TriggerPrimitive& muon_primitive
-  );
+  ) const;
 
   const EMTFSectorProcessorLUT& lut() const;
 
   // CSC functions
-  void convert_csc(EMTFHitExtra& conv_hit);
+  void convert_csc(EMTFHitExtra& conv_hit) const;
 
   // RPC functions
-  void convert_rpc(EMTFHitExtra& conv_hit);
+  void convert_rpc(EMTFHitExtra& conv_hit) const;
 
 private:
   const EMTFSectorProcessorLUT* lut_;

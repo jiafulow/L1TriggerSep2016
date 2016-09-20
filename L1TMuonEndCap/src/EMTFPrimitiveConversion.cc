@@ -32,7 +32,7 @@ EMTFHitExtra EMTFPrimitiveConversion::convert(
     CSCTag tag,
     int selected,
     const TriggerPrimitive& muon_primitive
-) {
+) const {
   const CSCDetId tp_detId = muon_primitive.detId<CSCDetId>();
   const CSCData& tp_data  = muon_primitive.getCSCData();
 
@@ -117,7 +117,7 @@ EMTFHitExtra EMTFPrimitiveConversion::convert(
     RPCTag tag,
     int selected,
     const TriggerPrimitive& muon_primitive
-) {
+) const {
   //const RPCDetId tp_detId = muon_primitive.detId<RPCDetId>();
   //const RPCData& tp_data  = muon_primitive.getRPCData();
 
@@ -134,7 +134,7 @@ const EMTFSectorProcessorLUT& EMTFPrimitiveConversion::lut() const {
 }
 
 // CSC functions
-void EMTFPrimitiveConversion::convert_csc(EMTFHitExtra& conv_hit) {
+void EMTFPrimitiveConversion::convert_csc(EMTFHitExtra& conv_hit) const {
   // Defined as in firmware
   int fw_endcap  = (endcap_-1);
   int fw_sector  = (sector_-1);
@@ -394,6 +394,6 @@ void EMTFPrimitiveConversion::convert_csc(EMTFHitExtra& conv_hit) {
 }
 
 // RPC functions
-void EMTFPrimitiveConversion::convert_rpc(EMTFHitExtra& conv_hit) {
+void EMTFPrimitiveConversion::convert_rpc(EMTFHitExtra& conv_hit) const {
 
 }

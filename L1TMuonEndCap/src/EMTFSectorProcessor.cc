@@ -46,7 +46,7 @@ void EMTFSectorProcessor::process(
     const TriggerPrimitiveCollection& muon_primitives,
     EMTFHitExtraCollection& out_hits,
     EMTFTrackExtraCollection& out_tracks
-) {
+) const {
 
   // List of converted hits, extended from previous BXs
   std::deque<EMTFHitExtraCollection> extended_conv_hits;
@@ -74,7 +74,8 @@ void EMTFSectorProcessor::process_single_bx(
     EMTFTrackExtraCollection& out_tracks,
     std::deque<EMTFHitExtraCollection>& extended_conv_hits,
     std::map<EMTFPatternId, int>& patt_lifetime_map
-) {
+) const {
+
   // Instantiate stuff
   EMTFPrimitiveSelection prim_sel;
   prim_sel.configure(endcap_, sector_, bx, includeNeighbor_);
@@ -97,6 +98,8 @@ void EMTFSectorProcessor::process_single_bx(
   std::map<int, std::vector<TriggerPrimitive> > selected_rpc_map;
 
   EMTFHitExtraCollection conv_hits;
+
+  std::vector<EMTFRoadExtraCollection> zone_roads;  // each zone has its road collection
 
 
   // Select muon primitives that belong to this sector and this BX
@@ -192,7 +195,7 @@ void EMTFSectorProcessor::process_single_bx(
   // Perform pattern recognition
   extended_conv_hits.push_back(conv_hits);
 
-  patt_recog.detect(extended_conv_hits, patt_lifetime_map);
+  patt_recog.detect(extended_conv_hits, patt_lifetime_map, zone_roads);
 
 
   out_hits.insert(out_hits.end(), conv_hits.begin(), conv_hits.end());

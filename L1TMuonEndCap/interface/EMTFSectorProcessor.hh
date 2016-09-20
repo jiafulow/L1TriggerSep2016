@@ -32,7 +32,7 @@ public:
       const TriggerPrimitiveCollection& muon_primitives,
       EMTFHitExtraCollection& out_hits,
       EMTFTrackExtraCollection& out_tracks
-  );
+  ) const;
 
   void process_single_bx(
       int bx,
@@ -41,7 +41,7 @@ public:
       EMTFTrackExtraCollection& out_tracks,
       std::deque<EMTFHitExtraCollection>& extended_conv_hits,
       std::map<EMTFPatternId, int>& patt_lifetime_map
-  );
+  ) const;
 
   int sector() const { return sector_; }
 

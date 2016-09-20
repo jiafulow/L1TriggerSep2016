@@ -5,8 +5,6 @@
 
 #include "helper.h"  // to_hex, to_binary
 
-#define NUM_ZONES 4
-#define NUM_ZONE_HITS 160
 #define NUM_PATTERNS 9
 #define PATTERN_KEY_ZHIT 7
 #define PATTERN_PADDING_EXTRA_W_ST1 15-7
@@ -116,8 +114,9 @@ void EMTFPatternRecognition::configure_details() {
 
 void EMTFPatternRecognition::detect(
     const std::deque<EMTFHitExtraCollection>& extended_conv_hits,
-    std::map<pattern_id_t, int>& patt_lifetime_map
-) {
+    std::map<pattern_id_t, int>& patt_lifetime_map,
+    std::vector<EMTFRoadExtraCollection>& zone_roads
+) const {
 
   if (true) {  // debug
     for (const auto& conv_hits : extended_conv_hits) {
@@ -146,7 +145,8 @@ void EMTFPatternRecognition::detect(
   }
 
   // Perform pattern recognition in each zone
-  std::array<EMTFRoadExtraCollection, NUM_ZONES> zone_roads;
+  zone_roads.clear();
+  zone_roads.resize(NUM_ZONES);
 
   for (int izone = 0; izone < NUM_ZONES; ++izone) {
     detect_single_zone(izone, zone_images.at(izone), patt_lifetime_map, zone_roads.at(izone));
@@ -179,7 +179,7 @@ void EMTFPatternRecognition::make_zone_image(
     int zone,
     const std::deque<EMTFHitExtraCollection>& extended_conv_hits,
     EMTFPhiMemoryImage& image
-) {
+) const {
   // Loop over converted hits and fill the zone image
   std::deque<EMTFHitExtraCollection>::const_iterator ext_conv_hits_it  = extended_conv_hits.begin();
   std::deque<EMTFHitExtraCollection>::const_iterator ext_conv_hits_end = extended_conv_hits.end();
@@ -205,7 +205,7 @@ void EMTFPatternRecognition::detect_single_zone(
     EMTFPhiMemoryImage cloned_image,
     std::map<pattern_id_t, int>& patt_lifetime_map,
     EMTFRoadExtraCollection& roads
-) {
+) const {
   roads.clear();
 
   // The zone hit image is rotated/shifted before comparing with patterns
@@ -343,7 +343,7 @@ void EMTFPatternRecognition::detect_single_zone(
 void EMTFPatternRecognition::sort_single_zone(
     int zone,
     EMTFRoadExtraCollection& roads
-) {
+) const {
 
   // First, order by key_zhit
   struct {

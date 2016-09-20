@@ -23,7 +23,7 @@ public:
       const edm::Event& iEvent, const edm::EventSetup& iSetup,
       EMTFHitExtraCollection& out_hits,
       EMTFTrackExtraCollection& out_tracks
-  );
+  ) const;
 
 private:
   std::unique_ptr<EMTFSectorProcessor> sector_processor_;
