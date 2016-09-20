@@ -37,10 +37,7 @@ public:
       EMTFRoadExtraCollection& roads
   ) const;
 
-  void sort_single_zone(
-      int zone,
-      EMTFRoadExtraCollection& roads
-  ) const;
+  void sort_single_zone(EMTFRoadExtraCollection& roads) const;
 
 
 private:

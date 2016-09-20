@@ -12,6 +12,7 @@
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPrimitiveSelection.hh"
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPrimitiveConversion.hh"
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPatternRecognition.hh"
+#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPrimitiveMatching.hh"
 
 
 class EMTFSectorProcessor {

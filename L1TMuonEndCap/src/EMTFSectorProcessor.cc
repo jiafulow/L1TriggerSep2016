@@ -94,6 +94,9 @@ void EMTFSectorProcessor::process_single_bx(
       pattDefinitions_, maxRoadsPerZone_
   );
 
+  EMTFPrimitiveMatching prim_match;
+  prim_match.configure(endcap_, sector_, bx);
+
   std::map<int, std::vector<TriggerPrimitive> > selected_csc_map;
   std::map<int, std::vector<TriggerPrimitive> > selected_rpc_map;
 
@@ -101,7 +104,10 @@ void EMTFSectorProcessor::process_single_bx(
 
   std::vector<EMTFRoadExtraCollection> zone_roads;  // each zone has its road collection
 
+  std::vector<EMTFTrackExtraCollection> zone_tracks;  // each zone has its track collection
 
+
+  // ___________________________________________________________________________
   // Select muon primitives that belong to this sector and this BX
   // Assign the muon primitives with an index 0-53 that roughly corresponds to
   // the input link
@@ -192,10 +198,17 @@ void EMTFSectorProcessor::process_single_bx(
     }
   }
 
-  // Perform pattern recognition
   extended_conv_hits.push_back(conv_hits);
 
+  // Perform pattern recognition
+
   patt_recog.detect(extended_conv_hits, patt_lifetime_map, zone_roads);
+
+  // Match the trigger primitives to the roads
+
+  prim_match.match(extended_conv_hits, zone_roads, zone_tracks);
+
+
 
 
   out_hits.insert(out_hits.end(), conv_hits.begin(), conv_hits.end());

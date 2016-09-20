@@ -162,7 +162,7 @@ void EMTFPatternRecognition::detect(
 
   // Sort patterns and select best three patterns in each zone
   for (int izone = 0; izone < NUM_ZONES; ++izone) {
-    sort_single_zone(izone, zone_roads.at(izone));
+    sort_single_zone(zone_roads.at(izone));
   }
 
   if (true) {  // debug
@@ -340,11 +340,7 @@ void EMTFPatternRecognition::detect_single_zone(
   roads.swap(survived_roads);
 }
 
-void EMTFPatternRecognition::sort_single_zone(
-    int zone,
-    EMTFRoadExtraCollection& roads
-) const {
-
+void EMTFPatternRecognition::sort_single_zone(EMTFRoadExtraCollection& roads) const {
   // First, order by key_zhit
   struct {
     constexpr bool operator()(const EMTFRoadExtra& lhs, const EMTFRoadExtra& rhs) {
@@ -355,7 +351,7 @@ void EMTFPatternRecognition::sort_single_zone(
   std::sort(roads.begin(), roads.end(), greater_zhit_cmp);
 
   // Second, sort by quality_code, but preserving the original order
-    struct {
+  struct {
     constexpr bool operator()(const EMTFRoadExtra& lhs, const EMTFRoadExtra& rhs) {
       return lhs.quality_code > rhs.quality_code;
     }

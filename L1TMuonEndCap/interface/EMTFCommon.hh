@@ -38,5 +38,8 @@ typedef L1TMuonEndCap::RPCTag RPCTag;
 #define NUM_ZONES 4
 #define NUM_ZONE_HITS 160
 
+// Stations
+#define NUM_STATIONS 4
+
 #endif
 

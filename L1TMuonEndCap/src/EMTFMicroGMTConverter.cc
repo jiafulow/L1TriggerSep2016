@@ -27,6 +27,6 @@ void EMTFMicroGMTConverter::convert_many(
     l1t::RegionalMuonCand out_cand;
 
     convert(in_track, out_cand);
-    out_cands.push_back(in_track.BX(), out_cand);
+    out_cands.push_back(in_track.bx, out_cand);
   }
 }
