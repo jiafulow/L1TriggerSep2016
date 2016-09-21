@@ -7,7 +7,8 @@
 class EMTFPrimitiveMatching {
 public:
   void configure(
-    int endcap, int sector, int bx
+    int endcap, int sector, int bx,
+    int thetaWindow
   );
 
   void match(
@@ -35,12 +36,16 @@ public:
       EMTFTrackExtra& track
   ) const;
 
+  void calculate_angles(EMTFTrackExtra& track) const;
+
   unsigned int get_fs_zone_code(const EMTFHitExtra& conv_hit) const;
 
   unsigned int get_fs_segment(const EMTFHitExtra& conv_hit) const;
 
 private:
   int endcap_, sector_, bx_;
+
+  int thetaWindow_;
 };
 
 #endif

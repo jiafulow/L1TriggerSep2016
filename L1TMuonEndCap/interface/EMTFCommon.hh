@@ -25,6 +25,8 @@ typedef L1TMuonEndCap::EMTFRoadExtraCollection  EMTFRoadExtraCollection;
 typedef L1TMuonEndCap::EMTFTrackExtra           EMTFTrackExtra;
 typedef L1TMuonEndCap::EMTFTrackExtraCollection EMTFTrackExtraCollection;
 
+typedef L1TMuonEndCap::EMTFPtLUTData EMTFPtLUTData;
+
 typedef L1TMuonEndCap::TriggerPrimitive           TriggerPrimitive;
 typedef L1TMuonEndCap::TriggerPrimitiveCollection TriggerPrimitiveCollection;
 
@@ -47,6 +49,7 @@ typedef L1TMuonEndCap::RPCTag RPCTag;
 
 // Stations
 #define NUM_STATIONS 4
+#define NUM_STATION_PAIRS 6
 
 #endif
 

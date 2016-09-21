@@ -27,7 +27,7 @@ public:
       int endcap, int sector,
       int minBX, int maxBX, int bxWindow,
       const std::vector<int>& zoneBoundaries1, const std::vector<int>& zoneBoundaries2, int zoneOverlap,
-      const std::vector<std::string>& pattDefinitions, int maxRoadsPerZone,
+      const std::vector<std::string>& pattDefinitions, int maxRoadsPerZone, int thetaWindow,
       bool includeNeighbor, bool duplicateWires
   );
 
@@ -59,6 +59,7 @@ private:
   int zoneOverlap_;
   std::vector<std::string> pattDefinitions_;
   int maxRoadsPerZone_;
+  int thetaWindow_;
 
   bool includeNeighbor_, duplicateWires_;
 };

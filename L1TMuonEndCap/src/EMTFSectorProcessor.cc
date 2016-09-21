@@ -17,7 +17,7 @@ void EMTFSectorProcessor::configure(
     int endcap, int sector,
     int minBX, int maxBX, int bxWindow,
     const std::vector<int>& zoneBoundaries1, const std::vector<int>& zoneBoundaries2, int zoneOverlap,
-    const std::vector<std::string>& pattDefinitions, int maxRoadsPerZone,
+    const std::vector<std::string>& pattDefinitions, int maxRoadsPerZone, int thetaWindow,
     bool includeNeighbor, bool duplicateWires
 ) {
   assert(MIN_ENDCAP <= endcap && endcap <= MAX_ENDCAP);
@@ -37,6 +37,7 @@ void EMTFSectorProcessor::configure(
   zoneOverlap_     = zoneOverlap;
   pattDefinitions_ = pattDefinitions;
   maxRoadsPerZone_ = maxRoadsPerZone;
+  thetaWindow_     = thetaWindow;
 
   includeNeighbor_ = includeNeighbor;
   duplicateWires_ = duplicateWires;
@@ -102,7 +103,10 @@ void EMTFSectorProcessor::process_single_bx(
   );
 
   EMTFPrimitiveMatching prim_match;
-  prim_match.configure(endcap_, sector_, bx);
+  prim_match.configure(
+      endcap_, sector_, bx,
+      thetaWindow_
+  );
 
   std::map<int, std::vector<TriggerPrimitive> > selected_csc_map;
   std::map<int, std::vector<TriggerPrimitive> > selected_rpc_map;

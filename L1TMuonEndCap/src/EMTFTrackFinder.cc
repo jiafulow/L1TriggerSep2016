@@ -19,19 +19,20 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
 
   ph_th_lut_   = iConfig.getParameter<std::string>("PhThLUT");
 
-  const edm::ParameterSet spPRParams16 = config_.getParameter<edm::ParameterSet>("spPRParams16");
-  minBX_           = spPRParams16.getParameter<int>("MinBX");
-  maxBX_           = spPRParams16.getParameter<int>("MaxBX");
-  bxWindow_        = spPRParams16.getParameter<int>("BXWindow");
-  zoneBoundaries1_ = spPRParams16.getParameter<std::vector<int> >("ZoneBoundaries1");
-  zoneBoundaries2_ = spPRParams16.getParameter<std::vector<int> >("ZoneBoundaries2");
-  zoneOverlap_     = spPRParams16.getParameter<int>("ZoneOverlap");
-  pattDefinitions_ = spPRParams16.getParameter<std::vector<std::string> >("PatternDefinitions");
-  maxRoadsPerZone_ = spPRParams16.getParameter<int>("MaxRoadsPerZone");
-
   const edm::ParameterSet spPCParams16 = config_.getParameter<edm::ParameterSet>("spPCParams16");
-  includeNeighbor_ = spPCParams16.getParameter<bool>("IncludeNeighbor");
-  duplicateWires_  = spPCParams16.getParameter<bool>("DuplicateWires");
+  auto includeNeighbor  = spPCParams16.getParameter<bool>("IncludeNeighbor");
+  auto duplicateWires   = spPCParams16.getParameter<bool>("DuplicateWires");
+
+  const edm::ParameterSet spPRParams16 = config_.getParameter<edm::ParameterSet>("spPRParams16");
+  auto minBX            = spPRParams16.getParameter<int>("MinBX");
+  auto maxBX            = spPRParams16.getParameter<int>("MaxBX");
+  auto bxWindow         = spPRParams16.getParameter<int>("BXWindow");
+  auto zoneBoundaries1  = spPRParams16.getParameter<std::vector<int> >("ZoneBoundaries1");
+  auto zoneBoundaries2  = spPRParams16.getParameter<std::vector<int> >("ZoneBoundaries2");
+  auto zoneOverlap      = spPRParams16.getParameter<int>("ZoneOverlap");
+  auto pattDefinitions  = spPRParams16.getParameter<std::vector<std::string> >("PatternDefinitions");
+  auto maxRoadsPerZone  = spPRParams16.getParameter<int>("MaxRoadsPerZone");
+  auto thetaWindow      = spPRParams16.getParameter<int>("ThetaWindow");
 
   try {
     // Configure sector processor LUT
@@ -45,10 +46,10 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
         sector_processors_.back().configure(
             &sector_processor_lut_,
             endcap, sector,
-            minBX_, maxBX_, bxWindow_,
-            zoneBoundaries1_, zoneBoundaries2_, zoneOverlap_,
-            pattDefinitions_, maxRoadsPerZone_,
-            includeNeighbor_, duplicateWires_
+            minBX, maxBX, bxWindow,
+            zoneBoundaries1, zoneBoundaries2, zoneOverlap,
+            pattDefinitions, maxRoadsPerZone, thetaWindow,
+            includeNeighbor, duplicateWires
         );
       }
     }

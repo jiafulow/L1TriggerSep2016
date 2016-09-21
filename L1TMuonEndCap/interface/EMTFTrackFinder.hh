@@ -37,15 +37,6 @@ private:
   bool useCSC_, useRPC_;
 
   std::string ph_th_lut_;
-
-  int minBX_, maxBX_, bxWindow_;
-  std::vector<int> zoneBoundaries1_, zoneBoundaries2_;
-  int zoneOverlap_;
-  std::vector<std::string> pattDefinitions_;
-  int maxRoadsPerZone_;
-
-  bool includeNeighbor_, duplicateWires_;
-
 };
 
 #endif
