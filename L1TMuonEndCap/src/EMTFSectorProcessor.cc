@@ -15,10 +15,11 @@ EMTFSectorProcessor::~EMTFSectorProcessor() {
 void EMTFSectorProcessor::configure(
     const EMTFSectorProcessorLUT* lut,
     int endcap, int sector,
+    bool includeNeighbor, bool duplicateWires,
     int minBX, int maxBX, int bxWindow,
     const std::vector<int>& zoneBoundaries1, const std::vector<int>& zoneBoundaries2, int zoneOverlap,
-    const std::vector<std::string>& pattDefinitions, int maxRoadsPerZone, int thetaWindow,
-    bool includeNeighbor, bool duplicateWires
+    const std::vector<std::string>& pattDefinitions,
+    int maxRoadsPerZone, int thetaWindow, int maxTracks
 ) {
   assert(MIN_ENDCAP <= endcap && endcap <= MAX_ENDCAP);
   assert(MIN_TRIGSECTOR <= sector && sector <= MAX_TRIGSECTOR);
@@ -29,6 +30,9 @@ void EMTFSectorProcessor::configure(
   endcap_ = endcap;
   sector_ = sector;
 
+  includeNeighbor_ = includeNeighbor;
+  duplicateWires_ = duplicateWires;
+
   minBX_           = minBX;
   maxBX_           = maxBX;
   bxWindow_        = bxWindow;
@@ -38,9 +42,7 @@ void EMTFSectorProcessor::configure(
   pattDefinitions_ = pattDefinitions;
   maxRoadsPerZone_ = maxRoadsPerZone;
   thetaWindow_     = thetaWindow;
-
-  includeNeighbor_ = includeNeighbor;
-  duplicateWires_ = duplicateWires;
+  maxTracks_       = maxTracks;
 }
 
 void EMTFSectorProcessor::process(
@@ -108,6 +110,12 @@ void EMTFSectorProcessor::process_single_bx(
       thetaWindow_
   );
 
+  EMTFBestTrackSelection btrack_sel;
+  btrack_sel.configure(
+      endcap_, sector_, bx,
+      maxRoadsPerZone_, maxTracks_
+  );
+
   std::map<int, std::vector<TriggerPrimitive> > selected_csc_map;
   std::map<int, std::vector<TriggerPrimitive> > selected_rpc_map;
 
@@ -116,6 +124,8 @@ void EMTFSectorProcessor::process_single_bx(
   std::vector<EMTFRoadExtraCollection> zone_roads;  // each zone has its road collection
 
   std::vector<EMTFTrackExtraCollection> zone_tracks;  // each zone has its track collection
+
+  EMTFTrackExtraCollection best_tracks;
 
 
   // ___________________________________________________________________________
@@ -219,10 +229,15 @@ void EMTFSectorProcessor::process_single_bx(
 
   prim_match.match(extended_conv_hits, zone_roads, zone_tracks);
 
+  // Select the best tracks
+
+  btrack_sel.select(zone_tracks, best_tracks);
+
 
 
 
   out_hits.insert(out_hits.end(), conv_hits.begin(), conv_hits.end());
+  out_tracks.insert(out_tracks.end(), best_tracks.begin(), best_tracks.end());
 
   return;
 }

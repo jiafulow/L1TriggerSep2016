@@ -33,6 +33,7 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
   auto pattDefinitions  = spPRParams16.getParameter<std::vector<std::string> >("PatternDefinitions");
   auto maxRoadsPerZone  = spPRParams16.getParameter<int>("MaxRoadsPerZone");
   auto thetaWindow      = spPRParams16.getParameter<int>("ThetaWindow");
+  auto maxTracks        = spPRParams16.getParameter<int>("MaxTracks");
 
   try {
     // Configure sector processor LUT
@@ -46,10 +47,11 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
         sector_processors_.back().configure(
             &sector_processor_lut_,
             endcap, sector,
+            includeNeighbor, duplicateWires,
             minBX, maxBX, bxWindow,
             zoneBoundaries1, zoneBoundaries2, zoneOverlap,
-            pattDefinitions, maxRoadsPerZone, thetaWindow,
-            includeNeighbor, duplicateWires
+            pattDefinitions,
+            maxRoadsPerZone, thetaWindow, maxTracks
         );
       }
     }
@@ -117,9 +119,14 @@ void EMTFTrackFinder::process(
       std::cout << bx << " " << h.endcap << " " << h.sector << " " << h.subsector << " " << station << " " << h.valid << " " << h.quality << " " << h.pattern << " " << h.wire << " " << chamber << " " << h.bend << " " << strip << std::endl;
     }
 
-    std::cout << "Primitive conversion: " << std::endl;
+    std::cout << "Primitives: " << std::endl;
     for (const auto& h : out_hits) {
       std::cout << h.pc_station << " " << h.pc_chamber << " " << h.phi_fp << " " << h.theta_fp << " " << (1ul<<h.ph_hit) << " " << h.phzvl << std::endl;
+    }
+
+    std::cout << "Tracks: " << std::endl;
+    for (const auto& t : out_tracks) {
+      std::cout << t.winner << " " << t.rank << " " << t.xroad.zone << " " << t.xroad.winner<< std::endl;
     }
   }
 

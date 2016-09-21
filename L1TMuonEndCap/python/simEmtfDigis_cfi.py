@@ -49,6 +49,7 @@ simEmtfDigis = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
         ),
         MaxRoadsPerZone = cms.int32(3),
         ThetaWindow = cms.int32(4),
+        MaxTracks = cms.int32(3),
     ),
 
     # Sector processor pt-assignment parameters

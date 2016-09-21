@@ -181,10 +181,10 @@ void EMTFPrimitiveMatching::match(
       for (const auto& track : tracks) {
         if (track.rank) {
           std::cout << "deltas: z: " << track.xroad.zone << " pat: " << track.xroad.winner << " rank: " << to_hex(track.rank)
-              << " delta_ph: " << array_string(track.ptlut_data.delta_ph)
-              << " delta_th: " << array_string(track.ptlut_data.delta_th)
-              << " sign_ph: " << array_string(track.ptlut_data.sign_ph)
-              << " sign_th: " << array_string(track.ptlut_data.sign_th)
+              << " delta_ph: " << array_as_string(track.ptlut_data.delta_ph)
+              << " delta_th: " << array_as_string(track.ptlut_data.delta_th)
+              << " sign_ph: " << array_as_string(track.ptlut_data.sign_ph)
+              << " sign_th: " << array_as_string(track.ptlut_data.sign_th)
               << " phi: " << track.phi_int << " theta: " << track.theta_int
               << std::endl;
         }
@@ -442,10 +442,9 @@ void EMTFPrimitiveMatching::calculate_angles(EMTFTrackExtra& track) const {
 
   // remove some valid flags if th did not line up
   for (int istation = 0; istation < NUM_STATIONS; ++istation) {
-    int ibegin = _table[istation];
-    int iend   = _table[istation+4];
-
     if ((vstat & (1<<istation)) == 0) {  // station bit not set
+      //int ibegin = _table[istation];
+      //int iend   = _table[istation+4];
       //for (int i = ibegin; i < iend; ++i) {
       //  track.xhits_valid.at(i) = false;
       //}

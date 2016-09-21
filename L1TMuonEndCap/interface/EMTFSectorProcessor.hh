@@ -13,6 +13,7 @@
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPrimitiveConversion.hh"
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPatternRecognition.hh"
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPrimitiveMatching.hh"
+#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFBestTrackSelection.hh"
 
 
 class EMTFSectorProcessor {
@@ -25,10 +26,11 @@ public:
   void configure(
       const EMTFSectorProcessorLUT* lut,
       int endcap, int sector,
+      bool includeNeighbor, bool duplicateWires,
       int minBX, int maxBX, int bxWindow,
       const std::vector<int>& zoneBoundaries1, const std::vector<int>& zoneBoundaries2, int zoneOverlap,
-      const std::vector<std::string>& pattDefinitions, int maxRoadsPerZone, int thetaWindow,
-      bool includeNeighbor, bool duplicateWires
+      const std::vector<std::string>& pattDefinitions,
+      int maxRoadsPerZone, int thetaWindow, int maxTracks
   );
 
   void process(
@@ -54,14 +56,13 @@ private:
 
   int endcap_, sector_;
 
+  bool includeNeighbor_, duplicateWires_;
+
   int minBX_, maxBX_, bxWindow_;
   std::vector<int> zoneBoundaries1_, zoneBoundaries2_;
   int zoneOverlap_;
   std::vector<std::string> pattDefinitions_;
-  int maxRoadsPerZone_;
-  int thetaWindow_;
-
-  bool includeNeighbor_, duplicateWires_;
+  int maxRoadsPerZone_, thetaWindow_, maxTracks_;
 };
 
 #endif

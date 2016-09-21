@@ -28,7 +28,7 @@ namespace {
   size_t array_size(T(&)[N]) { return N; }
 
   template<typename T, size_t N>
-  std::string array_string(const T(&arr)[N]) {
+  std::string array_as_string(const T(&arr)[N]) {
     std::stringstream s;
     const char* sep = "";
     for (size_t i=0; i<N; ++i) {
