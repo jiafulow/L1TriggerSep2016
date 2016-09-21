@@ -1,6 +1,8 @@
 <export>
   <lib name="1"/>
 </export>
+<flags ADD_SUBDIR="1"/>
+<flags LDFLAGS="-lXMLIO"/>
 
 <use name="FWCore/Framework"/>
 <use name="FWCore/ParameterSet"/>
@@ -9,6 +11,7 @@
 <use name="DataFormats/DTDigi"/>
 <use name="DataFormats/L1DTTrackFinder"/>
 <use name="DataFormats/L1TMuon"/>
+
 <use name="DataFormatsSep2016/L1TMuon"/>
-<!--use name="boost"/-->
-<!--use name="root"/-->
+
+<use name="root"/>

@@ -35,6 +35,10 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
   auto thetaWindow      = spPRParams16.getParameter<int>("ThetaWindow");
   auto maxTracks        = spPRParams16.getParameter<int>("MaxTracks");
 
+  const edm::ParameterSet spPAParams16 = config_.getParameter<edm::ParameterSet>("spPAParams16");
+  auto treeVer          = spPAParams16.getParameter<std::string>("TreeVer");
+
+
   try {
     // Configure sector processor LUT
     sector_processor_lut_.read(ph_th_lut_);

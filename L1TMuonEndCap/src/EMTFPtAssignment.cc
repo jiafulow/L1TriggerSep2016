@@ -1,10 +1,10 @@
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPtAssignment.hh"
 
-EMTFPtAssignment::EMTFPtAssignment() {
 
+void EMTFPtAssignment::configure(
+    int endcap, int sector, int bx
+) {
+  endcap_ = endcap;
+  sector_ = sector;
+  bx_     = bx;
 }
-
-EMTFPtAssignment::~EMTFPtAssignment() {
-
-}
-

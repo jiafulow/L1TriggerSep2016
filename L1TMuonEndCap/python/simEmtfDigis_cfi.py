@@ -54,7 +54,7 @@ simEmtfDigis = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
 
     # Sector processor pt-assignment parameters
     spPAParams16 = cms.PSet(
-
+        TreeVer = cms.string('v_16_02_21'),
     ),
 
     # Sector processor ghost-cancellation parameters
