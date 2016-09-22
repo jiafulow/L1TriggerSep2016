@@ -10,8 +10,10 @@
 #include "FWCore/Framework/interface/ConsumesCollector.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFSectorProcessor.hh"
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFSectorProcessorLUT.hh"
+#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPtAssignmentEngine.hh"
+
+#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFSectorProcessor.hh"
 
 
 class EMTFTrackFinder {
@@ -27,6 +29,9 @@ public:
 
 private:
   EMTFSectorProcessorLUT sector_processor_lut_;
+
+  EMTFPtAssignmentEngine pt_assignment_engine_;
+
   std::vector<EMTFSectorProcessor> sector_processors_;
 
   const edm::ParameterSet config_;

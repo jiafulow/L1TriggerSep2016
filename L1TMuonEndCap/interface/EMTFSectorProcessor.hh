@@ -9,11 +9,14 @@
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFCommon.hh"
 
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFSectorProcessorLUT.hh"
+#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPtAssignmentEngine.hh"
+
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPrimitiveSelection.hh"
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPrimitiveConversion.hh"
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPatternRecognition.hh"
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPrimitiveMatching.hh"
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFBestTrackSelection.hh"
+#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPtAssignment.hh"
 
 
 class EMTFSectorProcessor {
@@ -25,6 +28,7 @@ public:
 
   void configure(
       const EMTFSectorProcessorLUT* lut,
+      const EMTFPtAssignmentEngine* pt_assign_engine,
       int endcap, int sector,
       bool includeNeighbor, bool duplicateWires,
       int minBX, int maxBX, int bxWindow,
@@ -53,6 +57,8 @@ public:
 
 private:
   const EMTFSectorProcessorLUT* lut_;
+
+  const EMTFPtAssignmentEngine* pt_assign_engine_;
 
   int endcap_, sector_;
 

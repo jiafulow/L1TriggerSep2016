@@ -14,6 +14,7 @@ EMTFSectorProcessor::~EMTFSectorProcessor() {
 
 void EMTFSectorProcessor::configure(
     const EMTFSectorProcessorLUT* lut,
+    const EMTFPtAssignmentEngine* pt_assign_engine,
     int endcap, int sector,
     bool includeNeighbor, bool duplicateWires,
     int minBX, int maxBX, int bxWindow,
@@ -26,6 +27,8 @@ void EMTFSectorProcessor::configure(
   assert(lut != nullptr);
 
   lut_ = lut;
+
+  pt_assign_engine_ = pt_assign_engine;
 
   endcap_ = endcap;
   sector_ = sector;
@@ -114,6 +117,12 @@ void EMTFSectorProcessor::process_single_bx(
   btrack_sel.configure(
       endcap_, sector_, bx,
       maxRoadsPerZone_, maxTracks_
+  );
+
+  EMTFPtAssignment pt_assign;
+  pt_assign.configure(
+      pt_assign_engine_,
+      endcap_, sector_, bx
   );
 
   std::map<int, std::vector<TriggerPrimitive> > selected_csc_map;
@@ -233,8 +242,11 @@ void EMTFSectorProcessor::process_single_bx(
 
   btrack_sel.select(zone_tracks, best_tracks);
 
+  // Assign pT
 
+  pt_assign.assign(best_tracks);
 
+  // Output
 
   out_hits.insert(out_hits.end(), conv_hits.begin(), conv_hits.end());
   out_tracks.insert(out_tracks.end(), best_tracks.begin(), best_tracks.end());

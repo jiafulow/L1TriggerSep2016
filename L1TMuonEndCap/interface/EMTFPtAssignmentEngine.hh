@@ -5,6 +5,10 @@
 #include <string>
 #include <vector>
 
+#include "L1TriggerSep2016/L1TMuonEndCap/interface/bdt/Forest.h"
+
+#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFCommon.hh"
+
 
 class EMTFPtAssignmentEngine {
 public:
@@ -13,15 +17,17 @@ public:
 
   typedef uint64_t address_t;
 
-  address_t calculate_address() const;
+  void read(const std::string& tree_ver);
 
-  address_t calculate_address_fw() const;
+  address_t calculate_address(const EMTFTrackExtra& track) const;
 
-  float calculate_pt(address_t address) const;
+  address_t calculate_address_fw(const EMTFTrackExtra& track) const;
+
+  float calculate_pt(const address_t& address);
 
 private:
-  //std::vector<int> allowedModes_;
-  //Forest forest_[16];
+  std::vector<int> allowedModes_;
+  Forest forest_[16];
 
   bool ok_;
 };

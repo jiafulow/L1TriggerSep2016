@@ -8,6 +8,7 @@
 
 EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollector&& iConsumes) :
     sector_processor_lut_(),
+    pt_assignment_engine_(),
     sector_processors_(),
     config_(iConfig),
     tokenCSC_(iConsumes.consumes<CSCCorrelatedLCTDigiCollection>(iConfig.getParameter<edm::InputTag>("CSCInput"))),
@@ -36,12 +37,15 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
   auto maxTracks        = spPRParams16.getParameter<int>("MaxTracks");
 
   const edm::ParameterSet spPAParams16 = config_.getParameter<edm::ParameterSet>("spPAParams16");
-  auto treeVer          = spPAParams16.getParameter<std::string>("TreeVer");
+  auto tree_ver         = spPAParams16.getParameter<std::string>("TreeVer");
 
 
   try {
     // Configure sector processor LUT
     sector_processor_lut_.read(ph_th_lut_);
+
+    // Configure pT assignment engine
+    pt_assignment_engine_.read(tree_ver);
 
     // Configure sector processors
     for (int endcap = MIN_ENDCAP; endcap <= MAX_ENDCAP; ++endcap) {
@@ -50,6 +54,7 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
 
         sector_processors_.back().configure(
             &sector_processor_lut_,
+            &pt_assignment_engine_,
             endcap, sector,
             includeNeighbor, duplicateWires,
             minBX, maxBX, bxWindow,
