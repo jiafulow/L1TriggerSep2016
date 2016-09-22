@@ -27,12 +27,12 @@ public:
   void sort_ph_diff(std::vector<std::pair<int, int> >& phi_differences) const;
 
   void insert_hits(
-      int station, int ichit, int ph_diff, const EMTFHitExtraCollection& conv_hits,
+      int ichit, int ph_diff, const EMTFHitExtraCollection& conv_hits,
       EMTFTrackExtra& track
   ) const;
 
   void insert_hit(
-      int station, int ichit, int ph_diff, const EMTFHitExtraCollection& conv_hits,
+      int ichit, int ph_diff, const EMTFHitExtraCollection& conv_hits,
       EMTFTrackExtra& track
   ) const;
 

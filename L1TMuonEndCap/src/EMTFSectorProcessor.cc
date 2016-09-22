@@ -93,7 +93,7 @@ void EMTFSectorProcessor::process_single_bx(
   EMTFPrimitiveConversion prim_conv;
   prim_conv.configure(
       lut_,
-      endcap_, sector_,
+      endcap_, sector_, bx,
       zoneBoundaries1_, zoneBoundaries2_, zoneOverlap_
   );
 

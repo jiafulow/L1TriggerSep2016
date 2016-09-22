@@ -12,13 +12,14 @@ using RPCData = TriggerPrimitive::RPCData;
 
 void EMTFPrimitiveConversion::configure(
     const EMTFSectorProcessorLUT* lut,
-    int endcap, int sector,
+    int endcap, int sector, int bx,
     const std::vector<int>& zoneBoundaries1, const std::vector<int>& zoneBoundaries2, int zoneOverlap
 ) {
   lut_ = lut;
 
   endcap_ = endcap;
   sector_ = sector;
+  bx_     = bx;
 
   zoneBoundaries1_ = zoneBoundaries1;
   zoneBoundaries2_ = zoneBoundaries2;

@@ -35,7 +35,7 @@ void EMTFBestTrackSelection::select(
   std::vector<bool> killed(max_zn, false);
   std::vector<int>  rank  (max_zn, 0);
 
-  // Initialize
+  // Initialize arrays
   assert((int) zone_tracks.size() == max_z);
 
   for (int z = 0; z < max_z; ++z) {
@@ -53,14 +53,12 @@ void EMTFBestTrackSelection::select(
       //larger[i][i] = 1; // result of comparison with itself
       larger[zn][zn] = true;
 
-      for (unsigned s = 0; s < track.xhits.size(); ++s) {
-        if (track.xhits_valid.at(s)) {
-          const EMTFHitExtra& hit = track.xhits.at(s);
+      for (const auto& conv_hit : track.xhits) {
+        assert(conv_hit.valid);
 
-          // A segment identifier (chamber, strip)
-          auto segment = std::pair<int, int>(hit.pc_station*9 + hit.pc_chamber, hit.strip);
-          segments.at(zn).push_back(segment);
-        }
+        // A segment identifier (chamber, strip)
+        auto segment = std::pair<int, int>(conv_hit.pc_station*9 + conv_hit.pc_chamber, conv_hit.strip);
+        segments.at(zn).push_back(segment);
       }
     }  // end loop over n
   }  // end loop over z

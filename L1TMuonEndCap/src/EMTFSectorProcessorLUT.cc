@@ -67,6 +67,9 @@ void EMTFSectorProcessorLUT::read(const std::string& ph_th_lut) {
         << "got " << th_corr_lut_neighbor_.size() << " values.";
   }
 
+  // clct pattern convertion array from CMSSW
+  //{0.0, 0.0, -0.60,  0.60, -0.64,  0.64, -0.23,  0.23, -0.21,  0.21, 0.0}
+  // 0    0    -5      +5    -5      +5    -2      +2    -2      +2    0
   ph_patt_corr_ = {
     0, 0, 5, 5, 5, 5, 2, 2, 2, 2, 0
   };

@@ -123,17 +123,11 @@ void EMTFPrimitiveMatching::match(
       track.sector   = road.sector;
       track.bx       = road.bx;
 
-      track.mode      = 0;
-      track.num_xhits = 0;
-
+      track.num_xhits    = 0;
       track.xhits        .clear();
       track.xhits_ph_diff.clear();
-      track.xhits_valid  .clear();
 
-      track.xhits        .resize(10, EMTFHitExtra());
-      track.xhits_ph_diff.resize(10, invalid_ph_diff);
-      track.xhits_valid  .resize(10, false);
-
+      // Insert hits
       for (int istation = 0; istation < NUM_STATIONS; ++istation) {
         const int zs = (izone*4) + istation;
 
@@ -142,13 +136,14 @@ void EMTFPrimitiveMatching::match(
         int ph_diff = zs_phi_differences.at(zs).at(iroad).second;
 
         if (ph_diff != invalid_ph_diff) {
-          insert_hit(istation+1, ichit, ph_diff, conv_hits, track);
+          insert_hits(ichit, ph_diff, conv_hits, track);
         }
       }
 
       //track.road = static_cast<EMTFRoad>(road);
       track.xroad = road;
 
+      // Calculate deltas
       calculate_angles(track);
 
       // Output track
@@ -162,17 +157,13 @@ void EMTFPrimitiveMatching::match(
   if (true) {  // debug
     for (const auto& tracks : zone_tracks) {
       for (const auto& track : tracks) {
-        int i = 0;
         for (const auto& xhit : track.xhits) {
-          if (track.xhits_valid.at(i)) {
-            int fs_segment = get_fs_segment(xhit);
-            std::cout << "match seg: z: " << track.xroad.zone << " pat: " << track.xroad.winner <<  " st: " << xhit.station
-                << " vi: " << to_binary(0b1, 2) << " hi: " << ((fs_segment>>4) & 0x3)
-                << " ci: " << ((fs_segment>>1) & 0x7) << " si: " << (fs_segment & 0x1)
-                << " ph: " << xhit.phi_fp << " th: " << xhit.theta_fp
-                << std::endl;
-          }
-          ++i;
+          int fs_segment = get_fs_segment(xhit);
+          std::cout << "match seg: z: " << track.xroad.zone << " pat: " << track.xroad.winner <<  " st: " << xhit.station
+              << " vi: " << to_binary(0b1, 2) << " hi: " << ((fs_segment>>4) & 0x3)
+              << " ci: " << ((fs_segment>>1) & 0x7) << " si: " << (fs_segment & 0x1)
+              << " ph: " << xhit.phi_fp << " th: " << xhit.theta_fp
+              << std::endl;
         }
       }
     }
@@ -221,9 +212,8 @@ void EMTFPrimitiveMatching::match_single_zone_station(
       // Get abs difference
       int ph_diff = (ph_pat > ph_seg_red) ? (ph_pat - ph_seg_red) : (ph_seg_red - ph_pat);
 
-      if (ph_diff > max_ph_diff) {
+      if (ph_diff > max_ph_diff)
         ph_diff = invalid_ph_diff;  // difference is too high, cannot be the same pattern
-      }
 
       tmp_phi_differences.push_back(std::make_pair(ichit, ph_diff));  // make a key-value pair
     }
@@ -258,15 +248,15 @@ void EMTFPrimitiveMatching::sort_ph_diff(std::vector<std::pair<int, int> >& phi_
 }
 
 void EMTFPrimitiveMatching::insert_hits(
-    int station, int ichit, int ph_diff, const EMTFHitExtraCollection& conv_hits,
+    int ichit, int ph_diff, const EMTFHitExtraCollection& conv_hits,
     EMTFTrackExtra& track
 ) const {
-  // First, insert the hit
-  insert_hit(station, ichit, ph_diff, conv_hits, track);
-
   const int nchits = conv_hits.size();
 
-  // Second, find possible duplicated hit, insert that too
+  // First, insert the hit
+  insert_hit(ichit, ph_diff, conv_hits, track);
+
+  // Second, find possible duplicated hits, insert them too
   for (int jchit = 0; jchit < nchits; ++jchit) {
     if (jchit == ichit)
       continue;
@@ -283,64 +273,45 @@ void EMTFPrimitiveMatching::insert_hits(
       // Must have the same phi_fp
       assert(conv_hit_i.phi_fp == conv_hit_j.phi_fp);
 
-      insert_hit(station, jchit, ph_diff, conv_hits, track);
+      insert_hit(jchit, ph_diff, conv_hits, track);
     }
   }
 }
 
 void EMTFPrimitiveMatching::insert_hit(
-    int station, int ichit, int ph_diff, const EMTFHitExtraCollection& conv_hits,
+    int ichit, int ph_diff, const EMTFHitExtraCollection& conv_hits,
     EMTFTrackExtra& track
 ) const {
-  static const int _table[8] = {
-    0, 4, 6, 8,  // ibegin for st1,2,3,4
-    4, 6, 8, 10  // iend for st1,2,3,4
-  };
-
   const EMTFHitExtra& conv_hit = conv_hits.at(ichit);
   //const EMTFHit& conv_hit = static_cast<EMTFHit>(conv_hits.at(ichit));
 
-  unsigned istation = station-1;
-  assert(istation < 4);
-  int ibegin = _table[istation];
-  int iend   = _table[istation+4];
-  bool ins_success = false;
+  struct {
+    typedef EMTFHitExtra value_type;
+    constexpr bool operator()(const value_type& lhs, const value_type& rhs) {
+      return lhs.station < rhs.station;
+    }
+  } less_station_cmp;
 
-  for (int i = ibegin; i < iend; ++i) {
-    if (track.xhits_valid.at(i) == true)
-      continue;
+  // Sorted insert
+  auto upper = std::upper_bound(track.xhits.begin(), track.xhits.end(), conv_hit, less_station_cmp);
+  auto pos = upper - track.xhits.begin();
 
-    track.xhits.at(i)          = conv_hit;
-    track.xhits_ph_diff.at(i)  = ph_diff;
-    track.xhits_valid.at(i)    = true;
-    track.num_xhits           += 1;
-    track.mode                |= (1<<(4-station));
-
-    ins_success = true;
-    break;
-  }
-
-  assert(ins_success && "Failed to insert EMTFHitExtra into EMTFTrackExtra");
+  track.num_xhits += 1;
+  track.xhits        .insert(track.xhits.begin()         + pos, conv_hit);
+  track.xhits_ph_diff.insert(track.xhits_ph_diff.begin() + pos, ph_diff);
 }
 
 void EMTFPrimitiveMatching::calculate_angles(EMTFTrackExtra& track) const {
-  static const int _table[8] = {
-    0, 4, 6, 8,  // ibegin for st1,2,3,4
-    4, 6, 8, 10  // iend for st1,2,3,4
-  };
-
   // Fold track.xhits, a vector of EMTFHits, into a vector of vector of EMTFHits
   // with index [station][num]
   std::vector<EMTFHitExtraCollection> st_conv_hits;
 
   for (int istation = 0; istation < NUM_STATIONS; ++istation) {
     st_conv_hits.push_back(EMTFHitExtraCollection());
-    int ibegin = _table[istation];
-    int iend   = _table[istation+NUM_STATIONS];
 
-    for (int i = ibegin; i < iend; ++i) {
-      if (track.xhits_valid.at(i))
-        st_conv_hits.back().push_back(track.xhits.at(i));
+    for (const auto& conv_hit : track.xhits) {
+      if ((conv_hit.station-1) == istation)
+        st_conv_hits.back().push_back(conv_hit);
     }
   }
   assert(st_conv_hits.size() == NUM_STATIONS);
@@ -354,22 +325,22 @@ void EMTFPrimitiveMatching::calculate_angles(EMTFTrackExtra& track) const {
   std::array<int,  NUM_STATION_PAIRS> best_dtheta_sign_arr;
   std::array<int,  NUM_STATION_PAIRS> best_dphi_arr;
   std::array<int,  NUM_STATION_PAIRS> best_dphi_sign_arr;
+  std::array<bool, NUM_STATION_PAIRS> best_dtheta_valid_arr;
 
   best_dtheta_arr.fill(invalid_dtheta);
   best_dtheta_sign_arr.fill(0);
   best_dphi_arr.fill(invalid_dphi);
   best_dphi_sign_arr.fill(0);
+  best_dtheta_valid_arr.fill(false);
 
   // For phi and theta assignment
-  // from 0 to 5: ME2,  ME3,  ME4,  ME2,  ME2,  ME3
-  //              (stB),(stB),(stB),(stA),(stA),(stA)
-  std::array<int,  NUM_STATION_PAIRS> best_phi_arr;
-  std::array<int,  NUM_STATION_PAIRS> best_theta_arr;
-  std::array<bool, NUM_STATION_PAIRS> best_valid_arr;
+  std::array<int,  NUM_STATIONS> best_theta_arr;
+  std::array<int,  NUM_STATIONS> best_phi_arr;
+  std::array<bool, NUM_STATIONS> best_theta_valid_arr;
 
   best_phi_arr.fill(0);
   best_theta_arr.fill(0);
-  best_valid_arr.fill(false);
+  best_theta_valid_arr.fill(false);
 
   // Calculate angles
   int ipair = 0;
@@ -390,9 +361,12 @@ void EMTFPrimitiveMatching::calculate_angles(EMTFTrackExtra& track) const {
           if (best_dtheta_arr.at(ipair) >= dth) {
             best_dtheta_arr.at(ipair) = dth;
             best_dtheta_sign_arr.at(ipair) = dth_sign;
+            best_dtheta_valid_arr.at(ipair) = true;
 
-            best_theta_arr.at(ipair) = (ipair < 3) ? thB : thA;
-            best_valid_arr.at(ipair) = true;
+            best_theta_arr.at(ist1) = thA;
+            best_theta_arr.at(ist2) = thB;
+            best_theta_valid_arr.at(ist1) = true;
+            best_theta_valid_arr.at(ist2) = true;
           }
 
           // Calculate phi deltas
@@ -401,14 +375,15 @@ void EMTFPrimitiveMatching::calculate_angles(EMTFTrackExtra& track) const {
           int dph = (phA > phB) ? phA - phB : phB - phA;
           int dph_sign = (phA <= phB);  // sign reversed according to Matt's oral request 2016-04-27
 
-          if (best_valid_arr.at(ipair)) {
+          if (best_dtheta_valid_arr.at(ipair)) {
             best_dphi_arr.at(ipair) = dph;
             best_dphi_sign_arr.at(ipair) = dph_sign;
 
-            best_phi_arr.at(ipair) = (ipair < 3) ? phB : phA;
+            best_phi_arr.at(ist1) = phA;
+            best_phi_arr.at(ist2) = phB;
           }
-        }
-      }
+        }  // end loop over conv_hits in station B
+      }  // end loop over conv_hits in station A
       ++ipair;
     }  // end loop over station B
   }  // end loop over station A
@@ -420,18 +395,30 @@ void EMTFPrimitiveMatching::calculate_angles(EMTFTrackExtra& track) const {
   int vmask3 = 0;
 
   // vmask contains valid station mask = {ME4,ME3,ME2,ME1}
-  if (best_dtheta_arr.at(0) <= thetaWindow_)
+  if (best_dtheta_arr.at(0) <= thetaWindow_) {
     vmask1 |= 0b0011;  // 12
-  if (best_dtheta_arr.at(1) <= thetaWindow_)
+    best_dtheta_valid_arr.at(0) = false;
+  }
+  if (best_dtheta_arr.at(1) <= thetaWindow_) {
     vmask1 |= 0b0101;  // 13
-  if (best_dtheta_arr.at(2) <= thetaWindow_)
+    best_dtheta_valid_arr.at(1) = false;
+  }
+  if (best_dtheta_arr.at(2) <= thetaWindow_) {
     vmask1 |= 0b1001;  // 14
-  if (best_dtheta_arr.at(3) <= thetaWindow_)
+    best_dtheta_valid_arr.at(2) = false;
+  }
+  if (best_dtheta_arr.at(3) <= thetaWindow_) {
     vmask2 |= 0b0110;  // 23
-  if (best_dtheta_arr.at(4) <= thetaWindow_)
+    best_dtheta_valid_arr.at(3) = false;
+  }
+  if (best_dtheta_arr.at(4) <= thetaWindow_) {
     vmask2 |= 0b1010;  // 24
-  if (best_dtheta_arr.at(5) <= thetaWindow_)
+    best_dtheta_valid_arr.at(4) = false;
+  }
+  if (best_dtheta_arr.at(5) <= thetaWindow_) {
     vmask3 |= 0b1100;  // 34
+    best_dtheta_valid_arr.at(5) = false;
+  }
 
   // merge station masks only if they share bits
   int vstat = vmask1;
@@ -443,12 +430,8 @@ void EMTFPrimitiveMatching::calculate_angles(EMTFTrackExtra& track) const {
   // remove some valid flags if th did not line up
   for (int istation = 0; istation < NUM_STATIONS; ++istation) {
     if ((vstat & (1<<istation)) == 0) {  // station bit not set
-      //int ibegin = _table[istation];
-      //int iend   = _table[istation+4];
-      //for (int i = ibegin; i < iend; ++i) {
-      //  track.xhits_valid.at(i) = false;
-      //}
       st_conv_hits.at(istation).clear();
+      best_theta_valid_arr.at(istation) = false;
     }
   }
 
@@ -457,36 +440,19 @@ void EMTFPrimitiveMatching::calculate_angles(EMTFTrackExtra& track) const {
   int theta_int = 0;
 
   if ((vstat & (1<<1)) != 0) {          // ME2 present
-    // phi is simple, we have it
-    phi_int = st_conv_hits.at(1).front().phi_fp;
-
-    // for theta, select delta to best station
-    assert(best_valid_arr.at(0) || best_valid_arr.at(3) || best_valid_arr.at(4));
-    if (best_valid_arr.at(0)) {         // 12
-      theta_int = best_theta_arr.at(0);
-    } else if (best_valid_arr.at(3)) {  // 23
-      theta_int = best_theta_arr.at(3);
-    } else if (best_valid_arr.at(4)) {  // 24
-      theta_int = best_theta_arr.at(4);
-    }
+    assert(best_theta_valid_arr.at(1));
+    phi_int   = best_phi_arr.at(1);
+    theta_int = best_theta_arr.at(1);
 
   } else if ((vstat & (1<<2)) != 0) {   // ME3 present
-    phi_int = st_conv_hits.at(2).front().phi_fp;
-
-    assert(best_valid_arr.at(1) || best_valid_arr.at(5));
-    if (best_valid_arr.at(1)) {         // 13
-      theta_int = best_theta_arr.at(1);
-    } else if (best_valid_arr.at(5)) {  // 34
-      theta_int = best_theta_arr.at(5);
-    }
+    assert(best_theta_valid_arr.at(2));
+    phi_int   = best_phi_arr.at(2);
+    theta_int = best_theta_arr.at(2);
 
   } else if ((vstat & (1<<3)) != 0) {   // ME4 present
-    phi_int = st_conv_hits.at(3).front().phi_fp;
-
-    assert(best_valid_arr.at(2));
-    if (best_valid_arr.at(2)) {         // 14
-      theta_int = best_theta_arr.at(2);
-    }
+    assert(best_theta_valid_arr.at(3));
+    phi_int   = best_phi_arr.at(3);
+    theta_int = best_theta_arr.at(3);
   }
 
   // update rank taking into account available stations after theta deltas
@@ -501,6 +467,15 @@ void EMTFPrimitiveMatching::calculate_angles(EMTFTrackExtra& track) const {
       (((vstat>>2) & 1) << 1) |  // ME3
       (((vstat>>3) & 1) << 0)    // ME4
   );
+
+  int mode = (
+      (((vstat>>0) & 1) << 3) |  // ME1
+      (((vstat>>1) & 1) << 2) |  // ME2
+      (((vstat>>2) & 1) << 1) |  // ME3
+      (((vstat>>3) & 1) << 0)    // ME4
+  );
+
+  int mode_inv = vstat;
 
   // if less than 2 segments, kill rank
   if (vstat == 0b0001 || vstat == 0b0010 || vstat == 0b0100 || vstat == 0b1000 || vstat == 0)
@@ -525,9 +500,12 @@ void EMTFPrimitiveMatching::calculate_angles(EMTFTrackExtra& track) const {
   // Output
 
   track.rank       = rank2;
+  track.mode       = mode;
+  track.mode_inv   = mode_inv;
   track.phi_int    = phi_int;
   track.theta_int  = theta_int;
 
+  // Assign ptlut_data
   EMTFPtLUTData ptlut_data;
   for (int i = 0; i < NUM_STATION_PAIRS; ++i) {
     ptlut_data.delta_ph[i] = best_dphi_arr.at(i);
@@ -543,6 +521,38 @@ void EMTFPrimitiveMatching::calculate_angles(EMTFTrackExtra& track) const {
 
   track.ptlut_data = ptlut_data;
 
+  // Reduce converted hit collection
+  track.num_xhits    = 0;
+  uint16_t check_num_xhits = 0;
+
+  // Apply erase-remove idiom
+  // Erase the hits that are not the "best" phi and theta in each station
+  for (int i = 0, j = 0; i < NUM_STATIONS; ++i) {
+    const int nchits = track.xhits.size();
+
+    if (best_theta_valid_arr.at(i)) {
+      for (int ichit = 0; ichit < nchits; ++ichit) {
+        const EMTFHitExtra& conv_hit = track.xhits.at(ichit);
+
+        if (
+            ((conv_hit.station-1) == i) &&
+            (conv_hit.phi_fp      == best_phi_arr.at(i)) &&
+            (conv_hit.theta_fp    == best_theta_arr.at(i))
+        ) {
+          track.num_xhits += 1;
+          track.xhits        .at(j) = std::move(track.xhits        .at(ichit));
+          track.xhits_ph_diff.at(j) = std::move(track.xhits_ph_diff.at(ichit));
+          ++j;
+          break;
+        }
+      }
+    }
+    check_num_xhits = j;
+  }
+  assert(track.num_xhits == check_num_xhits);
+
+  track.xhits        .erase(track.xhits.begin()        +track.num_xhits, track.xhits.end());
+  track.xhits_ph_diff.erase(track.xhits_ph_diff.begin()+track.num_xhits, track.xhits_ph_diff.end());
 }
 
 unsigned int EMTFPrimitiveMatching::get_fs_zone_code(const EMTFHitExtra& conv_hit) const {
@@ -593,4 +603,3 @@ unsigned int EMTFPrimitiveMatching::get_fs_segment(const EMTFHitExtra& conv_hit)
   fs_segment = ((fs_history & 0x3)<<4) | ((fs_chamber & 0x7)<<1) | (fs_segment & 0x1);
   return fs_segment;
 }
-
