@@ -135,7 +135,7 @@ void EMTFTrackFinder::process(
 
     std::cout << "Tracks: " << std::endl;
     for (const auto& t : out_tracks) {
-      std::cout << t.winner << " " << t.rank << " " << t.xroad.zone << " " << t.xroad.winner<< std::endl;
+      std::cout << t.winner << " " << t.rank << " " << t.mode << " " << t.ptlut_address << " " << t.pt << std::endl;
     }
   }
 

@@ -23,7 +23,7 @@ public:
 
   address_t calculate_address_fw(const EMTFTrackExtra& track) const;
 
-  float calculate_pt(const address_t& address);
+  float calculate_pt(const address_t& address, const EMTFTrackExtra& track);
 
 private:
   std::vector<int> allowedModes_;

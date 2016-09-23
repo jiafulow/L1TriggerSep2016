@@ -49,10 +49,6 @@ void EMTFBestTrackSelection::select(
 
       rank[zn] = track.rank;
 
-      //larger[i] = 0;
-      //larger[i][i] = 1; // result of comparison with itself
-      larger[zn][zn] = true;
-
       for (const auto& conv_hit : track.xhits) {
         assert(conv_hit.valid);
 
@@ -79,6 +75,10 @@ void EMTFBestTrackSelection::select(
     int ri=0, rj=0, gt=0, eq=0;
 
     for (int i = 0; i < max_zn; ++i) {
+      for (int j = 0; j < max_zn; ++j) {
+        larger[i][j] = 0;
+      }
+      larger[i][i] = 1; // result of comparison with itself
       //ri = rank[i%4][i/4]; // first index loops zone, second loops candidate. Zone loops faster, so we give equal priority to zones
       ri = rank[i];
 
@@ -90,7 +90,8 @@ void EMTFBestTrackSelection::select(
         rj = rank[j];
         gt = ri > rj;
         eq = ri == rj;
-        if ((i < j && (gt || eq)) || (i > j && gt)) larger[i][j] = 1;
+        if ((i < j && (gt || eq)) || (i > j && gt))
+          larger[i][j] = 1;
       }
 
       // "larger" array shows the result of comparison for each rank
@@ -126,15 +127,17 @@ void EMTFBestTrackSelection::select(
     // remove ghosts according to kill mask
     //exists = exists & (~kill1);
     for (int i = 0; i < max_zn; ++i) {
-      exists[i] = exists[i] & (~killed[i]);
+      exists[i] = exists[i] & (!killed[i]);
     }
 
     for (int i = 0; i < max_zn; ++i) {
       for (int j = 0; j < max_zn; ++j) {
+        //if  (exists[i]) larger[i] = larger[i] | (~exists); // if this track exists make it larger than all non-existing tracks
+        //else  larger[i] = 0; // else make it smaller than anything
         if (exists[i])
-          larger[i][j] = larger[i][j] | (~exists[j]);  // if this track exists make it larger than all non-existing tracks
+          larger[i][j] = larger[i][j] | (!exists[j]);
         else
-          larger[i][j] = 0;  // else make it smaller than anything
+          larger[i][j] = 0;
       }
 
       // count zeros in the comparison results. The best track will have none, the next will have one, the third will have two.
@@ -167,7 +170,15 @@ void EMTFBestTrackSelection::select(
 
   if (true) {  // debug
     for (const auto& track : best_tracks) {
-      std::cout << "track: z: " << track.xroad.zone << " pat: " << track.xroad.winner << " rank: " << to_hex(track.rank) << std::endl;
+      std::cout << "track: " << track.winner << " rank: " << to_hex(track.rank)
+          << " ph_deltas: " << array_as_string(track.ptlut_data.delta_ph)
+          << " th_deltas: " << array_as_string(track.ptlut_data.delta_th)
+          << " phi: " << track.phi_int << " theta: " << track.theta_int
+          << " cpat: " << array_as_string(track.ptlut_data.cpattern)
+          << std::endl;
+      for (const auto& conv_hit : track.xhits) {
+        std::cout << ".. track segments: st: " << conv_hit.pc_station << " ch: " << conv_hit.pc_chamber << " ph: " << conv_hit.phi_fp << " th: " << conv_hit.theta_fp << " cscid: " << (conv_hit.cscn_ID-1) << std::endl;
+      }
     }
   }
 }

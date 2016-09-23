@@ -42,6 +42,8 @@ public:
 
   unsigned int get_fs_segment(const EMTFHitExtra& conv_hit) const;
 
+  unsigned int get_bt_chamber(const EMTFHitExtra& conv_hit) const;
+
 private:
   int endcap_, sector_, bx_;
 

@@ -515,8 +515,11 @@ void EMTFPrimitiveMatching::calculate_angles(EMTFTrackExtra& track) const {
   }
   for (int i = 0; i < NUM_STATIONS; ++i) {
     const auto& v = st_conv_hits.at(i);
-    ptlut_data.cpattern[i] = v.empty() ? 0 : v.front().pattern;
-    ptlut_data.fr[i]       = v.empty() ? 0 : isFront(v.front().station, v.front().ring, v.front().chamber);
+    ptlut_data.cpattern[i]   = v.empty() ? 0 : v.front().pattern;
+    ptlut_data.fr[i]         = v.empty() ? 0 : isFront(v.front().station, v.front().ring, v.front().chamber);
+    ptlut_data.ph[i]         = best_phi_arr.at(i);
+    ptlut_data.th[i]         = best_theta_arr.at(i);
+    ptlut_data.bt_chamber[i] = v.empty() ? 0 : get_bt_chamber(v.front());
   }
 
   track.ptlut_data = ptlut_data;
@@ -602,4 +605,12 @@ unsigned int EMTFPrimitiveMatching::get_fs_segment(const EMTFHitExtra& conv_hit)
 
   fs_segment = ((fs_history & 0x3)<<4) | ((fs_chamber & 0x7)<<1) | (fs_segment & 0x1);
   return fs_segment;
+}
+
+unsigned int EMTFPrimitiveMatching::get_bt_chamber(const EMTFHitExtra& conv_hit) const {
+  int bt_station = (conv_hit.station == 1) ? (conv_hit.subsector-1) : conv_hit.station;
+  int bt_chamber = (conv_hit.cscn_ID-1);
+  if (bt_chamber >= 12)
+    bt_chamber -= 3;
+  return (bt_station * 12) + bt_chamber;
 }
