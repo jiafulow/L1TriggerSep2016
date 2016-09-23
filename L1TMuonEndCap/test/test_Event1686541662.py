@@ -15,49 +15,56 @@ class MyAnalyzer(FWLiteAnalyzer):
     # 3 2 3 2 5 1 13 6 0 1 0 136
 
     handles = {
-      "emtf": ("std::vector<L1TMuonEndCap::EMTFHitExtra>", "simEmtfDigisData"),
+      "hits": ("std::vector<L1TMuonEndCap::EMTFHitExtra>", "simEmtfDigisData"),
+      "tracks": ("std::vector<L1TMuonEndCap::EMTFTrackExtra>", "simEmtfDigisData"),
     }
     super(MyAnalyzer, self).__init__(inputFiles, handles)
 
   def process(self, event):
     self.getHandles(event)
-    emtf = self.handles["emtf"].product()
+    hits = self.handles["hits"].product()
+    tracks = self.handles["tracks"].product()
 
-    hit = emtf[4]
+    hit = hits[4]
     assert(hit.phi_fp      == 2717)
     assert(hit.theta_fp    == 20)
     assert((1<<hit.ph_hit) == 512)
     assert(hit.phzvl       == 1)
 
-    hit = emtf[5]
+    hit = hits[5]
     assert(hit.phi_fp      == 1403)
     assert(hit.theta_fp    == 9)
     assert((1<<hit.ph_hit) == 32)
     assert(hit.phzvl       == 1)
 
-    hit = emtf[6]
+    hit = hits[6]
     assert(hit.phi_fp      == 1482)
     assert(hit.theta_fp    == 9)
     assert((1<<hit.ph_hit) == 128)
     assert(hit.phzvl       == 1)
 
-    hit = emtf[7]
+    hit = hits[7]
     assert(hit.phi_fp      == 1604)
     assert(hit.theta_fp    == 10)
     assert((1<<hit.ph_hit) == 4096)
     assert(hit.phzvl       == 1)
 
-    hit = emtf[8]
+    hit = hits[8]
     assert(hit.phi_fp      == 1446)
     assert(hit.theta_fp    == 13)
     assert((1<<hit.ph_hit) == 64)
     assert(hit.phzvl       == 1)
 
-    hit = emtf[9]
+    hit = hits[9]
     assert(hit.phi_fp      == 1322)
     assert(hit.theta_fp    == 7)
     assert((1<<hit.ph_hit) == 2097152)
     assert(hit.phzvl       == 1)
+
+    track = tracks[0]
+    assert(track.rank      == 106)
+    assert(track.mode      == 14)
+    assert(track.ptlut_address == 474472433)
 
     return
 

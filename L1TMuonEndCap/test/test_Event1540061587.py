@@ -12,31 +12,38 @@ class MyAnalyzer(FWLiteAnalyzer):
     # 3 1 3 0 2 1 11 2 64 3 0 34
 
     handles = {
-      "emtf": ("std::vector<L1TMuonEndCap::EMTFHitExtra>", "simEmtfDigisData"),
+      "hits": ("std::vector<L1TMuonEndCap::EMTFHitExtra>", "simEmtfDigisData"),
+      "tracks": ("std::vector<L1TMuonEndCap::EMTFTrackExtra>", "simEmtfDigisData"),
     }
     super(MyAnalyzer, self).__init__(inputFiles, handles)
 
   def process(self, event):
     self.getHandles(event)
-    emtf = self.handles["emtf"].product()
+    hits = self.handles["hits"].product()
+    tracks = self.handles["tracks"].product()
 
-    hit = emtf[0]
+    hit = hits[0]
     assert(hit.phi_fp      == 3454)
     assert(hit.theta_fp    == 36)
     assert((1<<hit.ph_hit) == 4096)
     assert(hit.phzvl       == 1)
 
-    hit = emtf[1]
+    hit = hits[1]
     assert(hit.phi_fp      == 3543)
     assert(hit.theta_fp    == 36)
     assert((1<<hit.ph_hit) == 32768)
     assert(hit.phzvl       == 1)
 
-    hit = emtf[2]
+    hit = hits[2]
     assert(hit.phi_fp      == 3983)
     assert(hit.theta_fp    == 29)
     assert((1<<hit.ph_hit) == 2048)
     assert(hit.phzvl       == 1)
+
+    track = tracks[0]
+    assert(track.rank      == 105)
+    assert(track.mode      == 13)
+    assert(track.ptlut_address == 760262673)
 
     return
 
