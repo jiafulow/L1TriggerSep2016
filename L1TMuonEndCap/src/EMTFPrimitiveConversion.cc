@@ -108,6 +108,14 @@ EMTFHitExtra EMTFPrimitiveConversion::convert(
   conv_hit.pattern     = tp_data.pattern;
   conv_hit.bend        = tp_data.bend;
 
+  conv_hit.bc0         = 0;
+  conv_hit.mpc_link    = tp_data.mpclink;
+  conv_hit.sync_err    = tp_data.syncErr;
+  conv_hit.track_num   = tp_data.trknmb;
+  conv_hit.stub_num    = 0;
+  conv_hit.bx0         = tp_data.bx0;
+  conv_hit.layer       = 0;
+
   convert_csc(conv_hit);
   return conv_hit;
 }

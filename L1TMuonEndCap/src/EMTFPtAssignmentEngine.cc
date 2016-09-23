@@ -507,17 +507,22 @@ float EMTFPtAssignmentEngine::calculate_pt(const address_t& address, const EMTFT
     break;
   }
 
-  dPhi12 *= ((sign12 == 0) ? -1 : 1);
-  dPhi13 *= ((sign13 == 0) ? -1 : 1);
-  dPhi14 *= ((sign14 == 0) ? -1 : 1);
-  dPhi23 *= ((sign23 == 0) ? -1 : 1);
-  dPhi24 *= ((sign24 == 0) ? -1 : 1);
-  dPhi34 *= ((sign34 == 0) ? -1 : 1);
 
-  CLCT1  *= ((CLCT1Sign == 0) ? -1 : 1);
-  CLCT2  *= ((CLCT2Sign == 0) ? -1 : 1);
-  CLCT3  *= ((CLCT3Sign == 0) ? -1 : 1);
-  CLCT4  *= ((CLCT4Sign == 0) ? -1 : 1);
+  auto get_signed_int = [](int var, int sign) {
+    return (sign == 1) ? (var * 1) : (var * -1);
+  };
+
+  dPhi12 = get_signed_int(dPhi12, sign12);
+  dPhi13 = get_signed_int(dPhi13, sign13);
+  dPhi14 = get_signed_int(dPhi14, sign14);
+  dPhi23 = get_signed_int(dPhi23, sign23);
+  dPhi24 = get_signed_int(dPhi24, sign24);
+  dPhi34 = get_signed_int(dPhi34, sign34);
+
+  CLCT1  = get_signed_int(CLCT1, CLCT1Sign);
+  CLCT2  = get_signed_int(CLCT2, CLCT2Sign);
+  CLCT3  = get_signed_int(CLCT3, CLCT3Sign);
+  CLCT4  = get_signed_int(CLCT4, CLCT4Sign);
 
   float ftheta = getEtaFromBin(theta, 5);  // eta = getEtaFromBin(eta, 5);
 

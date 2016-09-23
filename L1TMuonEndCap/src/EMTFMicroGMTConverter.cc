@@ -15,7 +15,7 @@ void EMTFMicroGMTConverter::convert(
 ) const {
 
   // compressed pt = pt*2 (scale) + 1 (iPt = 0 is empty candidate)
-  int ipt = (in_track.pt)*2 + 1;
+  int ipt = (in_track.pt*2) + 1;
   if (ipt > 511)
     ipt = 511;
 
@@ -39,7 +39,7 @@ void EMTFMicroGMTConverter::convert(
   out_cand.setTFIdentifiers(sector, tftype);
 }
 
-void EMTFMicroGMTConverter::convert_many(
+void EMTFMicroGMTConverter::convert_all(
     const EMTFTrackExtraCollection& in_tracks,
     l1t::RegionalMuonCandBxCollection& out_cands
 ) const {
@@ -47,7 +47,7 @@ void EMTFMicroGMTConverter::convert_many(
   out_cands.clear();
   out_cands.setBXRange(-2,2);
 
-  for (const auto& in_track: in_tracks) {
+  for (const auto& in_track : in_tracks) {
     l1t::RegionalMuonCand out_cand;
 
     convert(in_track, out_cand);

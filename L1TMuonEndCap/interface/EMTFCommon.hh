@@ -1,6 +1,10 @@
 #ifndef L1TMuonEndCap_EMTFCommon_hh
 #define L1TMuonEndCap_EMTFCommon_hh
 
+#include "DataFormatsSep2016/L1TMuon/interface/EMTFHit.h"
+#include "DataFormatsSep2016/L1TMuon/interface/EMTFRoad.h"
+#include "DataFormatsSep2016/L1TMuon/interface/EMTFTrack.h"
+
 #include "DataFormatsSep2016/L1TMuon/interface/EMTFHitExtra.h"
 #include "DataFormatsSep2016/L1TMuon/interface/EMTFRoadExtra.h"
 #include "DataFormatsSep2016/L1TMuon/interface/EMTFTrackExtra.h"

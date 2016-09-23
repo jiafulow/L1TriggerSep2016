@@ -17,7 +17,7 @@ public:
       l1t::RegionalMuonCand& out_cand
   ) const;
 
-  void convert_many(
+  void convert_all(
       const EMTFTrackExtraCollection& in_tracks,
       l1t::RegionalMuonCandBxCollection& out_cands
   ) const;
