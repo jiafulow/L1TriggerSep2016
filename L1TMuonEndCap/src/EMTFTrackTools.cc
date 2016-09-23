@@ -1,32 +1,32 @@
 
-#include "L1Trigger/L1TMuonEndCap/interface/EMTFTrackTools.h"
+#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFTrackTools.h"
 
-namespace l1t {
+namespace L1TMuonEndCap {
 
-  void EMTFTrack::ImportSP( const emtf::SP _SP, int _sector) {
+  //void EMTFTrack::ImportSP( const emtf::SP _SP, int _sector) {
+  //
+  //  EMTFTrack::set_sector       ( _sector );
+  //  EMTFTrack::set_sector_GMT   ( calc_sector_GMT(_sector) );
+  //  EMTFTrack::set_mode         ( _SP.Mode() );         
+  //  EMTFTrack::set_quality      ( _SP.Quality_GMT() );      
+  //  EMTFTrack::set_bx           ( _SP.TBIN() - 3 );     
+  //  EMTFTrack::set_pt_GMT       ( _SP.Pt_GMT() );       
+  //  EMTFTrack::set_pt_LUT_addr  ( _SP.Pt_LUT_addr() );
+  //  EMTFTrack::set_eta_GMT      ( _SP.Eta_GMT() );      
+  //  EMTFTrack::set_phi_loc_int  ( _SP.Phi_full() );  
+  //  EMTFTrack::set_phi_GMT      ( _SP.Phi_GMT() );      
+  //  EMTFTrack::set_charge       ( (_SP.C() == 1) ? -1 : 1 ); // uGMT uses opposite of physical charge (to match pdgID)
+  //  EMTFTrack::set_charge_GMT   ( _SP.C() );
+  //  EMTFTrack::set_charge_valid ( _SP.VC() );
 
-    EMTFTrack::set_sector       ( _sector );
-    EMTFTrack::set_sector_GMT   ( calc_sector_GMT(_sector) );
-    EMTFTrack::set_mode         ( _SP.Mode() );         
-    EMTFTrack::set_quality      ( _SP.Quality_GMT() );      
-    EMTFTrack::set_bx           ( _SP.TBIN() - 3 );     
-    EMTFTrack::set_pt_GMT       ( _SP.Pt_GMT() );       
-    EMTFTrack::set_pt_LUT_addr  ( _SP.Pt_LUT_addr() );
-    EMTFTrack::set_eta_GMT      ( _SP.Eta_GMT() );      
-    EMTFTrack::set_phi_loc_int  ( _SP.Phi_full() );  
-    EMTFTrack::set_phi_GMT      ( _SP.Phi_GMT() );      
-    EMTFTrack::set_charge       ( (_SP.C() == 1) ? -1 : 1 ); // uGMT uses opposite of physical charge (to match pdgID)
-    EMTFTrack::set_charge_GMT   ( _SP.C() );
-    EMTFTrack::set_charge_valid ( _SP.VC() );
-
-    EMTFTrack::set_pt           ( calc_pt( pt_GMT ) );
-    EMTFTrack::set_eta          ( calc_eta( eta_GMT ) );
-    EMTFTrack::set_phi_loc_deg  ( calc_phi_loc_deg( phi_loc_int ) );
-    EMTFTrack::set_phi_loc_rad  ( calc_phi_loc_rad( phi_loc_int ) );
-    EMTFTrack::set_phi_glob_deg ( calc_phi_glob_deg( phi_loc_deg, _sector ) );
-    EMTFTrack::set_phi_glob_rad ( calc_phi_glob_rad( phi_loc_rad, _sector ) );
-
-  } // End EMTFTrack::ImportSP
+  //  EMTFTrack::set_pt           ( calc_pt( pt_GMT ) );
+  //  EMTFTrack::set_eta          ( calc_eta( eta_GMT ) );
+  //  EMTFTrack::set_phi_loc_deg  ( calc_phi_loc_deg( phi_loc_int ) );
+  //  EMTFTrack::set_phi_loc_rad  ( calc_phi_loc_rad( phi_loc_int ) );
+  //  EMTFTrack::set_phi_glob_deg ( calc_phi_glob_deg( phi_loc_deg, _sector ) );
+  //  EMTFTrack::set_phi_glob_rad ( calc_phi_glob_rad( phi_loc_rad, _sector ) );
+  //
+  //} // End EMTFTrack::ImportSP
 
   // Calculates special chamber ID for track address sent to uGMT, using CSC_ID, subsector, neighbor, and station
   int calc_uGMT_chamber( int _csc_ID, int _subsector, int _neighbor, int _station) {
@@ -190,63 +190,63 @@ namespace l1t {
 
   } // End function: void EMTFTrack::ImportPtLUT
 
-  EMTFTrack EMTFTrackExtra::CreateEMTFTrack() {
-
-    EMTFTrack thisTrack;
-    for (int iHit = 0; iHit < NumHitsExtra(); iHit++) {
-      thisTrack.push_Hit( _HitsExtra.at(iHit).CreateEMTFHit() );
-    }
-      
-    thisTrack.set_endcap        ( Endcap()       );
-    thisTrack.set_sector        ( Sector()       );
-    thisTrack.set_sector_GMT    ( Sector_GMT()   );
-    thisTrack.set_sector_index  ( Sector_index() );
-    thisTrack.set_mode          ( Mode()         );
-    thisTrack.set_mode_LUT      ( Mode_LUT()     );
-    thisTrack.set_quality       ( Quality()      );
-    thisTrack.set_bx            ( BX()           );
-    thisTrack.set_pt            ( Pt()           );
-    thisTrack.set_pt_GMT        ( Pt_GMT()       );
-    thisTrack.set_pt_LUT_addr   ( Pt_LUT_addr()  );
-    thisTrack.set_eta           ( Eta()          );
-    thisTrack.set_eta_GMT       ( Eta_GMT()      );
-    thisTrack.set_eta_LUT       ( Eta_LUT()      );
-    thisTrack.set_phi_loc_int   ( Phi_loc_int()  );
-    thisTrack.set_phi_loc_deg   ( Phi_loc_deg()  );
-    thisTrack.set_phi_loc_rad   ( Phi_loc_rad()  );
-    thisTrack.set_phi_GMT       ( Phi_GMT()      );
-    thisTrack.set_phi_glob_deg  ( Phi_glob_deg() );
-    thisTrack.set_phi_glob_rad  ( Phi_glob_rad() );
-    thisTrack.set_charge        ( Charge()       );
-    thisTrack.set_charge_GMT    ( Charge_GMT()   );
-    thisTrack.set_charge_valid  ( Charge_valid() );
-    thisTrack.set_dPhi_12       ( DPhi_12()      );
-    thisTrack.set_dPhi_13       ( DPhi_13()      );
-    thisTrack.set_dPhi_14       ( DPhi_14()      );
-    thisTrack.set_dPhi_23       ( DPhi_23()      );
-    thisTrack.set_dPhi_24       ( DPhi_24()      );
-    thisTrack.set_dPhi_34       ( DPhi_34()      );
-    thisTrack.set_dTheta_12     ( DTheta_12()    );
-    thisTrack.set_dTheta_13     ( DTheta_13()    );
-    thisTrack.set_dTheta_14     ( DTheta_14()    );
-    thisTrack.set_dTheta_23     ( DTheta_23()    );
-    thisTrack.set_dTheta_24     ( DTheta_24()    );
-    thisTrack.set_dTheta_34     ( DTheta_34()    );
-    thisTrack.set_clct_1        ( CLCT_1()       );
-    thisTrack.set_clct_2        ( CLCT_2()       );
-    thisTrack.set_clct_3        ( CLCT_3()       );
-    thisTrack.set_clct_4        ( CLCT_4()       );
-    thisTrack.set_fr_1          ( FR_1()         );
-    thisTrack.set_fr_2          ( FR_2()         );
-    thisTrack.set_fr_3          ( FR_3()         );
-    thisTrack.set_fr_4          ( FR_4()         );
-    thisTrack.set_track_num     ( Track_num()    );
-    thisTrack.set_has_neighbor  ( Has_neighbor() );
-    thisTrack.set_all_neighbor  ( All_neighbor() );
-
-    return thisTrack;
-
-  } // End EMTFTrackExtra::CreateEMTFTrack
+  //EMTFTrack EMTFTrackExtra::CreateEMTFTrack() {
+  //
+  //  EMTFTrack thisTrack;
+  //  for (int iHit = 0; iHit < NumHitsExtra(); iHit++) {
+  //    thisTrack.push_Hit( _HitsExtra.at(iHit).CreateEMTFHit() );
+  //  }
+  //    
+  //  thisTrack.set_endcap        ( Endcap()       );
+  //  thisTrack.set_sector        ( Sector()       );
+  //  thisTrack.set_sector_GMT    ( Sector_GMT()   );
+  //  thisTrack.set_sector_index  ( Sector_index() );
+  //  thisTrack.set_mode          ( Mode()         );
+  //  thisTrack.set_mode_LUT      ( Mode_LUT()     );
+  //  thisTrack.set_quality       ( Quality()      );
+  //  thisTrack.set_bx            ( BX()           );
+  //  thisTrack.set_pt            ( Pt()           );
+  //  thisTrack.set_pt_GMT        ( Pt_GMT()       );
+  //  thisTrack.set_pt_LUT_addr   ( Pt_LUT_addr()  );
+  //  thisTrack.set_eta           ( Eta()          );
+  //  thisTrack.set_eta_GMT       ( Eta_GMT()      );
+  //  thisTrack.set_eta_LUT       ( Eta_LUT()      );
+  //  thisTrack.set_phi_loc_int   ( Phi_loc_int()  );
+  //  thisTrack.set_phi_loc_deg   ( Phi_loc_deg()  );
+  //  thisTrack.set_phi_loc_rad   ( Phi_loc_rad()  );
+  //  thisTrack.set_phi_GMT       ( Phi_GMT()      );
+  //  thisTrack.set_phi_glob_deg  ( Phi_glob_deg() );
+  //  thisTrack.set_phi_glob_rad  ( Phi_glob_rad() );
+  //  thisTrack.set_charge        ( Charge()       );
+  //  thisTrack.set_charge_GMT    ( Charge_GMT()   );
+  //  thisTrack.set_charge_valid  ( Charge_valid() );
+  //  thisTrack.set_dPhi_12       ( DPhi_12()      );
+  //  thisTrack.set_dPhi_13       ( DPhi_13()      );
+  //  thisTrack.set_dPhi_14       ( DPhi_14()      );
+  //  thisTrack.set_dPhi_23       ( DPhi_23()      );
+  //  thisTrack.set_dPhi_24       ( DPhi_24()      );
+  //  thisTrack.set_dPhi_34       ( DPhi_34()      );
+  //  thisTrack.set_dTheta_12     ( DTheta_12()    );
+  //  thisTrack.set_dTheta_13     ( DTheta_13()    );
+  //  thisTrack.set_dTheta_14     ( DTheta_14()    );
+  //  thisTrack.set_dTheta_23     ( DTheta_23()    );
+  //  thisTrack.set_dTheta_24     ( DTheta_24()    );
+  //  thisTrack.set_dTheta_34     ( DTheta_34()    );
+  //  thisTrack.set_clct_1        ( CLCT_1()       );
+  //  thisTrack.set_clct_2        ( CLCT_2()       );
+  //  thisTrack.set_clct_3        ( CLCT_3()       );
+  //  thisTrack.set_clct_4        ( CLCT_4()       );
+  //  thisTrack.set_fr_1          ( FR_1()         );
+  //  thisTrack.set_fr_2          ( FR_2()         );
+  //  thisTrack.set_fr_3          ( FR_3()         );
+  //  thisTrack.set_fr_4          ( FR_4()         );
+  //  thisTrack.set_track_num     ( Track_num()    );
+  //  thisTrack.set_has_neighbor  ( Has_neighbor() );
+  //  thisTrack.set_all_neighbor  ( All_neighbor() );
+  //
+  //  return thisTrack;
+  //
+  //} // End EMTFTrackExtra::CreateEMTFTrack
 
     
 } // End namespace l1t

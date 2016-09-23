@@ -1,7 +1,7 @@
 
-#include "L1Trigger/L1TMuonEndCap/interface/EMTFHitTools.h"
+#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFHitTools.h"
 
-namespace l1t {
+namespace L1TMuonEndCap {
 
   void EMTFHit::PrintSimulatorHeader() {
     std::cout << "Simulator hits: time_bin, endcap, sector, subsector, station, valid, "
@@ -88,12 +88,12 @@ namespace l1t {
 
   } // End EMTFHit::ImportCSCCorrelatedLCTDigi
 
-  void EMTFHitExtra::ImportCSCCorrelatedLCTDigi( const CSCCorrelatedLCTDigi& _digi ) { 
-
-    EMTFHit::ImportCSCCorrelatedLCTDigi ( _digi );
-    EMTFHitExtra::set_bx0  ( _digi.getBX0()     );
-
-  } // End EMTFHitExtra::ImportCSCCorrelatedLCTDigi
+  //void EMTFHitExtra::ImportCSCCorrelatedLCTDigi( const CSCCorrelatedLCTDigi& _digi ) { 
+  //
+  //  EMTFHit::ImportCSCCorrelatedLCTDigi ( _digi );
+  //  EMTFHitExtra::set_bx0  ( _digi.getBX0()     );
+  //
+  //} // End EMTFHitExtra::ImportCSCCorrelatedLCTDigi
 
   CSCCorrelatedLCTDigi EMTFHit::CreateCSCCorrelatedLCTDigi() {
 
@@ -117,25 +117,25 @@ namespace l1t {
     return RPCDigi( strip, bx + 6 );
   }
 
-  void EMTFHit::ImportME( const emtf::ME _ME) {
-
-    EMTFHit::set_wire       ( _ME.Wire() );
-    EMTFHit::set_strip      ( _ME.Strip() );
-    EMTFHit::set_quality    ( _ME.Quality() );
-    EMTFHit::set_pattern    ( _ME.CLCT_pattern() );
-    EMTFHit::set_bend       ( (_ME.LR() == 1) ? 1 : -1 );
-    EMTFHit::set_valid      ( _ME.VP() );
-    EMTFHit::set_sync_err   ( _ME.SE() );
-    EMTFHit::set_bx         ( _ME.TBIN() - 3 );
-    EMTFHit::set_bc0        ( _ME.BC0() ); 
-    EMTFHit::set_is_CSC_hit ( true  );
-    EMTFHit::set_is_RPC_hit ( false );
-
-    // Station, CSC_ID, Sector, Subsector, Neighbor, Sector_index, Ring, and Chamber filled in
-    // EventFilter/L1TRawToDigi/src/implementations_stage2/EMTFBlockME.cc
-    // "set_layer()" is not invoked, so Layer is not yet filled - AWB 21.04.16
-
-  } // End EMTFHit::ImportME
+  //void EMTFHit::ImportME( const emtf::ME _ME) {
+  //
+  //  EMTFHit::set_wire       ( _ME.Wire() );
+  //  EMTFHit::set_strip      ( _ME.Strip() );
+  //  EMTFHit::set_quality    ( _ME.Quality() );
+  //  EMTFHit::set_pattern    ( _ME.CLCT_pattern() );
+  //  EMTFHit::set_bend       ( (_ME.LR() == 1) ? 1 : -1 );
+  //  EMTFHit::set_valid      ( _ME.VP() );
+  //  EMTFHit::set_sync_err   ( _ME.SE() );
+  //  EMTFHit::set_bx         ( _ME.TBIN() - 3 );
+  //  EMTFHit::set_bc0        ( _ME.BC0() ); 
+  //  EMTFHit::set_is_CSC_hit ( true  );
+  //  EMTFHit::set_is_RPC_hit ( false );
+  //
+  //  // Station, CSC_ID, Sector, Subsector, Neighbor, Sector_index, Ring, and Chamber filled in
+  //  // EventFilter/L1TRawToDigi/src/implementations_stage2/EMTFBlockME.cc
+  //  // "set_layer()" is not invoked, so Layer is not yet filled - AWB 21.04.16
+  //
+  //} // End EMTFHit::ImportME
 
   int calc_ring (int _station, int _csc_ID, int _strip) {
     if (_station > 1) {
@@ -173,35 +173,35 @@ namespace l1t {
     return tmp_chamber;
   } // End EMTFHit::calc_chamber
 
-  EMTFHit EMTFHitExtra::CreateEMTFHit() {
-
-    EMTFHit thisHit;
-    thisHit.set_endcap       ( Endcap()        );
-    thisHit.set_station      ( Station()       );
-    thisHit.set_ring         ( Ring()          );
-    thisHit.set_sector       ( Sector()        );
-    thisHit.set_sector_index ( Sector_index()  );
-    thisHit.set_subsector    ( Subsector()     );
-    thisHit.set_chamber      ( Chamber()       );
-    thisHit.set_csc_ID       ( CSC_ID()        );
-    thisHit.set_neighbor     ( Neighbor()      );
-    thisHit.set_mpc_link     ( MPC_link()      );
-    thisHit.set_wire         ( Wire()          );
-    thisHit.set_strip        ( Strip()         );
-    thisHit.set_track_num    ( Track_num()     );
-    thisHit.set_quality      ( Quality()       );
-    thisHit.set_pattern      ( Pattern()       );
-    thisHit.set_bend         ( Bend()          );
-    thisHit.set_valid        ( Valid()         );
-    thisHit.set_sync_err     ( Sync_err()      );
-    thisHit.set_bc0          ( BC0()           );
-    thisHit.set_bx           ( BX()            );
-    thisHit.set_stub_num     ( Stub_num()      );
-    thisHit.set_is_CSC_hit   ( Is_CSC_hit()    );
-    thisHit.set_is_RPC_hit   ( Is_RPC_hit()    );
-
-    return thisHit;
-  } // End EMTFHitExtra::CreateEMTFHit
+  //EMTFHit EMTFHitExtra::CreateEMTFHit() {
+  //
+  //  EMTFHit thisHit;
+  //  thisHit.set_endcap       ( Endcap()        );
+  //  thisHit.set_station      ( Station()       );
+  //  thisHit.set_ring         ( Ring()          );
+  //  thisHit.set_sector       ( Sector()        );
+  //  thisHit.set_sector_index ( Sector_index()  );
+  //  thisHit.set_subsector    ( Subsector()     );
+  //  thisHit.set_chamber      ( Chamber()       );
+  //  thisHit.set_csc_ID       ( CSC_ID()        );
+  //  thisHit.set_neighbor     ( Neighbor()      );
+  //  thisHit.set_mpc_link     ( MPC_link()      );
+  //  thisHit.set_wire         ( Wire()          );
+  //  thisHit.set_strip        ( Strip()         );
+  //  thisHit.set_track_num    ( Track_num()     );
+  //  thisHit.set_quality      ( Quality()       );
+  //  thisHit.set_pattern      ( Pattern()       );
+  //  thisHit.set_bend         ( Bend()          );
+  //  thisHit.set_valid        ( Valid()         );
+  //  thisHit.set_sync_err     ( Sync_err()      );
+  //  thisHit.set_bc0          ( BC0()           );
+  //  thisHit.set_bx           ( BX()            );
+  //  thisHit.set_stub_num     ( Stub_num()      );
+  //  thisHit.set_is_CSC_hit   ( Is_CSC_hit()    );
+  //  thisHit.set_is_RPC_hit   ( Is_RPC_hit()    );
+  //
+  //  return thisHit;
+  //} // End EMTFHitExtra::CreateEMTFHit
 
     
 } // End namespace l1t

@@ -2,9 +2,12 @@
 #ifndef EMTFHitTools_h
 #define EMTFHitTools_h
 
-#include "DataFormats/L1TMuon/interface/EMTFHitExtra.h"
+#include "DataFormats/GeometryVector/interface/Pi.h"
 
-namespace l1t {
+#include "DataFormatsSep2016/L1TMuon/interface/EMTFHit.h"
+#include "DataFormatsSep2016/L1TMuon/interface/EMTFHitExtra.h"
+
+namespace L1TMuonEndCap {
   
   int calc_ring (int _station, int _csc_ID, int _strip);
   int calc_chamber (int _station, int _sector, int _subsector, int _ring, int _csc_ID);

@@ -2,9 +2,10 @@
 #ifndef EMTFTrackTools_h
 #define EMTFTrackTools_h
 
-#include "DataFormats/L1TMuon/interface/EMTFTrackExtra.h"
+#include "DataFormatsSep2016/L1TMuon/interface/EMTFTrack.h"
+#include "DataFormatsSep2016/L1TMuon/interface/EMTFTrackExtra.h"
 
-namespace l1t {
+namespace L1TMuonEndCap {
   
   int calc_uGMT_chamber( int _csc_ID, int _subsector, int _neighbor, int _station);
   
