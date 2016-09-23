@@ -9,18 +9,18 @@
 
 class EMTFMicroGMTConverter {
 public:
-  EMTFMicroGMTConverter();
+  explicit EMTFMicroGMTConverter();
   ~EMTFMicroGMTConverter();
 
   void convert(
       const EMTFTrackExtra& in_track,
       l1t::RegionalMuonCand& out_cand
-  );
+  ) const;
 
   void convert_many(
       const EMTFTrackExtraCollection& in_tracks,
       l1t::RegionalMuonCandBxCollection& out_cands
-  );
+  ) const;
 
 private:
 };
