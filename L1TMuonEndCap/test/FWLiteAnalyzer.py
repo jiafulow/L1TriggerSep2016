@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # A simple FWLite-based python analyzer
 # Based on https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookFWLitePython
 # Some snippets of codes are stolen from PhysicsTools/Heppy
@@ -41,29 +43,35 @@ class FWLiteAnalyzer(object):
       self.maxEvents = 0x7FFFFFFFFFFFFFFF  # TChain::kBigNumber
     return
 
-  def beginLoop(self, setup):
+  def analyze(self):
+    self.beginLoop()
+    for evt in self.processLoop():
+      pass
+    self.endLoop()
     return
 
-  def endLoop(self, setup):
+  def beginLoop(self):
     return
 
-  def getHandles(self, event):
-    for k, v in self.handles.iteritems():
-      label = self.handle_labels[k]
-      event.getByLabel(label, v)
+  def endLoop(self):
+    return
+
+  def processLoop(self):
+    for ievt, evt in enumerate(self.events):
+      #if (ievt % 1000) == 0:
+      #  print "Processing event: %i" % ievt
+      self.process(evt)
+      yield evt
     return
 
   def process(self, event):
     self.getHandles(event)
     return
 
-  def analyze(self):
-    self.beginLoop(self.setup)
-    for ievt, evt in enumerate(self.events):
-      if (ievt % 1000) == 0:
-        print "Processing event: %i" % ievt
-      self.process(evt)
-    self.endLoop(self.setup)
+  def getHandles(self, event):
+    for k, v in self.handles.iteritems():
+      label = self.handle_labels[k]
+      event.getByLabel(label, v)
     return
 
 
@@ -78,5 +86,5 @@ if __name__ == "__main__":
   #gSystem.Load("libDataFormatsPatCandidates.so")
   #gSystem.Load("libDataFormatsSep2016L1TMuon.so")
 
-  analyzer = MyAnalyzer()
+  analyzer = FWLiteAnalyzer(inputFiles='pippo.root')
   analyzer.analyze()

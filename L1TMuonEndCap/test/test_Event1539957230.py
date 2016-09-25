@@ -3,9 +3,8 @@ import unittest
 from FWLiteAnalyzer import FWLiteAnalyzer
 
 
-class MyAnalyzer(FWLiteAnalyzer):
-
-  def __init__(self):
+class TestEvent1539957230(unittest.TestCase):
+  def setUp(self):
     inputFiles = ["Event1539957230_out.root"]
     # 3 1 3 2 1 1 13 6 33 2 0 47
     # 3 1 3 0 2 1 15 10 77 2 0 141
@@ -16,55 +15,55 @@ class MyAnalyzer(FWLiteAnalyzer):
       "hits": ("std::vector<L1TMuonEndCap::EMTFHitExtra>", "simEmtfDigisData"),
       "tracks": ("std::vector<L1TMuonEndCap::EMTFTrackExtra>", "simEmtfDigisData"),
     }
-    super(MyAnalyzer, self).__init__(inputFiles, handles)
 
-  def process(self, event):
-    self.getHandles(event)
-    hits = self.handles["hits"].product()
-    tracks = self.handles["tracks"].product()
+    self.analyzer = FWLiteAnalyzer(inputFiles, handles)
+    self.analyzer.beginLoop()
+    self.event = next(self.analyzer.processLoop())
+
+  def tearDown(self):
+    self.analyzer.endLoop()
+    self.analyzer = None
+    self.event = None
+
+  def test_hits(self):
+    hits = self.analyzer.handles["hits"].product()
 
     hit = hits[0]
-    assert(hit.phi_fp      == 3964)
-    assert(hit.theta_fp    == 37)
-    assert((1<<hit.ph_hit) == 512)
-    assert(hit.phzvl       == 1)
+    self.assertEqual(hit.phi_fp     , 3964)
+    self.assertEqual(hit.theta_fp   , 37)
+    self.assertEqual((1<<hit.ph_hit), 512)
+    self.assertEqual(hit.phzvl      , 1)
 
     hit = hits[1]
-    assert(hit.phi_fp      == 3644)
-    assert(hit.theta_fp    == 33)
-    assert((1<<hit.ph_hit) == 137438953472)
-    assert(hit.phzvl       == 1)
+    self.assertEqual(hit.phi_fp     , 3644)
+    self.assertEqual(hit.theta_fp   , 33)
+    self.assertEqual((1<<hit.ph_hit), 137438953472)
+    self.assertEqual(hit.phzvl      , 1)
 
     hit = hits[2]
-    assert(hit.phi_fp      == 3879)
-    assert(hit.theta_fp    == 30)
-    assert((1<<hit.ph_hit) == 256)
-    assert(hit.phzvl       == 1)
+    self.assertEqual(hit.phi_fp     , 3879)
+    self.assertEqual(hit.theta_fp   , 30)
+    self.assertEqual((1<<hit.ph_hit), 256)
+    self.assertEqual(hit.phzvl      , 1)
 
     hit = hits[3]
-    assert(hit.phi_fp      == 4146)
-    assert(hit.theta_fp    == 27)
-    assert((1<<hit.ph_hit) == 65536)
-    assert(hit.phzvl       == 1)
+    self.assertEqual(hit.phi_fp     , 4146)
+    self.assertEqual(hit.theta_fp   , 27)
+    self.assertEqual((1<<hit.ph_hit), 65536)
+    self.assertEqual(hit.phzvl      , 1)
+
+  def test_tracks(self):
+    tracks = self.analyzer.handles["tracks"].product()
 
     track = tracks[0]
-    assert(track.rank      == 40)
-    assert(track.mode      == 12)
-    assert(track.ptlut_address == 218120512)
+    self.assertEqual(track.rank         , 40)
+    self.assertEqual(track.mode         , 12)
+    self.assertEqual(track.ptlut_address, 218120512)
 
     track = tracks[1]
-    assert(track.rank      == 23)
-    assert(track.mode      == 3)
-    assert(track.ptlut_address == 820437771)
-
-    return
-
-class TestEvent1539957230(unittest.TestCase):
-  def setUp(self):
-    self.analyzer = MyAnalyzer()
-
-  def test_one(self):
-    self.analyzer.analyze()
+    self.assertEqual(track.rank         , 23)
+    self.assertEqual(track.mode         , 3)
+    self.assertEqual(track.ptlut_address, 820437771)
 
 
 # ______________________________________________________________________________
