@@ -18,7 +18,7 @@ public:
 
   void configure_details();
 
-  void detect(
+  void process(
       const std::deque<EMTFHitExtraCollection>& extended_conv_hits,
       std::map<pattern_id_t, int>& patt_lifetime_map,
       std::vector<EMTFRoadExtraCollection>& zone_roads
@@ -30,7 +30,7 @@ public:
       EMTFPhiMemoryImage& image
   ) const;
 
-  void detect_single_zone(
+  void process_single_zone(
       int zone,
       EMTFPhiMemoryImage cloned_image,
       std::map<pattern_id_t, int>& patt_lifetime_map,

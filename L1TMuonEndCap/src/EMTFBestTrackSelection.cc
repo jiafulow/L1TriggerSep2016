@@ -15,7 +15,7 @@ void EMTFBestTrackSelection::configure(
   maxTracks_       = maxTracks;
 }
 
-void EMTFBestTrackSelection::select(
+void EMTFBestTrackSelection::process(
     const std::vector<EMTFTrackExtraCollection>& zone_tracks,
     EMTFTrackExtraCollection& best_tracks
 ) const {

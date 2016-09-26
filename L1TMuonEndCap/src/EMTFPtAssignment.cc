@@ -16,7 +16,7 @@ void EMTFPtAssignment::configure(
   bx_     = bx;
 }
 
-void EMTFPtAssignment::assign(EMTFTrackExtraCollection& best_tracks) {
+void EMTFPtAssignment::process(EMTFTrackExtraCollection& best_tracks) {
   using address_t = EMTFPtAssignmentEngine::address_t;
 
   const int ntracks = best_tracks.size();

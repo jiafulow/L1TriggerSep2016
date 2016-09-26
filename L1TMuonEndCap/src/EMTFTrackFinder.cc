@@ -95,11 +95,8 @@ void EMTFTrackFinder::process(
   // Check trigger primitives
   if (verbose_ > 2) {
     std::cout << "Num of TriggerPrimitive: " << muon_primitives.size() << std::endl;
-    std::ostringstream o;
     for (const auto& p : muon_primitives) {
-      p.print(o);
-      std::cout << o.str() << std::endl;
-      o.str("");
+      p.print(std::cout);
     }
   }
 
@@ -111,8 +108,10 @@ void EMTFTrackFinder::process(
       int es = (endcap-1) * 6 + (sector-1);
 
       sector_processors_.at(es).process(
-          iEvent.id().event(), muon_primitives,
-          out_hits, out_tracks
+          iEvent.id().event(),
+          muon_primitives,
+          out_hits,
+          out_tracks
       );
     }
   }
@@ -128,17 +127,16 @@ void EMTFTrackFinder::process(
       std::cout << bx << " " << h.endcap << " " << h.sector << " " << h.subsector << " " << station << " " << h.valid << " " << h.quality << " " << h.pattern << " " << h.wire << " " << chamber << " " << h.bend << " " << strip << std::endl;
     }
 
-    std::cout << "Primitives: " << std::endl;
+    std::cout << "Converted hits: " << std::endl;
     for (const auto& h : out_hits) {
       std::cout << h.pc_station << " " << h.pc_chamber << " " << h.phi_fp << " " << h.theta_fp << " " << (1ul<<h.ph_hit) << " " << h.phzvl << std::endl;
     }
 
-    std::cout << "Tracks: " << std::endl;
+    std::cout << "Num of EMTFTrackExtra: " << out_tracks.size() << std::endl;
     for (const auto& t : out_tracks) {
       std::cout << t.winner << " " << t.rank << " " << t.mode << " " << t.ptlut_address << " " << t.pt << std::endl;
     }
   }
-
 
   return;
 }

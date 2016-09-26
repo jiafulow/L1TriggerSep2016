@@ -112,7 +112,7 @@ void EMTFPatternRecognition::configure_details() {
   //const int padding_w_st1 = full_pat_w_st1 / 2;  // = 15
 }
 
-void EMTFPatternRecognition::detect(
+void EMTFPatternRecognition::process(
     const std::deque<EMTFHitExtraCollection>& extended_conv_hits,
     std::map<pattern_id_t, int>& patt_lifetime_map,
     std::vector<EMTFRoadExtraCollection>& zone_roads
@@ -149,7 +149,7 @@ void EMTFPatternRecognition::detect(
   zone_roads.resize(NUM_ZONES);
 
   for (int izone = 0; izone < NUM_ZONES; ++izone) {
-    detect_single_zone(izone, zone_images.at(izone), patt_lifetime_map, zone_roads.at(izone));
+    process_single_zone(izone, zone_images.at(izone), patt_lifetime_map, zone_roads.at(izone));
   }
 
   if (true) {  // debug
@@ -200,7 +200,7 @@ void EMTFPatternRecognition::make_zone_image(
   }  // end loop over extended_conv_hits
 }
 
-void EMTFPatternRecognition::detect_single_zone(
+void EMTFPatternRecognition::process_single_zone(
     int zone,
     EMTFPhiMemoryImage cloned_image,
     std::map<pattern_id_t, int>& patt_lifetime_map,

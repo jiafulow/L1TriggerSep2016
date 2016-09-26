@@ -11,7 +11,7 @@ public:
     int maxRoadsPerZone, int maxTracks
   );
 
-  void select(
+  void process(
       const std::vector<EMTFTrackExtraCollection>& zone_tracks,
       EMTFTrackExtraCollection& best_tracks
   ) const;

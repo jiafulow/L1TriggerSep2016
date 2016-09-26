@@ -15,6 +15,7 @@
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPrimitiveConversion.hh"
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPatternRecognition.hh"
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPrimitiveMatching.hh"
+#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFAngleCalculation.hh"
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFBestTrackSelection.hh"
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPtAssignment.hh"
 

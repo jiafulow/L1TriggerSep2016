@@ -1,8 +1,5 @@
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFSectorProcessor.hh"
 
-#define NUM_CSC_CHAMBERS 6*9
-#define NUM_RPC_CHAMBERS 6*9  // ??
-
 
 EMTFSectorProcessor::EMTFSectorProcessor() {
 
@@ -25,6 +22,7 @@ void EMTFSectorProcessor::configure(
   assert(MIN_ENDCAP <= endcap && endcap <= MAX_ENDCAP);
   assert(MIN_TRIGSECTOR <= sector && sector <= MAX_TRIGSECTOR);
   assert(lut != nullptr);
+  assert(pt_assign_engine != nullptr);
 
   lut_ = lut;
 
@@ -34,7 +32,7 @@ void EMTFSectorProcessor::configure(
   sector_ = sector;
 
   includeNeighbor_ = includeNeighbor;
-  duplicateWires_ = duplicateWires;
+  duplicateWires_  = duplicateWires;
 
   minBX_           = minBX;
   maxBX_           = maxBX;
@@ -89,9 +87,14 @@ void EMTFSectorProcessor::process_single_bx(
     std::map<EMTFPatternId, int>& patt_lifetime_map
 ) const {
 
-  // Instantiate stuff
+  // ___________________________________________________________________________
+  // Configure
+
   EMTFPrimitiveSelection prim_sel;
-  prim_sel.configure(endcap_, sector_, bx, includeNeighbor_);
+  prim_sel.configure(
+      endcap_, sector_, bx,
+      includeNeighbor_, duplicateWires_
+  );
 
   EMTFPrimitiveConversion prim_conv;
   prim_conv.configure(
@@ -109,6 +112,11 @@ void EMTFSectorProcessor::process_single_bx(
 
   EMTFPrimitiveMatching prim_match;
   prim_match.configure(
+      endcap_, sector_, bx
+  );
+
+  EMTFAngleCalculation angle_calc;
+  angle_calc.configure(
       endcap_, sector_, bx,
       thetaWindow_
   );
@@ -136,115 +144,41 @@ void EMTFSectorProcessor::process_single_bx(
 
   EMTFTrackExtraCollection best_tracks;
 
-
   // ___________________________________________________________________________
-  // Select muon primitives that belong to this sector and this BX
-  // Assign the muon primitives with an index 0-53 that roughly corresponds to
-  // the input link
-  TriggerPrimitiveCollection::const_iterator tp_it  = muon_primitives.begin();
-  TriggerPrimitiveCollection::const_iterator tp_end = muon_primitives.end();
+  // Process
 
-  for (; tp_it != tp_end; ++tp_it) {
-    int selected_csc = prim_sel.select(CSCTag(), *tp_it);  // CSC
-
-    if (selected_csc >= 0) {
-      assert(selected_csc < NUM_CSC_CHAMBERS);
-      selected_csc_map[selected_csc].push_back(*tp_it);
-    }
-  }
-
-  for (; tp_it != tp_end; ++tp_it) {
-    int selected_rpc = prim_sel.select(RPCTag(), *tp_it);  // RPC
-
-    if (selected_rpc >= 0) {
-      assert(selected_rpc < NUM_RPC_CHAMBERS);
-      selected_rpc_map[selected_rpc].push_back(*tp_it);
-    }
-  }
-
-  // Duplicate CSC muon primitives
-  // If there are 2 LCTs in the same chamber with (strip, wire) = (s1, w1) and (s2, w2)
-  // make all combinations with (s1, w1), (s2, w1), (s1, w2), (s2, w2)
-  if (duplicateWires_) {
-    std::map<int, std::vector<TriggerPrimitive> >::iterator map_tp_it  = selected_csc_map.begin();
-    std::map<int, std::vector<TriggerPrimitive> >::iterator map_tp_end = selected_csc_map.end();
-
-    for (; map_tp_it != map_tp_end; ++map_tp_it) {
-      //int selected = map_tp_it->first;
-      std::vector<TriggerPrimitive>& tmp_primitives = map_tp_it->second;  // pass by reference
-      assert(tmp_primitives.size() <= 2);  // at most 2
-
-      if (tmp_primitives.size() == 2) {
-        if (
-            (tmp_primitives.at(0).getStrip() != tmp_primitives.at(1).getStrip()) &&
-            (tmp_primitives.at(0).getWire() != tmp_primitives.at(1).getWire())
-        ) {
-          // Swap wire numbers
-          TriggerPrimitive tp0 = tmp_primitives.at(0);  // clone
-          TriggerPrimitive tp1 = tmp_primitives.at(1);  // clone
-
-          TriggerPrimitive::CSCData tp0_data_tmp = tp0.getCSCData();
-          TriggerPrimitive::CSCData tp0_data     = tp0.getCSCData();
-          TriggerPrimitive::CSCData tp1_data     = tp1.getCSCData();
-          tp0_data.keywire = tp1_data.keywire;
-          tp1_data.keywire = tp0_data_tmp.keywire;
-          tp0.setCSCData(tp0_data);
-          tp1.setCSCData(tp1_data);
-
-          tmp_primitives.insert(tmp_primitives.begin()+1, tp1);
-          tmp_primitives.insert(tmp_primitives.begin()+2, tp0);
-        }
-      }  // end if tmp_primitives.size() == 2
-    }  // end loop over selected_csc_map
-  }
+  // Select muon primitives that belong to this sector and this BX.
+  // Put them into maps with an index that roughly corresponds to
+  // each input link
+  prim_sel.process(CSCTag(), muon_primitives, selected_csc_map);
+  prim_sel.process(RPCTag(), muon_primitives, selected_rpc_map);
 
   // Convert trigger primitives into "converted hits"
   // A converted hit consists of integer representations of phi, theta, and zones
-  std::map<int, std::vector<TriggerPrimitive> >::const_iterator map_tp_it  = selected_csc_map.begin();
-  std::map<int, std::vector<TriggerPrimitive> >::const_iterator map_tp_end = selected_csc_map.end();
-
-  for (; map_tp_it != map_tp_end; ++map_tp_it) {
-    int selected = map_tp_it->first;
-    TriggerPrimitiveCollection::const_iterator tp_it  = map_tp_it->second.begin();
-    TriggerPrimitiveCollection::const_iterator tp_end = map_tp_it->second.end();
-
-    for (; tp_it != tp_end; ++tp_it) {
-      const EMTFHitExtra& conv_hit = prim_conv.convert(CSCTag(), selected, *tp_it);  // CSC
-      conv_hits.push_back(conv_hit);
-    }
-  }
-
-  map_tp_it  = selected_rpc_map.begin();
-  map_tp_end = selected_rpc_map.end();
-
-  for (; map_tp_it != map_tp_end; ++map_tp_it) {
-    int selected = map_tp_it->first;
-    TriggerPrimitiveCollection::const_iterator tp_it  = map_tp_it->second.begin();
-    TriggerPrimitiveCollection::const_iterator tp_end = map_tp_it->second.end();
-
-    for (; tp_it != tp_end; ++tp_it) {
-      const EMTFHitExtra& conv_hit = prim_conv.convert(RPCTag(), selected, *tp_it);  // RPC
-      conv_hits.push_back(conv_hit);
-    }
-  }
-
+  conv_hits.clear();
+  prim_conv.process(CSCTag(), selected_csc_map, conv_hits);
+  prim_conv.process(RPCTag(), selected_rpc_map, conv_hits);
   extended_conv_hits.push_back(conv_hits);
 
-  // Perform pattern recognition
+  // Detect patterns in all zones, find 3 best roads in each zone
 
-  patt_recog.detect(extended_conv_hits, patt_lifetime_map, zone_roads);
+  patt_recog.process(extended_conv_hits, patt_lifetime_map, zone_roads);
 
-  // Match the trigger primitives to the roads
+  // Match the trigger primitives to the roads, create tracks
 
-  prim_match.match(extended_conv_hits, zone_roads, zone_tracks);
+  prim_match.process(extended_conv_hits, zone_roads, zone_tracks);
 
-  // Select the best tracks
+  // Calculate deflection angles for each track
 
-  btrack_sel.select(zone_tracks, best_tracks);
+  angle_calc.process(zone_tracks);
 
-  // Assign pT
+  // Identify 3 best tracks
 
-  pt_assign.assign(best_tracks);
+  btrack_sel.process(zone_tracks, best_tracks);
+
+  // Construct pT address, assign pT
+
+  pt_assign.process(best_tracks);
 
   // Output
 

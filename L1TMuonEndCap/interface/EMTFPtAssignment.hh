@@ -13,7 +13,7 @@ public:
     int endcap, int sector, int bx
   );
 
-  void assign(EMTFTrackExtraCollection& best_tracks);
+  void process(EMTFTrackExtraCollection& best_tracks);
 
 private:
   EMTFPtAssignmentEngine* pt_assign_engine_;

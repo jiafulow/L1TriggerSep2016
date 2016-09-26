@@ -32,10 +32,10 @@ void L1TMuonEndCapTrackProducer::produce(edm::Event& iEvent, const edm::EventSet
   // Run
   track_finder_->process(iEvent, iSetup, *out_xhits, *out_xtracks);
 
-  // Put into old EMTFHit, EMTFTrack formats
+  // Convert into old EMTFHit, EMTFTrack formats
   track_adaptor_->convert_all(*out_xhits, *out_xtracks, *out_hits, *out_tracks);
 
-  // Put into uGMT format
+  // Convert into uGMT format
   uGMT_converter_->convert_all(*out_xtracks, *out_cands);
 
   // Fill the output products
