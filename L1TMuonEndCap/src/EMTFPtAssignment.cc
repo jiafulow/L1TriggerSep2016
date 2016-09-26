@@ -26,7 +26,14 @@ void EMTFPtAssignment::process(EMTFTrackExtraCollection& best_tracks) {
 
     address_t address = pt_assign_engine_->calculate_address(track);
     float     xmlpt   = pt_assign_engine_->calculate_pt(address, track);
+    float     pt      = xmlpt * 1.4;
 
+
+    // compressed pt = pt*2 (scale) + 1 (pt = 0 is empty candidate)
+    int gmt_pt = pt;
+    gmt_pt = (gmt_pt*2) + 1;
+    if (gmt_pt > 511)
+      gmt_pt = 511;
 
     // convert phi into gmt scale according to DN15-017
     // full scale is -16 to 100, or 116 values, covers range -10 to 62.5 deg
@@ -48,8 +55,9 @@ void EMTFPtAssignment::process(EMTFTrackExtraCollection& best_tracks) {
     // Output
     track.ptlut_address = address;
     track.pt_xml        = xmlpt;
-    track.pt            = xmlpt*1.4;
+    track.pt            = pt;
 
+    track.gmt_pt        = gmt_pt;
     track.gmt_phi       = gmt_phi;
     track.gmt_eta       = gmt_eta;
     track.gmt_quality   = gmt_quality;
