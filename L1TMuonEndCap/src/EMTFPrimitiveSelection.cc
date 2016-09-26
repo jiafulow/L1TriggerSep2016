@@ -4,16 +4,104 @@
 #include "DataFormats/MuonDetId/interface/CSCDetId.h"
 #include "DataFormats/MuonDetId/interface/RPCDetId.h"
 
+#define NUM_CSC_CHAMBERS 6*9
+#define NUM_RPC_CHAMBERS 6*9  // ??
+
 using CSCData = TriggerPrimitive::CSCData;
 using RPCData = TriggerPrimitive::RPCData;
 
 
+void EMTFPrimitiveSelection::configure(
+      int endcap, int sector, int bx,
+      bool includeNeighbor, bool duplicateWires
+) {
+  endcap_ = endcap;
+  sector_ = sector;
+  bx_     = bx;
+
+  includeNeighbor_ = includeNeighbor;
+  duplicateWires_  = duplicateWires;
+}
+
 // Specialized for CSC
 template<>
-int EMTFPrimitiveSelection::select(
+void EMTFPrimitiveSelection::process(
     CSCTag tag,
-    const TriggerPrimitive& muon_primitive
+    const TriggerPrimitiveCollection& muon_primitives,
+    std::map<int, TriggerPrimitiveCollection>& selected_csc_map
 ) {
+  TriggerPrimitiveCollection::const_iterator tp_it  = muon_primitives.begin();
+  TriggerPrimitiveCollection::const_iterator tp_end = muon_primitives.end();
+
+  for (; tp_it != tp_end; ++tp_it) {
+    int selected_csc = select_csc(*tp_it);  // CSC
+
+    if (selected_csc >= 0) {
+      assert(selected_csc < NUM_CSC_CHAMBERS);
+      selected_csc_map[selected_csc].push_back(*tp_it);
+    }
+  }
+
+  // Duplicate CSC muon primitives
+  // If there are 2 LCTs in the same chamber with (strip, wire) = (s1, w1) and (s2, w2)
+  // make all combinations with (s1, w1), (s2, w1), (s1, w2), (s2, w2)
+  if (duplicateWires_) {
+    std::map<int, TriggerPrimitiveCollection>::iterator map_tp_it  = selected_csc_map.begin();
+    std::map<int, TriggerPrimitiveCollection>::iterator map_tp_end = selected_csc_map.end();
+
+    for (; map_tp_it != map_tp_end; ++map_tp_it) {
+      //int selected = map_tp_it->first;
+      TriggerPrimitiveCollection& tmp_primitives = map_tp_it->second;  // pass by reference
+      assert(tmp_primitives.size() <= 2);  // at most 2
+
+      if (tmp_primitives.size() == 2) {
+        if (
+            (tmp_primitives.at(0).getStrip() != tmp_primitives.at(1).getStrip()) &&
+            (tmp_primitives.at(0).getWire() != tmp_primitives.at(1).getWire())
+        ) {
+          // Swap wire numbers
+          TriggerPrimitive tp0 = tmp_primitives.at(0);  // clone
+          TriggerPrimitive tp1 = tmp_primitives.at(1);  // clone
+
+          TriggerPrimitive::CSCData tp0_data_tmp = tp0.getCSCData();
+          TriggerPrimitive::CSCData tp0_data     = tp0.getCSCData();
+          TriggerPrimitive::CSCData tp1_data     = tp1.getCSCData();
+          tp0_data.keywire = tp1_data.keywire;
+          tp1_data.keywire = tp0_data_tmp.keywire;
+          tp0.setCSCData(tp0_data);
+          tp1.setCSCData(tp1_data);
+
+          tmp_primitives.insert(tmp_primitives.begin()+1, tp1);
+          tmp_primitives.insert(tmp_primitives.begin()+2, tp0);
+        }
+      }  // end if tmp_primitives.size() == 2
+    }  // end loop over selected_csc_map
+  }
+}
+
+// Specialized for RPC
+template<>
+void EMTFPrimitiveSelection::process(
+    RPCTag tag,
+    const TriggerPrimitiveCollection& muon_primitives,
+    std::map<int, TriggerPrimitiveCollection>& selected_rpc_map
+) {
+  TriggerPrimitiveCollection::const_iterator tp_it  = muon_primitives.begin();
+  TriggerPrimitiveCollection::const_iterator tp_end = muon_primitives.end();
+
+  for (; tp_it != tp_end; ++tp_it) {
+    int selected_rpc = select_rpc(*tp_it);  // RPC
+
+    if (selected_rpc >= 0) {
+      assert(selected_rpc < NUM_RPC_CHAMBERS);
+      selected_rpc_map[selected_rpc].push_back(*tp_it);
+    }
+  }
+}
+
+
+// CSC functions
+int EMTFPrimitiveSelection::select_csc(const TriggerPrimitive& muon_primitive) {
   int selected = -1;
 
   if (muon_primitive.subsystem() == TriggerPrimitive::kCSC) {
@@ -49,42 +137,6 @@ int EMTFPrimitiveSelection::select(
   return selected;
 }
 
-// Specialized for RPC
-template<>
-int EMTFPrimitiveSelection::select(
-    RPCTag tag,
-    const TriggerPrimitive& muon_primitive
-) {
-  int selected = -1;
-
-  if (muon_primitive.subsystem() == TriggerPrimitive::kRPC) {
-    const RPCDetId tp_detId = muon_primitive.detId<RPCDetId>();
-    const RPCData& tp_data  = muon_primitive.getRPCData();
-
-    int tp_region    = tp_detId.region();  // 0 for Barrel, +/-1 for +/- Endcap
-    int tp_endcap    = (tp_region == -1) ? 2 : tp_region;
-    int tp_sector    = tp_detId.sector();
-    int tp_subsector = tp_detId.subsector();
-    int tp_station   = tp_detId.station();
-    int tp_ring      = tp_detId.ring();
-    int tp_roll      = tp_detId.roll();
-
-    int tp_bx        = tp_data.bx;
-
-    if (is_in_bx_rpc(tp_bx)) {
-      if (is_in_sector_rpc(tp_endcap, tp_sector)) {
-        selected = get_index_rpc(tp_subsector, tp_station, tp_ring, tp_roll, false);
-
-      } else if (is_in_neighbor_sector_rpc(tp_endcap, tp_sector, tp_subsector, tp_station, tp_ring, tp_roll)) {
-        selected = get_index_rpc(tp_subsector, tp_station, tp_ring, tp_roll, true);
-      }
-    }
-  }
-
-  return selected;
-}
-
-// CSC functions
 bool EMTFPrimitiveSelection::is_in_sector_csc(int tp_endcap, int tp_sector) const {
   return ((endcap_ == tp_endcap) && (sector_ == tp_sector));
 }
@@ -142,6 +194,36 @@ int EMTFPrimitiveSelection::get_index_csc(int tp_subsector, int tp_station, int 
 }
 
 // RPC functions
+int EMTFPrimitiveSelection::select_rpc(const TriggerPrimitive& muon_primitive) {
+  int selected = -1;
+
+  if (muon_primitive.subsystem() == TriggerPrimitive::kRPC) {
+    const RPCDetId tp_detId = muon_primitive.detId<RPCDetId>();
+    const RPCData& tp_data  = muon_primitive.getRPCData();
+
+    int tp_region    = tp_detId.region();  // 0 for Barrel, +/-1 for +/- Endcap
+    int tp_endcap    = (tp_region == -1) ? 2 : tp_region;
+    int tp_sector    = tp_detId.sector();
+    int tp_subsector = tp_detId.subsector();
+    int tp_station   = tp_detId.station();
+    int tp_ring      = tp_detId.ring();
+    int tp_roll      = tp_detId.roll();
+
+    int tp_bx        = tp_data.bx;
+
+    if (is_in_bx_rpc(tp_bx)) {
+      if (is_in_sector_rpc(tp_endcap, tp_sector)) {
+        selected = get_index_rpc(tp_subsector, tp_station, tp_ring, tp_roll, false);
+
+      } else if (is_in_neighbor_sector_rpc(tp_endcap, tp_sector, tp_subsector, tp_station, tp_ring, tp_roll)) {
+        selected = get_index_rpc(tp_subsector, tp_station, tp_ring, tp_roll, true);
+      }
+    }
+  }
+
+  return selected;
+}
+
 bool EMTFPrimitiveSelection::is_in_sector_rpc(int tp_endcap, int tp_sector) const {
   return ((endcap_ == tp_endcap) && (sector_ == tp_sector));
 }

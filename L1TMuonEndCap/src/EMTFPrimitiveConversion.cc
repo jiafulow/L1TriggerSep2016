@@ -29,11 +29,55 @@ void EMTFPrimitiveConversion::configure(
 
 // Specialized for CSC
 template<>
-EMTFHitExtra EMTFPrimitiveConversion::convert(
+void EMTFPrimitiveConversion::process(
     CSCTag tag,
-    int selected,
-    const TriggerPrimitive& muon_primitive
+    const std::map<int, TriggerPrimitiveCollection>& selected_csc_map,
+    EMTFHitExtraCollection& conv_hits
 ) const {
+  std::map<int, TriggerPrimitiveCollection>::const_iterator map_tp_it  = selected_csc_map.begin();
+  std::map<int, TriggerPrimitiveCollection>::const_iterator map_tp_end = selected_csc_map.end();
+
+  for (; map_tp_it != map_tp_end; ++map_tp_it) {
+    int selected = map_tp_it->first;
+    TriggerPrimitiveCollection::const_iterator tp_it  = map_tp_it->second.begin();
+    TriggerPrimitiveCollection::const_iterator tp_end = map_tp_it->second.end();
+
+    for (; tp_it != tp_end; ++tp_it) {
+      const EMTFHitExtra& conv_hit = convert_prim_csc(selected, *tp_it);  // CSC
+      conv_hits.push_back(conv_hit);
+    }
+  }
+}
+
+// Specialized for RPC
+template<>
+void EMTFPrimitiveConversion::process(
+    RPCTag tag,
+    const std::map<int, TriggerPrimitiveCollection>& selected_rpc_map,
+    EMTFHitExtraCollection& conv_hits
+) const {
+  std::map<int, TriggerPrimitiveCollection>::const_iterator map_tp_it  = selected_rpc_map.begin();
+  std::map<int, TriggerPrimitiveCollection>::const_iterator map_tp_end = selected_rpc_map.end();
+
+  for (; map_tp_it != map_tp_end; ++map_tp_it) {
+    int selected = map_tp_it->first;
+    TriggerPrimitiveCollection::const_iterator tp_it  = map_tp_it->second.begin();
+    TriggerPrimitiveCollection::const_iterator tp_end = map_tp_it->second.end();
+
+    for (; tp_it != tp_end; ++tp_it) {
+      const EMTFHitExtra& conv_hit = convert_prim_rpc(selected, *tp_it);  // RPC
+      conv_hits.push_back(conv_hit);
+    }
+  }
+}
+
+const EMTFSectorProcessorLUT& EMTFPrimitiveConversion::lut() const {
+  assert(lut_ != nullptr);
+  return *lut_;
+}
+
+// CSC functions
+EMTFHitExtra EMTFPrimitiveConversion::convert_prim_csc(int selected, const TriggerPrimitive& muon_primitive) const {
   const CSCDetId tp_detId = muon_primitive.detId<CSCDetId>();
   const CSCData& tp_data  = muon_primitive.getCSCData();
 
@@ -120,29 +164,6 @@ EMTFHitExtra EMTFPrimitiveConversion::convert(
   return conv_hit;
 }
 
-// Specialized for RPC
-template<>
-EMTFHitExtra EMTFPrimitiveConversion::convert(
-    RPCTag tag,
-    int selected,
-    const TriggerPrimitive& muon_primitive
-) const {
-  //const RPCDetId tp_detId = muon_primitive.detId<RPCDetId>();
-  //const RPCData& tp_data  = muon_primitive.getRPCData();
-
-  EMTFHitExtra conv_hit;
-
-  convert_rpc(conv_hit);
-
-  return conv_hit;
-}
-
-const EMTFSectorProcessorLUT& EMTFPrimitiveConversion::lut() const {
-  assert(lut_ != nullptr);
-  return *lut_;
-}
-
-// CSC functions
 void EMTFPrimitiveConversion::convert_csc(EMTFHitExtra& conv_hit) const {
   // Defined as in firmware
   int fw_endcap  = (endcap_-1);
@@ -403,6 +424,17 @@ void EMTFPrimitiveConversion::convert_csc(EMTFHitExtra& conv_hit) const {
 }
 
 // RPC functions
+EMTFHitExtra EMTFPrimitiveConversion::convert_prim_rpc(int selected, const TriggerPrimitive& muon_primitive) const {
+  //const RPCDetId tp_detId = muon_primitive.detId<RPCDetId>();
+  //const RPCData& tp_data  = muon_primitive.getRPCData();
+
+  EMTFHitExtra conv_hit;
+
+  convert_rpc(conv_hit);
+
+  return conv_hit;
+}
+
 void EMTFPrimitiveConversion::convert_rpc(EMTFHitExtra& conv_hit) const {
 
 }

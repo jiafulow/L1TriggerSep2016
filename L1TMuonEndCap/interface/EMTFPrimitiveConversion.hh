@@ -15,18 +15,20 @@ public:
   );
 
   template<typename T>
-  EMTFHitExtra convert(
+  void process(
       T tag,
-      int selected,
-      const TriggerPrimitive& muon_primitive
+      const std::map<int, TriggerPrimitiveCollection>& selected_prim_map,
+      EMTFHitExtraCollection& conv_hits
   ) const;
 
   const EMTFSectorProcessorLUT& lut() const;
 
   // CSC functions
+  EMTFHitExtra convert_prim_csc(int selected, const TriggerPrimitive& muon_primitive) const;
   void convert_csc(EMTFHitExtra& conv_hit) const;
 
   // RPC functions
+  EMTFHitExtra convert_prim_rpc(int selected, const TriggerPrimitive& muon_primitive) const;
   void convert_rpc(EMTFHitExtra& conv_hit) const;
 
 private:
