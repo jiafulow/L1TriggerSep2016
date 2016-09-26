@@ -17,7 +17,7 @@ void EMTFTrackAdaptor::convert_hit(const EMTFHitExtra& in_hit, EMTFHit& out_hit)
   out_hit.set_station      ( in_hit.station       );
   out_hit.set_ring         ( in_hit.ring          );
   out_hit.set_sector       ( in_hit.sector        );
-  out_hit.set_sector_index ( (in_hit.endcap-1)*6 + (in_hit.sector-1)  );
+  out_hit.set_sector_index ( (in_hit.endcap-1)*6 + (in_hit.sector-1) );
   out_hit.set_subsector    ( in_hit.subsector     );
   out_hit.set_chamber      ( in_hit.chamber       );
   out_hit.set_csc_ID       ( in_hit.csc_ID        );
@@ -34,31 +34,36 @@ void EMTFTrackAdaptor::convert_hit(const EMTFHitExtra& in_hit, EMTFHit& out_hit)
   out_hit.set_bc0          ( in_hit.bc0           );
   out_hit.set_bx           ( in_hit.bx            );
   out_hit.set_stub_num     ( in_hit.stub_num      );
-  out_hit.set_is_CSC_hit   ( (in_hit.subsystem == 1) ? 1 : 0  );
-  out_hit.set_is_RPC_hit   ( (in_hit.subsystem == 2) ? 1 : 0  );
+  out_hit.set_is_CSC_hit   ( (in_hit.subsystem == TriggerPrimitive::kCSC) ? 1 : 0 );
+  out_hit.set_is_RPC_hit   ( (in_hit.subsystem == TriggerPrimitive::kRPC) ? 1 : 0 );
 }
 
 void EMTFTrackAdaptor::convert_track(const EMTFTrackExtra& in_track, EMTFTrack& out_track) const {
-  using namespace L1TMuonEndCap;
+  namespace l1t = L1TMuonEndCap;
 
   for (const auto& in_hit : in_track.xhits) {
     EMTFHit out_hit;
 
     convert_hit(in_hit, out_hit);
     out_track.push_Hit(out_hit);
+
+    if ( out_hit.Neighbor() == 0 ) out_track.set_all_neighbor(0);
+    if ( out_hit.Neighbor() == 1 ) out_track.set_has_neighbor(1);
+    if ( out_hit.Neighbor() == 0 && out_track.Has_neighbor() == -999 ) out_track.set_has_neighbor(0);
+    if ( out_hit.Neighbor() == 1 && out_track.All_neighbor() == -999 ) out_track.set_all_neighbor(0);
   }
 
   int theta_int = in_track.theta_int;
-  float theta_angle = calc_theta_rad_from_int( theta_int );
-  float eta = calc_eta_from_theta_rad( theta_angle );
+  float theta_angle = l1t::calc_theta_rad_from_int( theta_int );
+  float eta = l1t::calc_eta_from_theta_rad( theta_angle );
 
   int phi_loc_int = in_track.phi_int;
-  float phi_loc_deg = calc_phi_loc_deg( phi_loc_int );
-  float phi_loc_rad = calc_phi_loc_rad( phi_loc_int );
+  float phi_loc_deg = l1t::calc_phi_loc_deg( phi_loc_int );
+  float phi_loc_rad = l1t::calc_phi_loc_rad( phi_loc_int );
 
   int sector = in_track.sector;
-  float phi_glob_deg = calc_phi_glob_deg( phi_loc_deg, sector );
-  float phi_glob_rad = calc_phi_glob_rad( phi_loc_rad, sector );
+  float phi_glob_deg = l1t::calc_phi_glob_deg( phi_loc_deg, sector );
+  float phi_glob_rad = l1t::calc_phi_glob_rad( phi_loc_rad, sector );
 
   const EMTFPtLUTData& ptlut_data = in_track.ptlut_data;
 
@@ -75,7 +80,7 @@ void EMTFTrackAdaptor::convert_track(const EMTFTrackExtra& in_track, EMTFTrack& 
   out_track.set_quality       ( in_track.gmt_quality    );
   out_track.set_bx            ( in_track.bx             );
   out_track.set_pt            ( in_track.pt             );
-  out_track.set_pt_GMT        ( (in_track.pt*2) + 1     );
+  out_track.set_pt_GMT        ( in_track.gmt_pt         );
   out_track.set_pt_LUT_addr   ( in_track.ptlut_address  );
   out_track.set_eta           ( eta                     );
   out_track.set_eta_GMT       ( in_track.gmt_eta        );
@@ -110,15 +115,14 @@ void EMTFTrackAdaptor::convert_track(const EMTFTrackExtra& in_track, EMTFTrack& 
   out_track.set_fr_3          ( ptlut_data.fr[2]        );
   out_track.set_fr_4          ( ptlut_data.fr[3]        );
   out_track.set_track_num     ( 0                       );  // what is this?
-  out_track.set_has_neighbor  ( 0                       );
-  out_track.set_all_neighbor  ( 0                       );
+  //out_track.set_has_neighbor  ( 0                       );
+  //out_track.set_all_neighbor  ( 0                       );
 }
 
 void EMTFTrackAdaptor::convert_all(
     const EMTFHitExtraCollection& in_hits, const EMTFTrackExtraCollection& in_tracks,
     EMTFHitCollection& out_hits, EMTFTrackCollection& out_tracks
 ) const {
-
   out_hits.clear();
   out_tracks.clear();
 
@@ -135,5 +139,4 @@ void EMTFTrackAdaptor::convert_all(
     convert_track(in_track, out_track);
     out_tracks.push_back(out_track);
   }
-
 }
