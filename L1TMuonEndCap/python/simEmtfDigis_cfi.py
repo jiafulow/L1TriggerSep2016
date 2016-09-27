@@ -18,6 +18,10 @@ simEmtfDigis = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
     CSCEnable = cms.bool(True),
     RPCEnable = cms.bool(False),
 
+    # Versioning
+    Version = cms.int32(1),
+    PtLUTVersion = cms.int32(1),
+
     # LUT files
     PhThLUT = cms.string('ph_lut_v1'),
 
@@ -54,7 +58,7 @@ simEmtfDigis = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
 
     # Sector processor pt-assignment parameters
     spPAParams16 = cms.PSet(
-        TreeVer = cms.string('v_16_02_21'),
+        TreeDir = cms.string('v_16_02_21'),
     ),
 
     # Sector processor ghost-cancellation parameters

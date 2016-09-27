@@ -9,16 +9,18 @@ class EMTFPtAssignmentEngine;
 class EMTFPtAssignment {
 public:
   void configure(
-    const EMTFPtAssignmentEngine* pt_assign_engine,
-    int endcap, int sector, int bx
+      const EMTFPtAssignmentEngine* pt_assign_engine,
+      int verbose, int endcap, int sector, int bx
   );
 
-  void process(EMTFTrackExtraCollection& best_tracks);
+  void process(
+      EMTFTrackExtraCollection& best_tracks
+  );
 
 private:
   EMTFPtAssignmentEngine* pt_assign_engine_;
 
-  int endcap_, sector_, bx_;
+  int verbose_, endcap_, sector_, bx_;
 };
 
 #endif

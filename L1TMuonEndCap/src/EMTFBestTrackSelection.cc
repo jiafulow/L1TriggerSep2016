@@ -4,12 +4,13 @@
 
 
 void EMTFBestTrackSelection::configure(
-    int endcap, int sector, int bx,
+    int verbose, int endcap, int sector, int bx,
     int maxRoadsPerZone, int maxTracks
 ) {
-  endcap_ = endcap;
-  sector_ = sector;
-  bx_     = bx;
+  verbose_ = verbose;
+  endcap_  = endcap;
+  sector_  = sector;
+  bx_      = bx;
 
   maxRoadsPerZone_ = maxRoadsPerZone;
   maxTracks_       = maxTracks;
@@ -168,7 +169,7 @@ void EMTFBestTrackSelection::process(
     }
   }
 
-  if (true) {  // debug
+  if (verbose_ > 0) {  // debug
     for (const auto& track : best_tracks) {
       std::cout << "track: " << track.winner << " rank: " << to_hex(track.rank)
           << " ph_deltas: " << array_as_string(track.ptlut_data.delta_ph)

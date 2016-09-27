@@ -5,15 +5,16 @@ runOnMC = False
 
 from FWCore.ParameterSet.VarParsing import VarParsing
 options = VarParsing('analysis')
+options.register('verbosity', 1, VarParsing.multiplicity.singleton, VarParsing.varType.int, 'Verbosity')
 options.parseArguments()
-# Modify the defaults
+
+# Modify default arguments
 if not options.inputFiles:
     options.inputFiles = ['file:pippo.root']
 if options.outputFile == "output.root":
     options.outputFile = "output.root"
 
-
-# MessageLogger
+# Message logger
 process.load("FWCore.MessageService.MessageLogger_cfi")
 process.MessageLogger.cerr.FwkReport.reportEvery = 1
 
@@ -40,12 +41,12 @@ process.out = cms.OutputModule("PoolOutputModule",
 process.options = cms.untracked.PSet()
 
 
-# simEmtfDigis
+# Plugin: simEmtfDigis
 process.load("L1TriggerSep2016.L1TMuonEndCap.simEmtfDigis_cfi")
-process.simEmtfDigisData.verbosity = 2
+process.simEmtfDigisData.verbosity = options.verbosity
 
+# Paths
 process.p = cms.Path(process.simEmtfDigisData)
 process.e = cms.EndPath(process.out)
-
 process.schedule = cms.Schedule(process.p, process.e)
 

@@ -7,23 +7,25 @@
 class EMTFPrimitiveMatching {
 public:
   void configure(
-    int endcap, int sector, int bx
+      int verbose, int endcap, int sector, int bx
   );
 
   void process(
-    const std::deque<EMTFHitExtraCollection>& extended_conv_hits,
-    const std::vector<EMTFRoadExtraCollection>& zone_roads,
-    std::vector<EMTFTrackExtraCollection>& zone_tracks
+      const std::deque<EMTFHitExtraCollection>& extended_conv_hits,
+      const std::vector<EMTFRoadExtraCollection>& zone_roads,
+      std::vector<EMTFTrackExtraCollection>& zone_tracks
   ) const;
 
   void process_single_zone_station(
-    int station,
-    const EMTFRoadExtraCollection& roads,
-    const EMTFHitExtraCollection& conv_hits,
-    std::vector<std::pair<int, int> >& phi_differences
+      int station,
+      const EMTFRoadExtraCollection& roads,
+      const EMTFHitExtraCollection& conv_hits,
+      std::vector<std::pair<int, int> >& phi_differences
   ) const;
 
-  void sort_ph_diff(std::vector<std::pair<int, int> >& phi_differences) const;
+  void sort_ph_diff(
+      std::vector<std::pair<int, int> >& phi_differences
+  ) const;
 
   void insert_hits(
       int ichit, int ph_diff, const EMTFHitExtraCollection& conv_hits,
@@ -40,7 +42,7 @@ public:
   unsigned int get_fs_segment(const EMTFHitExtra& conv_hit) const;
 
 private:
-  int endcap_, sector_, bx_;
+  int verbose_, endcap_, sector_, bx_;
 };
 
 #endif

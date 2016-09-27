@@ -30,7 +30,7 @@ public:
   void configure(
       const EMTFSectorProcessorLUT* lut,
       const EMTFPtAssignmentEngine* pt_assign_engine,
-      int endcap, int sector,
+      int verbose, int endcap, int sector,
       bool includeNeighbor, bool duplicateWires,
       int minBX, int maxBX, int bxWindow,
       const std::vector<int>& zoneBoundaries1, const std::vector<int>& zoneBoundaries2, int zoneOverlap,
@@ -61,7 +61,7 @@ private:
 
   const EMTFPtAssignmentEngine* pt_assign_engine_;
 
-  int endcap_, sector_;
+  int verbose_, endcap_, sector_;
 
   bool includeNeighbor_, duplicateWires_;
 

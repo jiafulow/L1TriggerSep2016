@@ -12,7 +12,7 @@ EMTFSectorProcessor::~EMTFSectorProcessor() {
 void EMTFSectorProcessor::configure(
     const EMTFSectorProcessorLUT* lut,
     const EMTFPtAssignmentEngine* pt_assign_engine,
-    int endcap, int sector,
+    int verbose, int endcap, int sector,
     bool includeNeighbor, bool duplicateWires,
     int minBX, int maxBX, int bxWindow,
     const std::vector<int>& zoneBoundaries1, const std::vector<int>& zoneBoundaries2, int zoneOverlap,
@@ -28,8 +28,9 @@ void EMTFSectorProcessor::configure(
 
   pt_assign_engine_ = pt_assign_engine;
 
-  endcap_ = endcap;
-  sector_ = sector;
+  verbose_ = verbose;
+  endcap_  = endcap;
+  sector_  = sector;
 
   includeNeighbor_ = includeNeighbor;
   duplicateWires_  = duplicateWires;
@@ -64,7 +65,7 @@ void EMTFSectorProcessor::process(
   int delayBX = bxWindow_ - 1;  // = 2
 
   for (int ibx = minBX_; ibx <= maxBX_ + delayBX; ++ibx) {
-    if (true) {  // debug
+    if (verbose_ > 0) {  // debug
       std::cout << "Endcap: " << endcap_ << " Sector: " << sector_ << " Event: " << ievent << " BX: " << ibx << std::endl;
     }
 
@@ -92,45 +93,45 @@ void EMTFSectorProcessor::process_single_bx(
 
   EMTFPrimitiveSelection prim_sel;
   prim_sel.configure(
-      endcap_, sector_, bx,
+      verbose_, endcap_, sector_, bx,
       includeNeighbor_, duplicateWires_
   );
 
   EMTFPrimitiveConversion prim_conv;
   prim_conv.configure(
       lut_,
-      endcap_, sector_, bx,
+      verbose_, endcap_, sector_, bx,
       zoneBoundaries1_, zoneBoundaries2_, zoneOverlap_
   );
 
   EMTFPatternRecognition patt_recog;
   patt_recog.configure(
-      endcap_, sector_, bx,
+      verbose_, endcap_, sector_, bx,
       minBX_, maxBX_, bxWindow_,
       pattDefinitions_, maxRoadsPerZone_
   );
 
   EMTFPrimitiveMatching prim_match;
   prim_match.configure(
-      endcap_, sector_, bx
+      verbose_, endcap_, sector_, bx
   );
 
   EMTFAngleCalculation angle_calc;
   angle_calc.configure(
-      endcap_, sector_, bx,
+      verbose_, endcap_, sector_, bx,
       thetaWindow_
   );
 
   EMTFBestTrackSelection btrack_sel;
   btrack_sel.configure(
-      endcap_, sector_, bx,
+      verbose_, endcap_, sector_, bx,
       maxRoadsPerZone_, maxTracks_
   );
 
   EMTFPtAssignment pt_assign;
   pt_assign.configure(
       pt_assign_engine_,
-      endcap_, sector_, bx
+      verbose_, endcap_, sector_, bx
   );
 
   std::map<int, std::vector<TriggerPrimitive> > selected_csc_map;
@@ -161,27 +162,21 @@ void EMTFSectorProcessor::process_single_bx(
   extended_conv_hits.push_back(conv_hits);
 
   // Detect patterns in all zones, find 3 best roads in each zone
-
   patt_recog.process(extended_conv_hits, patt_lifetime_map, zone_roads);
 
   // Match the trigger primitives to the roads, create tracks
-
   prim_match.process(extended_conv_hits, zone_roads, zone_tracks);
 
   // Calculate deflection angles for each track
-
   angle_calc.process(zone_tracks);
 
   // Identify 3 best tracks
-
   btrack_sel.process(zone_tracks, best_tracks);
 
   // Construct pT address, assign pT
-
   pt_assign.process(best_tracks);
 
   // Output
-
   out_hits.insert(out_hits.end(), conv_hits.begin(), conv_hits.end());
   out_tracks.insert(out_tracks.end(), best_tracks.begin(), best_tracks.end());
 

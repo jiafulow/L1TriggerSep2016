@@ -7,7 +7,7 @@
 class EMTFPrimitiveSelection {
 public:
   void configure(
-      int endcap, int sector, int bx,
+      int verbose, int endcap, int sector, int bx,
       bool includeNeighbor, bool duplicateWires
   );
 
@@ -49,7 +49,7 @@ public:
   int get_index_rpc(int tp_subsector, int tp_station, int tp_ring, int tp_roll, bool is_neighbor) const;
 
 private:
-  int endcap_, sector_, bx_;
+  int verbose_, endcap_, sector_, bx_;
 
   bool includeNeighbor_, duplicateWires_;
 };

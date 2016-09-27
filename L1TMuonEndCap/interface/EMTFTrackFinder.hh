@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <array>
 
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
@@ -12,7 +13,6 @@
 
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFSectorProcessorLUT.hh"
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPtAssignmentEngine.hh"
-
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFSectorProcessor.hh"
 
 
@@ -32,14 +32,17 @@ private:
 
   EMTFPtAssignmentEngine pt_assignment_engine_;
 
-  std::vector<EMTFSectorProcessor> sector_processors_;
+  std::array<EMTFSectorProcessor, 12> sector_processors_;
 
   const edm::ParameterSet config_;
-  const edm::EDGetToken tokenCSC_;
-  const edm::EDGetToken tokenRPC_;
+
+  const edm::EDGetToken tokenCSC_, tokenRPC_;
+
   int verbose_;
 
   bool useCSC_, useRPC_;
+
+  int version_, ptlut_ver_;
 
   std::string ph_th_lut_;
 };

@@ -12,14 +12,15 @@ using RPCData = TriggerPrimitive::RPCData;
 
 void EMTFPrimitiveConversion::configure(
     const EMTFSectorProcessorLUT* lut,
-    int endcap, int sector, int bx,
+    int verbose, int endcap, int sector, int bx,
     const std::vector<int>& zoneBoundaries1, const std::vector<int>& zoneBoundaries2, int zoneOverlap
 ) {
   lut_ = lut;
 
-  endcap_ = endcap;
-  sector_ = sector;
-  bx_     = bx;
+  verbose_ = verbose;
+  endcap_  = endcap;
+  sector_  = sector;
+  bx_      = bx;
 
   zoneBoundaries1_ = zoneBoundaries1;
   zoneBoundaries2_ = zoneBoundaries2;
@@ -232,7 +233,7 @@ void EMTFPrimitiveConversion::convert_csc(EMTFHitExtra& conv_hit) const {
   }
   assert(pc_lut_id < 61);
 
-  if (false) {  // debug
+  if (verbose_ > 1) {  // debug
     std::cout << "st: " << pc_station << " ch: " << pc_chamber
         << " lut_id: " << pc_lut_id
         << " ph_init: " << lut().get_ph_init(fw_endcap, fw_sector, pc_lut_id)
@@ -363,7 +364,7 @@ void EMTFPrimitiveConversion::convert_csc(EMTFHitExtra& conv_hit) const {
         zone_code |= (1<<2);  // zone 2: [-,127+2]
 
     } else if (fw_cscid <= 8 || fw_cscid == 14) {  // ring 3
-      if (true)
+      if (true)  // ME1/3 does not need phzvl
         zone_code |= (1<<3);  // zone 3: [-,-]
     }
 

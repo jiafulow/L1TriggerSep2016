@@ -12,12 +12,13 @@ using RPCData = TriggerPrimitive::RPCData;
 
 
 void EMTFPrimitiveSelection::configure(
-      int endcap, int sector, int bx,
+      int verbose, int endcap, int sector, int bx,
       bool includeNeighbor, bool duplicateWires
 ) {
-  endcap_ = endcap;
-  sector_ = sector;
-  bx_     = bx;
+  verbose_ = verbose;
+  endcap_  = endcap;
+  sector_  = sector;
+  bx_      = bx;
 
   includeNeighbor_ = includeNeighbor;
   duplicateWires_  = duplicateWires;

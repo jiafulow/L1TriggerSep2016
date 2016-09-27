@@ -10,11 +10,12 @@ namespace {
 
 
 void EMTFPrimitiveMatching::configure(
-    int endcap, int sector, int bx
+    int verbose, int endcap, int sector, int bx
 ) {
-  endcap_ = endcap;
-  sector_ = sector;
-  bx_     = bx;
+  verbose_ = verbose;
+  endcap_  = endcap;
+  sector_  = sector;
+  bx_      = bx;
 }
 
 void EMTFPrimitiveMatching::process(
@@ -56,7 +57,7 @@ void EMTFPrimitiveMatching::process(
     }  // end loop over conv_hits
   }  // end loop over extended_conv_hits
 
-  if (true) {  // debug
+  if (verbose_ > 0) {  // debug
     for (int izone = 0; izone < NUM_ZONES; ++izone) {
       for (int istation = 0; istation < NUM_STATIONS; ++istation) {
         const int zs = (izone*4) + istation;
@@ -88,7 +89,7 @@ void EMTFPrimitiveMatching::process(
     }  // end loop over stations
   }  // end loop over zones
 
-  if (true) {  // debug
+  if (verbose_ > 0) {  // debug
     for (int izone = 0; izone < NUM_ZONES; ++izone) {
       for (int istation = 0; istation < NUM_STATIONS; ++istation) {
         const int zs = (izone*4) + istation;
@@ -147,7 +148,7 @@ void EMTFPrimitiveMatching::process(
     assert(zone_tracks.size() == zone_roads.size());
   }  // end loop over zones
 
-  if (true) {  // debug
+  if (verbose_ > 0) {  // debug
     for (const auto& tracks : zone_tracks) {
       for (const auto& track : tracks) {
         for (const auto& xhit : track.xhits) {
@@ -212,7 +213,9 @@ void EMTFPrimitiveMatching::process_single_zone_station(
   }  // end loop over roads
 }
 
-void EMTFPrimitiveMatching::sort_ph_diff(std::vector<std::pair<int, int> >& phi_differences) const {
+void EMTFPrimitiveMatching::sort_ph_diff(
+    std::vector<std::pair<int, int> >& phi_differences
+) const {
   // Sort by value, but preserving the original order
   struct {
     typedef std::pair<int, int> value_type;
@@ -279,8 +282,6 @@ void EMTFPrimitiveMatching::insert_hit(
   track.xhits        .insert(track.xhits.begin()         + pos, conv_hit);
   track.xhits_ph_diff.insert(track.xhits_ph_diff.begin() + pos, ph_diff);
 }
-
-
 
 unsigned int EMTFPrimitiveMatching::get_fs_zone_code(const EMTFHitExtra& conv_hit) const {
   static const int _table[4][3] = {  // [station][ring]

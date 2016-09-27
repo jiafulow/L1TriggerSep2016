@@ -32,13 +32,20 @@ void EMTFMicroGMTConverter::convert_all(
     const EMTFTrackExtraCollection& in_tracks,
     l1t::RegionalMuonCandBxCollection& out_cands
 ) const {
+  int gmtMinBX = -2;
+  int gmtMaxBX = +2;
+
   out_cands.clear();
-  out_cands.setBXRange(-2,2);
+  out_cands.setBXRange(gmtMinBX, gmtMaxBX);
 
   for (const auto& in_track : in_tracks) {
-    l1t::RegionalMuonCand out_cand;
+    int bx = in_track.bx;
 
-    convert(in_track, out_cand);
-    out_cands.push_back(in_track.bx, out_cand);
+    if (gmtMinBX <= bx && bx <= gmtMaxBX) {
+      l1t::RegionalMuonCand out_cand;
+
+      convert(in_track, out_cand);
+      out_cands.push_back(bx, out_cand);
+    }
   }
 }

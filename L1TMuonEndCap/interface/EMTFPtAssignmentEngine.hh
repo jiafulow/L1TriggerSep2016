@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <array>
 
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/bdt/Forest.h"
 
@@ -17,7 +18,7 @@ public:
 
   typedef uint64_t address_t;
 
-  void read(const std::string& tree_ver);
+  void read(const std::string& treeDir);
 
   address_t calculate_address(const EMTFTrackExtra& track) const;
 
@@ -27,7 +28,7 @@ public:
 
 private:
   std::vector<int> allowedModes_;
-  Forest forest_[16];
+  std::array<Forest, 16> forests_;
 
   bool ok_;
 };

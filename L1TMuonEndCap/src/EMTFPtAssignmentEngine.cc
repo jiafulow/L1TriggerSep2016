@@ -8,6 +8,7 @@
 
 EMTFPtAssignmentEngine::EMTFPtAssignmentEngine() :
     allowedModes_({3,5,9,6,10,12,7,11,13,14,15}),
+    forests_(),
     ok_(false)
 {
 
@@ -17,17 +18,17 @@ EMTFPtAssignmentEngine::~EMTFPtAssignmentEngine() {
 
 }
 
-void EMTFPtAssignmentEngine::read(const std::string& tree_ver) {
+void EMTFPtAssignmentEngine::read(const std::string& treeDir) {
   if (ok_)  return;
 
-  //std::string tree_dir = "L1Trigger/L1TMuon/data/emtf_luts/" + tree_ver + "/ModeVariables/trees";
-  std::string tree_dir = "L1TriggerSep2016/L1TMuonEndCap/data/emtf_luts/" + tree_ver + "/ModeVariables/trees";
+  //std::string treeDirFull = "L1Trigger/L1TMuon/data/emtf_luts/" + treeDir + "/ModeVariables/trees";
+  std::string treeDirFull = "L1TriggerSep2016/L1TMuonEndCap/data/emtf_luts/" + treeDir + "/ModeVariables/trees";
 
   for (unsigned i = 0; i < allowedModes_.size(); ++i) {
-    int mode_inv = allowedModes_[i];  // inverted mode because reasons
+    int mode_inv = allowedModes_.at(i);  // inverted mode because reasons
     std::stringstream ss;
-    ss << tree_dir << "/" << mode_inv;
-    forest_[mode_inv].loadForestFromXML(ss.str().c_str(), 64);
+    ss << treeDirFull << "/" << mode_inv;
+    forests_.at(mode_inv).loadForestFromXML(ss.str().c_str(), 64);
   }
 
   ok_ = true;
@@ -306,7 +307,9 @@ float EMTFPtAssignmentEngine::calculate_pt(const address_t& address, const EMTFT
 
   uint16_t mode_inv = (address >> (30-4)) & ((1<<4)-1);
 
-  auto contain = [](const auto& vec, const auto& elem) { return (std::find(vec.begin(), vec.end(), elem) != vec.end()); };
+  auto contain = [](const auto& vec, const auto& elem) {
+    return (std::find(vec.begin(), vec.end(), elem) != vec.end());
+  };
 
   bool is_good_mode = contain(allowedModes_, mode_inv);
 
@@ -575,7 +578,7 @@ float EMTFPtAssignmentEngine::calculate_pt(const address_t& address, const EMTFT
           dPhi34 = dPhi23;
       }
     }
-  } // end if eta_3
+  } // end if era_3
 
 
   const int (*mode_variables)[6] = ModeVariables_Scheme3;
@@ -597,20 +600,17 @@ float EMTFPtAssignmentEngine::calculate_pt(const address_t& address, const EMTFT
     }
   }
 
-  if (true) {  // debug
-    std::cout << "mode_inv: " << mode_inv << " variables: ";
-    for (const auto& v: tree_data)
-      std::cout << v << " ";
-    std::cout << std::endl;
-  }
+  //std::cout << "mode_inv: " << mode_inv << " variables: ";
+  //for (const auto& v: tree_data)
+  //  std::cout << v << " ";
+  //std::cout << std::endl;
 
-  std::unique_ptr<Event> tree_event(new Event());
+  auto tree_event = std::make_unique<Event>();
   tree_event->data = tree_data;
 
-  forest_[mode_inv].predictEvent(tree_event.get(), 64);
+  forests_.at(mode_inv).predictEvent(tree_event.get(), 64);
   float tmp_pt = tree_event->predictedValue;
-  tmp_pt = (tmp_pt != 0) ? 1.0/tmp_pt : tmp_pt;
-  pt = tmp_pt;
+  pt = (tmp_pt != 0) ? 1.0/tmp_pt : tmp_pt;
 
   return pt;
 }

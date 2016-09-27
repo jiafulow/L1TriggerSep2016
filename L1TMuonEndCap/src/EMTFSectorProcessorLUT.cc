@@ -170,6 +170,8 @@ uint32_t EMTFSectorProcessorLUT::get_ph_zone_offset(int pc_station, int pc_chamb
 }
 
 void EMTFSectorProcessorLUT::read_file(const std::string& filename, std::vector<uint32_t>& vec) {
+  vec.clear();
+
   std::ifstream infile;
   infile.open(edm::FileInPath(filename).fullPath().c_str());
 
@@ -178,6 +180,5 @@ void EMTFSectorProcessorLUT::read_file(const std::string& filename, std::vector<
     buf = (buf == -999) ? 0 : buf;
     vec.push_back(buf);
   }
-
   infile.close();
 }

@@ -10,7 +10,7 @@ class EMTFPrimitiveConversion {
 public:
   void configure(
       const EMTFSectorProcessorLUT* lut,
-      int endcap, int sector, int bx,
+      int verbose, int endcap, int sector, int bx,
       const std::vector<int>& zoneBoundaries1, const std::vector<int>& zoneBoundaries2, int zoneOverlap
   );
 
@@ -34,7 +34,7 @@ public:
 private:
   const EMTFSectorProcessorLUT* lut_;
 
-  int endcap_, sector_, bx_;
+  int verbose_, endcap_, sector_, bx_;
 
   std::vector<int> zoneBoundaries1_, zoneBoundaries2_;
   int zoneOverlap_;

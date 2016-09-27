@@ -18,6 +18,9 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
   useCSC_      = iConfig.getParameter<bool>("CSCEnable");
   useRPC_      = iConfig.getParameter<bool>("RPCEnable");
 
+  version_     = iConfig.getParameter<int>("Version");
+  ptlut_ver_   = iConfig.getParameter<int>("PtLUTVersion");
+
   ph_th_lut_   = iConfig.getParameter<std::string>("PhThLUT");
 
   const edm::ParameterSet spPCParams16 = config_.getParameter<edm::ParameterSet>("spPCParams16");
@@ -37,7 +40,7 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
   auto maxTracks        = spPRParams16.getParameter<int>("MaxTracks");
 
   const edm::ParameterSet spPAParams16 = config_.getParameter<edm::ParameterSet>("spPAParams16");
-  auto tree_ver         = spPAParams16.getParameter<std::string>("TreeVer");
+  auto treeDir          = spPAParams16.getParameter<std::string>("TreeDir");
 
 
   try {
@@ -45,17 +48,17 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
     sector_processor_lut_.read(ph_th_lut_);
 
     // Configure pT assignment engine
-    pt_assignment_engine_.read(tree_ver);
+    pt_assignment_engine_.read(treeDir);
 
     // Configure sector processors
     for (int endcap = MIN_ENDCAP; endcap <= MAX_ENDCAP; ++endcap) {
       for (int sector = MIN_TRIGSECTOR; sector <= MAX_TRIGSECTOR; ++sector) {
-        sector_processors_.push_back(EMTFSectorProcessor());
+        const int es = (endcap-1) * 6 + (sector-1);
 
-        sector_processors_.back().configure(
+        sector_processors_.at(es).configure(
             &sector_processor_lut_,
             &pt_assignment_engine_,
-            endcap, sector,
+            verbose_, endcap, sector,
             includeNeighbor, duplicateWires,
             minBX, maxBX, bxWindow,
             zoneBoundaries1, zoneBoundaries2, zoneOverlap,
@@ -93,7 +96,7 @@ void EMTFTrackFinder::process(
     collector.extractPrimitives(RPCTag(), iEvent, tokenRPC_, muon_primitives);
 
   // Check trigger primitives
-  if (verbose_ > 2) {
+  if (verbose_ > 1) {  // debug
     std::cout << "Num of TriggerPrimitive: " << muon_primitives.size() << std::endl;
     for (const auto& p : muon_primitives) {
       p.print(std::cout);
@@ -105,7 +108,7 @@ void EMTFTrackFinder::process(
 
   for (int endcap = MIN_ENDCAP; endcap <= MAX_ENDCAP; ++endcap) {
     for (int sector = MIN_TRIGSECTOR; sector <= MAX_TRIGSECTOR; ++sector) {
-      int es = (endcap-1) * 6 + (sector-1);
+      const int es = (endcap-1) * 6 + (sector-1);
 
       sector_processors_.at(es).process(
           iEvent.id().event(),
@@ -116,7 +119,7 @@ void EMTFTrackFinder::process(
     }
   }
 
-  if (verbose_ > 1) {
+  if (verbose_ > 0) {  // debug
     std::cout << "Num of EMTFHitExtra: " << out_hits.size() << std::endl;
     std::cout << "bx e s ss st vf ql cp wg id bd hs" << std::endl;
     for (const auto& h : out_hits) {

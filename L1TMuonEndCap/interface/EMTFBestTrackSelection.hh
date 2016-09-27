@@ -7,8 +7,8 @@
 class EMTFBestTrackSelection {
 public:
   void configure(
-    int endcap, int sector, int bx,
-    int maxRoadsPerZone, int maxTracks
+      int verbose, int endcap, int sector, int bx,
+      int maxRoadsPerZone, int maxTracks
   );
 
   void process(
@@ -17,7 +17,7 @@ public:
   ) const;
 
 private:
-  int endcap_, sector_, bx_;
+  int verbose_, endcap_, sector_, bx_;
 
   int maxRoadsPerZone_, maxTracks_;
 };

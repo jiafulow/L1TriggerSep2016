@@ -6,17 +6,20 @@
 
 void EMTFPtAssignment::configure(
     const EMTFPtAssignmentEngine* pt_assign_engine,
-    int endcap, int sector, int bx
+    int verbose, int endcap, int sector, int bx
 ) {
   //pt_assign_engine_ = pt_assign_engine;
   pt_assign_engine_ = const_cast<EMTFPtAssignmentEngine*>(pt_assign_engine);
 
-  endcap_ = endcap;
-  sector_ = sector;
-  bx_     = bx;
+  verbose_ = verbose;
+  endcap_  = endcap;
+  sector_  = sector;
+  bx_      = bx;
 }
 
-void EMTFPtAssignment::process(EMTFTrackExtraCollection& best_tracks) {
+void EMTFPtAssignment::process(
+    EMTFTrackExtraCollection& best_tracks
+) {
   using address_t = EMTFPtAssignmentEngine::address_t;
 
   const int ntracks = best_tracks.size();
@@ -64,7 +67,7 @@ void EMTFPtAssignment::process(EMTFTrackExtraCollection& best_tracks) {
     track.gmt_charge    = gmt_charge;
   }
 
-  if (true) {  // debug
+  if (verbose_ > 0) {  // debug
     for (const auto& track: best_tracks) {
       std::cout << "track: " << track.winner << " pt address: " << track.ptlut_address << " pt: " << track.pt << " mode: " << track.mode << " GMT charge: " << track.gmt_charge << " quality: " << track.gmt_quality << " eta: " << track.gmt_eta << " phi: " << track.gmt_phi << std::endl;
     }

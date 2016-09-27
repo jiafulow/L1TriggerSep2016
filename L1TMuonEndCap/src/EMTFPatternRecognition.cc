@@ -11,13 +11,14 @@
 
 
 void EMTFPatternRecognition::configure(
-    int endcap, int sector, int bx,
+    int verbose, int endcap, int sector, int bx,
     int minBX, int maxBX, int bxWindow,
     const std::vector<std::string>& pattDefinitions, int maxRoadsPerZone
 ) {
-  endcap_ = endcap;
-  sector_ = sector;
-  bx_     = bx;
+  verbose_ = verbose;
+  endcap_  = endcap;
+  sector_  = sector;
+  bx_      = bx;
 
   minBX_           = minBX;
   maxBX_           = maxBX;
@@ -86,7 +87,7 @@ void EMTFPatternRecognition::configure_details() {
     // Remove the extra padding
     pattern.rotr(PATTERN_PADDING_EXTRA_W_ST1);
 
-    if (false) {  // debug
+    if (verbose_ > 1) {  // debug
       std::cout << "Pattern definition: " << straightness << " "
           << st4_min << " " << st4_max << " "
           << st3_min << " " << st3_max << " "
@@ -118,7 +119,7 @@ void EMTFPatternRecognition::process(
     std::vector<EMTFRoadExtraCollection>& zone_roads
 ) const {
 
-  if (true) {  // debug
+  if (verbose_ > 0) {  // debug
     for (const auto& conv_hits : extended_conv_hits) {
       for (const auto& conv_hit : conv_hits) {
         std::cout << "st: " << conv_hit.pc_station << " ch: " << conv_hit.pc_chamber
@@ -137,7 +138,7 @@ void EMTFPatternRecognition::process(
     make_zone_image(izone, extended_conv_hits, zone_images.at(izone));
   }
 
-  if (false) {  // debug
+  if (verbose_ > 1) {  // debug
     for (int izone = NUM_ZONES; izone >= 1; --izone) {
       std::cout << "zone: " << izone << std::endl;
       std::cout << zone_images.at(izone-1) << std::endl;
@@ -152,7 +153,7 @@ void EMTFPatternRecognition::process(
     process_single_zone(izone, zone_images.at(izone), patt_lifetime_map, zone_roads.at(izone));
   }
 
-  if (true) {  // debug
+  if (verbose_ > 0) {  // debug
     for (const auto& roads : zone_roads) {
       for (const auto& road : roads) {
         std::cout << "pattern: z: " << road.zone << " ph: " << road.key_zhit << " q: " << to_hex(road.quality_code) << " ly: " << to_binary(road.layer_code, 3) << " str: " << to_binary(road.straightness, 3) << std::endl;
@@ -165,7 +166,7 @@ void EMTFPatternRecognition::process(
     sort_single_zone(zone_roads.at(izone));
   }
 
-  if (true) {  // debug
+  if (verbose_ > 0) {  // debug
     for (const auto& roads : zone_roads) {
       for (const auto& road : roads) {
         std::cout << "z: " << road.zone << " r: " << road.winner << " ph_num: " << road.ph_num << " ph_q: " << to_hex(road.quality_code) << " ly: " << to_binary(road.layer_code, 3) << " str: " << to_binary(road.straightness, 3) << std::endl;
