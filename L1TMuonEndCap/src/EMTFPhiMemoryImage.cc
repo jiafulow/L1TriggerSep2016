@@ -16,36 +16,29 @@ EMTFPhiMemoryImage::~EMTFPhiMemoryImage() {
 }
 
 EMTFPhiMemoryImage::EMTFPhiMemoryImage(const EMTFPhiMemoryImage& other) {
-  for (unsigned int i = 0; i < _layers; ++i) {
-    for (unsigned int j = 0; j < _units; ++j) {
-      _buffer[i][j] = other._buffer[i][j];
-    }
-  }
+  std::copy(&(other._buffer[0][0]), &(other._buffer[0][0]) + (_layers*_units), &(_buffer[0][0]));
 }
 
-EMTFPhiMemoryImage& EMTFPhiMemoryImage::operator=(const EMTFPhiMemoryImage& other) {
-  if (this == &other)
-    return *this;
+EMTFPhiMemoryImage::EMTFPhiMemoryImage(EMTFPhiMemoryImage&& other) noexcept : EMTFPhiMemoryImage() {
+  swap(other);
+}
 
-  for (unsigned int i = 0; i < _layers; ++i) {
-    for (unsigned int j = 0; j < _units; ++j) {
-      _buffer[i][j] = other._buffer[i][j];
-    }
-  }
+// Copy-and-swap idiom
+EMTFPhiMemoryImage& EMTFPhiMemoryImage::operator=(EMTFPhiMemoryImage other) {
+  swap(other);
   return *this;
 }
 
+void EMTFPhiMemoryImage::swap(EMTFPhiMemoryImage& other) {
+  std::swap_ranges(&(other._buffer[0][0]), &(other._buffer[0][0]) + (_layers*_units), &(_buffer[0][0]));
+}
+
 void EMTFPhiMemoryImage::reset() {
-  for (unsigned int i = 0; i < _layers; ++i) {
-    for (unsigned int j = 0; j < _units; ++j) {
-      _buffer[i][j] = 0;
-    }
-  }
+  std::fill(&(_buffer[0][0]), &(_buffer[0][0]) + (_layers*_units), 0);
 }
 
 void EMTFPhiMemoryImage::set_bit(unsigned int layer, unsigned int bit) {
   check_input(layer, bit);
-
   value_type unit = bit / UINT64_BITS;
   value_type mask = (1ul << (bit % UINT64_BITS));
   _buffer[layer][unit] |= mask;
@@ -53,7 +46,6 @@ void EMTFPhiMemoryImage::set_bit(unsigned int layer, unsigned int bit) {
 
 void EMTFPhiMemoryImage::clear_bit(unsigned int layer, unsigned int bit) {
   check_input(layer, bit);
-
   value_type unit = bit / UINT64_BITS;
   value_type mask = (1ul << (bit % UINT64_BITS));
   _buffer[layer][unit] &= ~mask;
@@ -61,7 +53,6 @@ void EMTFPhiMemoryImage::clear_bit(unsigned int layer, unsigned int bit) {
 
 bool EMTFPhiMemoryImage::test_bit(unsigned int layer, unsigned int bit) const {
   check_input(layer, bit);
-
   value_type unit = bit / UINT64_BITS;
   value_type mask = (1ul << (bit % UINT64_BITS));
   return _buffer[layer][unit] & mask;
@@ -69,13 +60,11 @@ bool EMTFPhiMemoryImage::test_bit(unsigned int layer, unsigned int bit) const {
 
 void EMTFPhiMemoryImage::set_word(unsigned int layer, unsigned int unit, value_type value) {
   check_input(layer, unit*UINT64_BITS);
-
   _buffer[layer][unit] = value;
 }
 
 EMTFPhiMemoryImage::value_type EMTFPhiMemoryImage::get_word(unsigned int layer, unsigned int unit) const {
   check_input(layer, unit*UINT64_BITS);
-
   return _buffer[layer][unit];
 }
 

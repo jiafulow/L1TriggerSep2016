@@ -14,9 +14,12 @@ public:
   EMTFPhiMemoryImage();
   ~EMTFPhiMemoryImage();
 
-  // Copy constructor and copy assignment needed to manage resources
+  // Copy constructor, move constructor and copy assignment
   EMTFPhiMemoryImage(const EMTFPhiMemoryImage& other);
-  EMTFPhiMemoryImage& operator=(const EMTFPhiMemoryImage& other);
+  EMTFPhiMemoryImage(EMTFPhiMemoryImage&& other) noexcept;
+  EMTFPhiMemoryImage& operator=(EMTFPhiMemoryImage other);
+
+  void swap(EMTFPhiMemoryImage& other);
 
   void reset();
 
