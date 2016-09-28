@@ -48,9 +48,14 @@ void EMTFPrimitiveMatching::process(
         zone_code = get_fs_zone_code(conv_hit);  // decide based on new zone code
 
       for (int izone = 0; izone < NUM_ZONES; ++izone) {
-        if (zone_code & (1<<izone)) {
-          const int zs = (izone*4) + istation;
-          zs_conv_hits.at(zs).push_back(conv_hit);
+        const EMTFRoadExtraCollection& roads = zone_roads.at(izone);
+        const int nroads = roads.size();
+
+        if (nroads > 0) {
+          if (zone_code & (1<<izone)) {
+            const int zs = (izone*4) + istation;
+            zs_conv_hits.at(zs).push_back(conv_hit);
+          }
         }
       }
 

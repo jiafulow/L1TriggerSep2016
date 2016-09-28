@@ -305,6 +305,9 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address_fw(c
 float EMTFPtAssignmentEngine::calculate_pt(const address_t& address, const EMTFTrackExtra& track) {
   float pt = 0.;
 
+  if (address == 0)  // invalid address
+    return pt;
+
   uint16_t mode_inv = (address >> (30-4)) & ((1<<4)-1);
 
   auto contain = [](const auto& vec, const auto& elem) {
@@ -313,7 +316,7 @@ float EMTFPtAssignmentEngine::calculate_pt(const address_t& address, const EMTFT
 
   bool is_good_mode = contain(allowedModes_, mode_inv);
 
-  if (!is_good_mode)  // early exit
+  if (!is_good_mode)  // invalid mode
     return pt;
 
   int dPhi12    = 0;

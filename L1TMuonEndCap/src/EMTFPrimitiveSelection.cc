@@ -30,7 +30,7 @@ void EMTFPrimitiveSelection::process(
     CSCTag tag,
     const TriggerPrimitiveCollection& muon_primitives,
     std::map<int, TriggerPrimitiveCollection>& selected_csc_map
-) {
+) const {
   TriggerPrimitiveCollection::const_iterator tp_it  = muon_primitives.begin();
   TriggerPrimitiveCollection::const_iterator tp_end = muon_primitives.end();
 
@@ -86,7 +86,7 @@ void EMTFPrimitiveSelection::process(
     RPCTag tag,
     const TriggerPrimitiveCollection& muon_primitives,
     std::map<int, TriggerPrimitiveCollection>& selected_rpc_map
-) {
+) const {
   TriggerPrimitiveCollection::const_iterator tp_it  = muon_primitives.begin();
   TriggerPrimitiveCollection::const_iterator tp_end = muon_primitives.end();
 
@@ -102,7 +102,7 @@ void EMTFPrimitiveSelection::process(
 
 
 // CSC functions
-int EMTFPrimitiveSelection::select_csc(const TriggerPrimitive& muon_primitive) {
+int EMTFPrimitiveSelection::select_csc(const TriggerPrimitive& muon_primitive) const {
   int selected = -1;
 
   if (muon_primitive.subsystem() == TriggerPrimitive::kCSC) {
@@ -195,7 +195,7 @@ int EMTFPrimitiveSelection::get_index_csc(int tp_subsector, int tp_station, int 
 }
 
 // RPC functions
-int EMTFPrimitiveSelection::select_rpc(const TriggerPrimitive& muon_primitive) {
+int EMTFPrimitiveSelection::select_rpc(const TriggerPrimitive& muon_primitive) const {
   int selected = -1;
 
   if (muon_primitive.subsystem() == TriggerPrimitive::kRPC) {

@@ -48,6 +48,10 @@ void EMTFPtAssignment::process(
     gmt_phi -= 35; // offset of -22 deg
 
     int gmt_eta = getGMTEta(track.theta_int, endcap_);
+    bool use_ones_complem_gmt_eta = true;
+    if (use_ones_complem_gmt_eta) {
+      gmt_eta = (gmt_eta < 0) ? ~(-gmt_eta) : gmt_eta;
+    }
 
     int gmt_quality = getGMTQuality(track.mode, track.theta_int);
 

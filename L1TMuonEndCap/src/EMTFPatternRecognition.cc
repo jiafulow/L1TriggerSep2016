@@ -209,6 +209,8 @@ void EMTFPatternRecognition::process_single_zone(
 ) const {
   roads.clear();
 
+  const int drift_time = bxWindow_ - 1;
+
   // The zone hit image is rotated/shifted before comparing with patterns
   // First, rotate left/shift up to the zone hit in the key station
   cloned_image.rotl(PATTERN_KEY_ZHIT);
@@ -236,12 +238,12 @@ void EMTFPatternRecognition::process_single_zone(
         auto ins = patt_lifetime_map.insert({patt_id, 1});
 
         if (!ins.second) {  // already exists, increment counter
-          ins.first->second += 1;
-
           // Is lifetime up?
-          if (ins.first->second == bxWindow_) {  // = 3
+          if (ins.first->second == drift_time) {
             is_lifetime_up = true;
           }
+
+          ins.first->second += 1;
         }
 
       } else {
@@ -272,7 +274,7 @@ void EMTFPatternRecognition::process_single_zone(
         EMTFRoadExtra road;
         road.endcap   = endcap_;
         road.sector   = sector_;
-        road.bx       = bx_;
+        road.bx       = bx_ - drift_time;
 
         road.zone     = std::get<0>(patt_id);
         road.key_zhit = std::get<1>(patt_id);

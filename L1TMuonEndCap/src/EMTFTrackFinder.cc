@@ -124,10 +124,11 @@ void EMTFTrackFinder::process(
     std::cout << "bx e s ss st vf ql cp wg id bd hs" << std::endl;
     for (const auto& h : out_hits) {
       int bx      = h.bx + 3;
+      int sector  = h.pc_sector;
       int station = (h.pc_station == 0 && h.subsector == 1) ? 1 : h.pc_station;
       int chamber = h.pc_chamber + 1;
       int strip   = (h.station == 1 && h.ring == 4) ? h.strip + 128 : h.strip;  // ME1/1a
-      std::cout << bx << " " << h.endcap << " " << h.sector << " " << h.subsector << " " << station << " " << h.valid << " " << h.quality << " " << h.pattern << " " << h.wire << " " << chamber << " " << h.bend << " " << strip << std::endl;
+      std::cout << bx << " " << h.endcap << " " << sector << " " << h.subsector << " " << station << " " << h.valid << " " << h.quality << " " << h.pattern << " " << h.wire << " " << chamber << " " << h.bend << " " << strip << std::endl;
     }
 
     std::cout << "Converted hits: " << std::endl;

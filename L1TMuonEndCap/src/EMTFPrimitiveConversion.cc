@@ -113,6 +113,7 @@ EMTFHitExtra EMTFPrimitiveConversion::convert_prim_csc(int selected, const Trigg
   assert(tp_data.quality > 0);
 
   //
+  int pc_sector    = sector_;
   int pc_station   = selected / 9;
   int pc_chamber   = selected % 9;
 
@@ -143,6 +144,8 @@ EMTFHitExtra EMTFPrimitiveConversion::convert_prim_csc(int selected, const Trigg
 
   conv_hit.bx          = tp_bx - 6;
   conv_hit.subsystem   = TriggerPrimitive::kCSC;
+
+  conv_hit.pc_sector   = pc_sector;
   conv_hit.pc_station  = pc_station;
   conv_hit.pc_chamber  = pc_chamber;
 
