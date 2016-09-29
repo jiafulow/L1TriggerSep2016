@@ -84,7 +84,7 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
   best_dtheta_arr.fill(invalid_dtheta);
   best_dtheta_sign_arr.fill(0);
   best_dphi_arr.fill(invalid_dphi);
-  best_dphi_sign_arr.fill(0);
+  best_dphi_sign_arr.fill(1);  // dphi sign reversed compared to dtheta
   best_dtheta_valid_arr.fill(false);
 
   // For phi and theta assignment

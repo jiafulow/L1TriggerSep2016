@@ -55,8 +55,9 @@ void EMTFPtAssignment::process(
 
     int gmt_quality = getGMTQuality(track.mode, track.theta_int);
 
-    const EMTFPtLUTData& ptlut_data = track.ptlut_data;
-    int gmt_charge = getGMTCharge(ptlut_data.ph[0], ptlut_data.ph[1], ptlut_data.ph[2], ptlut_data.ph[3], track.mode);
+    std::vector<uint16_t> delta_ph(&(track.ptlut_data.delta_ph[0]), &(track.ptlut_data.delta_ph[0]) + 6);
+    std::vector<uint16_t> sign_ph(&(track.ptlut_data.sign_ph[0]), &(track.ptlut_data.sign_ph[0]) + 6);
+    std::pair<int,int> gmt_charge = getGMTCharge(track.mode, delta_ph, sign_ph);
 
     // _________________________________________________________________________
     // Output
@@ -64,11 +65,12 @@ void EMTFPtAssignment::process(
     track.pt_xml        = xmlpt;
     track.pt            = pt;
 
-    track.gmt_pt        = gmt_pt;
-    track.gmt_phi       = gmt_phi;
-    track.gmt_eta       = gmt_eta;
-    track.gmt_quality   = gmt_quality;
-    track.gmt_charge    = gmt_charge;
+    track.gmt_pt           = gmt_pt;
+    track.gmt_phi          = gmt_phi;
+    track.gmt_eta          = gmt_eta;
+    track.gmt_quality      = gmt_quality;
+    track.gmt_charge       = gmt_charge.first;
+    track.gmt_charge_valid = gmt_charge.second;
   }
 
   if (verbose_ > 0) {  // debug

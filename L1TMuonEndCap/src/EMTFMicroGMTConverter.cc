@@ -20,7 +20,7 @@ void EMTFMicroGMTConverter::convert(
   out_cand.setHwPhi(in_track.gmt_phi);
   out_cand.setHwEta(in_track.gmt_eta);
   out_cand.setHwSign(in_track.gmt_charge);
-  out_cand.setHwSignValid(1);
+  out_cand.setHwSignValid(in_track.gmt_charge_valid);
   out_cand.setHwQual(in_track.gmt_quality);
   // jl: FIXME this has to be adapted to the new schema of saving in_track addresses
   //out_cand.setTrackSubAddress(l1t::RegionalMuonCand::kME12, in_trackaddress&0xf);
