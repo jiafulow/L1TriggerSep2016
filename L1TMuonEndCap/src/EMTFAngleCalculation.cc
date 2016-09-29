@@ -34,20 +34,21 @@ void EMTFAngleCalculation::process(
       // Calculate deltas
       calculate_angles(track);
     }
+
+    // Erase tracks with rank = 0
+    erase_tracks(tracks);
   }
 
   if (verbose_ > 0) {  // debug
     for (const auto& tracks : zone_tracks) {
       for (const auto& track : tracks) {
-        if (track.rank) {
-          std::cout << "deltas: z: " << track.xroad.zone << " pat: " << track.xroad.winner << " rank: " << to_hex(track.rank)
-              << " delta_ph: " << array_as_string(track.ptlut_data.delta_ph)
-              << " delta_th: " << array_as_string(track.ptlut_data.delta_th)
-              << " sign_ph: " << array_as_string(track.ptlut_data.sign_ph)
-              << " sign_th: " << array_as_string(track.ptlut_data.sign_th)
-              << " phi: " << track.phi_int << " theta: " << track.theta_int
-              << std::endl;
-        }
+        std::cout << "deltas: z: " << track.xroad.zone << " pat: " << track.xroad.winner << " rank: " << to_hex(track.rank)
+            << " delta_ph: " << array_as_string(track.ptlut_data.delta_ph)
+            << " delta_th: " << array_as_string(track.ptlut_data.delta_th)
+            << " sign_ph: " << array_as_string(track.ptlut_data.sign_ph)
+            << " sign_th: " << array_as_string(track.ptlut_data.sign_th)
+            << " phi: " << track.phi_int << " theta: " << track.theta_int
+            << std::endl;
       }
     }
   }
@@ -110,6 +111,7 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
           int thB = conv_hitB.theta_fp;
           int dth = (thA > thB) ? thA - thB : thB - thA;
           int dth_sign = (thA > thB);  // sign
+          assert(dth < invalid_dtheta);
 
           if (best_dtheta_arr.at(ipair) >= dth) {
             best_dtheta_arr.at(ipair) = dth;
@@ -249,16 +251,7 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
     return result;
   };
 
-  // ___________________________________________________________________________
-  // Output
-
-  track.rank       = rank2;
-  track.mode       = mode;
-  track.mode_inv   = mode_inv;
-  track.phi_int    = phi_int;
-  track.theta_int  = theta_int;
-
-  // Assign ptlut_data
+  // Fill ptlut_data
   EMTFPtLUTData ptlut_data;
   for (int i = 0; i < NUM_STATION_PAIRS; ++i) {
     ptlut_data.delta_ph[i] = best_dphi_arr.at(i);
@@ -275,40 +268,73 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
     ptlut_data.bt_chamber[i] = v.empty() ? 0 : get_bt_chamber(v.front());
   }
 
+  // ___________________________________________________________________________
+  // Output
+
+  track.rank       = rank2;
+  track.mode       = mode;
+  track.mode_inv   = mode_inv;
+  track.phi_int    = phi_int;
+  track.theta_int  = theta_int;
   track.ptlut_data = ptlut_data;
+}
 
-  // Reduce converted hit collection
-  track.num_xhits    = 0;
-  uint16_t check_num_xhits = 0;
+void EMTFAngleCalculation::erase_tracks(EMTFTrackExtraCollection& tracks) const {
+  // Erase tracks with rank == 0
+  // using erase-remove idiom
+  int ntracks = tracks.size();
 
-  // Apply erase-remove idiom
-  // Erase the hits that are not the "best" phi and theta in each station
-  for (int i = 0, j = 0; i < NUM_STATIONS; ++i) {
-    const int nchits = track.xhits.size();
+  for (int itrack = 0, jtrack = 0; itrack < ntracks; ++itrack) {
+    const EMTFTrackExtra& track = tracks.at(itrack);
 
-    if (best_theta_valid_arr.at(i)) {
-      for (int ichit = 0; ichit < nchits; ++ichit) {
-        const EMTFHitExtra& conv_hit = track.xhits.at(ichit);
-
-        if (
-            ((conv_hit.station-1) == i) &&
-            (conv_hit.phi_fp      == best_phi_arr.at(i)) &&
-            (conv_hit.theta_fp    == best_theta_arr.at(i))
-        ) {
-          track.num_xhits += 1;
-          track.xhits        .at(j) = std::move(track.xhits        .at(ichit));
-          track.xhits_ph_diff.at(j) = std::move(track.xhits_ph_diff.at(ichit));
-          ++j;
-          break;
-        }
-      }
+    // Keep good tracks in front
+    if (track.rank != 0) {
+      tracks.at(jtrack) = tracks.at(itrack);
+      ++jtrack;
     }
-    check_num_xhits = j;
-  }
-  assert(track.num_xhits == check_num_xhits);
 
-  track.xhits        .erase(track.xhits.begin()        +track.num_xhits, track.xhits.end());
-  track.xhits_ph_diff.erase(track.xhits_ph_diff.begin()+track.num_xhits, track.xhits_ph_diff.end());
+    // Remove everything behind
+    if (itrack == ntracks-1) {  // on the last track
+      tracks.erase(tracks.begin() + jtrack, tracks.end());
+    }
+  }  // end loop over tracks
+
+
+  // Erase hits that are not the best phi and theta in each station
+  // using erase-remove idiom
+  ntracks = tracks.size();
+
+  for (int itrack = 0; itrack < ntracks; ++itrack) {
+    EMTFTrackExtra& track = tracks.at(itrack);  // pass by reference
+    track.num_xhits = 0;
+
+    const int nchits = track.xhits.size();
+    for (int ichit = 0, jchit = 0; ichit < nchits; ++ichit) {
+      const EMTFHitExtra& conv_hit = track.xhits.at(ichit);
+      const int istation = (conv_hit.station-1);
+
+      // Keep good hits in front
+      if (
+          (conv_hit.pattern     == track.ptlut_data.cpattern[istation]) &&
+          (conv_hit.phi_fp      == track.ptlut_data.ph[istation]) &&
+          (conv_hit.theta_fp    == track.ptlut_data.th[istation])
+      ) {
+        track.num_xhits += 1;
+        track.xhits.at(jchit) = track.xhits.at(ichit);
+        track.xhits_ph_diff.at(jchit) = track.xhits_ph_diff.at(ichit);
+        ++jchit;
+      }
+
+      // Remove everything behind
+      if (ichit == nchits-1) {  // on the last hit
+        track.xhits.erase(track.xhits.begin() + jchit, track.xhits.end());
+        track.xhits_ph_diff.erase(track.xhits_ph_diff.begin() + jchit, track.xhits_ph_diff.end());
+      }
+    }  // end loop over hits
+
+    assert(track.num_xhits == track.xhits.size());
+  }  // end loop over tracks
+
 }
 
 int EMTFAngleCalculation::get_bt_chamber(const EMTFHitExtra& conv_hit) const {
