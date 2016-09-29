@@ -54,7 +54,7 @@ void EMTFBestTrackSelection::process(
         assert(conv_hit.valid);
 
         // A segment identifier (chamber, strip)
-        auto segment = std::pair<int, int>(conv_hit.pc_station*9 + conv_hit.pc_chamber, conv_hit.strip);
+        const auto& segment = std::make_pair<int, int>(conv_hit.pc_station*9 + conv_hit.pc_chamber, conv_hit.strip);
         segments.at(zn).push_back(segment);
       }
     }  // end loop over n

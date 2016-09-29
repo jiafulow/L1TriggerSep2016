@@ -137,8 +137,9 @@ void EMTFTrackFinder::process(
     }
 
     std::cout << "Num of EMTFTrackExtra: " << out_tracks.size() << std::endl;
+    std::cout << "bx e s a mo et ph cr q pt" << std::endl;
     for (const auto& t : out_tracks) {
-      std::cout << t.winner << " " << t.rank << " " << t.mode << " " << t.ptlut_address << " " << t.pt << std::endl;
+      std::cout << t.bx << " " << t.endcap << " " << t.sector << " " << t.ptlut_address << " " << t.mode << " " << t.gmt_eta << " " << t.gmt_phi << " " << t.gmt_charge << " " << t.gmt_quality << " " << t.pt << std::endl;
     }
   }
 

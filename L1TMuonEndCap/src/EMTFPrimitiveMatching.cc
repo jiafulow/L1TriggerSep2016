@@ -124,6 +124,7 @@ void EMTFPrimitiveMatching::process(
       track.endcap   = road.endcap;
       track.sector   = road.sector;
       track.bx       = road.bx;
+      track.zone     = road.zone;
 
       track.num_xhits    = 0;
       track.xhits        .clear();
@@ -280,8 +281,8 @@ void EMTFPrimitiveMatching::insert_hit(
   } less_station_cmp;
 
   // Sorted insert
-  auto upper = std::upper_bound(track.xhits.begin(), track.xhits.end(), conv_hit, less_station_cmp);
-  auto pos = upper - track.xhits.begin();
+  EMTFHitExtraCollection::iterator upper = std::upper_bound(track.xhits.begin(), track.xhits.end(), conv_hit, less_station_cmp);
+  unsigned pos = std::distance(track.xhits.begin(), upper);
 
   track.num_xhits += 1;
   track.xhits        .insert(track.xhits.begin()         + pos, conv_hit);
