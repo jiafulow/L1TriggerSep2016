@@ -27,7 +27,7 @@ static int getGMTEta(int theta, int endcap) {
 
 static int getGMTQuality(int mode, int theta) {
   int quality = 0;
-  if(theta > 87){  // if (eta < 1.2)
+  if (theta > 87) {  // if (eta < 1.2)
     switch (mode) {
     case 15:  quality = 8;  break;
     case 14:  quality = 4;  break;
@@ -59,87 +59,103 @@ static int getGMTCharge(int phi1, int phi2, int phi3, int phi4, int mode) {
   int emuCharge = 0;
   int phidiffs[6] = {phi2 - phi1, phi3 - phi1, phi4 - phi1, phi3 - phi2, phi4 - phi2, phi4 - phi3};
 
-  if (mode == 15) {
-    if(phidiffs[0] > 0)
+  switch(mode) {
+  case 15:  // 1-2-3-4
+    if (phidiffs[0] > 0)                          // 1-2
       emuCharge = 1;
-    else if(phidiffs[0] == 0 && phidiffs[1] < 0)
+    else if (phidiffs[0] == 0 && phidiffs[1] < 0) // 1-3
       emuCharge = 1;
-    else if(phidiffs[1] == 0 && phidiffs[2] < 0)
+    else if (phidiffs[1] == 0 && phidiffs[2] < 0) // 1-4
       emuCharge = 1;
     else
       emuCharge = -1;
+    break;
 
-  } else if (mode == 14) {
-    if(phidiffs[0] < 0)
+  case 14:  // 1-2-3
+    if (phidiffs[0] < 0)                          // 1-2
       emuCharge = -1;
-    else if(phidiffs[0] == 0 && phidiffs[1] < 0)
+    else if (phidiffs[0] == 0 && phidiffs[1] < 0) // 1-3
       emuCharge = -1;
     else
       emuCharge = 1;
+    break;
 
-  } else if (mode == 13) {
-    if(phidiffs[0] > 0)
+  case 13:  // 1-2-4
+    if (phidiffs[0] > 0)                          // 1-2
       emuCharge = 1;
-    else if(phidiffs[0] == 0 && phidiffs[2] < 0)
+    else if (phidiffs[0] == 0 && phidiffs[2] < 0) // 1-4
       emuCharge = 1;
     else
       emuCharge = -1;
+    break;
 
-  } else if (mode == 12) {
-    if(phidiffs[0] > 0)
+  case 12:  // 1-2
+    if (phidiffs[0] > 0)                          // 1-2
       emuCharge = 1;
     else
       emuCharge = -1;
+    break;
 
-  } else if (mode == 11) {
-    if(phidiffs[1] > 0)
+  case 11:  // 1-3-4
+    if (phidiffs[1] > 0)                          // 1-3
       emuCharge = 1;
-    else if(phidiffs[1] == 0 && phidiffs[2] < 0)
+    else if (phidiffs[1] == 0 && phidiffs[2] < 0) // 1-4
       emuCharge = 1;
     else
       emuCharge = -1;
+    break;
 
-  } else if (mode == 10) {
-    if(phidiffs[1] > 0)
+  case 10:  // 1-3
+    if (phidiffs[1] > 0)                          // 1-3
       emuCharge = 1;
     else
       emuCharge = -1;
+    break;
 
-  } else if (mode == 9) {
-    if(phidiffs[2] > 0)
+  case 9:   // 1-4
+    if (phidiffs[2] > 0)                          // 1-4
       emuCharge = 1;
     else
       emuCharge = -1;
+    break;
 
-  } else if (mode == 7) {
-    if(phidiffs[3] > 0)
+  case 7:   // 2-3-4
+    if (phidiffs[3] > 0)                          // 2-3
       emuCharge = 1;
-    else if(phidiffs[3] == 0 && phidiffs[4] < 0)
+    else if (phidiffs[3] == 0 && phidiffs[4] < 0) // 2-4
       emuCharge = 1;
     else
       emuCharge = -1;
+    break;
 
-  } else if (mode == 6) {
-    if(phidiffs[3] > 0)
+  case 6:   // 2-3
+    if (phidiffs[3] > 0)                          // 2-3
       emuCharge = 1;
     else
       emuCharge = -1;
+    break;
 
-  } else if (mode == 5) {
-    if(phidiffs[4] > 0)
+  case 5:   // 2-4
+    if (phidiffs[4] > 0)                          // 2-4
       emuCharge = 1;
     else
       emuCharge = -1;
+    break;
 
-  } else if (mode == 3){
-    if(phidiffs[5] > 0)
+  case 3:   // 3-4
+    if (phidiffs[5] > 0)                          // 3-4
       emuCharge = 1;
     else
       emuCharge = -1;
+    break;
+
+  default:
+    emuCharge = -1;
+    break;
   }
 
   int charge = 0;
-  if(emuCharge == 1)
+  if (emuCharge == 1)
     charge = 1;
   return charge;
 }
