@@ -1,13 +1,25 @@
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPatternRecognition.hh"
 
-#include <iterator>
-#include <regex>
-
 #include "helper.h"  // to_hex, to_binary
 
 #define NUM_PATTERNS 9
 #define PATTERN_KEY_ZHIT 7
 #define PATTERN_PADDING_EXTRA_W_ST1 15-7
+
+namespace {
+  // See http://stackoverflow.com/a/53878
+  std::vector<std::string> split_string(const std::string& s, char c = ' ', char d = ' ') {
+    std::vector<std::string> result;
+    const char* str = s.c_str();
+    do {
+      const char* begin = str;
+      while(*str != c && *str != d && *str)
+        str++;
+      result.push_back(std::string(begin, str));
+    } while (0 != *str++);
+    return result;
+  }
+}  // namespace
 
 
 void EMTFPatternRecognition::configure(
@@ -35,30 +47,22 @@ void EMTFPatternRecognition::configure_details() {
   straightnesses_.clear();
 
   // Parse pattern definitions
-  std::regex digits("(\\d+)");
-
   for (const auto& s: pattDefinitions_) {
-    auto digits_begin = std::sregex_iterator(s.begin(), s.end(), digits);
-    auto digits_end = std::sregex_iterator();
-    //for (std::sregex_iterator imatch = digits_begin; imatch != digits_end; ++imatch) {
-    //  std::cout << imatch->str() << std::endl;
-    //}
-    assert(std::distance(digits_begin, digits_end) == 9);  // Want to find 9 numbers
-
-    std::sregex_iterator imatch = digits_begin;
-    auto to_integer = [](auto imatch) { return std::stoi(imatch->str()); };
+    const std::vector<std::string>& tokens = split_string(s, ',', ':');  // split by comma or colon
+    assert(tokens.size() == 9);  // want to find 9 numbers
+    int itoken = 0;
 
     // Get the 9 integers
     // straightness, hits in ME1, hits in ME2, hits in ME3, hits in ME4
-    int straightness = to_integer(imatch++);
-    int st1_max      = to_integer(imatch++);
-    int st1_min      = to_integer(imatch++);
-    int st2_max      = to_integer(imatch++);
-    int st2_min      = to_integer(imatch++);
-    int st3_max      = to_integer(imatch++);
-    int st3_min      = to_integer(imatch++);
-    int st4_max      = to_integer(imatch++);
-    int st4_min      = to_integer(imatch++);
+    int straightness = std::stoi(tokens.at(itoken++));
+    int st1_max      = std::stoi(tokens.at(itoken++));
+    int st1_min      = std::stoi(tokens.at(itoken++));
+    int st2_max      = std::stoi(tokens.at(itoken++));
+    int st2_min      = std::stoi(tokens.at(itoken++));
+    int st3_max      = std::stoi(tokens.at(itoken++));
+    int st3_min      = std::stoi(tokens.at(itoken++));
+    int st4_max      = std::stoi(tokens.at(itoken++));
+    int st4_min      = std::stoi(tokens.at(itoken++));
 
     // There can only be one zone hit in the key station in the pattern
     // and it has to be this magic number
@@ -95,6 +99,7 @@ void EMTFPatternRecognition::configure_details() {
           << st1_min << " " << st1_max << std::endl;
       std::cout << pattern << std::endl;
     }
+
     patterns_.push_back(pattern);
     straightnesses_.push_back(straightness);
   }
@@ -115,7 +120,7 @@ void EMTFPatternRecognition::configure_details() {
 
 void EMTFPatternRecognition::process(
     const std::deque<EMTFHitExtraCollection>& extended_conv_hits,
-    std::map<pattern_id_t, int>& patt_lifetime_map,
+    std::map<pattern_ref_t, int>& patt_lifetime_map,
     std::vector<EMTFRoadExtraCollection>& zone_roads
 ) const {
 
@@ -204,7 +209,7 @@ void EMTFPatternRecognition::make_zone_image(
 void EMTFPatternRecognition::process_single_zone(
     int zone,
     EMTFPhiMemoryImage cloned_image,
-    std::map<pattern_id_t, int>& patt_lifetime_map,
+    std::map<pattern_ref_t, int>& patt_lifetime_map,
     EMTFRoadExtraCollection& roads
 ) const {
   roads.clear();
@@ -227,7 +232,7 @@ void EMTFPatternRecognition::process_single_zone(
     // Compare with patterns
     for (int ipatt = 0; ipatt < NUM_PATTERNS; ++ipatt) {
       const EMTFPhiMemoryImage& patt = patterns_.at(ipatt);
-      const pattern_id_t patt_id = std::make_tuple(zone, izhit, ipatt);
+      const pattern_ref_t patt_ref = {{zone, izhit, ipatt}};  // due to GCC bug, use {{}} instead of {}
 
       bool is_lifetime_up = false;
 
@@ -235,7 +240,7 @@ void EMTFPatternRecognition::process_single_zone(
 
       if (layer_code > 0) {
         // Starts counting at any hit in the pattern, even single
-        auto ins = patt_lifetime_map.insert({patt_id, 1});
+        auto ins = patt_lifetime_map.insert({patt_ref, 1});
 
         if (!ins.second) {  // already exists, increment counter
           // Is lifetime up?
@@ -247,7 +252,7 @@ void EMTFPatternRecognition::process_single_zone(
         }
 
       } else {
-        patt_lifetime_map.erase(patt_id);  // erase if exists
+        patt_lifetime_map.erase(patt_ref);  // erase if exists
       }
 
       // If lifetime is up, and not single-layer hit patterns (stations 3&4 considered
@@ -276,9 +281,9 @@ void EMTFPatternRecognition::process_single_zone(
         road.sector   = sector_;
         road.bx       = bx_ - drift_time;
 
-        road.zone     = std::get<0>(patt_id);
-        road.key_zhit = std::get<1>(patt_id);
-        road.pattern  = std::get<2>(patt_id);
+        road.zone     = patt_ref.at(0);
+        road.key_zhit = patt_ref.at(1);
+        road.pattern  = patt_ref.at(2);
 
         road.straightness = straightness;
         road.layer_code   = layer_code;

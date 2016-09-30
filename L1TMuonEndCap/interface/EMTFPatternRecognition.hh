@@ -7,8 +7,8 @@
 
 class EMTFPatternRecognition {
 public:
-  // Pattern detector ID: [zone][keystrip][pattern]
-  typedef std::tuple<int, int, int>  pattern_id_t;
+  // Pattern detector ID: [zone, keystrip, pattern]
+  typedef std::array<int, 3>  pattern_ref_t;
 
   void configure(
       int verbose, int endcap, int sector, int bx,
@@ -20,7 +20,7 @@ public:
 
   void process(
       const std::deque<EMTFHitExtraCollection>& extended_conv_hits,
-      std::map<pattern_id_t, int>& patt_lifetime_map,
+      std::map<pattern_ref_t, int>& patt_lifetime_map,
       std::vector<EMTFRoadExtraCollection>& zone_roads
   ) const;
 
@@ -33,7 +33,7 @@ public:
   void process_single_zone(
       int zone,
       EMTFPhiMemoryImage cloned_image,
-      std::map<pattern_id_t, int>& patt_lifetime_map,
+      std::map<pattern_ref_t, int>& patt_lifetime_map,
       EMTFRoadExtraCollection& roads
   ) const;
 
@@ -52,6 +52,6 @@ private:
   std::vector<int> straightnesses_;
 };
 
-typedef EMTFPatternRecognition::pattern_id_t EMTFPatternId;
+typedef EMTFPatternRecognition::pattern_ref_t EMTFPatternRef;
 
 #endif

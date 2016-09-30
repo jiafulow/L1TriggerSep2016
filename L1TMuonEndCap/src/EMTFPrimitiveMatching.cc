@@ -53,7 +53,7 @@ void EMTFPrimitiveMatching::process(
 
         if (nroads > 0) {
           if (zone_code & (1<<izone)) {
-            const int zs = (izone*4) + istation;
+            const int zs = (izone*NUM_STATIONS) + istation;
             zs_conv_hits.at(zs).push_back(conv_hit);
           }
         }
@@ -65,7 +65,7 @@ void EMTFPrimitiveMatching::process(
   if (verbose_ > 0) {  // debug
     for (int izone = 0; izone < NUM_ZONES; ++izone) {
       for (int istation = 0; istation < NUM_STATIONS; ++istation) {
-        const int zs = (izone*4) + istation;
+        const int zs = (izone*NUM_STATIONS) + istation;
         for (const auto& conv_hit : zs_conv_hits.at(zs)) {
           std::cout << "z: " << izone << " st: " << istation+1 << " cscid: " << conv_hit.csc_ID << " ph_seg: " << conv_hit.phi_fp << " ph_seg_red: " << (conv_hit.phi_fp>>((bw_fph-bpow-1)))<< std::endl;
         }
@@ -81,7 +81,7 @@ void EMTFPrimitiveMatching::process(
   // pattern and segment
   for (int izone = 0; izone < NUM_ZONES; ++izone) {
     for (int istation = 0; istation < NUM_STATIONS; ++istation) {
-      const int zs = (izone*4) + istation;
+      const int zs = (izone*NUM_STATIONS) + istation;
 
       process_single_zone_station(
           istation + 1,
@@ -97,7 +97,7 @@ void EMTFPrimitiveMatching::process(
   if (verbose_ > 0) {  // debug
     for (int izone = 0; izone < NUM_ZONES; ++izone) {
       for (int istation = 0; istation < NUM_STATIONS; ++istation) {
-        const int zs = (izone*4) + istation;
+        const int zs = (izone*NUM_STATIONS) + istation;
         int i = 0;
         for (const auto& ph_diff_pair : zs_phi_differences.at(zs)) {
           std::cout << "z: " << izone << " r: " << zone_roads.at(izone).at(i).winner << " ph_num: " << zone_roads.at(izone).at(i).ph_num << " st: " << istation+1 << " ichit: " << ph_diff_pair.first << " ph_diff: " << ph_diff_pair.second << std::endl;
@@ -132,7 +132,7 @@ void EMTFPrimitiveMatching::process(
 
       // Insert hits
       for (int istation = 0; istation < NUM_STATIONS; ++istation) {
-        const int zs = (izone*4) + istation;
+        const int zs = (izone*NUM_STATIONS) + istation;
 
         const EMTFHitExtraCollection& conv_hits = zs_conv_hits.at(zs);
         int ichit   = zs_phi_differences.at(zs).at(iroad).first;
@@ -276,7 +276,7 @@ void EMTFPrimitiveMatching::insert_hit(
   struct {
     typedef EMTFHitExtra value_type;
     constexpr bool operator()(const value_type& lhs, const value_type& rhs) {
-      return lhs.station < rhs.station;
+      return std::make_pair(lhs.station, lhs.bx) < std::make_pair(rhs.station, rhs.bx);
     }
   } less_station_cmp;
 
