@@ -102,6 +102,21 @@ void EMTFSectorProcessorLUT::read(const std::string& ph_th_lut) {
         << "got " << ph_zone_offset_.size() << " values.";
   }
 
+  // start phi of each chamber in reduced precision, for zone hits,
+  // with negative offset to allow for possible chamber movement
+  ph_init_hard_ = {
+    39,  57,  76, 39,  58,  76, 41,  60,  79, 39,  57,  76, 21, 21, 23, 21,
+    95, 114, 132, 95, 114, 133, 98, 116, 135, 95, 114, 132,  0,  0,  0,  0,
+    38,  76, 113, 39,  58,  76, 95, 114, 132,  1,  21,   0,  0,  0,  0,  0,
+    38,  76, 113, 39,  58,  76, 95, 114, 132,  1,  21,   0,  0,  0,  0,  0,
+    38,  76, 113, 38,  57,  76, 95, 113, 132,  1,  20,   0,  0,  0,  0,  0
+  };
+  if (ph_init_hard_.size() != 5*16) {
+    throw cms::Exception("EMTFSectorProcessorLUT")
+        << "Expected ph_init_hard_ to get " << 5*16 << " values, "
+        << "got " << ph_init_hard_.size() << " values.";
+  }
+
   ok_ = true;
   return;
 }
@@ -167,6 +182,11 @@ uint32_t EMTFSectorProcessorLUT::get_ph_patt_corr_sign(int pattern) const {
 uint32_t EMTFSectorProcessorLUT::get_ph_zone_offset(int pc_station, int pc_chamber) const {
   size_t index = pc_station * 9 + pc_chamber;
   return ph_zone_offset_.at(index);
+}
+
+uint32_t EMTFSectorProcessorLUT::get_ph_init_hard(int fw_station, int fw_cscid) const {
+  size_t index = fw_station * 16 + fw_cscid;
+  return ph_init_hard_.at(index);
 }
 
 void EMTFSectorProcessorLUT::read_file(const std::string& filename, std::vector<uint32_t>& vec) {

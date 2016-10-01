@@ -8,7 +8,7 @@ class EMTFPrimitiveSelection {
 public:
   void configure(
       int verbose, int endcap, int sector, int bx,
-      bool includeNeighbor, bool duplicateWires
+      bool includeNeighbor, bool duplicateTheta
   );
 
   template<typename T>
@@ -51,7 +51,7 @@ public:
 private:
   int verbose_, endcap_, sector_, bx_;
 
-  bool includeNeighbor_, duplicateWires_;
+  bool includeNeighbor_, duplicateTheta_;
 };
 
 #endif

@@ -42,6 +42,8 @@ private:
 
   bool useCSC_, useRPC_;
 
+  int minBX_, maxBX_, bxWindow_;
+
   int version_, ptlut_ver_;
 
   std::string ph_th_lut_;

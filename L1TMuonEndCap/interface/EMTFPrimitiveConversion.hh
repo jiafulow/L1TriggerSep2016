@@ -11,6 +11,7 @@ public:
   void configure(
       const EMTFSectorProcessorLUT* lut,
       int verbose, int endcap, int sector, int bx,
+      bool duplicateTheta, bool fixZonePhi,
       const std::vector<int>& zoneBoundaries1, const std::vector<int>& zoneBoundaries2, int zoneOverlap
   );
 
@@ -35,6 +36,8 @@ private:
   const EMTFSectorProcessorLUT* lut_;
 
   int verbose_, endcap_, sector_, bx_;
+
+  bool duplicateTheta_, fixZonePhi_;
 
   std::vector<int> zoneBoundaries1_, zoneBoundaries2_;
   int zoneOverlap_;

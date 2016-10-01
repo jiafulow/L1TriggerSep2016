@@ -18,6 +18,10 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
   useCSC_      = iConfig.getParameter<bool>("CSCEnable");
   useRPC_      = iConfig.getParameter<bool>("RPCEnable");
 
+  minBX_       = iConfig.getParameter<int>("MinBX");
+  maxBX_       = iConfig.getParameter<int>("MaxBX");
+  bxWindow_    = iConfig.getParameter<int>("BXWindow");
+
   version_     = iConfig.getParameter<int>("Version");
   ptlut_ver_   = iConfig.getParameter<int>("PtLUTVersion");
 
@@ -25,12 +29,10 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
 
   const edm::ParameterSet spPCParams16 = config_.getParameter<edm::ParameterSet>("spPCParams16");
   auto includeNeighbor  = spPCParams16.getParameter<bool>("IncludeNeighbor");
-  auto duplicateWires   = spPCParams16.getParameter<bool>("DuplicateWires");
+  auto duplicateTheta   = spPCParams16.getParameter<bool>("DuplicateTheta");
+  auto fixZonePhi       = spPCParams16.getParameter<bool>("FixZonePhi");
 
   const edm::ParameterSet spPRParams16 = config_.getParameter<edm::ParameterSet>("spPRParams16");
-  auto minBX            = spPRParams16.getParameter<int>("MinBX");
-  auto maxBX            = spPRParams16.getParameter<int>("MaxBX");
-  auto bxWindow         = spPRParams16.getParameter<int>("BXWindow");
   auto zoneBoundaries1  = spPRParams16.getParameter<std::vector<int> >("ZoneBoundaries1");
   auto zoneBoundaries2  = spPRParams16.getParameter<std::vector<int> >("ZoneBoundaries2");
   auto zoneOverlap      = spPRParams16.getParameter<int>("ZoneOverlap");
@@ -58,9 +60,9 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
         sector_processors_.at(es).configure(
             &sector_processor_lut_,
             &pt_assignment_engine_,
-            verbose_, endcap, sector,
-            includeNeighbor, duplicateWires,
-            minBX, maxBX, bxWindow,
+            verbose_, minBX_, maxBX_, bxWindow_,
+            endcap, sector,
+            includeNeighbor, duplicateTheta, fixZonePhi,
             zoneBoundaries1, zoneBoundaries2, zoneOverlap,
             pattDefinitions,
             maxRoadsPerZone, thetaWindow, maxTracks

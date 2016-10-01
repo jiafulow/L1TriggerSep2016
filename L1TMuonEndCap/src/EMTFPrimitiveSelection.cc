@@ -13,7 +13,7 @@ using RPCData = TriggerPrimitive::RPCData;
 
 void EMTFPrimitiveSelection::configure(
       int verbose, int endcap, int sector, int bx,
-      bool includeNeighbor, bool duplicateWires
+      bool includeNeighbor, bool duplicateTheta
 ) {
   verbose_ = verbose;
   endcap_  = endcap;
@@ -21,7 +21,7 @@ void EMTFPrimitiveSelection::configure(
   bx_      = bx;
 
   includeNeighbor_ = includeNeighbor;
-  duplicateWires_  = duplicateWires;
+  duplicateTheta_  = duplicateTheta;
 }
 
 // Specialized for CSC
@@ -46,7 +46,7 @@ void EMTFPrimitiveSelection::process(
   // Duplicate CSC muon primitives
   // If there are 2 LCTs in the same chamber with (strip, wire) = (s1, w1) and (s2, w2)
   // make all combinations with (s1, w1), (s2, w1), (s1, w2), (s2, w2)
-  if (duplicateWires_) {
+  if (duplicateTheta_) {
     std::map<int, TriggerPrimitiveCollection>::iterator map_tp_it  = selected_csc_map.begin();
     std::map<int, TriggerPrimitiveCollection>::iterator map_tp_end = selected_csc_map.end();
 

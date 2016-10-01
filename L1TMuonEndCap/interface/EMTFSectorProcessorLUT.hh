@@ -31,6 +31,8 @@ public:
 
   uint32_t get_ph_zone_offset(int pc_station, int pc_chamber) const;
 
+  uint32_t get_ph_init_hard(int fw_station, int fw_cscid) const;
+
 private:
   void read_file(const std::string& filename, std::vector<uint32_t>& vec);
 
@@ -44,6 +46,7 @@ private:
   std::vector<uint32_t> ph_patt_corr_;
   std::vector<uint32_t> ph_patt_corr_sign_;
   std::vector<uint32_t> ph_zone_offset_;
+  std::vector<uint32_t> ph_init_hard_;
 
   bool ok_;
 };

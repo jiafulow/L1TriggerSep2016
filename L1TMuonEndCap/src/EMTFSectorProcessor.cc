@@ -12,9 +12,9 @@ EMTFSectorProcessor::~EMTFSectorProcessor() {
 void EMTFSectorProcessor::configure(
     const EMTFSectorProcessorLUT* lut,
     const EMTFPtAssignmentEngine* pt_assign_engine,
-    int verbose, int endcap, int sector,
-    bool includeNeighbor, bool duplicateWires,
-    int minBX, int maxBX, int bxWindow,
+    int verbose, int minBX, int maxBX, int bxWindow,
+    int endcap, int sector,
+    bool includeNeighbor, bool duplicateTheta, bool fixZonePhi,
     const std::vector<int>& zoneBoundaries1, const std::vector<int>& zoneBoundaries2, int zoneOverlap,
     const std::vector<std::string>& pattDefinitions,
     int maxRoadsPerZone, int thetaWindow, int maxTracks
@@ -28,16 +28,18 @@ void EMTFSectorProcessor::configure(
 
   pt_assign_engine_ = pt_assign_engine;
 
-  verbose_ = verbose;
-  endcap_  = endcap;
-  sector_  = sector;
+  verbose_  = verbose;
+  minBX_    = minBX;
+  maxBX_    = maxBX;
+  bxWindow_ = bxWindow;
+
+  endcap_   = endcap;
+  sector_   = sector;
 
   includeNeighbor_ = includeNeighbor;
-  duplicateWires_  = duplicateWires;
+  duplicateTheta_  = duplicateTheta;
+  fixZonePhi_      = fixZonePhi;
 
-  minBX_           = minBX;
-  maxBX_           = maxBX;
-  bxWindow_        = bxWindow;
   zoneBoundaries1_ = zoneBoundaries1;
   zoneBoundaries2_ = zoneBoundaries2;
   zoneOverlap_     = zoneOverlap;
@@ -94,13 +96,14 @@ void EMTFSectorProcessor::process_single_bx(
   EMTFPrimitiveSelection prim_sel;
   prim_sel.configure(
       verbose_, endcap_, sector_, bx,
-      includeNeighbor_, duplicateWires_
+      includeNeighbor_, duplicateTheta_
   );
 
   EMTFPrimitiveConversion prim_conv;
   prim_conv.configure(
       lut_,
       verbose_, endcap_, sector_, bx,
+      duplicateTheta_, fixZonePhi_,
       zoneBoundaries1_, zoneBoundaries2_, zoneOverlap_
   );
 

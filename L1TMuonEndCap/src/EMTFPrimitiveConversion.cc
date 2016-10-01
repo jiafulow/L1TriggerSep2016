@@ -13,6 +13,7 @@ using RPCData = TriggerPrimitive::RPCData;
 void EMTFPrimitiveConversion::configure(
     const EMTFSectorProcessorLUT* lut,
     int verbose, int endcap, int sector, int bx,
+    bool duplicateTheta, bool fixZonePhi,
     const std::vector<int>& zoneBoundaries1, const std::vector<int>& zoneBoundaries2, int zoneOverlap
 ) {
   lut_ = lut;
@@ -21,6 +22,9 @@ void EMTFPrimitiveConversion::configure(
   endcap_  = endcap;
   sector_  = sector;
   bx_      = bx;
+
+  duplicateTheta_  = duplicateTheta;
+  fixZonePhi_      = fixZonePhi;
 
   zoneBoundaries1_ = zoneBoundaries1;
   zoneBoundaries2_ = zoneBoundaries2;
@@ -285,6 +289,24 @@ void EMTFPrimitiveConversion::convert_csc(EMTFHitExtra& conv_hit) const {
   int ph_hit = lut().get_ph_disp(fw_endcap, fw_sector, pc_lut_id);
   ph_hit = (ph_hit >> 1) + ph_tmp_sign * (ph_tmp >> 5) + ph_coverage;
 
+  // Full phi +16 to put the rounded value into the middle of error range
+  // Divide full phi by 32, subtract chamber start
+  int ph_hit_fixed = -1 * lut().get_ph_init_hard(fw_station, fw_cscid);
+  ph_hit_fixed = ph_hit_fixed + ((fph + 16) >> 5);
+
+  if (fixZonePhi_)
+    ph_hit = ph_hit_fixed;
+
+  // Zone phi
+  int zone_hit = lut().get_ph_zone_offset(pc_station, pc_chamber);
+  zone_hit += ph_hit;
+
+  int zone_hit_fixed = lut().get_ph_init_hard(fw_station, fw_cscid);
+  zone_hit_fixed += ph_hit;
+
+  if (fixZonePhi_)
+    zone_hit = zone_hit_fixed;
+
   // ___________________________________________________________________________
   // th conversion
 
@@ -412,9 +434,6 @@ void EMTFPrimitiveConversion::convert_csc(EMTFHitExtra& conv_hit) const {
     }
   }
   assert(zone_code > 0);
-
-  int zone_hit = lut().get_ph_zone_offset(pc_station, pc_chamber);
-  zone_hit += ph_hit;
 
   // ___________________________________________________________________________
   // Output

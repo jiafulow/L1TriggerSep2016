@@ -30,9 +30,9 @@ public:
   void configure(
       const EMTFSectorProcessorLUT* lut,
       const EMTFPtAssignmentEngine* pt_assign_engine,
-      int verbose, int endcap, int sector,
-      bool includeNeighbor, bool duplicateWires,
-      int minBX, int maxBX, int bxWindow,
+      int verbose, int minBX, int maxBX, int bxWindow,
+      int endcap, int sector,
+      bool includeNeighbor, bool duplicateTheta, bool fixZonePhi,
       const std::vector<int>& zoneBoundaries1, const std::vector<int>& zoneBoundaries2, int zoneOverlap,
       const std::vector<std::string>& pattDefinitions,
       int maxRoadsPerZone, int thetaWindow, int maxTracks
@@ -61,11 +61,12 @@ private:
 
   const EMTFPtAssignmentEngine* pt_assign_engine_;
 
-  int verbose_, endcap_, sector_;
+  int verbose_, minBX_, maxBX_, bxWindow_;
 
-  bool includeNeighbor_, duplicateWires_;
+  int endcap_, sector_;
 
-  int minBX_, maxBX_, bxWindow_;
+  bool includeNeighbor_, duplicateTheta_, fixZonePhi_;
+
   std::vector<int> zoneBoundaries1_, zoneBoundaries2_;
   int zoneOverlap_;
   std::vector<std::string> pattDefinitions_;

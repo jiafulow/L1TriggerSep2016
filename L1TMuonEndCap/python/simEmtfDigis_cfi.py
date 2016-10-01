@@ -18,6 +18,11 @@ simEmtfDigis = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
     CSCEnable = cms.bool(True),
     RPCEnable = cms.bool(False),
 
+    # BX
+    MinBX = cms.int32(-3),
+    MaxBX = cms.int32(+4),
+    BXWindow = cms.int32(3),
+
     # Versioning
     Version = cms.int32(1),
     PtLUTVersion = cms.int32(1),
@@ -28,14 +33,12 @@ simEmtfDigis = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
     # Sector processor primitive-conversion parameters
     spPCParams16 = cms.PSet(
         IncludeNeighbor = cms.bool(True),
-        DuplicateWires = cms.bool(True),
+        DuplicateTheta = cms.bool(True),
+        FixZonePhi = cms.bool(True),
     ),
 
     # Sector processor pattern-recognition parameters
     spPRParams16 = cms.PSet(
-        MinBX = cms.int32(-3),
-        MaxBX = cms.int32(+4),
-        BXWindow = cms.int32(3),
         ZoneBoundaries1 = cms.vint32(0,42,50,88),
         ZoneBoundaries2 = cms.vint32(41,49,87,127),
         ZoneOverlap = cms.int32(2),
