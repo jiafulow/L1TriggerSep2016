@@ -23,6 +23,17 @@ void EMTFPrimitiveMatching::process(
     const std::vector<EMTFRoadExtraCollection>& zone_roads,
     std::vector<EMTFTrackExtraCollection>& zone_tracks
 ) const {
+  int num_roads = 0;
+  for (const auto& roads : zone_roads)
+    num_roads += roads.size();
+  bool early_exit = (num_roads == 0);
+
+  zone_tracks.clear();
+  zone_tracks.resize(NUM_ZONES);
+
+  if (early_exit)
+    return;
+
 
   // Organize converted hits by (zone, station)
   std::array<EMTFHitExtraCollection, NUM_ZONES*NUM_STATIONS> zs_conv_hits;
@@ -109,9 +120,6 @@ void EMTFPrimitiveMatching::process(
 
 
   // Build all tracks in each zone
-  zone_tracks.clear();
-  zone_tracks.resize(NUM_ZONES);
-
   for (int izone = 0; izone < NUM_ZONES; ++izone) {
     const EMTFRoadExtraCollection& roads = zone_roads.at(izone);
     const int nroads = roads.size();
