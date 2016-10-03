@@ -24,7 +24,8 @@ namespace {
 void EMTFPatternRecognition::configure(
     int verbose, int endcap, int sector, int bx,
     int minBX, int maxBX, int bxWindow,
-    const std::vector<std::string>& pattDefinitions, int maxRoadsPerZone
+    const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions,
+    int maxRoadsPerZone, bool useSecondEarliest, bool useSymPatterns
 ) {
   verbose_ = verbose;
   endcap_  = endcap;
@@ -35,8 +36,11 @@ void EMTFPatternRecognition::configure(
   maxBX_           = maxBX;
   bxWindow_        = bxWindow;
 
-  pattDefinitions_ = pattDefinitions;
-  maxRoadsPerZone_ = maxRoadsPerZone;
+  pattDefinitions_    = pattDefinitions;
+  symPattDefinitions_ = symPattDefinitions;
+  maxRoadsPerZone_    = maxRoadsPerZone;
+  useSecondEarliest_  = useSecondEarliest;
+  useSymPatterns_     = useSymPatterns;
 
   configure_details();
 }
@@ -45,76 +49,151 @@ void EMTFPatternRecognition::configure_details() {
   patterns_.clear();
 
   // Parse pattern definitions
-  for (const auto& s: pattDefinitions_) {
-    const std::vector<std::string>& tokens = split_string(s, ',', ':');  // split by comma or colon
-    assert(tokens.size() == 9);  // want to find 9 numbers
-    int itoken = 0;
+  if (!useSymPatterns_) {
+    for (const auto& s: pattDefinitions_) {
+      const std::vector<std::string>& tokens = split_string(s, ',', ':');  // split by comma or colon
+      assert(tokens.size() == 9);  // want to find 9 numbers
+      int itoken = 0;
 
-    // Get the 9 integers
-    // straightness, hits in ME1, hits in ME2, hits in ME3, hits in ME4
-    int straightness = std::stoi(tokens.at(itoken++));
-    int st1_max      = std::stoi(tokens.at(itoken++));
-    int st1_min      = std::stoi(tokens.at(itoken++));
-    int st2_max      = std::stoi(tokens.at(itoken++));
-    int st2_min      = std::stoi(tokens.at(itoken++));
-    int st3_max      = std::stoi(tokens.at(itoken++));
-    int st3_min      = std::stoi(tokens.at(itoken++));
-    int st4_max      = std::stoi(tokens.at(itoken++));
-    int st4_min      = std::stoi(tokens.at(itoken++));
+      // Get the 9 integers
+      // straightness, hits in ME1, hits in ME2, hits in ME3, hits in ME4
+      int straightness = std::stoi(tokens.at(itoken++));
+      int st1_max      = std::stoi(tokens.at(itoken++));
+      int st1_min      = std::stoi(tokens.at(itoken++));
+      int st2_max      = std::stoi(tokens.at(itoken++));
+      int st2_min      = std::stoi(tokens.at(itoken++));
+      int st3_max      = std::stoi(tokens.at(itoken++));
+      int st3_min      = std::stoi(tokens.at(itoken++));
+      int st4_max      = std::stoi(tokens.at(itoken++));
+      int st4_min      = std::stoi(tokens.at(itoken++));
 
-    // There can only be one zone hit in the key station in the pattern
-    // and it has to be this magic number
-    assert(st2_min == PATTERN_KEY_ZHIT && st2_max == PATTERN_KEY_ZHIT);
+      // There can only be one zone hit in the key station in the pattern
+      // and it has to be this magic number
+      assert(st2_max == PATTERN_KEY_ZHIT && st2_min == PATTERN_KEY_ZHIT);
 
-    // There is extra "padding" in st1 w.r.t st2,3,4
-    // Add the extra padding to st2,3,4
-    st2_max += PATTERN_PADDING_EXTRA_W_ST1;
-    st2_min += PATTERN_PADDING_EXTRA_W_ST1;
-    st3_max += PATTERN_PADDING_EXTRA_W_ST1;
-    st3_min += PATTERN_PADDING_EXTRA_W_ST1;
-    st4_max += PATTERN_PADDING_EXTRA_W_ST1;
-    st4_min += PATTERN_PADDING_EXTRA_W_ST1;
+      // There is extra "padding" in st1 w.r.t st2,3,4
+      // Add the extra padding to st2,3,4
+      st2_max += PATTERN_PADDING_EXTRA_W_ST1;
+      st2_min += PATTERN_PADDING_EXTRA_W_ST1;
+      st3_max += PATTERN_PADDING_EXTRA_W_ST1;
+      st3_min += PATTERN_PADDING_EXTRA_W_ST1;
+      st4_max += PATTERN_PADDING_EXTRA_W_ST1;
+      st4_min += PATTERN_PADDING_EXTRA_W_ST1;
 
-    // Create a pattern
-    EMTFPhiMemoryImage pattern;
-    pattern.set_straightness(straightness);
+      // Create a pattern
+      EMTFPhiMemoryImage pattern;
+      pattern.set_straightness(straightness);
 
-    for (int i = st1_min; i <= st1_max; i++)
-      pattern.set_bit(0, i);
-    for (int i = st2_min; i <= st2_max; i++)
-      pattern.set_bit(1, i);
-    for (int i = st3_min; i <= st3_max; i++)
-      pattern.set_bit(2, i);
-    for (int i = st4_min; i <= st4_max; i++)
-      pattern.set_bit(3, i);
+      for (int i = st1_min; i <= st1_max; i++)
+        pattern.set_bit(0, i);
+      for (int i = st2_min; i <= st2_max; i++)
+        pattern.set_bit(1, i);
+      for (int i = st3_min; i <= st3_max; i++)
+        pattern.set_bit(2, i);
+      for (int i = st4_min; i <= st4_max; i++)
+        pattern.set_bit(3, i);
 
-    // Remove the extra padding
-    pattern.rotr(PATTERN_PADDING_EXTRA_W_ST1);
+      // Remove the extra padding
+      pattern.rotr(PATTERN_PADDING_EXTRA_W_ST1);
 
-    if (verbose_ > 1) {  // debug
-      std::cout << "Pattern definition: " << straightness << " "
-          << st4_min << " " << st4_max << " "
-          << st3_min << " " << st3_max << " "
-          << st2_min << " " << st2_max << " "
-          << st1_min << " " << st1_max << std::endl;
-      std::cout << pattern << std::endl;
+      if (verbose_ > 1) {  // debug
+        std::cout << "Pattern definition: " << straightness << " "
+            << st4_min << " " << st4_max << " "
+            << st3_min << " " << st3_max << " "
+            << st2_min << " " << st2_max << " "
+            << st1_min << " " << st1_max << " "
+            << std::endl;
+        std::cout << pattern << std::endl;
+      }
+
+      patterns_.push_back(pattern);
     }
+    assert(patterns_.size() == pattDefinitions_.size());
 
-    patterns_.push_back(pattern);
+  } else {
+    for (const auto& s: symPattDefinitions_) {
+      const std::vector<std::string>& tokens = split_string(s, ',', ':');  // split by comma or colon
+      assert(tokens.size() == 17);  // want to find 17 numbers
+      int itoken = 0;
+
+      // Get the 17 integers
+      // straightness, hits in ME1, hits in ME2, hits in ME3, hits in ME4
+      int straightness = std::stoi(tokens.at(itoken++));
+      int st1_max1     = std::stoi(tokens.at(itoken++));
+      int st1_min1     = std::stoi(tokens.at(itoken++));
+      int st1_max2     = std::stoi(tokens.at(itoken++));
+      int st1_min2     = std::stoi(tokens.at(itoken++));
+      int st2_max1     = std::stoi(tokens.at(itoken++));
+      int st2_min1     = std::stoi(tokens.at(itoken++));
+      int st2_max2     = std::stoi(tokens.at(itoken++));
+      int st2_min2     = std::stoi(tokens.at(itoken++));
+      int st3_max1     = std::stoi(tokens.at(itoken++));
+      int st3_min1     = std::stoi(tokens.at(itoken++));
+      int st3_max2     = std::stoi(tokens.at(itoken++));
+      int st3_min2     = std::stoi(tokens.at(itoken++));
+      int st4_max1     = std::stoi(tokens.at(itoken++));
+      int st4_min1     = std::stoi(tokens.at(itoken++));
+      int st4_max2     = std::stoi(tokens.at(itoken++));
+      int st4_min2     = std::stoi(tokens.at(itoken++));
+
+      // There can only be one zone hit in the key station in the pattern
+      // and it has to be this magic number
+      assert(st2_max1 == PATTERN_KEY_ZHIT && st2_min1 == PATTERN_KEY_ZHIT);
+      assert(st2_max2 == PATTERN_KEY_ZHIT && st2_min2 == PATTERN_KEY_ZHIT);
+
+      // There is extra "padding" in st1 w.r.t st2,3,4
+      // Add the extra padding to st2,3,4
+      st2_max1 += PATTERN_PADDING_EXTRA_W_ST1;
+      st2_min1 += PATTERN_PADDING_EXTRA_W_ST1;
+      st2_max2 += PATTERN_PADDING_EXTRA_W_ST1;
+      st2_min2 += PATTERN_PADDING_EXTRA_W_ST1;
+      st3_max1 += PATTERN_PADDING_EXTRA_W_ST1;
+      st3_min1 += PATTERN_PADDING_EXTRA_W_ST1;
+      st3_max2 += PATTERN_PADDING_EXTRA_W_ST1;
+      st3_min2 += PATTERN_PADDING_EXTRA_W_ST1;
+      st4_max1 += PATTERN_PADDING_EXTRA_W_ST1;
+      st4_min1 += PATTERN_PADDING_EXTRA_W_ST1;
+      st4_max2 += PATTERN_PADDING_EXTRA_W_ST1;
+      st4_min2 += PATTERN_PADDING_EXTRA_W_ST1;
+
+      // Create a pattern
+      EMTFPhiMemoryImage pattern;
+      pattern.set_straightness(straightness);
+
+      for (int i = st1_min1; i <= st1_max1; i++)
+        pattern.set_bit(0, i);
+      for (int i = st1_min2; i <= st1_max2; i++)
+        pattern.set_bit(0, i);
+      for (int i = st2_min1; i <= st2_max1; i++)
+        pattern.set_bit(1, i);
+      for (int i = st2_min2; i <= st2_max2; i++)
+        pattern.set_bit(1, i);
+      for (int i = st3_min1; i <= st3_max1; i++)
+        pattern.set_bit(2, i);
+      for (int i = st3_min2; i <= st3_max2; i++)
+        pattern.set_bit(2, i);
+      for (int i = st4_min1; i <= st4_max1; i++)
+        pattern.set_bit(3, i);
+      for (int i = st4_min2; i <= st4_max2; i++)
+        pattern.set_bit(3, i);
+
+      // Remove the extra padding
+      pattern.rotr(PATTERN_PADDING_EXTRA_W_ST1);
+
+      if (verbose_ > 1) {  // debug
+        std::cout << "Pattern definition: " << straightness << " "
+            << st4_min1 << " " << st4_max1 << " " << st4_min2 << " " << st4_max2 << " "
+            << st3_min1 << " " << st3_max1 << " " << st3_min2 << " " << st3_max2 << " "
+            << st2_min1 << " " << st2_max1 << " " << st2_min2 << " " << st2_max2 << " "
+            << st1_min1 << " " << st1_max1 << " " << st1_min2 << " " << st1_max2 << " "
+            << std::endl;
+        std::cout << pattern << std::endl;
+      }
+
+      patterns_.push_back(pattern);
+    }
+    assert(patterns_.size() == symPattDefinitions_.size());
   }
-  assert(patterns_.size() == pattDefinitions_.size());
-
-  //// pattern half-width for stations 3,4
-  //const int pat_w_st3 = 3;
-  //// pattern half-width for station 1
-  //const int pat_w_st1 = pat_w_st3 + 1;
-  //// number of input bits for stations 3,4
-  //const int full_pat_w_st3 = (1 << (pat_w_st3+1)) - 1;  // = 15
-  //// number of input bits for station 1
-  //const int full_pat_w_st1 = (1 << (pat_w_st1+1)) - 1;  // = 31
-  //// width of zero padding for station copies
-  //const int padding_w_st3 = full_pat_w_st3 / 2;  // = 7
-  //const int padding_w_st1 = full_pat_w_st1 / 2;  // = 15
 }
 
 void EMTFPatternRecognition::process(
@@ -251,16 +330,36 @@ void EMTFPatternRecognition::process_single_zone(
       bool more_than_zero = (layer_code != 0);
 
       if (more_than_zero) {
-        // Starts counting at any hit in the pattern, even single
-        auto ins = patt_lifetime_map.insert({patt_ref, 1});
+        // Insert this pattern
+        auto ins = patt_lifetime_map.insert({patt_ref, 0});
 
-        if (!ins.second) {  // already exists, increment counter
-          // Is lifetime up?
-          if (ins.first->second == drift_time) {
+        if (!useSecondEarliest_) {  // Use 1st earliest
+          auto patt_ins = ins.first;  // iterator of patt_lifetime_map pointing to this pattern
+          bool patt_exists = !ins.second;
+
+          if (patt_exists) {  // if exists
+            if (patt_ins->second == drift_time) {  // is lifetime up?
+              is_lifetime_up = true;
+            }
+          }
+          patt_ins->second += 1;  // bx starts counting at any hit in the pattern, even single
+
+        } else {  // Use 2nd earliest
+          auto patt_ins = ins.first;  // iterator of patt_lifetime_map pointing to this pattern
+          int old_bx_shifter = patt_ins->second;
+          int bx2 = old_bx_shifter & (1<<2);
+          int bx1 = old_bx_shifter & (1<<1);
+          int bx0 = old_bx_shifter & (1<<0);
+
+          if (bx2 == 0 && bx1 == 1) {  // is lifetime up? (note: drift_time is not being used)
             is_lifetime_up = true;
           }
 
-          ins.first->second += 1;
+          bx2 = bx1;
+          bx1 = bx0;
+          bx0 = more_than_zero;  // put 1 in shifter when one layer is hit
+          int new_bx_shifter = (bx2 << 2) | (bx1 << 1) | bx0;
+          patt_ins->second = new_bx_shifter;
         }
 
       } else {

@@ -16,8 +16,9 @@ void EMTFSectorProcessor::configure(
     int endcap, int sector,
     bool includeNeighbor, bool duplicateTheta, bool fixZonePhi,
     const std::vector<int>& zoneBoundaries1, const std::vector<int>& zoneBoundaries2, int zoneOverlap,
-    const std::vector<std::string>& pattDefinitions,
-    int maxRoadsPerZone, int thetaWindow, int maxTracks
+    const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions,
+    int maxRoadsPerZone, int thetaWindow, int maxTracks,
+    bool useSecondEarliest, bool useSymPatterns
 ) {
   assert(MIN_ENDCAP <= endcap && endcap <= MAX_ENDCAP);
   assert(MIN_TRIGSECTOR <= sector && sector <= MAX_TRIGSECTOR);
@@ -40,13 +41,16 @@ void EMTFSectorProcessor::configure(
   duplicateTheta_  = duplicateTheta;
   fixZonePhi_      = fixZonePhi;
 
-  zoneBoundaries1_ = zoneBoundaries1;
-  zoneBoundaries2_ = zoneBoundaries2;
-  zoneOverlap_     = zoneOverlap;
-  pattDefinitions_ = pattDefinitions;
-  maxRoadsPerZone_ = maxRoadsPerZone;
-  thetaWindow_     = thetaWindow;
-  maxTracks_       = maxTracks;
+  zoneBoundaries1_    = zoneBoundaries1;
+  zoneBoundaries2_    = zoneBoundaries2;
+  zoneOverlap_        = zoneOverlap;
+  pattDefinitions_    = pattDefinitions;
+  symPattDefinitions_ = symPattDefinitions;
+  maxRoadsPerZone_    = maxRoadsPerZone;
+  thetaWindow_        = thetaWindow;
+  maxTracks_          = maxTracks;
+  useSecondEarliest_  = useSecondEarliest;
+  useSymPatterns_     = useSymPatterns;
 }
 
 void EMTFSectorProcessor::process(
@@ -111,7 +115,8 @@ void EMTFSectorProcessor::process_single_bx(
   patt_recog.configure(
       verbose_, endcap_, sector_, bx,
       minBX_, maxBX_, bxWindow_,
-      pattDefinitions_, maxRoadsPerZone_
+      pattDefinitions_, symPattDefinitions_,
+      maxRoadsPerZone_, useSecondEarliest_, useSymPatterns_
   );
 
   EMTFPrimitiveMatching prim_match;

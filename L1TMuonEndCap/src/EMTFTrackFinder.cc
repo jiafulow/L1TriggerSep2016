@@ -28,21 +28,24 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
   ph_th_lut_   = iConfig.getParameter<std::string>("PhThLUT");
 
   const edm::ParameterSet spPCParams16 = config_.getParameter<edm::ParameterSet>("spPCParams16");
-  auto includeNeighbor  = spPCParams16.getParameter<bool>("IncludeNeighbor");
-  auto duplicateTheta   = spPCParams16.getParameter<bool>("DuplicateTheta");
-  auto fixZonePhi       = spPCParams16.getParameter<bool>("FixZonePhi");
+  auto includeNeighbor    = spPCParams16.getParameter<bool>("IncludeNeighbor");
+  auto duplicateTheta     = spPCParams16.getParameter<bool>("DuplicateTheta");
+  auto fixZonePhi         = spPCParams16.getParameter<bool>("FixZonePhi");
 
   const edm::ParameterSet spPRParams16 = config_.getParameter<edm::ParameterSet>("spPRParams16");
-  auto zoneBoundaries1  = spPRParams16.getParameter<std::vector<int> >("ZoneBoundaries1");
-  auto zoneBoundaries2  = spPRParams16.getParameter<std::vector<int> >("ZoneBoundaries2");
-  auto zoneOverlap      = spPRParams16.getParameter<int>("ZoneOverlap");
-  auto pattDefinitions  = spPRParams16.getParameter<std::vector<std::string> >("PatternDefinitions");
-  auto maxRoadsPerZone  = spPRParams16.getParameter<int>("MaxRoadsPerZone");
-  auto thetaWindow      = spPRParams16.getParameter<int>("ThetaWindow");
-  auto maxTracks        = spPRParams16.getParameter<int>("MaxTracks");
+  auto zoneBoundaries1    = spPRParams16.getParameter<std::vector<int> >("ZoneBoundaries1");
+  auto zoneBoundaries2    = spPRParams16.getParameter<std::vector<int> >("ZoneBoundaries2");
+  auto zoneOverlap        = spPRParams16.getParameter<int>("ZoneOverlap");
+  auto pattDefinitions    = spPRParams16.getParameter<std::vector<std::string> >("PatternDefinitions");
+  auto symPattDefinitions = spPRParams16.getParameter<std::vector<std::string> >("SymPatternDefinitions");
+  auto maxRoadsPerZone    = spPRParams16.getParameter<int>("MaxRoadsPerZone");
+  auto thetaWindow        = spPRParams16.getParameter<int>("ThetaWindow");
+  auto maxTracks          = spPRParams16.getParameter<int>("MaxTracks");
+  auto useSecondEarliest  = spPRParams16.getParameter<bool>("UseSecondEarliest");
+  auto useSymPatterns     = spPRParams16.getParameter<bool>("UseSymmetricalPatterns");
 
   const edm::ParameterSet spPAParams16 = config_.getParameter<edm::ParameterSet>("spPAParams16");
-  auto treeDir          = spPAParams16.getParameter<std::string>("TreeDir");
+  auto treeDir            = spPAParams16.getParameter<std::string>("TreeDir");
 
 
   try {
@@ -64,8 +67,9 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
             endcap, sector,
             includeNeighbor, duplicateTheta, fixZonePhi,
             zoneBoundaries1, zoneBoundaries2, zoneOverlap,
-            pattDefinitions,
-            maxRoadsPerZone, thetaWindow, maxTracks
+            pattDefinitions, symPattDefinitions,
+            maxRoadsPerZone, thetaWindow, maxTracks,
+            useSecondEarliest, useSymPatterns
         );
       }
     }

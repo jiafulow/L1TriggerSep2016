@@ -54,9 +54,19 @@ simEmtfDigis = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
             "0,30:23,7:7,7:0,7:0",
             "0,7:0,7:7,14:7,14:7",
         ),
+        SymPatternDefinitions = cms.vstring(
+            # straightness, hits in ME1, hits in ME2, hits in ME3, hits in ME4
+            "4,15:15:15:15,7:7:7:7,7:7:7:7,7:7:7:7",
+            "3,16:16:14:14,7:7:7:7,8:7:7:6,8:7:7:6",
+            "2,18:17:13:12,7:7:7:7,10:7:7:4,10:7:7:4",
+            "1,22:19:11:8,7:7:7:7,14:7:7:0,14:7:7:0",
+            "0,30:23:7:0,7:7:7:7,14:7:7:0,14:7:7:0",
+        ),
         MaxRoadsPerZone = cms.int32(3),
         ThetaWindow = cms.int32(4),
         MaxTracks = cms.int32(3),
+        UseSecondEarliest = cms.bool(True),
+        UseSymmetricalPatterns = cms.bool(True),
     ),
 
     # Sector processor pt-assignment parameters

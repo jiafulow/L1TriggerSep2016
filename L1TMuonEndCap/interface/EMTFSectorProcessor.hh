@@ -34,8 +34,9 @@ public:
       int endcap, int sector,
       bool includeNeighbor, bool duplicateTheta, bool fixZonePhi,
       const std::vector<int>& zoneBoundaries1, const std::vector<int>& zoneBoundaries2, int zoneOverlap,
-      const std::vector<std::string>& pattDefinitions,
-      int maxRoadsPerZone, int thetaWindow, int maxTracks
+      const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions,
+      int maxRoadsPerZone, int thetaWindow, int maxTracks,
+      bool useSecondEarliest, bool useSymPatterns
   );
 
   void process(
@@ -69,8 +70,9 @@ private:
 
   std::vector<int> zoneBoundaries1_, zoneBoundaries2_;
   int zoneOverlap_;
-  std::vector<std::string> pattDefinitions_;
+  std::vector<std::string> pattDefinitions_, symPattDefinitions_;
   int maxRoadsPerZone_, thetaWindow_, maxTracks_;
+  bool useSecondEarliest_, useSymPatterns_;
 };
 
 #endif
