@@ -16,6 +16,16 @@ public:
       EMTFTrackExtraCollection& best_tracks
   ) const;
 
+  void cancel_one_bx(
+      const std::vector<EMTFTrackExtraCollection>& zone_tracks,
+      EMTFTrackExtraCollection& best_tracks
+  ) const;
+
+  void cancel_three_bx(
+      const std::vector<EMTFTrackExtraCollection>& zone_tracks,
+      EMTFTrackExtraCollection& best_tracks
+  ) const;
+
 private:
   int verbose_, endcap_, sector_, bx_;
 
