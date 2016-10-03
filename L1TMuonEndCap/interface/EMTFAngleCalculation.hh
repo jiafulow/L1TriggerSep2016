@@ -17,6 +17,8 @@ public:
 
   void calculate_angles(EMTFTrackExtra& track) const;
 
+  void calculate_bx(EMTFTrackExtra& track) const;
+
   void erase_tracks(EMTFTrackExtraCollection& tracks) const;
 
   int get_bt_chamber(const EMTFHitExtra& conv_hit) const;

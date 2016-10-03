@@ -26,17 +26,21 @@ void EMTFAngleCalculation::process(
 
   for (int izone = 0; izone < NUM_ZONES; ++izone) {
     EMTFTrackExtraCollection& tracks = zone_tracks.at(izone);  // pass by reference
-    const int ntracks = tracks.size();
 
-    for (int itrack = 0; itrack < ntracks; ++itrack) {
-      EMTFTrackExtra& track = tracks.at(itrack);  // pass by reference
-
+    for (unsigned itrack = 0; itrack < tracks.size(); ++itrack) {
       // Calculate deltas
+      EMTFTrackExtra& track = tracks.at(itrack);  // pass by reference
       calculate_angles(track);
     }
 
     // Erase tracks with rank = 0
     erase_tracks(tracks);
+
+    for (unsigned itrack = 0; itrack < tracks.size(); ++itrack) {
+      // Calculate bx
+      EMTFTrackExtra& track = tracks.at(itrack);  // pass by reference
+      calculate_bx(track);
+    }
   }
 
   if (verbose_ > 0) {  // debug
@@ -279,6 +283,35 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
   track.ptlut_data = ptlut_data;
 }
 
+void EMTFAngleCalculation::calculate_bx(EMTFTrackExtra& track) const {
+  int h2 = 0;
+  int h1 = 0;
+
+  for (const auto& conv_hit : track.xhits) {
+    if (conv_hit.bx == bx_ - 2)  // count stubs delayed by 2 BX
+      h2 += 1;
+    if (conv_hit.bx >= bx_ - 1)  // count stubs delayed by 1 BX or more
+      h1 += 1;
+  }
+
+  int first_bx = bx_ - 2;
+
+  int second_bx = bx_ - 2;
+  if (h2 >= 2) {
+    second_bx = bx_ - 2;  // two stubs in earliest BX, analyze immediately
+  } else if (h1 >= 2) {
+    second_bx = bx_ - 1;  // second-earliest stub one BX late
+  } else {
+    second_bx = bx_ - 0;  // second-earliest stub two BXs late
+  }
+
+  // ___________________________________________________________________________
+  // Output
+
+  track.first_bx  = first_bx;
+  track.second_bx = second_bx;
+}
+
 void EMTFAngleCalculation::erase_tracks(EMTFTrackExtraCollection& tracks) const {
   // Erase tracks with rank == 0
   // using erase-remove idiom
@@ -312,9 +345,7 @@ void EMTFAngleCalculation::erase_tracks(EMTFTrackExtraCollection& tracks) const 
     std::array<bool, NUM_STATIONS> stations;  // keep track of which station is empty
   } selected_hit_pred;
 
-  int ntracks = tracks.size();
-
-  for (int itrack = 0; itrack < ntracks; ++itrack) {
+  for (unsigned itrack = 0; itrack < tracks.size(); ++itrack) {
     EMTFTrackExtra& track = tracks.at(itrack);  // pass by reference
     selected_hit_pred.ptlut_data = track.ptlut_data;  // capture
     selected_hit_pred.stations.fill(true);
