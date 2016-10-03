@@ -17,6 +17,8 @@ EMTFPhiMemoryImage::~EMTFPhiMemoryImage() {
 
 EMTFPhiMemoryImage::EMTFPhiMemoryImage(const EMTFPhiMemoryImage& other) {
   std::copy(&(other._buffer[0][0]), &(other._buffer[0][0]) + (_layers*_units), &(_buffer[0][0]));
+
+  _straightness = other._straightness;
 }
 
 EMTFPhiMemoryImage::EMTFPhiMemoryImage(EMTFPhiMemoryImage&& other) noexcept : EMTFPhiMemoryImage() {
@@ -31,10 +33,14 @@ EMTFPhiMemoryImage& EMTFPhiMemoryImage::operator=(EMTFPhiMemoryImage other) {
 
 void EMTFPhiMemoryImage::swap(EMTFPhiMemoryImage& other) {
   std::swap_ranges(&(other._buffer[0][0]), &(other._buffer[0][0]) + (_layers*_units), &(_buffer[0][0]));
+
+  std::swap(other._straightness, _straightness);
 }
 
 void EMTFPhiMemoryImage::reset() {
   std::fill(&(_buffer[0][0]), &(_buffer[0][0]) + (_layers*_units), 0);
+
+  _straightness = 0;
 }
 
 void EMTFPhiMemoryImage::set_bit(unsigned int layer, unsigned int bit) {

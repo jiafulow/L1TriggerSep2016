@@ -49,7 +49,6 @@ private:
   int maxRoadsPerZone_;
 
   std::vector<EMTFPhiMemoryImage> patterns_;
-  std::vector<int> straightnesses_;
 };
 
 typedef EMTFPatternRecognition::pattern_ref_t EMTFPatternRef;

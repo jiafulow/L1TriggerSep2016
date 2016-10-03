@@ -2,7 +2,6 @@
 
 #include "helper.h"  // to_hex, to_binary
 
-#define NUM_PATTERNS 9
 #define PATTERN_KEY_ZHIT 7
 #define PATTERN_PADDING_EXTRA_W_ST1 15-7
 
@@ -44,7 +43,6 @@ void EMTFPatternRecognition::configure(
 
 void EMTFPatternRecognition::configure_details() {
   patterns_.clear();
-  straightnesses_.clear();
 
   // Parse pattern definitions
   for (const auto& s: pattDefinitions_) {
@@ -79,6 +77,8 @@ void EMTFPatternRecognition::configure_details() {
 
     // Create a pattern
     EMTFPhiMemoryImage pattern;
+    pattern.set_straightness(straightness);
+
     for (int i = st1_min; i <= st1_max; i++)
       pattern.set_bit(0, i);
     for (int i = st2_min; i <= st2_max; i++)
@@ -101,9 +101,8 @@ void EMTFPatternRecognition::configure_details() {
     }
 
     patterns_.push_back(pattern);
-    straightnesses_.push_back(straightness);
   }
-  assert(patterns_.size() == NUM_PATTERNS);
+  assert(patterns_.size() == pattDefinitions_.size());
 
   //// pattern half-width for stations 3,4
   //const int pat_w_st3 = 3;
@@ -123,6 +122,10 @@ void EMTFPatternRecognition::process(
     std::map<pattern_ref_t, int>& patt_lifetime_map,
     std::vector<EMTFRoadExtraCollection>& zone_roads
 ) const {
+  int num_conv_hits = 0;
+  for (const auto& conv_hits : extended_conv_hits)
+    num_conv_hits += conv_hits.size();
+  bool early_exit = (num_conv_hits == 0) && (patt_lifetime_map.size() == 0);
 
   if (verbose_ > 0) {  // debug
     for (const auto& conv_hits : extended_conv_hits) {
@@ -134,7 +137,15 @@ void EMTFPatternRecognition::process(
             << std::endl;
       }
     }
+    std::cout << "num_conv_hits: " << num_conv_hits << " num_patt_lifetimes: " << patt_lifetime_map.size() << std::endl;
   }
+
+  zone_roads.clear();
+  zone_roads.resize(NUM_ZONES);
+
+  if (early_exit)
+    return;
+
 
   // Make zone images
   std::array<EMTFPhiMemoryImage, NUM_ZONES> zone_images;
@@ -151,9 +162,6 @@ void EMTFPatternRecognition::process(
   }
 
   // Perform pattern recognition in each zone
-  zone_roads.clear();
-  zone_roads.resize(NUM_ZONES);
-
   for (int izone = 0; izone < NUM_ZONES; ++izone) {
     process_single_zone(izone, zone_images.at(izone), patt_lifetime_map, zone_roads.at(izone));
   }
@@ -215,6 +223,7 @@ void EMTFPatternRecognition::process_single_zone(
   roads.clear();
 
   const int drift_time = bxWindow_ - 1;
+  const int npatterns = patterns_.size();
 
   // The zone hit image is rotated/shifted before comparing with patterns
   // First, rotate left/shift up to the zone hit in the key station
@@ -230,15 +239,18 @@ void EMTFPatternRecognition::process_single_zone(
     EMTFRoadExtra tmp_road;
 
     // Compare with patterns
-    for (int ipatt = 0; ipatt < NUM_PATTERNS; ++ipatt) {
+    for (int ipatt = 0; ipatt < npatterns; ++ipatt) {
       const EMTFPhiMemoryImage& patt = patterns_.at(ipatt);
       const pattern_ref_t patt_ref = {{zone, izhit, ipatt}};  // due to GCC bug, use {{}} instead of {}
+      int straightness = patt.get_straightness();
 
       bool is_lifetime_up = false;
 
       int layer_code = patt.op_and(cloned_image);  // kind of like AND operator
+      bool more_than_one  = (layer_code != 0) && (layer_code != 1) && (layer_code != 2) && (layer_code != 4);
+      bool more_than_zero = (layer_code != 0);
 
-      if (layer_code > 0) {
+      if (more_than_zero) {
         // Starts counting at any hit in the pattern, even single
         auto ins = patt_lifetime_map.insert({patt_ref, 1});
 
@@ -257,12 +269,7 @@ void EMTFPatternRecognition::process_single_zone(
 
       // If lifetime is up, and not single-layer hit patterns (stations 3&4 considered
       // as a single layer), find quality of this pattern
-      if (
-        is_lifetime_up &&
-        ((layer_code != 1) && (layer_code != 2) && (layer_code != 4) && (layer_code != 0))
-      ) {
-        int straightness = straightnesses_.at(ipatt);
-
+      if (is_lifetime_up && more_than_one) {
         // This quality code scheme is giving almost-equal priority to
         // more stations and better straightness
         // Station 1 has higher weight, station 2 lower, stations 3&4 lowest
@@ -299,18 +306,19 @@ void EMTFPatternRecognition::process_single_zone(
         }
       }
 
-    }  // end loop over zone hits
+    }  // end loop over patterns
 
     // Output road
     if (max_quality_code != -1) {
       roads.push_back(tmp_road);
     }
 
-  }  // end loop over patterns
+  }  // end loop over zone hits
 
 
   // Ghost cancellation logic by considering neighbor patterns
-  std::vector<int> quality_codes(NUM_ZONE_HITS, 0);
+  std::array<int, NUM_ZONE_HITS> quality_codes;
+  quality_codes.fill(0);
 
   for (unsigned iroad = 0; iroad < roads.size(); ++iroad) {
     const EMTFRoadExtra& road = roads.at(iroad);

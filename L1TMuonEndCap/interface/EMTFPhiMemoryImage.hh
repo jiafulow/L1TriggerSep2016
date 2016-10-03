@@ -33,6 +33,10 @@ public:
 
   value_type get_word(unsigned int layer, unsigned int unit) const;
 
+  void set_straightness(int s) { _straightness = s; }
+
+  int get_straightness() const { return _straightness; }
+
   // Left rotation by n bits
   void rotl(const value_type n);
 
@@ -61,6 +65,8 @@ private:
 
   // Hits in non-key stations
   value_type _buffer[_layers][_units];
+
+  int _straightness;
 };
 
 // _____________________________________________________________________________
