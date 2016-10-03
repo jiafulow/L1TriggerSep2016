@@ -65,22 +65,37 @@ void EMTFSectorProcessor::process(
   // List of converted hits, extended from previous BXs
   std::deque<EMTFHitExtraCollection> extended_conv_hits;
 
+  // List of best track candidates, extended from previous BXs
+  std::deque<EMTFTrackExtraCollection> extended_best_track_cands;
+
   // Map of pattern detector --> lifetime, tracked across BXs
   std::map<EMTFPatternRef, int> patt_lifetime_map;
 
   int delayBX = bxWindow_ - 1;  // = 2
 
-  for (int ibx = minBX_; ibx <= maxBX_ + delayBX; ++ibx) {
+  for (int bx = minBX_; bx <= maxBX_ + delayBX; ++bx) {
     if (verbose_ > 0) {  // debug
-      std::cout << "Endcap: " << endcap_ << " Sector: " << sector_ << " Event: " << ievent << " BX: " << ibx << std::endl;
+      std::cout << "Endcap: " << endcap_ << " Sector: " << sector_ << " Event: " << ievent << " BX: " << bx << std::endl;
     }
 
-    process_single_bx(ibx, muon_primitives, out_hits, out_tracks, extended_conv_hits, patt_lifetime_map);
+    process_single_bx(
+        bx,
+        muon_primitives,
+        out_hits,
+        out_tracks,
+        extended_conv_hits,
+        extended_best_track_cands,
+        patt_lifetime_map
+    );
 
-    if (ibx >= minBX_ + delayBX) {
+    // Drop earliest BX outside of BX window
+    if (bx >= minBX_ + delayBX) {
       extended_conv_hits.pop_front();
+      for (int izone = 0; izone < NUM_ZONES; ++izone) {
+        extended_best_track_cands.pop_front();
+      }
     }
-  }
+  }  // end loop over bx
 
   return;
 }
@@ -91,6 +106,7 @@ void EMTFSectorProcessor::process_single_bx(
     EMTFHitExtraCollection& out_hits,
     EMTFTrackExtraCollection& out_tracks,
     std::deque<EMTFHitExtraCollection>& extended_conv_hits,
+    std::deque<EMTFTrackExtraCollection>& extended_best_track_cands,
     std::map<EMTFPatternRef, int>& patt_lifetime_map
 ) const {
 
@@ -134,7 +150,7 @@ void EMTFSectorProcessor::process_single_bx(
   EMTFBestTrackSelection btrack_sel;
   btrack_sel.configure(
       verbose_, endcap_, sector_, bx,
-      maxRoadsPerZone_, maxTracks_
+      maxRoadsPerZone_, maxTracks_, useSecondEarliest_
   );
 
   EMTFPtAssignment pt_assign;
@@ -178,13 +194,17 @@ void EMTFSectorProcessor::process_single_bx(
 
   // Calculate deflection angles for each track
   angle_calc.process(zone_tracks);
+  for (int izone = 0; izone < NUM_ZONES; ++izone) {
+    extended_best_track_cands.push_back(zone_tracks.at(izone));
+  }
 
   // Identify 3 best tracks
-  btrack_sel.process(zone_tracks, best_tracks);
+  btrack_sel.process(extended_best_track_cands, best_tracks);
 
   // Construct pT address, assign pT
   pt_assign.process(best_tracks);
 
+  // ___________________________________________________________________________
   // Output
   out_hits.insert(out_hits.end(), conv_hits.begin(), conv_hits.end());
   out_tracks.insert(out_tracks.end(), best_tracks.begin(), best_tracks.end());

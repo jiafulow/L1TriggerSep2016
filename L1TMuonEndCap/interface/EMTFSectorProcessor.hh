@@ -52,6 +52,7 @@ public:
       EMTFHitExtraCollection& out_hits,
       EMTFTrackExtraCollection& out_tracks,
       std::deque<EMTFHitExtraCollection>& extended_conv_hits,
+      std::deque<EMTFTrackExtraCollection>& extended_best_track_cands,
       std::map<EMTFPatternRef, int>& patt_lifetime_map
   ) const;
 

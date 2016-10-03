@@ -5,27 +5,27 @@
 
 void EMTFBestTrackSelection::configure(
     int verbose, int endcap, int sector, int bx,
-    int maxRoadsPerZone, int maxTracks
+    int maxRoadsPerZone, int maxTracks, bool useSecondEarliest
 ) {
   verbose_ = verbose;
   endcap_  = endcap;
   sector_  = sector;
   bx_      = bx;
 
-  maxRoadsPerZone_ = maxRoadsPerZone;
-  maxTracks_       = maxTracks;
+  maxRoadsPerZone_    = maxRoadsPerZone;
+  maxTracks_          = maxTracks;
+  useSecondEarliest_  = useSecondEarliest;
 }
 
 void EMTFBestTrackSelection::process(
-    const std::vector<EMTFTrackExtraCollection>& zone_tracks,
+    const std::deque<EMTFTrackExtraCollection>& extended_best_track_cands,
     EMTFTrackExtraCollection& best_tracks
 ) const {
 
-  bool useSecondEarliest_ = true; //FIXME
   if (!useSecondEarliest_) {
-    cancel_one_bx(zone_tracks, best_tracks);
+    cancel_one_bx(extended_best_track_cands, best_tracks);
   } else {
-    cancel_three_bx(zone_tracks, best_tracks);
+    cancel_three_bx(extended_best_track_cands, best_tracks);
   }
 
   if (verbose_ > 0) {  // debug
@@ -44,9 +44,18 @@ void EMTFBestTrackSelection::process(
 }
 
 void EMTFBestTrackSelection::cancel_one_bx(
-    const std::vector<EMTFTrackExtraCollection>& zone_tracks,
+    const std::deque<EMTFTrackExtraCollection>& extended_best_track_cands,
     EMTFTrackExtraCollection& best_tracks
 ) const {
+  assert(extended_best_track_cands.size() >= NUM_ZONES);
+
+  std::vector<EMTFTrackExtraCollection> zone_tracks;
+  zone_tracks.resize(NUM_ZONES);
+  for (int izone = 0; izone < NUM_ZONES; ++izone) {
+    int izone_in_last_bx = extended_best_track_cands.size() - NUM_ZONES + izone;
+    zone_tracks.at(izone) = extended_best_track_cands.at(izone_in_last_bx);
+  }
+
   const int max_z = NUM_ZONES;        // = 4 zones
   const int max_n = maxRoadsPerZone_; // = 3 candidates per zone
   const int max_zn = max_z * max_n;   // = 12 total candidates
@@ -197,9 +206,18 @@ void EMTFBestTrackSelection::cancel_one_bx(
 }
 
 void EMTFBestTrackSelection::cancel_three_bx(
-    const std::vector<EMTFTrackExtraCollection>& zone_tracks,
+    const std::deque<EMTFTrackExtraCollection>& extended_best_track_cands,
     EMTFTrackExtraCollection& best_tracks
 ) const {
+  assert(extended_best_track_cands.size() >= NUM_ZONES);
+
+  std::vector<EMTFTrackExtraCollection> zone_tracks;
+  zone_tracks.resize(NUM_ZONES);
+  for (int izone = 0; izone < NUM_ZONES; ++izone) {
+    int izone_in_last_bx = extended_best_track_cands.size() - NUM_ZONES + izone;
+    zone_tracks.at(izone) = extended_best_track_cands.at(izone_in_last_bx);
+  }
+
   const int max_z = NUM_ZONES;        // = 4 zones
   const int max_n = maxRoadsPerZone_; // = 3 candidates per zone
   const int max_zn = max_z * max_n;   // = 12 total candidates
