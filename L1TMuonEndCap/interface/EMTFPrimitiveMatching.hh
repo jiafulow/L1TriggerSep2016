@@ -7,7 +7,8 @@
 class EMTFPrimitiveMatching {
 public:
   void configure(
-      int verbose, int endcap, int sector, int bx
+      int verbose, int endcap, int sector, int bx,
+      bool fixZonePhi
   );
 
   void process(
@@ -43,6 +44,8 @@ public:
 
 private:
   int verbose_, endcap_, sector_, bx_;
+
+  bool fixZonePhi_;
 };
 
 #endif

@@ -5,17 +5,20 @@
 namespace {
   static const int bw_fph = 13;  // bit width of ph, full precision
   static const int bpow = 7;     // (1 << bpow) is count of input ranks
-  static const int invalid_ph_diff = 31;
+  static const int invalid_ph_diff = 0x1ff;  // 512 (9-bit)
 }
 
 
 void EMTFPrimitiveMatching::configure(
-    int verbose, int endcap, int sector, int bx
+    int verbose, int endcap, int sector, int bx,
+    bool fixZonePhi
 ) {
   verbose_ = verbose;
   endcap_  = endcap;
   sector_  = sector;
   bx_      = bx;
+
+  fixZonePhi_      = fixZonePhi;
 }
 
 void EMTFPrimitiveMatching::process(
@@ -185,8 +188,26 @@ void EMTFPrimitiveMatching::process_single_zone_station(
     const EMTFHitExtraCollection& conv_hits,
     std::vector<std::pair<int, int> >& phi_differences
 ) const {
-  const int max_ph_diff = (station == 1) ? 15 : 7;  // max phi difference
-  //const int invalid_ph_diff = (station == 1) ? 31 : 15;
+  // max phi difference between pattern and segment
+  int max_ph_diff = (station == 1) ? 15 : 7;
+  //int bw_ph_diff = (station == 1) ? 5 : 4; // ph difference bit width
+  //int invalid_ph_diff = (station == 1) ? 31 : 15;  // invalid difference
+
+  if (fixZonePhi_) {
+    if (station == 1) {
+      max_ph_diff = 496;  // width of pattern in ME1 + rounding error 15*32+16
+      //bw_ph_diff = 9;
+      //invalid_ph_diff = 0x1ff;
+    } else if (station == 2) {
+      max_ph_diff = 16;   // just rounding error for ME2 (pattern must match ME2 hit phi if there was one)
+      //bw_ph_diff = 5;
+      //invalid_ph_diff = 0x1f;
+    } else {
+      max_ph_diff = 240;  // width of pattern in ME3,4 + rounding error 7*32+16
+      //bw_ph_diff = 8;
+      //invalid_ph_diff = 0xff;
+    }
+  }
 
   const int nroads = roads.size();
   const int nchits = conv_hits.size();
@@ -196,12 +217,20 @@ void EMTFPrimitiveMatching::process_single_zone_station(
     int ph_q   = roads.at(iroad).ph_q;
     assert(ph_pat >= 0 && ph_q > 0);
 
+    if (fixZonePhi_) {
+      ph_pat <<= 5;  // add missing 5 lower bits to pattern phi
+    }
+
     std::vector<std::pair<int, int> > tmp_phi_differences;
 
     for (int ichit = 0; ichit < nchits; ++ichit) {
       int ph_seg     = conv_hits.at(ichit).phi_fp;  // ph from segments
       int ph_seg_red = ph_seg >> (bw_fph-bpow-1);  // remove unused low bits
       assert(ph_seg >= 0);
+
+      if (fixZonePhi_) {
+        ph_seg_red = ph_seg;  // use full-precision phi
+      }
 
       // Get abs difference
       int ph_diff = (ph_pat > ph_seg_red) ? (ph_pat - ph_seg_red) : (ph_seg_red - ph_pat);

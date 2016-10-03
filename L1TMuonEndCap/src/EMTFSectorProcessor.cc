@@ -121,7 +121,8 @@ void EMTFSectorProcessor::process_single_bx(
 
   EMTFPrimitiveMatching prim_match;
   prim_match.configure(
-      verbose_, endcap_, sector_, bx
+      verbose_, endcap_, sector_, bx,
+      fixZonePhi_
   );
 
   EMTFAngleCalculation angle_calc;
