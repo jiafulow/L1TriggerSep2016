@@ -91,9 +91,9 @@ void EMTFSectorProcessor::process(
     // Drop earliest BX outside of BX window
     if (bx >= minBX_ + delayBX) {
       extended_conv_hits.pop_front();
-      for (int izone = 0; izone < NUM_ZONES; ++izone) {
-        extended_best_track_cands.pop_front();
-      }
+
+      int n = zone_array<int>().size();
+      extended_best_track_cands.erase(extended_best_track_cands.begin(), extended_best_track_cands.begin() + n);
     }
   }  // end loop over bx
 
@@ -163,9 +163,9 @@ void EMTFSectorProcessor::process_single_bx(
 
   EMTFHitExtraCollection conv_hits;
 
-  std::vector<EMTFRoadExtraCollection> zone_roads;  // each zone has its road collection
+  zone_array<EMTFRoadExtraCollection> zone_roads;  // each zone has its road collection
 
-  std::vector<EMTFTrackExtraCollection> zone_tracks;  // each zone has its track collection
+  zone_array<EMTFTrackExtraCollection> zone_tracks;  // each zone has its track collection
 
   EMTFTrackExtraCollection best_tracks;
 
@@ -180,7 +180,6 @@ void EMTFSectorProcessor::process_single_bx(
 
   // Convert trigger primitives into "converted hits"
   // A converted hit consists of integer representations of phi, theta, and zones
-  conv_hits.clear();
   prim_conv.process(CSCTag(), selected_csc_map, conv_hits);
   prim_conv.process(RPCTag(), selected_rpc_map, conv_hits);
   extended_conv_hits.push_back(conv_hits);
@@ -193,9 +192,7 @@ void EMTFSectorProcessor::process_single_bx(
 
   // Calculate deflection angles for each track
   angle_calc.process(zone_tracks);
-  for (int izone = 0; izone < NUM_ZONES; ++izone) {
-    extended_best_track_cands.push_back(zone_tracks.at(izone));
-  }
+  extended_best_track_cands.insert(extended_best_track_cands.end(), zone_tracks.begin(), zone_tracks.end());
 
   // Identify 3 best tracks
   btrack_sel.process(extended_best_track_cands, best_tracks);
@@ -205,6 +202,7 @@ void EMTFSectorProcessor::process_single_bx(
 
   // ___________________________________________________________________________
   // Output
+
   out_hits.insert(out_hits.end(), conv_hits.begin(), conv_hits.end());
   out_tracks.insert(out_tracks.end(), best_tracks.begin(), best_tracks.end());
 

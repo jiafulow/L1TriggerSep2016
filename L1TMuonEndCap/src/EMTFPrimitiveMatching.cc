@@ -1,6 +1,6 @@
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPrimitiveMatching.hh"
 
-#include "helper.h"  // to_hex, to_binary
+#include "helper.hh"  // to_hex, to_binary
 
 namespace {
   static const int bw_fph = 13;  // bit width of ph, full precision
@@ -23,16 +23,13 @@ void EMTFPrimitiveMatching::configure(
 
 void EMTFPrimitiveMatching::process(
     const std::deque<EMTFHitExtraCollection>& extended_conv_hits,
-    const std::vector<EMTFRoadExtraCollection>& zone_roads,
-    std::vector<EMTFTrackExtraCollection>& zone_tracks
+    const zone_array<EMTFRoadExtraCollection>& zone_roads,
+    zone_array<EMTFTrackExtraCollection>& zone_tracks
 ) const {
   int num_roads = 0;
   for (const auto& roads : zone_roads)
     num_roads += roads.size();
   bool early_exit = (num_roads == 0);
-
-  zone_tracks.clear();
-  zone_tracks.resize(NUM_ZONES);
 
   if (early_exit)
     return;
@@ -43,7 +40,6 @@ void EMTFPrimitiveMatching::process(
 
   bool use_fs_zone_code = true;  // use zone code as in firmware find_segment module
 
-  // Loop over converted hits and fill the array
   std::deque<EMTFHitExtraCollection>::const_iterator ext_conv_hits_it  = extended_conv_hits.begin();
   std::deque<EMTFHitExtraCollection>::const_iterator ext_conv_hits_end = extended_conv_hits.end();
 
@@ -52,23 +48,18 @@ void EMTFPrimitiveMatching::process(
     EMTFHitExtraCollection::const_iterator conv_hits_end = ext_conv_hits_it->end();
 
     for (; conv_hits_it != conv_hits_end; ++conv_hits_it) {
-      const EMTFHitExtra& conv_hit = *conv_hits_it;
+      int istation = conv_hits_it->station-1;
+      int zone_code = conv_hits_it->zone_code;  // decide based on original zone code
+      if (use_fs_zone_code)
+        zone_code = get_fs_zone_code(*conv_hits_it);  // decide based on new zone code
 
       // A hit can go into multiple zones
-      int istation = conv_hit.station-1;
-
-      int zone_code = conv_hit.zone_code;  // decide based on original zone code
-      if (use_fs_zone_code)
-        zone_code = get_fs_zone_code(conv_hit);  // decide based on new zone code
-
       for (int izone = 0; izone < NUM_ZONES; ++izone) {
-        const EMTFRoadExtraCollection& roads = zone_roads.at(izone);
-        const int nroads = roads.size();
+        if (zone_roads.at(izone).size() > 0) {
 
-        if (nroads > 0) {
           if (zone_code & (1<<izone)) {
             const int zs = (izone*NUM_STATIONS) + istation;
-            zs_conv_hits.at(zs).push_back(conv_hit);
+            zs_conv_hits.at(zs).push_back(*conv_hits_it);
           }
         }
       }
@@ -114,7 +105,7 @@ void EMTFPrimitiveMatching::process(
         const int zs = (izone*NUM_STATIONS) + istation;
         int i = 0;
         for (const auto& ph_diff_pair : zs_phi_differences.at(zs)) {
-          std::cout << "z: " << izone << " r: " << zone_roads.at(izone).at(i).winner << " ph_num: " << zone_roads.at(izone).at(i).ph_num << " st: " << istation+1 << " ichit: " << ph_diff_pair.first << " ph_diff: " << ph_diff_pair.second << std::endl;
+          std::cout << "z: " << izone << " r: " << zone_roads.at(izone).at(i).winner << " ph_num: " << zone_roads.at(izone).at(i).ph_num << " st: " << istation+1 << " ihit: " << ph_diff_pair.first << " ph_diff: " << ph_diff_pair.second << std::endl;
           ++i;
         }
       }
@@ -146,11 +137,11 @@ void EMTFPrimitiveMatching::process(
         const int zs = (izone*NUM_STATIONS) + istation;
 
         const EMTFHitExtraCollection& conv_hits = zs_conv_hits.at(zs);
-        int ichit   = zs_phi_differences.at(zs).at(iroad).first;
+        int ihit    = zs_phi_differences.at(zs).at(iroad).first;
         int ph_diff = zs_phi_differences.at(zs).at(iroad).second;
 
         if (ph_diff != invalid_ph_diff) {
-          insert_hits(ichit, ph_diff, conv_hits, track);
+          insert_hits(ihit, ph_diff, conv_hits, track);
         }
       }
 
@@ -161,8 +152,6 @@ void EMTFPrimitiveMatching::process(
       zone_tracks.at(izone).push_back(track);
 
     }  // end loop over roads
-
-    assert(zone_tracks.size() == zone_roads.size());
   }  // end loop over zones
 
   if (verbose_ > 0) {  // debug
@@ -210,7 +199,7 @@ void EMTFPrimitiveMatching::process_single_zone_station(
   }
 
   const int nroads = roads.size();
-  const int nchits = conv_hits.size();
+  const int nhits = conv_hits.size();
 
   for (int iroad = 0; iroad < nroads; ++iroad) {
     int ph_pat = roads.at(iroad).ph_num;  // ph detected in pattern
@@ -223,8 +212,8 @@ void EMTFPrimitiveMatching::process_single_zone_station(
 
     std::vector<std::pair<int, int> > tmp_phi_differences;
 
-    for (int ichit = 0; ichit < nchits; ++ichit) {
-      int ph_seg     = conv_hits.at(ichit).phi_fp;  // ph from segments
+    for (int ihit = 0; ihit < nhits; ++ihit) {
+      int ph_seg     = conv_hits.at(ihit).phi_fp;  // ph from segments
       int ph_seg_red = ph_seg >> (bw_fph-bpow-1);  // remove unused low bits
       assert(ph_seg >= 0);
 
@@ -238,7 +227,7 @@ void EMTFPrimitiveMatching::process_single_zone_station(
       if (ph_diff > max_ph_diff)
         ph_diff = invalid_ph_diff;  // difference is too high, cannot be the same pattern
 
-      tmp_phi_differences.push_back(std::make_pair(ichit, ph_diff));  // make a key-value pair
+      tmp_phi_differences.push_back(std::make_pair(ihit, ph_diff));  // make a key-value pair
     }
 
     if (!tmp_phi_differences.empty()) {
@@ -268,26 +257,24 @@ void EMTFPrimitiveMatching::sort_ph_diff(
   } less_ph_diff_cmp;
 
   std::stable_sort(phi_differences.begin(), phi_differences.end(), less_ph_diff_cmp);
-
-  // Maybe implement the firmware algorithm here?
 }
 
 void EMTFPrimitiveMatching::insert_hits(
-    int ichit, int ph_diff, const EMTFHitExtraCollection& conv_hits,
+    int ihit, int ph_diff, const EMTFHitExtraCollection& conv_hits,
     EMTFTrackExtra& track
 ) const {
-  const int nchits = conv_hits.size();
+  const int nhits = conv_hits.size();
 
   // First, insert the hit
-  insert_hit(ichit, ph_diff, conv_hits, track);
+  insert_hit(ihit, ph_diff, conv_hits, track);
 
   // Second, find possible duplicated hits, insert them too
-  for (int jchit = 0; jchit < nchits; ++jchit) {
-    if (jchit == ichit)
+  for (int jhit = 0; jhit < nhits; ++jhit) {
+    if (ihit == jhit)
       continue;
 
-    const EMTFHitExtra& conv_hit_i = conv_hits.at(ichit);
-    const EMTFHitExtra& conv_hit_j = conv_hits.at(jchit);
+    const EMTFHitExtra& conv_hit_i = conv_hits.at(ihit);
+    const EMTFHitExtra& conv_hit_j = conv_hits.at(jhit);
 
     if (
       (conv_hit_i.pc_station == conv_hit_j.pc_station) &&
@@ -298,17 +285,17 @@ void EMTFPrimitiveMatching::insert_hits(
       // Must have the same phi_fp
       assert(conv_hit_i.phi_fp == conv_hit_j.phi_fp);
 
-      insert_hit(jchit, ph_diff, conv_hits, track);
+      insert_hit(jhit, ph_diff, conv_hits, track);
     }
   }
 }
 
 void EMTFPrimitiveMatching::insert_hit(
-    int ichit, int ph_diff, const EMTFHitExtraCollection& conv_hits,
+    int ihit, int ph_diff, const EMTFHitExtraCollection& conv_hits,
     EMTFTrackExtra& track
 ) const {
-  const EMTFHitExtra& conv_hit = conv_hits.at(ichit);
-  //const EMTFHit& conv_hit = static_cast<EMTFHit>(conv_hits.at(ichit));
+  const EMTFHitExtra& conv_hit = conv_hits.at(ihit);
+  //const EMTFHit& conv_hit = static_cast<EMTFHit>(conv_hits.at(ihit));
 
   struct {
     typedef EMTFHitExtra value_type;

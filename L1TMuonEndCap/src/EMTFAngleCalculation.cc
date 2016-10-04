@@ -1,6 +1,6 @@
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFAngleCalculation.hh"
 
-#include "helper.h"  // to_hex, to_binary
+#include "helper.hh"  // to_hex, to_binary
 
 namespace {
   static const int bw_fph = 13;  // bit width of ph, full precision
@@ -17,29 +17,33 @@ void EMTFAngleCalculation::configure(
   sector_  = sector;
   bx_      = bx;
 
-  thetaWindow_     = thetaWindow;
+  thetaWindow_        = thetaWindow;
 }
 
 void EMTFAngleCalculation::process(
-    std::vector<EMTFTrackExtraCollection>& zone_tracks
+    zone_array<EMTFTrackExtraCollection>& zone_tracks
 ) const {
 
   for (int izone = 0; izone < NUM_ZONES; ++izone) {
     EMTFTrackExtraCollection& tracks = zone_tracks.at(izone);  // pass by reference
 
-    for (unsigned itrack = 0; itrack < tracks.size(); ++itrack) {
-      // Calculate deltas
-      EMTFTrackExtra& track = tracks.at(itrack);  // pass by reference
-      calculate_angles(track);
+    EMTFTrackExtraCollection::iterator tracks_it  = tracks.begin();
+    EMTFTrackExtraCollection::iterator tracks_end = tracks.end();
+
+    // Calculate deltas
+    for (; tracks_it != tracks_end; ++tracks_it) {
+      calculate_angles(*tracks_it);
     }
 
     // Erase tracks with rank = 0
     erase_tracks(tracks);
 
-    for (unsigned itrack = 0; itrack < tracks.size(); ++itrack) {
-      // Calculate bx
-      EMTFTrackExtra& track = tracks.at(itrack);  // pass by reference
-      calculate_bx(track);
+    tracks_it  = tracks.begin();
+    tracks_end = tracks.end();
+
+    // Calculate bx
+    for (; tracks_it != tracks_end; ++tracks_it) {
+      calculate_bx(*tracks_it);
     }
   }
 
@@ -60,16 +64,14 @@ void EMTFAngleCalculation::process(
 }
 
 void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
-  // Fold track.xhits, a vector of EMTFHits, into a vector of vector of EMTFHits
-  // with index [station][num]
-  std::vector<EMTFHitExtraCollection> st_conv_hits;
+  // Group track.xhits by station
+  std::array<EMTFHitExtraCollection, NUM_STATIONS> st_conv_hits;
 
   for (int istation = 0; istation < NUM_STATIONS; ++istation) {
-    st_conv_hits.push_back(EMTFHitExtraCollection());
-
     for (const auto& conv_hit : track.xhits) {
-      if ((conv_hit.station-1) == istation)
-        st_conv_hits.back().push_back(conv_hit);
+      if ((conv_hit.station-1) == istation) {
+        st_conv_hits.at(istation).push_back(conv_hit);
+      }
     }
   }
   assert(st_conv_hits.size() == NUM_STATIONS);
@@ -88,10 +90,11 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
   best_dtheta_arr.fill(invalid_dtheta);
   best_dtheta_sign_arr.fill(0);
   best_dphi_arr.fill(invalid_dphi);
-  best_dphi_sign_arr.fill(1);  // dphi sign reversed compared to dtheta
+  best_dphi_sign_arr.fill(1);  // dphi sign reversed w.r.t dtheta
   best_dtheta_valid_arr.fill(false);
 
   // For phi and theta assignment
+  // from 0 to 3: st1, st2, st3, st4
   std::array<int,  NUM_STATIONS> best_theta_arr;
   std::array<int,  NUM_STATIONS> best_phi_arr;
   std::array<bool, NUM_STATIONS> best_theta_valid_arr;
@@ -143,6 +146,7 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
           }
         }  // end loop over conv_hits in station B
       }  // end loop over conv_hits in station A
+
       ++ipair;
     }  // end loop over station B
   }  // end loop over station A
@@ -290,7 +294,7 @@ void EMTFAngleCalculation::calculate_bx(EMTFTrackExtra& track) const {
   for (const auto& conv_hit : track.xhits) {
     if (conv_hit.bx == bx_ - 2)  // count stubs delayed by 2 BX
       h2 += 1;
-    if (conv_hit.bx >= bx_ - 1)  // count stubs delayed by 1 BX or more
+    if (conv_hit.bx <= bx_ - 1)  // count stubs delayed by 1 BX or more
       h1 += 1;
   }
 
@@ -345,7 +349,9 @@ void EMTFAngleCalculation::erase_tracks(EMTFTrackExtraCollection& tracks) const 
     std::array<bool, NUM_STATIONS> stations;  // keep track of which station is empty
   } selected_hit_pred;
 
-  for (unsigned itrack = 0; itrack < tracks.size(); ++itrack) {
+  const int ntracks = tracks.size();
+
+  for (int itrack = 0; itrack < ntracks; ++itrack) {
     EMTFTrackExtra& track = tracks.at(itrack);  // pass by reference
     selected_hit_pred.ptlut_data = track.ptlut_data;  // capture
     selected_hit_pred.stations.fill(true);
@@ -376,7 +382,6 @@ void EMTFAngleCalculation::erase_tracks(EMTFTrackExtraCollection& tracks) const 
     track.num_xhits = track.xhits.size();
     assert(track.num_xhits <= NUM_STATIONS);
   }  // end loop over tracks
-
 }
 
 int EMTFAngleCalculation::get_bt_chamber(const EMTFHitExtra& conv_hit) const {

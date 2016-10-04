@@ -13,8 +13,8 @@ public:
 
   void process(
       const std::deque<EMTFHitExtraCollection>& extended_conv_hits,
-      const std::vector<EMTFRoadExtraCollection>& zone_roads,
-      std::vector<EMTFTrackExtraCollection>& zone_tracks
+      const zone_array<EMTFRoadExtraCollection>& zone_roads,
+      zone_array<EMTFTrackExtraCollection>& zone_tracks
   ) const;
 
   void process_single_zone_station(
@@ -29,12 +29,12 @@ public:
   ) const;
 
   void insert_hits(
-      int ichit, int ph_diff, const EMTFHitExtraCollection& conv_hits,
+      int ihit, int ph_diff, const EMTFHitExtraCollection& conv_hits,
       EMTFTrackExtra& track
   ) const;
 
   void insert_hit(
-      int ichit, int ph_diff, const EMTFHitExtraCollection& conv_hits,
+      int ihit, int ph_diff, const EMTFHitExtraCollection& conv_hits,
       EMTFTrackExtra& track
   ) const;
 

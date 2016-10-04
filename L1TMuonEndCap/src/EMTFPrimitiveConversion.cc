@@ -247,6 +247,7 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
         << " ph_disp: " << lut().get_ph_disp(fw_endcap, fw_sector, pc_lut_id)
         << " th_init: " << lut().get_th_init(fw_endcap, fw_sector, pc_lut_id)
         << " th_disp: " << lut().get_th_disp(fw_endcap, fw_sector, pc_lut_id)
+        << " ph_init_hard: " << lut().get_ph_init_hard(fw_station, fw_cscid)
         << std::endl;
   }
 

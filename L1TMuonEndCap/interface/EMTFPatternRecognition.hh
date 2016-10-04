@@ -21,7 +21,13 @@ public:
   void process(
       const std::deque<EMTFHitExtraCollection>& extended_conv_hits,
       std::map<pattern_ref_t, int>& patt_lifetime_map,
-      std::vector<EMTFRoadExtraCollection>& zone_roads
+      zone_array<EMTFRoadExtraCollection>& zone_roads
+  ) const;
+
+  bool is_zone_empty(
+      int zone,
+      const std::deque<EMTFHitExtraCollection>& extended_conv_hits,
+      const std::map<pattern_ref_t, int>& patt_lifetime_map
   ) const;
 
   void make_zone_image(
