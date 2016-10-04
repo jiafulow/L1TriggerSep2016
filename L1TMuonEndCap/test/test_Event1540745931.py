@@ -30,30 +30,40 @@ class TestEvent1540745931(unittest.TestCase):
     hits = self.analyzer.handles["hits"].product()
 
     hit = hits[0]
+    self.assertEqual(hit.strip      , 124)
+    self.assertEqual(hit.wire       , 53)
     self.assertEqual(hit.phi_fp     , 4228)
     self.assertEqual(hit.theta_fp   , 77)
-    self.assertEqual((1<<hit.ph_hit), 131072)
-    self.assertEqual(hit.phzvl      , 1)
-
-    hit = hits[1]
-    self.assertEqual(hit.phi_fp     , 4252)
-    self.assertEqual(hit.theta_fp   , 76)
     self.assertEqual((1<<hit.ph_hit), 262144)
     self.assertEqual(hit.phzvl      , 1)
 
+    hit = hits[1]
+    self.assertEqual(hit.strip      , 130)
+    self.assertEqual(hit.wire       , 24)
+    self.assertEqual(hit.phi_fp     , 4252)
+    self.assertEqual(hit.theta_fp   , 76)
+    self.assertEqual((1<<hit.ph_hit), 524288)
+    self.assertEqual(hit.phzvl      , 1)
+
     hit = hits[2]
+    self.assertEqual(hit.strip      , 119)
+    self.assertEqual(hit.wire       , 24)
     self.assertEqual(hit.phi_fp     , 4207)
     self.assertEqual(hit.theta_fp   , 76)
-    self.assertEqual((1<<hit.ph_hit), 65536)
+    self.assertEqual((1<<hit.ph_hit), 131072)
     self.assertEqual(hit.phzvl      , 1)
 
     hit = hits[3]
+    self.assertEqual(hit.strip      , 26)
+    self.assertEqual(hit.wire       , 36)
     self.assertEqual(hit.phi_fp     , 4260)
     self.assertEqual(hit.theta_fp   , 78)
     self.assertEqual((1<<hit.ph_hit), 524288)
     self.assertEqual(hit.phzvl      , 2)
 
     hit = hits[4]
+    self.assertEqual(hit.strip      , 25)
+    self.assertEqual(hit.wire       , 46)
     self.assertEqual(hit.phi_fp     , 4263)
     self.assertEqual(hit.theta_fp   , 78)
     self.assertEqual((1<<hit.ph_hit), 1048576)
@@ -63,9 +73,13 @@ class TestEvent1540745931(unittest.TestCase):
     tracks = self.analyzer.handles["tracks"].product()
 
     track = tracks[0]
-    self.assertEqual(track.rank         , 63)
-    self.assertEqual(track.mode         , 15)
+    self.assertEqual(track.rank         , 0x6b)
     self.assertEqual(track.ptlut_address, 1047278616)
+    self.assertEqual(track.mode         , 15)
+    self.assertEqual(track.gmt_charge   , 1)
+    self.assertEqual(track.gmt_quality  , 15)
+    self.assertEqual(track.gmt_eta      , 120)
+    self.assertEqual(track.gmt_phi      , 76)
 
 
 # ______________________________________________________________________________

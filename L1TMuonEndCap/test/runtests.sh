@@ -27,3 +27,6 @@ rm Event*_out.root
 (cmsRun pippo_cfg.py inputFiles=file:Event1540745931.root outputFile=Event1540745931_out.root >/dev/null 2>&1) || die 'Failure running Event 1540745931' $?
 (python test_Event1540745931.py) || die 'Failure running Event 1540745931' $?
 
+(cmsRun pippo_cfg.py inputFiles=file:Event1687229747.root outputFile=Event1687229747_out.root >/dev/null 2>&1) || die 'Failure running Event 1687229747' $?
+(python test_Event1687229747.py) || die 'Failure running Event 1687229747' $?
+
