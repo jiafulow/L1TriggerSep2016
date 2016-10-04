@@ -375,6 +375,15 @@ static int getEtaInt(float eta, int bits=5)
   return (etaInt);
 }
 
+static int getEtaIntFromThetaInt(int theta, int bits=5)
+{
+  theta = (theta<<2) & 127;
+  float ftheta = theta;
+  ftheta = (ftheta*0.2874016 + 8.5)*(3.14159265359/180);
+  float eta = (-1)*std::log(std::tan(ftheta/2));
+  return getEtaInt(eta, bits);
+}
+
 static float getEtaFromBin(int etaBin, int bits=5)
 {
   if (etaBin>((1<<5)-1))

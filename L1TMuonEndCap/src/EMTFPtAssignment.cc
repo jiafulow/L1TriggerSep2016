@@ -28,7 +28,7 @@ void EMTFPtAssignment::process(
     EMTFTrackExtra& track = best_tracks.at(i);  // pass by reference
 
     address_t address = pt_assign_engine_->calculate_address(track);
-    float     xmlpt   = pt_assign_engine_->calculate_pt(address, track);
+    float     xmlpt   = pt_assign_engine_->calculate_pt(address);
     float     pt      = xmlpt * 1.4;
 
 
