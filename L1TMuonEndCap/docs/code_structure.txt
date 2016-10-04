@@ -1,0 +1,100 @@
+
+#################
+### Code flow ###
+#################
+
+* Main event processor is produce() in plugins/L1TMuonEndCapTrackProducer.cc
+  - Produces a collection of EMTFTrack(Extra), EMTFHit(Extra), and RegionalMuonCand
+
+  * process() in src/EMTFTrackFinder.cc creates tracks from hits (CSC LCTs and RPC segments)
+    - Fills the EMTFTrackExtra and EMTFHitExtra collections
+
+    * extractPrimitives() in src/EMTFSubsystemCollector.cc collects the input hits
+      - Creates a collection of TriggerPrimitives from CSC and RPC digis
+
+    * process() in src/EMTFSectorProcessor.cc runs the track-finder for each of the 12 sectors
+
+      * process_single_bx() in src/EMTFSectorProcessor.cc runs the track-finder for each BX
+
+      	* process() in src/EMTFPrimitiveSelection.cc processes CSC and RPC hits
+	  - For CSC, creates selected_csc_map[] of LCTs by link index
+	  - Configurable: includes neighbor sectors and duplicates for ambiguous strip/wire pairings
+
+
+	* process() in src/EMTFPrimitiveConversion.cc converts primitives to EMTFHitExtras
+	  
+	  * convert_prim_csc() converts a primitive to an EMTFHitExtra
+
+	    * convert_csc() computes the hit's theta, zone number(s), pattern phi, and full-precision phi
+
+	* process() in src/EMTFPatternRecognition.cc finds 3 best "roads" (patterns)
+	  - Fills pattern lifetime map and zone roads
+
+	  - Loop over zones
+	    * make_zone_image() makes a zone image from converted hits from multiple BX in each zone
+
+	  - Loop over zones
+	    * process_single_zone() creates all the "roads" (patterns) that match the hits in the zone image
+	      - Loop over key phi
+	      	- Loop over patterns, find road with this phi that has the highest quality
+	      	  - Each road has an endcap, sector, bx, zone, key phi, pattern, straightness, layer code, and quality code
+	      - Loop over created roads, cancel adjacent patterns
+	      	- Road is deleted if neighbor with phi-1 has higher quality, or neighbor with phi+1 has equal or higher quality
+
+	  - Loop over zones
+	    * sort_single_zone() sorts roads and selects best three in each zone
+	      - Sorting is first by key phi (high to low), then quality (high to low) when qualities are different
+	      - Keep first three roads in vector, assign "winner" variable equal to index in vector (0, 1, 2)
+
+	* process() in src/EMTFPrimitiveMatching.cc matches trigger primitives to winning roads
+	  - Loop over zone-station pairings
+	    * process_single_zone_station() finds the hit with the smallest dPhi to the road key phi
+	  - Loop over zone-station pairings
+	    - Create new track for each road, using hits with smallest dPhi in each station
+
+	* process() in src/EMTFAngleCalculation.cc
+	  - Loop over zones
+	    - Loop over tracks
+	      * calculate_angles()
+	      	- Calculates "best" dThetas (and dPhis) between each pair of stations (out of multiple hits per station?)
+	      	- Mask hit if *all* its dTheta values are larger than the theta window
+	      	- Compute and fill track theta, phi, mode, rank, and pT LUT inputs
+	    * erase_tracks()
+	      - Erases tracks with rank = 0 from track collection	      
+	      - Remove hits that did not have "best dTheta" for their station, or which failed theta window cut
+	    - Loop over tracks
+	      * calculate_bx() finds BX of 1st and 2nd earliest hits in tracks
+
+	* process() in src/EMTFBestTrackSelection.cc selects best 3 tracks per sector
+	  - Still coded with opaque FW notation, also does not deal with multiple BX.  (How are road / track BX assigned, anyway?)
+
+	* process() in src/EMTFPtAssignment.cc
+	  - Loop over tracks
+	    * calculate_address() in src/EMTFPtAssignmentEngine.cc computes the pT LUT address
+	    * calculate_pt() in src/EMTFPtAssignmentEngine.cc computes the pT from the address
+
+     
+##############################
+### Configurable variables ###
+##############################
+
+python/simEmtfDigis_cfi.py
+  * UseSecondEarliest      : Use 2nd earliest hit to time EMTF track (not yet working? - AWB 04.10.16)
+  * UseSymmetricalPatterns : Use 5 symmetric patterns instead of 9 asymmetric patterns (for use starting 09.10.16)
+  * FixZonePhi             : Zone phi fix from Alex (for use starting 09.10.16)
+
+src/EMTFPrimitiveMatching.cc
+  * use_fs_zone_code : Recalculate zone code (from where? why? - AWB 04.10.16)
+
+src/EMTFBestTrackSelection.cc
+  * use_fw_algo : Uses direct FW algorithm to cancel tracks (no emulator version available yet - AWB 04.10.16)
+
+src/EMTFPtAssignment.cc
+  * use_ones_complem_gmt_eta : Use one's complement notation for eta (with what effect? same or different than FW / uGMT? - AWB 04.10.16)
+
+src/EMTFPtAssignmentEngine.cc
+  * use_eta       : Use eta instead of theta in forming pT LUT address (right or wrong thing to do? - AWB 04.10.16)
+  * use_FRLUT     : Use alternative calculation of FR bit (why? - AWB 04.10.16)
+  * fix_dPhi9Bits : Truncated dPhi's to 512 bits (un-truncated by mistake in FW; will be fixed in FW when? - AWB 04.10.16)
+  * era_4         : Include high-pT muon outlier hit fix
+
