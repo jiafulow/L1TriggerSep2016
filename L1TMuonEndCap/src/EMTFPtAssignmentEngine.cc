@@ -38,16 +38,16 @@ void EMTFPtAssignmentEngine::read(const std::string& treeDir) {
 EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(const EMTFTrackExtra& track) const {
   address_t address = 0;
 
-  int mode_inv  = track.mode_inv;
+  int mode_inv  = track.mode_inv; // Still has "0b0000" component? - AWB 03.10.16
   int theta     = track.theta_int;
-  theta >>= 2;
+  theta >>= 2; // Why are we reducing the theta precision 4x? - AWB 03.10.16
 
-  bool use_eta = false;
+  bool use_eta = false; // Should make configurable in function call - AWB 03.10.16
   if (use_eta) {
     float ftheta = track.theta_int;
-    ftheta = (ftheta*0.2874016 + 8.5)*(3.14159265359/180);
+    ftheta = (ftheta*0.2874016 + 8.5)*(3.14159265359/180); // Where did 0.2874016, vs. 0.285, come from? - AWB 03.10.16
     float eta = (-1)*std::log(std::tan(ftheta/2));
-    theta = getEtaInt(eta, 5);
+    theta = getEtaInt(eta, 5); // From interface/EMTFPtAssignmentEngineHelper.hh
   }
 
   const EMTFPtLUTData& ptlut_data = track.ptlut_data;
@@ -103,7 +103,7 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
   dTheta24 = getdTheta(dTheta24 * ((dTheta24Sign) ? -1 : 1));
   dTheta34 = getdTheta(dTheta34 * ((dTheta34Sign) ? -1 : 1));
 
-  bool use_FRLUT = true;
+  bool use_FRLUT = true; // Why don't we use the FR bit assigned in ptlut_data? - AWB 03.10.16
   if (use_FRLUT) {
     int sector = track.sector;
     FR1 = getFRLUT(sector, CSCID1/12, CSCID1%12);
@@ -112,8 +112,9 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     FR4 = getFRLUT(sector, CSCID4/12, CSCID4%12);
   }
 
-  bool fix_dPhi9Bits = true;
+  bool fix_dPhi9Bits = false; // False in FW through the present - AWB 04.10.16
 
+  // Can we automate the assigning of addresses?  Would decrease typos, speed future development. - AWB 03.10.16
   switch(mode_inv) {
   case 3:   // 1-2
     if (fix_dPhi9Bits)  dPhi12 = std::min(511, dPhi12);
@@ -590,7 +591,7 @@ float EMTFPtAssignmentEngine::calculate_pt(const address_t& address) {
   } // end if era_4
 
 
-  const int (*mode_variables)[6] = ModeVariables_Scheme3;
+  const int (*mode_variables)[6] = ModeVariables_Scheme3; // What is this? - AWB 03.10.16
 
   const int variables[24] = {
     dPhi12, dPhi13, dPhi14, dPhi23, dPhi24, dPhi34, dTheta12, dTheta13, dTheta14, dTheta23, dTheta24, dTheta34,
@@ -619,7 +620,7 @@ float EMTFPtAssignmentEngine::calculate_pt(const address_t& address) {
 
   forests_.at(mode_inv).predictEvent(tree_event.get(), 64);
   float tmp_pt = tree_event->predictedValue;
-  pt = (tmp_pt != 0) ? 1.0/tmp_pt : tmp_pt;
+  pt = (tmp_pt != 0) ? 1.0/tmp_pt : 0;
 
   return pt;
 }

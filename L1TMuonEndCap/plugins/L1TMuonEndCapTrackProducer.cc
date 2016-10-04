@@ -2,18 +2,18 @@
 
 
 L1TMuonEndCapTrackProducer::L1TMuonEndCapTrackProducer(const edm::ParameterSet& iConfig) :
-    track_finder_(new EMTFTrackFinder(iConfig, consumesCollector())),
-    track_adaptor_(new EMTFTrackAdaptor()),
-    uGMT_converter_(new EMTFMicroGMTConverter()),
+    track_finder_(new EMTFTrackFinder(iConfig, consumesCollector())), // Builds tracks from input hits
+    track_adaptor_(new EMTFTrackAdaptor()),      // Converts output tracks to unpacked data format 
+    uGMT_converter_(new EMTFMicroGMTConverter()), // Converts output tracks into RegionalMuonCands for uGMT
     config_(iConfig)
 {
   // Make output products
-  produces<EMTFHitExtraCollection>           ("");
-  produces<EMTFTrackExtraCollection>         ("");
-  produces<l1t::RegionalMuonCandBxCollection>("EMTF");
+  produces<EMTFHitExtraCollection>           (""); // Same as EMTFHit, but with extra emulator-only variables
+  produces<EMTFTrackExtraCollection>         (""); // Same as EMTFTrack, but with extra emulator-only variables
+  produces<l1t::RegionalMuonCandBxCollection>("EMTF"); // EMTF tracks output to uGMT
 
-  produces<EMTFHitCollection>                ("");
-  produces<EMTFTrackCollection>              ("");
+  produces<EMTFHitCollection>                (""); // All CSC LCTs and RPC clusters received by EMTF
+  produces<EMTFTrackCollection>              (""); // All output EMTF tracks, in same format as unpacked data
 }
 
 L1TMuonEndCapTrackProducer::~L1TMuonEndCapTrackProducer() {
@@ -29,10 +29,11 @@ void L1TMuonEndCapTrackProducer::produce(edm::Event& iEvent, const edm::EventSet
   auto out_hits    = std::make_unique<EMTFHitCollection>();
   auto out_tracks  = std::make_unique<EMTFTrackCollection>();
 
-  // Run
+  // Main EMTF emulator process, produces tracks from hits in each sector in each event
+  // Defined in src/EMTFTrackFinder.cc
   track_finder_->process(iEvent, iSetup, *out_xhits, *out_xtracks);
 
-  // Convert into old EMTFHit, EMTFTrack formats
+  // Convert into unpacker EMTFHit, EMTFTrack formats
   track_adaptor_->convert_all(*out_xhits, *out_xtracks, *out_hits, *out_tracks);
 
   // Convert into uGMT format
@@ -55,7 +56,7 @@ void L1TMuonEndCapTrackProducer::endJob() {
 
 }
 
-//fill 'descriptions' with the allowed parameters
+// Fill 'descriptions' with the allowed parameters
 void L1TMuonEndCapTrackProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   //The following says we do not know what parameters are allowed so do no validation
   // Please change this to state exactly what you do use, even if it is no parameters
@@ -64,6 +65,6 @@ void L1TMuonEndCapTrackProducer::fillDescriptions(edm::ConfigurationDescriptions
   descriptions.addDefault(desc);
 }
 
-//define this as a plug-in
+// Define this as a plug-in
 typedef L1TMuonEndCapTrackProducer L1TMuonEndCapTrackProducerSep2016;
 DEFINE_FWK_MODULE(L1TMuonEndCapTrackProducerSep2016);

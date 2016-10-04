@@ -4,8 +4,8 @@
 #include "DataFormats/MuonDetId/interface/CSCDetId.h"
 #include "DataFormats/MuonDetId/interface/RPCDetId.h"
 
-#define NUM_CSC_CHAMBERS 6*9
-#define NUM_RPC_CHAMBERS 6*9  // ??
+#define NUM_CSC_CHAMBERS 6*9  // 18 in ME1, 9 in ME2/3/4, 9 from neighbor sector
+#define NUM_RPC_CHAMBERS 6*9  // Is this correct? - AWB 28.09.16
 
 using CSCData = TriggerPrimitive::CSCData;
 using RPCData = TriggerPrimitive::RPCData;
@@ -35,7 +35,7 @@ void EMTFPrimitiveSelection::process(
   TriggerPrimitiveCollection::const_iterator tp_end = muon_primitives.end();
 
   for (; tp_it != tp_end; ++tp_it) {
-    int selected_csc = select_csc(*tp_it);  // CSC
+    int selected_csc = select_csc(*tp_it); // Returns CSC "link" index (0 - 53) 
 
     if (selected_csc >= 0) {
       assert(selected_csc < NUM_CSC_CHAMBERS);
@@ -43,7 +43,7 @@ void EMTFPrimitiveSelection::process(
     }
   }
 
-  // Duplicate CSC muon primitives
+  // Duplicate CSC muon primitives - is this supposed to be done before pattern matching / zone assignment? - AWB 29.09.16
   // If there are 2 LCTs in the same chamber with (strip, wire) = (s1, w1) and (s2, w2)
   // make all combinations with (s1, w1), (s2, w1), (s1, w2), (s2, w2)
   if (duplicateTheta_) {
@@ -165,29 +165,30 @@ bool EMTFPrimitiveSelection::is_in_neighbor_sector_csc(
 }
 
 bool EMTFPrimitiveSelection::is_in_bx_csc(int tp_bx) const {
-  tp_bx -= 6;
+  tp_bx -= 6; // Need to verify (or impose) central BX = 6 condition, or make this offset configurable - AWB 28.09.16
   return (bx_ == tp_bx);
 }
 
+// Returns "roughly" the "input link". But what does this mean? And why does it matter? - AWB 28.09.16
 int EMTFPrimitiveSelection::get_index_csc(int tp_subsector, int tp_station, int tp_csc_ID, bool is_neighbor) const {
   int selected = -1;
 
   if (!is_neighbor) {
-    if (tp_station == 1 && tp_csc_ID-1 >= 9) {  // ME1/1a
-      selected = (tp_subsector-1) * 9 + (tp_csc_ID-1-9);
-    } else if (tp_station == 1) {  // ME1/1b, ME1/2, ME1/3
-      selected = (tp_subsector-1) * 9 + (tp_csc_ID-1);
-    } else {  // ME2,3,4
-      selected = (tp_station) * 9 + (tp_csc_ID-1);
+    if (tp_station == 1 && tp_csc_ID > 9) { // ME1/1a (using CSC_ID > 9 convention? - AWB 28.09.16)
+      selected = (tp_subsector - 1) * 9 + (tp_csc_ID - 9) - 1; // 0 - 2, 9 - 11
+    } else if (tp_station == 1) {           // ME1/1b, ME1/2, ME1/3
+      selected = (tp_subsector - 1) * 9 + tp_csc_ID - 1;       // 0 - 8, 9 - 17
+    } else {                                // ME2, ME3, ME4
+      selected = (tp_station) * 9 + tp_csc_ID - 1; // 18 - 26, 27 - 35, 36 - 44 
     }
 
   } else {
-    if (tp_station == 1 && tp_csc_ID-1 >= 9) {  // ME1/1a
-      selected = (5) * 9 + (tp_csc_ID-1-9)/3;
-    } else if (tp_station == 1) {  // ME1/1b, ME1/2, ME1/3
-      selected = (5) * 9 + (tp_csc_ID-1)/3;
-    } else {  // ME2,3,4
-      selected = (5) * 9 + (tp_station) * 2 - 1 + (tp_csc_ID-1 < 3 ? 0 : 1);
+    if (tp_station == 1 && tp_csc_ID > 9) { // ME1/1a (using CSC_ID > 9 convention? - AWB 28.09.16)
+      selected = (5) * 9 + ((tp_csc_ID - 9) / 3) - 1; // 45
+    } else if (tp_station == 1) {           // ME1/1b, ME1/2, ME1/3
+      selected = (5) * 9 + (tp_csc_ID / 3) - 1;       // 45 - 47
+    } else {                                // ME2, ME3, ME4
+      selected = (5) * 9 + (tp_station) * 2 + (tp_csc_ID == 3 ? 0 : 1) - 1; // 48 - 53
     }
   }
 

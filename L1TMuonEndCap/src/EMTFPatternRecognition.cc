@@ -118,6 +118,7 @@ void EMTFPatternRecognition::configure_details() {
 
       // Get the 17 integers
       // straightness, hits in ME1, hits in ME2, hits in ME3, hits in ME4
+      // If it's symmetric, why do we need both max1/min1 and max2/min2? - AWB 04.10.16
       int straightness = std::stoi(tokens.at(itoken++));
       int st1_max1     = std::stoi(tokens.at(itoken++));
       int st1_min1     = std::stoi(tokens.at(itoken++));
@@ -141,7 +142,7 @@ void EMTFPatternRecognition::configure_details() {
       assert(st2_max1 == PATTERN_KEY_ZHIT && st2_min1 == PATTERN_KEY_ZHIT);
       assert(st2_max2 == PATTERN_KEY_ZHIT && st2_min2 == PATTERN_KEY_ZHIT);
 
-      // There is extra "padding" in st1 w.r.t st2,3,4
+      // There is extra "padding" in st1 w.r.t st2,3,4 (? - AWB 04.10.16)
       // Add the extra padding to st2,3,4
       st2_max1 += PATTERN_PADDING_EXTRA_W_ST1;
       st2_min1 += PATTERN_PADDING_EXTRA_W_ST1;
@@ -177,7 +178,7 @@ void EMTFPatternRecognition::configure_details() {
       for (int i = st4_min2; i <= st4_max2; i++)
         pattern.set_bit(3, i);
 
-      // Remove the extra padding
+      // Remove the extra padding (? - AWB 04.10.16)
       pattern.rotr(PATTERN_PADDING_EXTRA_W_ST1);
 
       if (verbose_ > 1) {  // debug
@@ -284,7 +285,7 @@ void EMTFPatternRecognition::make_zone_image(
     for (; conv_hits_it != conv_hits_end; ++conv_hits_it) {
       const EMTFHitExtra& conv_hit = *conv_hits_it;
 
-      if (conv_hit.zone_code & (1<<zone)) {  // hit belongs to this zone
+      if (conv_hit.zone_code & (1 << zone)) {  // hit belongs to this zone
         unsigned int layer = conv_hit.station - 1;
         unsigned int bit   = conv_hit.zone_hit;
         image.set_bit(layer, bit);
@@ -452,12 +453,12 @@ void EMTFPatternRecognition::process_single_zone(
       survived_roads.push_back(roads.at(iroad));
     }
   }
-
+  // Contents of the vectors "roads" and "survived_roads" are swapped
   roads.swap(survived_roads);
 }
 
 void EMTFPatternRecognition::sort_single_zone(EMTFRoadExtraCollection& roads) const {
-  // First, order by key_zhit
+  // First, order by key_zhit (highest to lowest)
   struct {
     typedef EMTFRoadExtra value_type;
     constexpr bool operator()(const value_type& lhs, const value_type& rhs) {
@@ -467,7 +468,7 @@ void EMTFPatternRecognition::sort_single_zone(EMTFRoadExtraCollection& roads) co
 
   std::sort(roads.begin(), roads.end(), greater_zhit_cmp);
 
-  // Second, sort by quality_code, but preserving the original order
+  // Second, sort by quality_code (highest to lowest), but preserving the original order if qualities are equal
   struct {
     typedef EMTFRoadExtra value_type;
     constexpr bool operator()(const value_type& lhs, const value_type& rhs) {

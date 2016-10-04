@@ -4,7 +4,7 @@
 
 
 void EMTFBestTrackSelection::configure(
-    int verbose, int endcap, int sector, int bx,
+    int verbose, int endcap, int sector, int bx, int bxWindow,
     int maxRoadsPerZone, int maxTracks, bool useSecondEarliest
 ) {
   verbose_ = verbose;
@@ -12,6 +12,7 @@ void EMTFBestTrackSelection::configure(
   sector_  = sector;
   bx_      = bx;
 
+  bxWindow_           = bxWindow;
   maxRoadsPerZone_    = maxRoadsPerZone;
   maxTracks_          = maxTracks;
   useSecondEarliest_  = useSecondEarliest;
@@ -25,7 +26,7 @@ void EMTFBestTrackSelection::process(
   if (!useSecondEarliest_) {
     cancel_one_bx(extended_best_track_cands, best_tracks);
   } else {
-    cancel_three_bx(extended_best_track_cands, best_tracks);
+    cancel_multi_bx(extended_best_track_cands, best_tracks);
   }
 
   if (verbose_ > 0) {  // debug
@@ -100,7 +101,7 @@ void EMTFBestTrackSelection::cancel_one_bx(
     return;
 
 
-  // Copied from firmware
+  // Copied from firmware (emulator version to come? - AWB 03.10.16)
   bool use_fw_algo = true;
 
   if (use_fw_algo) {
@@ -203,14 +204,14 @@ void EMTFBestTrackSelection::cancel_one_bx(
   }
 }
 
-void EMTFBestTrackSelection::cancel_three_bx(
+void EMTFBestTrackSelection::cancel_multi_bx(
     const std::deque<EMTFTrackExtraCollection>& extended_best_track_cands,
     EMTFTrackExtraCollection& best_tracks
 ) const {
   const int num_h = extended_best_track_cands.size() / NUM_ZONES;  // num of bx history
   assert((int) extended_best_track_cands.size() == num_h * NUM_ZONES);
 
-  const int max_h = 3;                       // = 3 bx history
+  const int max_h = bxWindow_;               // = 3 bx history
   const int max_z = NUM_ZONES;               // = 4 zones
   const int max_n = maxRoadsPerZone_;        // = 3 candidates per zone
   //const int max_zn = max_z * max_n;          // = 12 total candidates
@@ -218,7 +219,7 @@ void EMTFBestTrackSelection::cancel_three_bx(
   assert(maxTracks_ <= max_hzn);
 
   // Emulate the arrays used in firmware
-  typedef std::array<int, 3> segment_ref_t;
+  typedef std::array<int, 3> segment_ref_t; // Should this be max_h or max_n, instead of 3? - AWB 04.10.16
   std::vector<std::vector<segment_ref_t> > segments(max_hzn, std::vector<segment_ref_t>());  // 2D array [hzn][num segments]
 
   std::vector<std::vector<bool> > larger(max_hzn, std::vector<bool>(max_hzn, false));  // 2D array [hzn][hzn]
@@ -272,7 +273,7 @@ void EMTFBestTrackSelection::cancel_three_bx(
     return;
 
 
-  // Copied from firmware
+  // Copied from firmware (emulator version to come? - AWB 03.10.16)
   bool use_fw_algo = true;
 
   if (use_fw_algo) {
@@ -303,7 +304,7 @@ void EMTFBestTrackSelection::cancel_three_bx(
       exists[i] = (ri != 0);
     }
 
-    // ghost cancellation, over 3 BXs
+    // ghost cancellation, over multiple BX
     for (int i = 0; i < max_hzn-1; ++i) { // candidate loop
       for (int j = i+1; j < max_hzn; ++j) { // comparison candidate loop
         int shared_segs = 0;

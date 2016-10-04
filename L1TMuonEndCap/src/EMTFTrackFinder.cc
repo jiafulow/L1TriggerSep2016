@@ -92,7 +92,7 @@ void EMTFTrackFinder::process(
   out_tracks.clear();
 
   // ___________________________________________________________________________
-  // Extract all trigger primitives
+  // Extract all trigger primitives (class defined in ??? - AWB 27.09.16)
   TriggerPrimitiveCollection muon_primitives;
 
   EMTFSubsystemCollector collector;
@@ -112,9 +112,10 @@ void EMTFTrackFinder::process(
   // ___________________________________________________________________________
   // Run each sector processor
 
-  for (int endcap = MIN_ENDCAP; endcap <= MAX_ENDCAP; ++endcap) {
+  // MIN/MAX ENDCAP and TRIGSECTOR set in interface/EMTFCommon.hh
+  for (int endcap = MIN_ENDCAP; endcap <= MAX_ENDCAP; ++endcap) { 
     for (int sector = MIN_TRIGSECTOR; sector <= MAX_TRIGSECTOR; ++sector) {
-      const int es = (endcap-1) * 6 + (sector-1);
+      int es = (endcap - MIN_ENDCAP) * (1 + MAX_TRIGSECTOR - MIN_TRIGSECTOR) + (sector - 1);
 
       sector_processors_.at(es).process(
           iEvent.id().event(),

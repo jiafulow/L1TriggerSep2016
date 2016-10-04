@@ -10,14 +10,15 @@ namespace {
 
 void EMTFAngleCalculation::configure(
     int verbose, int endcap, int sector, int bx,
-    int thetaWindow
+    int bxWindow, int thetaWindow
 ) {
   verbose_ = verbose;
   endcap_  = endcap;
   sector_  = sector;
   bx_      = bx;
 
-  thetaWindow_     = thetaWindow;
+  bxWindow_    = bxWindow;
+  thetaWindow_ = thetaWindow;
 }
 
 void EMTFAngleCalculation::process(
@@ -33,7 +34,7 @@ void EMTFAngleCalculation::process(
       calculate_angles(track);
     }
 
-    // Erase tracks with rank = 0
+    // Erase tracks with rank = 0, and hits that fail dTheta window (or are not "best" dTheta)
     erase_tracks(tracks);
 
     for (unsigned itrack = 0; itrack < tracks.size(); ++itrack) {
@@ -68,7 +69,7 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
     st_conv_hits.push_back(EMTFHitExtraCollection());
 
     for (const auto& conv_hit : track.xhits) {
-      if ((conv_hit.station-1) == istation)
+      if ((conv_hit.station - 1) == istation)
         st_conv_hits.back().push_back(conv_hit);
     }
   }
@@ -108,7 +109,7 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
       const EMTFHitExtraCollection& conv_hitsA = st_conv_hits.at(ist1);
       const EMTFHitExtraCollection& conv_hitsB = st_conv_hits.at(ist2);
 
-      for (const auto& conv_hitA : conv_hitsA) {
+      for (const auto& conv_hitA : conv_hitsA) { // When would we have more than 1 hit per station? - AWB 03.10.16
         for (const auto& conv_hitB : conv_hitsB) {
           // Calculate theta deltas
           int thA = conv_hitA.theta_fp;
@@ -120,9 +121,9 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
           if (best_dtheta_arr.at(ipair) >= dth) {
             best_dtheta_arr.at(ipair) = dth;
             best_dtheta_sign_arr.at(ipair) = dth_sign;
-            best_dtheta_valid_arr.at(ipair) = true;
+            best_dtheta_valid_arr.at(ipair) = true; // When is this condition not fulfilled? - AWB 03.10.16
 
-            best_theta_arr.at(ist1) = thA;
+            best_theta_arr.at(ist1) = thA; // What if the station 2 theta for the "best" 1-2 pair does not match the best 2-3 pair? - AWB 03.10.16
             best_theta_arr.at(ist2) = thB;
             best_theta_valid_arr.at(ist1) = true;
             best_theta_valid_arr.at(ist2) = true;
@@ -132,7 +133,7 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
           int phA = conv_hitA.phi_fp;
           int phB = conv_hitB.phi_fp;
           int dph = (phA > phB) ? phA - phB : phB - phA;
-          int dph_sign = (phA <= phB);  // sign reversed according to Matt's oral request 2016-04-27
+          int dph_sign = (phA <= phB);  // sign reversed according to Matt's oral request 2016-04-27 (Why??? - AWB 03.10.16)
 
           if (best_dtheta_valid_arr.at(ipair)) {
             best_dphi_arr.at(ipair) = dph;
@@ -154,9 +155,10 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
   int vmask3 = 0;
 
   // vmask contains valid station mask = {ME4,ME3,ME2,ME1}
+  // Why does vmask contain "0b0000"? - AWB 03.10.16
   if (best_dtheta_arr.at(0) <= thetaWindow_) {
     vmask1 |= 0b0011;  // 12
-    best_dtheta_valid_arr.at(0) = false;
+    best_dtheta_valid_arr.at(0) = false; // Why does a match make this IN-valid? - AWB 03.10.16
   }
   if (best_dtheta_arr.at(1) <= thetaWindow_) {
     vmask1 |= 0b0101;  // 13
@@ -180,35 +182,36 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
   }
 
   // merge station masks only if they share bits
+  // (How can they not?  All vmasks contin "0b0000" - AWB 03.10.16)
   int vstat = vmask1;
   if ((vstat & vmask2) != 0 || vstat == 0)
     vstat |= vmask2;
   if ((vstat & vmask3) != 0 || vstat == 0)
     vstat |= vmask3;
 
-  // remove some valid flags if th did not line up
+  // remove valid flag for station if hit has no dTheta values within the window
   for (int istation = 0; istation < NUM_STATIONS; ++istation) {
-    if ((vstat & (1<<istation)) == 0) {  // station bit not set
+    if ((vstat & (1 << istation)) == 0) {  // station bit not set
       st_conv_hits.at(istation).clear();
       best_theta_valid_arr.at(istation) = false;
     }
   }
 
-  // assign precise phi and theta
+  // assign precise phi and theta for the track
   int phi_int = 0;
   int theta_int = 0;
 
-  if ((vstat & (1<<1)) != 0) {          // ME2 present
+  if ((vstat & (1 << 1)) != 0) {          // ME2 present
     assert(best_theta_valid_arr.at(1));
     phi_int   = best_phi_arr.at(1);
     theta_int = best_theta_arr.at(1);
 
-  } else if ((vstat & (1<<2)) != 0) {   // ME3 present
+  } else if ((vstat & (1 << 2)) != 0) {   // ME3 present
     assert(best_theta_valid_arr.at(2));
     phi_int   = best_phi_arr.at(2);
     theta_int = best_theta_arr.at(2);
 
-  } else if ((vstat & (1<<3)) != 0) {   // ME4 present
+  } else if ((vstat & (1 << 3)) != 0) {   // ME4 present
     assert(best_theta_valid_arr.at(3));
     phi_int   = best_phi_arr.at(3);
     theta_int = best_theta_arr.at(3);
@@ -218,23 +221,23 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
   // keep straightness as it was
   int rank = (track.xroad.quality_code << 1);  // output rank is one bit longer than input, to accomodate ME4 separately
   int rank2 = (
-      (((rank>>6)  & 1) << 6) |  // straightness
-      (((rank>>4)  & 1) << 4) |  // straightness
-      (((rank>>2)  & 1) << 2) |  // straightness
-      (((vstat>>0) & 1) << 5) |  // ME1
-      (((vstat>>1) & 1) << 3) |  // ME2
-      (((vstat>>2) & 1) << 1) |  // ME3
-      (((vstat>>3) & 1) << 0)    // ME4
+      (((rank >> 6)  & 1) << 6) |  // straightness
+      (((rank >> 4)  & 1) << 4) |  // straightness
+      (((rank >> 2)  & 1) << 2) |  // straightness
+      (((vstat >> 0) & 1) << 5) |  // ME1
+      (((vstat >> 1) & 1) << 3) |  // ME2
+      (((vstat >> 2) & 1) << 1) |  // ME3
+      (((vstat >> 3) & 1) << 0)    // ME4
   );
 
   int mode = (
-      (((vstat>>0) & 1) << 3) |  // ME1
-      (((vstat>>1) & 1) << 2) |  // ME2
-      (((vstat>>2) & 1) << 1) |  // ME3
-      (((vstat>>3) & 1) << 0)    // ME4
+      (((vstat >> 0) & 1) << 3) |  // ME1
+      (((vstat >> 1) & 1) << 2) |  // ME2
+      (((vstat >> 2) & 1) << 1) |  // ME3
+      (((vstat >> 3) & 1) << 0)    // ME4
   );
 
-  int mode_inv = vstat;
+  int mode_inv = vstat; // With the "0b0000" componenent? - AWB 03.10.16
 
   // if less than 2 segments, kill rank
   if (vstat == 0b0001 || vstat == 0b0010 || vstat == 0b0100 || vstat == 0b1000 || vstat == 0)
@@ -247,10 +250,10 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
     // not overlapping means back
     if(isOverlapping)
     {
-      bool isEven = (chamber%2==0);
+      bool isEven = (chamber % 2 == 0);
       // odd chambers are bolted to the iron, which faces
       // forward in 1&2, backward in 3&4, so...
-      result = (station<3) ? isEven : !isEven;
+      result = (station < 3) ? isEven : !isEven;
     }
     return result;
   };
@@ -269,7 +272,7 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
     ptlut_data.fr[i]         = v.empty() ? 0 : isFront(v.front().station, v.front().ring, v.front().chamber);
     ptlut_data.ph[i]         = best_phi_arr.at(i);
     ptlut_data.th[i]         = best_theta_arr.at(i);
-    ptlut_data.bt_chamber[i] = v.empty() ? 0 : get_bt_chamber(v.front());
+    ptlut_data.bt_chamber[i] = v.empty() ? 0 : get_bt_chamber(v.front()); // What is this variable for? - AWB 03.10.16
   }
 
   // ___________________________________________________________________________
@@ -284,26 +287,30 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
 }
 
 void EMTFAngleCalculation::calculate_bx(EMTFTrackExtra& track) const {
-  int h2 = 0;
-  int h1 = 0;
+
+  int delayBX = bxWindow_ - 1;
+  assert(delayBX > 0);
+  int hbx[delayBX];
+  for (int i = delayBX; i >= 0; i--) 
+    hbx[i] = 0;
 
   for (const auto& conv_hit : track.xhits) {
-    if (conv_hit.bx == bx_ - 2)  // count stubs delayed by 2 BX
-      h2 += 1;
-    if (conv_hit.bx >= bx_ - 1)  // count stubs delayed by 1 BX or more
-      h1 += 1;
+    for (int i = delayBX; i >= 0; i--) {
+      if (conv_hit.bx <= bx_ - i)
+	hbx[i] += 1;  // Count stubs delayed by i BX or more
+    }
   }
 
-  int first_bx = bx_ - 2;
+  int first_bx = bx_ - delayBX; // Is this always true? - AWB 04.10.16
 
-  int second_bx = bx_ - 2;
-  if (h2 >= 2) {
-    second_bx = bx_ - 2;  // two stubs in earliest BX, analyze immediately
-  } else if (h1 >= 2) {
-    second_bx = bx_ - 1;  // second-earliest stub one BX late
-  } else {
-    second_bx = bx_ - 0;  // second-earliest stub two BXs late
+  int second_bx = 99;
+  for (int i = delayBX; i >= 0; i--) {
+    if (hbx[i] >= 2) { // If 2 or more stubs are delayed by i BX or more
+      second_bx = bx_ - i; // if i == delayBX, analyze immediately
+      break;
+    }
   }
+  assert(second_bx != 99);
 
   // ___________________________________________________________________________
   // Output
@@ -323,7 +330,6 @@ void EMTFAngleCalculation::erase_tracks(EMTFTrackExtraCollection& tracks) const 
   } rank_zero_pred;
 
   tracks.erase(std::remove_if(tracks.begin(), tracks.end(), rank_zero_pred), tracks.end());
-
 
   // Erase hits that are not selected as the best phi and theta in each station
   // using erase-remove idiom

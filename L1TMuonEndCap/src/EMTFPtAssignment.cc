@@ -29,7 +29,7 @@ void EMTFPtAssignment::process(
 
     address_t address = pt_assign_engine_->calculate_address(track);
     float     xmlpt   = pt_assign_engine_->calculate_pt(address);
-    float     pt      = xmlpt * 1.4;
+    float     pt      = xmlpt * 1.4; // Should do proper rounding (to 0.5) here. - AWB 03.10.16
 
 
     // compressed pt = pt*2 (scale) + 1 (pt = 0 is empty candidate)
@@ -47,9 +47,9 @@ void EMTFPtAssignment::process(
     int gmt_phi = (gmt_phi_mult>>18); // divide by 0x40000
     gmt_phi -= 35; // offset of -22 deg
 
-    int gmt_eta = getGMTEta(track.theta_int, endcap_);
+    int gmt_eta = getGMTEta(track.theta_int, endcap_); // From EMTFPtAssignmentHelper.hh. Does this bit-wise match the FW? - AWB 03.10.16
     bool use_ones_complem_gmt_eta = true;
-    if (use_ones_complem_gmt_eta) {
+    if (use_ones_complem_gmt_eta) { // Is this the proper thing to do? - AWB 04.10.16
       gmt_eta = (gmt_eta < 0) ? ~(-gmt_eta) : gmt_eta;
     }
 

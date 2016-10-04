@@ -97,7 +97,7 @@ void EMTFPrimitiveMatching::process(
     for (int istation = 0; istation < NUM_STATIONS; ++istation) {
       const int zs = (izone*NUM_STATIONS) + istation;
 
-      process_single_zone_station(
+      process_single_zone_station( // No requirement that hit be in pattern? - AWB 03.10.16
           istation + 1,
           zone_roads.at(izone),
           zs_conv_hits.at(zs),
@@ -189,6 +189,7 @@ void EMTFPrimitiveMatching::process_single_zone_station(
     std::vector<std::pair<int, int> >& phi_differences
 ) const {
   // max phi difference between pattern and segment
+  // This doesn't depend on the pattern straightness - any hit within the largest pattern may match? - AWB 04.10.16
   int max_ph_diff = (station == 1) ? 15 : 7;
   //int bw_ph_diff = (station == 1) ? 5 : 4; // ph difference bit width
   //int invalid_ph_diff = (station == 1) ? 31 : 15;  // invalid difference
@@ -213,12 +214,12 @@ void EMTFPrimitiveMatching::process_single_zone_station(
   const int nchits = conv_hits.size();
 
   for (int iroad = 0; iroad < nroads; ++iroad) {
-    int ph_pat = roads.at(iroad).ph_num;  // ph detected in pattern
-    int ph_q   = roads.at(iroad).ph_q;
+    int ph_pat = roads.at(iroad).ph_num;  // pattern key phi value
+    int ph_q   = roads.at(iroad).ph_q;    // pattern quality code
     assert(ph_pat >= 0 && ph_q > 0);
 
     if (fixZonePhi_) {
-      ph_pat <<= 5;  // add missing 5 lower bits to pattern phi
+      ph_pat <<= 5;  // add missing 5 lower bits to pattern phi (doesn't this just add 0's to the end? - AWB 04.10.16)
     }
 
     std::vector<std::pair<int, int> > tmp_phi_differences;
@@ -259,7 +260,7 @@ void EMTFPrimitiveMatching::process_single_zone_station(
 void EMTFPrimitiveMatching::sort_ph_diff(
     std::vector<std::pair<int, int> >& phi_differences
 ) const {
-  // Sort by value, but preserving the original order
+  // Sort by value, but preserving the original order in case of a tie
   struct {
     typedef std::pair<int, int> value_type;
     constexpr bool operator()(const value_type& lhs, const value_type& rhs) {
@@ -269,7 +270,7 @@ void EMTFPrimitiveMatching::sort_ph_diff(
 
   std::stable_sort(phi_differences.begin(), phi_differences.end(), less_ph_diff_cmp);
 
-  // Maybe implement the firmware algorithm here?
+  // Maybe implement the firmware algorithm here? - JFL 04.10.16
 }
 
 void EMTFPrimitiveMatching::insert_hits(

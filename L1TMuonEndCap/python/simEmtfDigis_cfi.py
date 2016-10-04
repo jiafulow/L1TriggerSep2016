@@ -34,7 +34,7 @@ simEmtfDigis = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
     spPCParams16 = cms.PSet(
         IncludeNeighbor = cms.bool(True),
         DuplicateTheta = cms.bool(True),
-        FixZonePhi = cms.bool(True),
+        FixZonePhi = cms.bool(False), ## False in FW through the present - AWB 04.10.16
     ),
 
     # Sector processor pattern-recognition parameters
@@ -44,11 +44,14 @@ simEmtfDigis = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
         ZoneOverlap = cms.int32(2),
         PatternDefinitions = cms.vstring(
             # straightness, hits in ME1, hits in ME2, hits in ME3, hits in ME4
+            # ME1 vaues centered at 15, range from 0 - 30
+            # ME2,3,4 values centered at 7, range from 0 - 14
+            # Is the "center" assumed somewhere, or do we need to make it configurable? - AWB 29.09.16
             "4,15:15,7:7,7:7,7:7",
             "3,16:16,7:7,7:6,7:6",
             "3,14:14,7:7,8:7,8:7",
-            "2,18:17,7:7,7:5,7:5",    # should be 7:4 in ME3,4
-            "2,13:12,7:7,10:7,10:7",
+            "2,18:17,7:7,7:5,7:5",
+            "2,13:12,7:7,10:7,10:7",  # should be 9:7 in ME3,4 (bug in FW or emulator? - AWB 29.09.16)
             "1,22:19,7:7,7:0,7:0",
             "1,11:8,7:7,14:7,14:7",
             "0,30:23,7:7,7:0,7:0",
@@ -65,8 +68,8 @@ simEmtfDigis = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
         MaxRoadsPerZone = cms.int32(3),
         ThetaWindow = cms.int32(4),
         MaxTracks = cms.int32(3),
-        UseSecondEarliest = cms.bool(True),
-        UseSymmetricalPatterns = cms.bool(True),
+        UseSecondEarliest = cms.bool(False), ## Code for this broken at the moment - AWB 04.10.16
+        UseSymmetricalPatterns = cms.bool(False), ## False in FW through the present - AWB 04.10.16
     ),
 
     # Sector processor pt-assignment parameters

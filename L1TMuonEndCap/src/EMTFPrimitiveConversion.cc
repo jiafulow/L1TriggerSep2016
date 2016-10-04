@@ -26,7 +26,7 @@ void EMTFPrimitiveConversion::configure(
   duplicateTheta_  = duplicateTheta;
   fixZonePhi_      = fixZonePhi;
 
-  zoneBoundaries1_ = zoneBoundaries1;
+  zoneBoundaries1_ = zoneBoundaries1; // Not used - why is this here? - AWB 29.09.16
   zoneBoundaries2_ = zoneBoundaries2;
   zoneOverlap_     = zoneOverlap;
 }
@@ -48,7 +48,7 @@ void EMTFPrimitiveConversion::process(
     TriggerPrimitiveCollection::const_iterator tp_end = map_tp_it->second.end();
 
     for (; tp_it != tp_end; ++tp_it) {
-      const EMTFHitExtra& conv_hit = convert_prim_csc(selected, *tp_it);  // CSC
+      const EMTFHitExtra& conv_hit = convert_prim_csc(selected, *tp_it);
       conv_hits.push_back(conv_hit);
     }
   }
@@ -97,7 +97,7 @@ EMTFHitExtra EMTFPrimitiveConversion::convert_prim_csc(int selected, const Trigg
 
   // station 1 --> subsector 1 or 2
   // station 2,3,4 --> subsector 0
-  int tp_subsector = (tp_station != 1) ? 0 : ((tp_chamber%6 > 2) ? 1 : 2);
+  int tp_subsector = (tp_station != 1) ? 0 : ((tp_chamber % 6 > 2) ? 1 : 2);
 
   // Check using ME1/1a --> ring 4 convention
   if (tp_station == 1 && tp_ring == 1) {
@@ -116,18 +116,19 @@ EMTFHitExtra EMTFPrimitiveConversion::convert_prim_csc(int selected, const Trigg
   assert(tp_data.pattern <= 10);
   assert(tp_data.quality > 0);
 
-  //
+  // What does "pc" stand for? - AWB 29.09.16
   int pc_sector    = sector_;
-  int pc_station   = selected / 9;
-  int pc_chamber   = selected % 9;
+  int pc_station   = selected / 9; // {0, 5} = {ME1 sub 1, ME1 sub 2, ME2, ME3, ME4, neighbor}
+  int pc_chamber   = selected % 9; // Equals CSC ID - 1 for all but neighbor chambers
 
   bool is_neighbor = (pc_station == 5);
 
-  int cscn_ID      = tp_csc_ID;
+  int cscn_ID      = tp_csc_ID; // CSC neighbor ID
   if (is_neighbor) {
-    // station 1 has 3 neighbor chambers: 13, 14, 15
-    // station 2,3,4 have 2 neighbor chambers: 10, 11
-    cscn_ID = (pc_chamber < 3) ? (pc_chamber + 12) : (((pc_chamber-1)%2) + 9);
+    // station 1 has 3 neighbor chambers: 13, 14, 15 in rings 1, 2, 3
+    // station 2,3,4 have 2 neighbor chambers: 10, 11 in rings 1, 2
+    // Why is there no chamber 12? - AWB 29.09.16
+    cscn_ID = (pc_chamber < 3) ? (pc_chamber + 12) : ( ((pc_chamber - 1) % 2) + 9);
     cscn_ID += 1;
 
     if (tp_station == 1) {  // ME1
@@ -146,7 +147,7 @@ EMTFHitExtra EMTFPrimitiveConversion::convert_prim_csc(int selected, const Trigg
   conv_hit.csc_ID      = tp_csc_ID;
   conv_hit.cscn_ID     = cscn_ID;
 
-  conv_hit.bx          = tp_bx - 6;
+  conv_hit.bx          = tp_bx - 6; // Need to check / set offset - AWB 29.09.16
   conv_hit.subsystem   = TriggerPrimitive::kCSC;
 
   conv_hit.pc_sector   = pc_sector;
@@ -160,13 +161,13 @@ EMTFHitExtra EMTFPrimitiveConversion::convert_prim_csc(int selected, const Trigg
   conv_hit.pattern     = tp_data.pattern;
   conv_hit.bend        = tp_data.bend;
 
-  conv_hit.bc0         = 0;
-  conv_hit.mpc_link    = tp_data.mpclink;
-  conv_hit.sync_err    = tp_data.syncErr;
-  conv_hit.track_num   = tp_data.trknmb;
-  conv_hit.stub_num    = 0;
-  conv_hit.bx0         = tp_data.bx0;
-  conv_hit.layer       = 0;
+  conv_hit.bc0         = 0; // Not used anywhere, but part of EMTF DAQ output
+  conv_hit.mpc_link    = tp_data.mpclink; // Used? Delete from class? - AWB 29.09.16
+  conv_hit.sync_err    = tp_data.syncErr; // Used? Delete from class? - AWB 29.09.16
+  conv_hit.track_num   = tp_data.trknmb; // Used? Delete from class? - AWB 29.09.16
+  conv_hit.stub_num    = 0; // Should define in same way as firmware - AWB 29.09.16
+  conv_hit.bx0         = tp_data.bx0; // Used? Delete from class? - AWB 29.09.16
+  conv_hit.layer       = 0; // Used? Delete from class? - AWB 29.09.16
 
   convert_csc(conv_hit);
   return conv_hit;
@@ -174,27 +175,27 @@ EMTFHitExtra EMTFPrimitiveConversion::convert_prim_csc(int selected, const Trigg
 
 void EMTFPrimitiveConversion::convert_csc(EMTFHitExtra& conv_hit) const {
   // Defined as in firmware
-  int fw_endcap  = (endcap_-1);
-  int fw_sector  = (sector_-1);
-  int fw_station = (conv_hit.station == 1) ? (conv_hit.subsector-1) : conv_hit.station;
-  int fw_cscid   = (conv_hit.cscn_ID-1);
+  int fw_endcap  = (endcap_-1); // 0 for ME+, 1 for ME-
+  int fw_sector  = (sector_-1); // 0 - 5
+  int fw_station = (conv_hit.station == 1) ? (conv_hit.subsector-1) : conv_hit.station; // 0 - 4
+  int fw_cscid   = (conv_hit.cscn_ID-1); // 0 - 14 (excluding 11? - AWB 29.09.16)
   int fw_hstrip  = conv_hit.strip;  // it is half-strip, despite the name
   int fw_wg      = conv_hit.wire;   // it is wiregroup, despite the name
 
-  int pc_station = conv_hit.pc_station;
-  int pc_chamber = conv_hit.pc_chamber;
+  int pc_station = conv_hit.pc_station; // 0 - 5
+  int pc_chamber = conv_hit.pc_chamber; // 0 - 8
 
   bool is_me11a = (conv_hit.station == 1 && conv_hit.ring == 4);
   bool is_me11b = (conv_hit.station == 1 && conv_hit.ring == 1);
   bool is_me13  = (conv_hit.station == 1 && conv_hit.ring == 3);
 
-  // Is this chamber mounted in reverse direction?
+  // Is this chamber mounted in reverse direction? (What does this mean? - AWB 29.09.16)
   bool ph_reverse = false;
   if ((fw_endcap == 0 && fw_station >= 3) || (fw_endcap == 1 && fw_station < 3))
     ph_reverse = true;
 
   // Chamber coverage if phi_reverse = true
-  int ph_coverage = 0;
+  int ph_coverage = 0; // What is ph_coverage? in what units? - AWB 29.09.16
   if (ph_reverse) {
     if (fw_station <= 1 && ((fw_cscid >= 6 && fw_cscid <= 8) || fw_cscid == 14))  // ME1/3
       ph_coverage = 15;
@@ -204,8 +205,8 @@ void EMTFPrimitiveConversion::convert_csc(EMTFHitExtra& conv_hit) const {
       ph_coverage = 20;
   }
 
-  int th_negative = 50;
-  int th_coverage = 45;
+  int th_negative = 50; // What is this? - AWB 29.09.16
+  int th_coverage = 45; // What is this? - AWB 29.09.16
 
   bool is_10degree = false;
   if (
@@ -217,25 +218,27 @@ void EMTFPrimitiveConversion::convert_csc(EMTFHitExtra& conv_hit) const {
 
   // LUT index
   // There are 54 CSC chambers including the neighbors in a sector, but 61 LUT indices
+  // This comes from dividing the 6 chambers + 1 neighbor in ME1/1 into ME1/1a and ME1/1b
   int pc_lut_id = pc_chamber;
-  if (pc_station == 0) {
+  if (pc_station == 0) {         // ME1 sub 1: 0 - 11
     pc_lut_id = is_me11a ? pc_lut_id + 9 : pc_lut_id;
-  } else if (pc_station == 1) {
+  } else if (pc_station == 1) {  // ME1 sub 2: 16 - 27
     pc_lut_id += 16;
     pc_lut_id = is_me11a ? pc_lut_id + 9 : pc_lut_id;
-  } else if (pc_station == 2) {
+  } else if (pc_station == 2) {  // ME2: 28 - 36
     pc_lut_id += 28;
-  } else if (pc_station == 3) {
+  } else if (pc_station == 3) {  // ME3: 39 - 47
     pc_lut_id += 39;
-  } else if (pc_station == 4) {
+  } else if (pc_station == 4) {  // ME4: 50 - 58
     pc_lut_id += 50;
-  } else if (pc_station == 5 && pc_chamber < 3) {
+  // Chambers from neighbor sector
+  } else if (pc_station == 5 && pc_chamber < 3) {  // ME1: 12 - 15
     pc_lut_id = is_me11a ? pc_lut_id + 15 : pc_lut_id + 12;
-  } else if (pc_station == 5 && pc_chamber < 5) {
+  } else if (pc_station == 5 && pc_chamber < 5) {  // ME2: 37 - 38 
     pc_lut_id += 28 + 9 - 3;
-  } else if (pc_station == 5 && pc_chamber < 7) {
+  } else if (pc_station == 5 && pc_chamber < 7) {  // ME3: 48 - 49
     pc_lut_id += 39 + 9 - 5;
-  } else if (pc_station == 5 && pc_chamber < 9) {
+  } else if (pc_station == 5 && pc_chamber < 9) {  // ME4: 59 - 60
     pc_lut_id += 50 + 9 - 7;
   }
   assert(pc_lut_id < 61);
@@ -256,7 +259,7 @@ void EMTFPrimitiveConversion::convert_csc(EMTFHitExtra& conv_hit) const {
   // Convert half-strip into 1/8-strip
   int eighth_strip = 0;
 
-  // Apply phi correction from CLCT pattern number
+  // Apply phi correction from CLCT pattern number (from src/EMTFSectorProcessorLUT.cc)
   int clct_pat_corr = lut().get_ph_patt_corr(conv_hit.pattern);
   int clct_pat_corr_sign = (lut().get_ph_patt_corr_sign(conv_hit.pattern) == 0) ? 1 : -1;
 
@@ -329,7 +332,7 @@ void EMTFPrimitiveConversion::convert_csc(EMTFHitExtra& conv_hit) const {
       th_tmp = th_coverage;  // limit at the top
   }
 
-  // theta precision: 0.285 degree
+  // theta precision = 0.285 degrees, starts at 8.5 deg: {1, 127} <--> {8.785, 44.695}
   int th = lut().get_th_init(fw_endcap, fw_sector, pc_lut_id);
   th = th + th_tmp;
 
@@ -341,7 +344,8 @@ void EMTFPrimitiveConversion::convert_csc(EMTFHitExtra& conv_hit) const {
   // zones
 
   // ph zone boundaries for chambers that cover more than one zone
-  // hardcoded boundaries must match boundaries in ph_th_match module
+  // bnd1 is the lower boundary, bnd2 the upper boundary
+  // hardcoded boundaries must match boundaries in ph_th_match module (where? - AWB 29.09.16)
   int ph_zone_bnd1 = zoneBoundaries2_.at(3);  // = 127
   if (fw_station <= 1 && (fw_cscid <= 2 || fw_cscid == 12))  // ME1/1
     ph_zone_bnd1 = zoneBoundaries2_.at(0);  // = 41
@@ -360,7 +364,8 @@ void EMTFPrimitiveConversion::convert_csc(EMTFHitExtra& conv_hit) const {
 
   int zone_overlap = zoneOverlap_;
 
-  // Check which zones ph hits should be applied to
+  // phzvl: each chamber overlaps with at most 3 zones, so this "local" zone word says
+  // which of the possible zones contain the hit: 1 for lower, 2 for middle, 4 for upper
   int phzvl = 0;
   if (th <= (ph_zone_bnd1 + zone_overlap)) {
     phzvl |= (1<<0);
@@ -438,12 +443,12 @@ void EMTFPrimitiveConversion::convert_csc(EMTFHitExtra& conv_hit) const {
   // ___________________________________________________________________________
   // Output
 
-  conv_hit.phi_fp     = fph;
-  conv_hit.theta_fp   = th;
-  conv_hit.phzvl      = phzvl;
-  conv_hit.ph_hit     = ph_hit;
-  conv_hit.zone_hit   = zone_hit;
-  conv_hit.zone_code  = zone_code;
+  conv_hit.phi_fp     = fph;        // Full-precision integer phi (within chamber? - AWB 29.09.16)
+  conv_hit.theta_fp   = th;         // Full-precision integer theta
+  conv_hit.phzvl      = phzvl;      // Local zone word: (1*low) + (2*mid) + (4*low)  (Remove from EMTFHitExtra? - AWB 29.09.16)  
+  conv_hit.ph_hit     = ph_hit;     // What is this? Doesn't appear to be used outside EMTFPrimitiveConversion.cc ... - AWB 29.09.16
+  conv_hit.zone_hit   = zone_hit;   // Phi value for building patterns (0.53333 deg precision) 
+  conv_hit.zone_code  = zone_code;  // Full zone word: 1*(zone 0) + 2*(zone 1) + 4*(zone 2) + 8*(zone 3) 
 }
 
 // RPC functions

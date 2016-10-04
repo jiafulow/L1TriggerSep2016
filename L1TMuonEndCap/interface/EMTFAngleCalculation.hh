@@ -8,7 +8,7 @@ class EMTFAngleCalculation {
 public:
   void configure(
       int verbose, int endcap, int sector, int bx,
-      int thetaWindow
+      int bxWindow, int thetaWindow
   );
 
   void process(
@@ -26,7 +26,7 @@ public:
 private:
   int verbose_, endcap_, sector_, bx_;
 
-  int thetaWindow_;
+  int bxWindow_, thetaWindow_;
 };
 
 #endif
