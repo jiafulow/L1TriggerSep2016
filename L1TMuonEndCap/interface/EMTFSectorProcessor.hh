@@ -36,7 +36,8 @@ public:
       const std::vector<int>& zoneBoundaries1, const std::vector<int>& zoneBoundaries2, int zoneOverlap,
       const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions,
       int maxRoadsPerZone, int thetaWindow, int maxTracks,
-      bool useSecondEarliest, bool useSymPatterns
+      bool useSecondEarliest, bool useSymPatterns,
+      bool readPtLUTFile, bool fixMode15HighPt, bool fix9bDPhi
   );
 
   void process(
@@ -77,6 +78,8 @@ private:
   std::vector<std::string> pattDefinitions_, symPattDefinitions_;
   int maxRoadsPerZone_, thetaWindow_, maxTracks_;
   bool useSecondEarliest_, useSymPatterns_;
+
+  bool readPtLUTFile_, fixMode15HighPt_, fix9bDPhi_;
 };
 
 #endif

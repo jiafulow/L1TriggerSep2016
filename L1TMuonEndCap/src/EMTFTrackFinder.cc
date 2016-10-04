@@ -24,9 +24,8 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
   version_     = iConfig.getParameter<int>("Version");
   ptlut_ver_   = iConfig.getParameter<int>("PtLUTVersion");
 
-  ph_th_lut_   = iConfig.getParameter<std::string>("PhThLUT");
-
   const edm::ParameterSet spPCParams16 = config_.getParameter<edm::ParameterSet>("spPCParams16");
+  auto phThLUT            = spPCParams16.getParameter<std::string>("PhThLUT");
   auto includeNeighbor    = spPCParams16.getParameter<bool>("IncludeNeighbor");
   auto duplicateTheta     = spPCParams16.getParameter<bool>("DuplicateTheta");
   auto fixZonePhi         = spPCParams16.getParameter<bool>("FixZonePhi");
@@ -44,15 +43,18 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
   auto useSymPatterns     = spPRParams16.getParameter<bool>("UseSymmetricalPatterns");
 
   const edm::ParameterSet spPAParams16 = config_.getParameter<edm::ParameterSet>("spPAParams16");
-  auto treeDir            = spPAParams16.getParameter<std::string>("TreeDir");
+  auto bdtXMLDir          = spPAParams16.getParameter<std::string>("BDTXMLDir");
+  auto readPtLUTFile      = spPAParams16.getParameter<bool>("ReadPtLUTFile");
+  auto fixMode15HighPt    = spPAParams16.getParameter<bool>("FixMode15HighPt");
+  auto fix9bDPhi          = spPAParams16.getParameter<bool>("Fix9bDPhi");
 
 
   try {
     // Configure sector processor LUT
-    sector_processor_lut_.read(ph_th_lut_);
+    sector_processor_lut_.read(phThLUT);
 
     // Configure pT assignment engine
-    pt_assignment_engine_.read(treeDir);
+    pt_assignment_engine_.read(bdtXMLDir);
 
     // Configure sector processors
     for (int endcap = MIN_ENDCAP; endcap <= MAX_ENDCAP; ++endcap) {
@@ -68,7 +70,8 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
             zoneBoundaries1, zoneBoundaries2, zoneOverlap,
             pattDefinitions, symPattDefinitions,
             maxRoadsPerZone, thetaWindow, maxTracks,
-            useSecondEarliest, useSymPatterns
+            useSecondEarliest, useSymPatterns,
+            readPtLUTFile, fixMode15HighPt, fix9bDPhi
         );
       }
     }

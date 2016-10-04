@@ -18,7 +18,8 @@ void EMTFSectorProcessor::configure(
     const std::vector<int>& zoneBoundaries1, const std::vector<int>& zoneBoundaries2, int zoneOverlap,
     const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions,
     int maxRoadsPerZone, int thetaWindow, int maxTracks,
-    bool useSecondEarliest, bool useSymPatterns
+    bool useSecondEarliest, bool useSymPatterns,
+    bool readPtLUTFile, bool fixMode15HighPt, bool fix9bDPhi
 ) {
   assert(MIN_ENDCAP <= endcap && endcap <= MAX_ENDCAP);
   assert(MIN_TRIGSECTOR <= sector && sector <= MAX_TRIGSECTOR);
@@ -51,6 +52,10 @@ void EMTFSectorProcessor::configure(
   maxTracks_          = maxTracks;
   useSecondEarliest_  = useSecondEarliest;
   useSymPatterns_     = useSymPatterns;
+
+  readPtLUTFile_   = readPtLUTFile;
+  fixMode15HighPt_ = fixMode15HighPt;
+  fix9bDPhi_       = fix9bDPhi;
 }
 
 void EMTFSectorProcessor::process(
@@ -155,7 +160,8 @@ void EMTFSectorProcessor::process_single_bx(
   EMTFPtAssignment pt_assign;
   pt_assign.configure(
       pt_assign_engine_,
-      verbose_, endcap_, sector_, bx
+      verbose_, endcap_, sector_, bx,
+      readPtLUTFile_, fixMode15HighPt_, fix9bDPhi_
   );
 
   std::map<int, TriggerPrimitiveCollection> selected_csc_map;

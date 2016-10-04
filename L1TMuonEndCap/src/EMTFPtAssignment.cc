@@ -6,7 +6,8 @@
 
 void EMTFPtAssignment::configure(
     const EMTFPtAssignmentEngine* pt_assign_engine,
-    int verbose, int endcap, int sector, int bx
+    int verbose, int endcap, int sector, int bx,
+    bool readPtLUTFile, bool fixMode15HighPt, bool fix9bDPhi
 ) {
   //pt_assign_engine_ = pt_assign_engine;
   pt_assign_engine_ = const_cast<EMTFPtAssignmentEngine*>(pt_assign_engine);
@@ -15,6 +16,11 @@ void EMTFPtAssignment::configure(
   endcap_  = endcap;
   sector_  = sector;
   bx_      = bx;
+
+  pt_assign_engine_->configure(
+      verbose_,
+      readPtLUTFile, fixMode15HighPt, fix9bDPhi
+  );
 }
 
 void EMTFPtAssignment::process(

@@ -47,8 +47,6 @@ private:
   int minBX_, maxBX_;
 
   int version_, ptlut_ver_;
-
-  std::string ph_th_lut_;
 };
 
 #endif

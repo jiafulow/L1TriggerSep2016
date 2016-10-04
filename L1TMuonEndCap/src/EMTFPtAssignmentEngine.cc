@@ -18,21 +18,32 @@ EMTFPtAssignmentEngine::~EMTFPtAssignmentEngine() {
 
 }
 
-void EMTFPtAssignmentEngine::read(const std::string& treeDir) {
+void EMTFPtAssignmentEngine::read(const std::string& xml_dir) {
   if (ok_)  return;
 
-  //std::string treeDirFull = "L1Trigger/L1TMuon/data/emtf_luts/" + treeDir + "/ModeVariables/trees";
-  std::string treeDirFull = "L1TriggerSep2016/L1TMuonEndCap/data/emtf_luts/" + treeDir + "/ModeVariables/trees";
+  //std::string xml_dir_full = "L1Trigger/L1TMuon/data/emtf_luts/" + xml_dir + "/ModeVariables/trees";
+  std::string xml_dir_full = "L1TriggerSep2016/L1TMuonEndCap/data/emtf_luts/" + xml_dir + "/ModeVariables/trees";
 
   for (unsigned i = 0; i < allowedModes_.size(); ++i) {
     int mode_inv = allowedModes_.at(i);  // inverted mode because reasons
     std::stringstream ss;
-    ss << treeDirFull << "/" << mode_inv;
+    ss << xml_dir_full << "/" << mode_inv;
     forests_.at(mode_inv).loadForestFromXML(ss.str().c_str(), 64);
   }
 
   ok_ = true;
   return;
+}
+
+void EMTFPtAssignmentEngine::configure(
+    int verbose,
+    bool readPtLUTFile, bool fixMode15HighPt, bool fix9bDPhi
+) {
+  verbose_ = verbose;
+
+  readPtLUTFile_   = readPtLUTFile;
+  fixMode15HighPt_ = fixMode15HighPt;
+  fix9bDPhi_       = fix9bDPhi;
 }
 
 EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(const EMTFTrackExtra& track) const {
@@ -112,11 +123,9 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     FR4 = getFRLUT(sector, CSCID4/12, CSCID4%12);
   }
 
-  bool fix_dPhi9Bits = true;
-
   switch(mode_inv) {
   case 3:   // 1-2
-    if (fix_dPhi9Bits)  dPhi12 = std::min(511, dPhi12);
+    if (fix9bDPhi_)  dPhi12 = std::min(511, dPhi12);
 
     address |= (dPhi12      & ((1<<9)-1)) << (0);
     address |= (sign12      & ((1<<1)-1)) << (0+9);
@@ -132,7 +141,7 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     break;
 
   case 5:   // 1-3
-    if (fix_dPhi9Bits)  dPhi13 = std::min(511, dPhi13);
+    if (fix9bDPhi_)  dPhi13 = std::min(511, dPhi13);
 
     address |= (dPhi13      & ((1<<9)-1)) << (0);
     address |= (sign13      & ((1<<1)-1)) << (0+9);
@@ -148,7 +157,7 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     break;
 
   case 9:   // 1-4
-    if (fix_dPhi9Bits)  dPhi14 = std::min(511, dPhi14);
+    if (fix9bDPhi_)  dPhi14 = std::min(511, dPhi14);
 
     address |= (dPhi14      & ((1<<9)-1)) << (0);
     address |= (sign14      & ((1<<1)-1)) << (0+9);
@@ -164,7 +173,7 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     break;
 
   case 6:   // 2-3
-    if (fix_dPhi9Bits)  dPhi23 = std::min(511, dPhi23);
+    if (fix9bDPhi_)  dPhi23 = std::min(511, dPhi23);
 
     address |= (dPhi23      & ((1<<9)-1)) << (0);
     address |= (sign23      & ((1<<1)-1)) << (0+9);
@@ -180,7 +189,7 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     break;
 
   case 10:  // 2-4
-    if (fix_dPhi9Bits)  dPhi24 = std::min(511, dPhi24);
+    if (fix9bDPhi_)  dPhi24 = std::min(511, dPhi24);
 
     address |= (dPhi24      & ((1<<9)-1)) << (0);
     address |= (sign24      & ((1<<1)-1)) << (0+9);
@@ -196,7 +205,7 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     break;
 
   case 12:  // 3-4
-    if (fix_dPhi9Bits)  dPhi34 = std::min(511, dPhi34);
+    if (fix9bDPhi_)  dPhi34 = std::min(511, dPhi34);
 
     address |= (dPhi34      & ((1<<9)-1)) << (0);
     address |= (sign34      & ((1<<1)-1)) << (0+9);
@@ -550,9 +559,7 @@ float EMTFPtAssignmentEngine::calculate_pt(const address_t& address) {
   // First fix to recover high pT muons with 3 hits in a line and one displaced hit - AWB 28.07.16
   // Done by re-writing a few addresses in the original LUT, according to the following logic
   // Implemented in FW 26.07.16, as of run 2774278 / fill 5119
-  bool era_4 = true;
-
-  if (era_4) {
+  if (fixMode15HighPt_) {
     if (mode_inv == 15) {
       bool st2_off = false;
       bool st3_off = false;
@@ -587,7 +594,7 @@ float EMTFPtAssignmentEngine::calculate_pt(const address_t& address) {
           dPhi34 = dPhi23;
       }
     }
-  } // end if era_4
+  }
 
 
   const int (*mode_variables)[6] = ModeVariables_Scheme3;

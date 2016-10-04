@@ -18,7 +18,12 @@ public:
 
   typedef uint64_t address_t;
 
-  void read(const std::string& treeDir);
+  void read(const std::string& xml_dir);
+
+  void configure(
+      int verbose,
+      bool readPtLUTFile, bool fixMode15HighPt, bool fix9bDPhi
+  );
 
   address_t calculate_address(const EMTFTrackExtra& track) const;
 
@@ -31,6 +36,10 @@ private:
   std::array<Forest, 16> forests_;
 
   bool ok_;
+
+  int verbose_;
+
+  bool readPtLUTFile_, fixMode15HighPt_, fix9bDPhi_;
 };
 
 #endif
