@@ -48,7 +48,8 @@ void EMTFPrimitiveConversion::process(
     TriggerPrimitiveCollection::const_iterator tp_end = map_tp_it->second.end();
 
     for (; tp_it != tp_end; ++tp_it) {
-      const EMTFHitExtra& conv_hit = convert_prim_csc(selected, *tp_it);  // CSC
+      EMTFHitExtra conv_hit;
+      convert_csc(selected, *tp_it, conv_hit);  // CSC
       conv_hits.push_back(conv_hit);
     }
   }
@@ -70,7 +71,8 @@ void EMTFPrimitiveConversion::process(
     TriggerPrimitiveCollection::const_iterator tp_end = map_tp_it->second.end();
 
     for (; tp_it != tp_end; ++tp_it) {
-      const EMTFHitExtra& conv_hit = convert_prim_rpc(selected, *tp_it);  // RPC
+      EMTFHitExtra conv_hit;
+      convert_rpc(selected, *tp_it, conv_hit);  // RPC
       conv_hits.push_back(conv_hit);
     }
   }
@@ -82,7 +84,7 @@ const EMTFSectorProcessorLUT& EMTFPrimitiveConversion::lut() const {
 }
 
 // CSC functions
-EMTFHitExtra EMTFPrimitiveConversion::convert_prim_csc(int selected, const TriggerPrimitive& muon_primitive) const {
+void EMTFPrimitiveConversion::convert_csc(int selected, const TriggerPrimitive& muon_primitive, EMTFHitExtra& conv_hit) const {
   const CSCDetId tp_detId = muon_primitive.detId<CSCDetId>();
   const CSCData& tp_data  = muon_primitive.getCSCData();
 
@@ -135,8 +137,7 @@ EMTFHitExtra EMTFPrimitiveConversion::convert_prim_csc(int selected, const Trigg
     }
   }
 
-  // Create a converted hit
-  EMTFHitExtra conv_hit;
+  // Set properties
   conv_hit.endcap      = tp_endcap;
   conv_hit.station     = tp_station;
   conv_hit.ring        = tp_ring;
@@ -168,11 +169,10 @@ EMTFHitExtra EMTFPrimitiveConversion::convert_prim_csc(int selected, const Trigg
   conv_hit.bx0         = tp_data.bx0;
   conv_hit.layer       = 0;
 
-  convert_csc(conv_hit);
-  return conv_hit;
+  convert_csc_details(conv_hit);
 }
 
-void EMTFPrimitiveConversion::convert_csc(EMTFHitExtra& conv_hit) const {
+void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const {
   // Defined as in firmware
   int fw_endcap  = (endcap_-1);
   int fw_sector  = (sector_-1);
@@ -447,17 +447,13 @@ void EMTFPrimitiveConversion::convert_csc(EMTFHitExtra& conv_hit) const {
 }
 
 // RPC functions
-EMTFHitExtra EMTFPrimitiveConversion::convert_prim_rpc(int selected, const TriggerPrimitive& muon_primitive) const {
+void EMTFPrimitiveConversion::convert_rpc(int selected, const TriggerPrimitive& muon_primitive, EMTFHitExtra& conv_hit) const {
   //const RPCDetId tp_detId = muon_primitive.detId<RPCDetId>();
   //const RPCData& tp_data  = muon_primitive.getRPCData();
 
-  EMTFHitExtra conv_hit;
-
-  convert_rpc(conv_hit);
-
-  return conv_hit;
+  convert_rpc_details(conv_hit);
 }
 
-void EMTFPrimitiveConversion::convert_rpc(EMTFHitExtra& conv_hit) const {
+void EMTFPrimitiveConversion::convert_rpc_details(EMTFHitExtra& conv_hit) const {
 
 }

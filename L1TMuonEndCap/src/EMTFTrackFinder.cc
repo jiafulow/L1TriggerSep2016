@@ -20,7 +20,6 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
 
   minBX_       = iConfig.getParameter<int>("MinBX");
   maxBX_       = iConfig.getParameter<int>("MaxBX");
-  bxWindow_    = iConfig.getParameter<int>("BXWindow");
 
   version_     = iConfig.getParameter<int>("Version");
   ptlut_ver_   = iConfig.getParameter<int>("PtLUTVersion");
@@ -63,7 +62,7 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
         sector_processors_.at(es).configure(
             &sector_processor_lut_,
             &pt_assignment_engine_,
-            verbose_, minBX_, maxBX_, bxWindow_,
+            verbose_, minBX_, maxBX_,
             endcap, sector,
             includeNeighbor, duplicateTheta, fixZonePhi,
             zoneBoundaries1, zoneBoundaries2, zoneOverlap,
@@ -73,6 +72,8 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
         );
       }
     }
+    assert(sector_processors_.size() == NUM_SECTORS);
+
   } catch (...) {
     throw;
   }

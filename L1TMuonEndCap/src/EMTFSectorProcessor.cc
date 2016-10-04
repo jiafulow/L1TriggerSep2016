@@ -12,7 +12,7 @@ EMTFSectorProcessor::~EMTFSectorProcessor() {
 void EMTFSectorProcessor::configure(
     const EMTFSectorProcessorLUT* lut,
     const EMTFPtAssignmentEngine* pt_assign_engine,
-    int verbose, int minBX, int maxBX, int bxWindow,
+    int verbose, int minBX, int maxBX,
     int endcap, int sector,
     bool includeNeighbor, bool duplicateTheta, bool fixZonePhi,
     const std::vector<int>& zoneBoundaries1, const std::vector<int>& zoneBoundaries2, int zoneOverlap,
@@ -22,6 +22,7 @@ void EMTFSectorProcessor::configure(
 ) {
   assert(MIN_ENDCAP <= endcap && endcap <= MAX_ENDCAP);
   assert(MIN_TRIGSECTOR <= sector && sector <= MAX_TRIGSECTOR);
+
   assert(lut != nullptr);
   assert(pt_assign_engine != nullptr);
 
@@ -32,7 +33,6 @@ void EMTFSectorProcessor::configure(
   verbose_  = verbose;
   minBX_    = minBX;
   maxBX_    = maxBX;
-  bxWindow_ = bxWindow;
 
   endcap_   = endcap;
   sector_   = sector;
@@ -71,7 +71,7 @@ void EMTFSectorProcessor::process(
   // Map of pattern detector --> lifetime, tracked across BXs
   std::map<EMTFPatternRef, int> patt_lifetime_map;
 
-  int delayBX = bxWindow_ - 1;  // = 2
+  int delayBX = BX_WINDOW - 1;  // = 2
 
   for (int bx = minBX_; bx <= maxBX_ + delayBX; ++bx) {
     if (verbose_ > 0) {  // debug
@@ -130,7 +130,6 @@ void EMTFSectorProcessor::process_single_bx(
   EMTFPatternRecognition patt_recog;
   patt_recog.configure(
       verbose_, endcap_, sector_, bx,
-      minBX_, maxBX_, bxWindow_,
       pattDefinitions_, symPattDefinitions_,
       maxRoadsPerZone_, useSecondEarliest_, useSymPatterns_
   );
@@ -159,8 +158,8 @@ void EMTFSectorProcessor::process_single_bx(
       verbose_, endcap_, sector_, bx
   );
 
-  std::map<int, std::vector<TriggerPrimitive> > selected_csc_map;
-  std::map<int, std::vector<TriggerPrimitive> > selected_rpc_map;
+  std::map<int, TriggerPrimitiveCollection> selected_csc_map;
+  std::map<int, TriggerPrimitiveCollection> selected_rpc_map;
 
   EMTFHitExtraCollection conv_hits;
 

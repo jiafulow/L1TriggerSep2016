@@ -12,7 +12,6 @@ public:
 
   void configure(
       int verbose, int endcap, int sector, int bx,
-      int minBX, int maxBX, int bxWindow,
       const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions,
       int maxRoadsPerZone, bool useSecondEarliest, bool useSymPatterns
   );
@@ -43,8 +42,6 @@ public:
 
 private:
   int verbose_, endcap_, sector_, bx_;
-
-  int minBX_, maxBX_, bxWindow_;
 
   std::vector<std::string> pattDefinitions_, symPattDefinitions_;
   int maxRoadsPerZone_;

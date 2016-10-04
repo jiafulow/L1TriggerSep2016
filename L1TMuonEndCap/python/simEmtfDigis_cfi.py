@@ -21,7 +21,6 @@ simEmtfDigis = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
     # BX
     MinBX = cms.int32(-3),
     MaxBX = cms.int32(+4),
-    BXWindow = cms.int32(3),
 
     # Versioning
     Version = cms.int32(1),

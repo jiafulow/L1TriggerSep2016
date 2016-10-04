@@ -30,7 +30,7 @@ public:
   void configure(
       const EMTFSectorProcessorLUT* lut,
       const EMTFPtAssignmentEngine* pt_assign_engine,
-      int verbose, int minBX, int maxBX, int bxWindow,
+      int verbose, int minBX, int maxBX,
       int endcap, int sector,
       bool includeNeighbor, bool duplicateTheta, bool fixZonePhi,
       const std::vector<int>& zoneBoundaries1, const std::vector<int>& zoneBoundaries2, int zoneOverlap,
@@ -40,30 +40,33 @@ public:
   );
 
   void process(
+      // Input
       EventNumber_t ievent,
       const TriggerPrimitiveCollection& muon_primitives,
+      // Output
       EMTFHitExtraCollection& out_hits,
       EMTFTrackExtraCollection& out_tracks
   ) const;
 
   void process_single_bx(
+      // Input
       int bx,
       const TriggerPrimitiveCollection& muon_primitives,
+      // Output
       EMTFHitExtraCollection& out_hits,
       EMTFTrackExtraCollection& out_tracks,
+      // Intermediate objects
       std::deque<EMTFHitExtraCollection>& extended_conv_hits,
       std::deque<EMTFTrackExtraCollection>& extended_best_track_cands,
       std::map<EMTFPatternRef, int>& patt_lifetime_map
   ) const;
-
-  int sector() const { return sector_; }
 
 private:
   const EMTFSectorProcessorLUT* lut_;
 
   const EMTFPtAssignmentEngine* pt_assign_engine_;
 
-  int verbose_, minBX_, maxBX_, bxWindow_;
+  int verbose_, minBX_, maxBX_;
 
   int endcap_, sector_;
 
