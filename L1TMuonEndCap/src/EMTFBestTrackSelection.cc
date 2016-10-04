@@ -48,9 +48,10 @@ void EMTFBestTrackSelection::process(
           << " th_deltas: " << array_as_string(track.ptlut_data.delta_th)
           << " phi: " << track.phi_int << " theta: " << track.theta_int
           << " cpat: " << array_as_string(track.ptlut_data.cpattern)
+          << " bx: " << track.bx
           << std::endl;
       for (const auto& conv_hit : track.xhits) {
-        std::cout << ".. track segments: st: " << conv_hit.pc_station << " ch: " << conv_hit.pc_chamber << " ph: " << conv_hit.phi_fp << " th: " << conv_hit.theta_fp << " cscid: " << (conv_hit.cscn_ID-1) << std::endl;
+        std::cout << ".. track segments: st: " << conv_hit.pc_station << " ch: " << conv_hit.pc_chamber << " ph: " << conv_hit.phi_fp << " th: " << conv_hit.theta_fp << " cscid: " << (conv_hit.cscn_ID-1) << " bx: " << conv_hit.bx << std::endl;
       }
     }
   }
@@ -163,6 +164,10 @@ void EMTFBestTrackSelection::cancel_one_bx(
     exists[i] = exists[i] & (!killed[i]);
   }
 
+  bool anything_exists = std::accumulate(exists.begin(), exists.end(), 0) != 0;
+  if (!anything_exists)
+    return;
+
   // update "larger" array
   for (i = 0; i < max_zn; ++i) {
     for (j = 0; j < max_zn; ++j) {
@@ -175,17 +180,24 @@ void EMTFBestTrackSelection::cancel_one_bx(
     }
   }
 
-  if (verbose_ > 1) {
-    std::cout << "exists: " << std::endl;
-    for (i = 0; i < max_zn; ++i) {
-      std::cout << exists[i] << " ";
+  if (verbose_ > 0) {  // debug
+    std::cout << "exists: ";
+    for (i = max_zn-1; i >= 0; --i) {
+      std::cout << exists[i];
     }
     std::cout << std::endl;
+    std::cout << "killed: ";
+    for (i = max_zn-1; i >= 0; --i) {
+      std::cout << killed[i];
+    }
+    std::cout << std::endl;
+  }
 
-    std::cout << "larger: " << std::endl;
-    for (i = 0; i < max_zn; ++i) {
-      for (j = 0; j < max_zn; ++j) {
-        std::cout << larger[i][j] << " ";
+  if (verbose_ > 1) {  // debug
+    for (j = 0; j < max_zn; ++j) {
+      std::cout << "larger: ";
+      for (i = max_zn-1; i >= 0; --i) {
+        std::cout << larger[j][i];
       }
       std::cout << std::endl;
     }
@@ -219,7 +231,10 @@ void EMTFBestTrackSelection::cancel_one_bx(
         const EMTFTrackExtraCollection& tracks = *(zone_tracks_begin + z);
         const EMTFTrackExtra& track = tracks.at(n);
         best_tracks.push_back(track);
+
+        // Update winner, BX
         best_tracks.back().winner = o;
+        best_tracks.back().bx = best_tracks.back().first_bx;
       }
     }
   }
@@ -347,6 +362,10 @@ void EMTFBestTrackSelection::cancel_three_bx(
     exists[i] = exists[i] & good_bx[i];
   }
 
+  bool anything_exists = std::accumulate(exists.begin(), exists.end(), 0) != 0;
+  if (!anything_exists)
+    return;
+
   // update "larger" array
   for (i = 0; i < max_hzn; ++i) {
     for (j = 0; j < max_hzn; ++j) {
@@ -359,17 +378,27 @@ void EMTFBestTrackSelection::cancel_three_bx(
     }
   }
 
-  if (verbose_ > 1) {
-    std::cout << "exists: " << std::endl;
-    for (i = 0; i < max_hzn; ++i) {
-      std::cout << exists[i] << " ";
+  if (verbose_ > 0) {  // debug
+    std::cout << "exists: ";
+    for (i = max_hzn-1; i >= 0; --i) {
+      std::cout << exists[i];
+      if ((i%max_zn) == 0 && i != 0)  std::cout << "_";
     }
     std::cout << std::endl;
+    std::cout << "killed: ";
+    for (i = max_hzn-1; i >= 0; --i) {
+      std::cout << killed[i];
+      if ((i%max_zn) == 0 && i != 0)  std::cout << "_";
+    }
+    std::cout << std::endl;
+  }
 
-    std::cout << "larger: " << std::endl;
-    for (i = 0; i < max_hzn; ++i) {
-      for (j = 0; j < max_hzn; ++j) {
-        std::cout << larger[i][j] << " ";
+  if (verbose_ > 1) {  // debug
+    for (j = 0; j < max_hzn; ++j) {
+      std::cout << "larger: ";
+      for (i = max_hzn-1; i >= 0; --i) {
+        std::cout << larger[j][i];
+        if ((i%max_zn) == 0 && i != 0)  std::cout << "_";
       }
       std::cout << std::endl;
     }
@@ -403,7 +432,10 @@ void EMTFBestTrackSelection::cancel_three_bx(
         const EMTFTrackExtraCollection& tracks = *(zone_tracks_begin + z - h*NUM_ZONES);
         const EMTFTrackExtra& track = tracks.at(n);
         best_tracks.push_back(track);
+
+        // Update winner, BX
         best_tracks.back().winner = o;
+        best_tracks.back().bx = best_tracks.back().second_bx;
       }
     }
   }

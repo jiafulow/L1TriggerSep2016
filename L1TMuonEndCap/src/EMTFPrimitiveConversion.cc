@@ -241,7 +241,8 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
   assert(pc_lut_id < 61);
 
   if (verbose_ > 1) {  // debug
-    std::cout << "st: " << pc_station << " ch: " << pc_chamber
+    std::cout << "pc_station: " << pc_station << " pc_chamber: " << pc_chamber
+        << " fw_station: " << fw_station << " fw_cscid: " << fw_cscid
         << " lut_id: " << pc_lut_id
         << " ph_init: " << lut().get_ph_init(fw_endcap, fw_sector, pc_lut_id)
         << " ph_disp: " << lut().get_ph_disp(fw_endcap, fw_sector, pc_lut_id)

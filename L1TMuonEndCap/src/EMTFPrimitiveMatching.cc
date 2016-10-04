@@ -35,6 +35,14 @@ void EMTFPrimitiveMatching::process(
     return;
 
 
+  if (verbose_ > 0) {  // debug
+    for (const auto& roads : zone_roads) {
+      for (const auto& road : roads) {
+        std::cout << "pattern on match input: z: " << road.zone << " r: " << road.winner << " ph_num: " << road.ph_num << " ph_q: " << to_hex(road.quality_code) << " ly: " << to_binary(road.layer_code, 3) << " str: " << to_binary(road.straightness, 3) << std::endl;
+      }
+    }
+  }
+
   // Organize converted hits by (zone, station)
   std::array<EMTFHitExtraCollection, NUM_ZONES*NUM_STATIONS> zs_conv_hits;
 
@@ -67,7 +75,7 @@ void EMTFPrimitiveMatching::process(
     }  // end loop over conv_hits
   }  // end loop over extended_conv_hits
 
-  if (verbose_ > 0) {  // debug
+  if (verbose_ > 1) {  // debug
     for (int izone = 0; izone < NUM_ZONES; ++izone) {
       for (int istation = 0; istation < NUM_STATIONS; ++istation) {
         const int zs = (izone*NUM_STATIONS) + istation;
@@ -101,12 +109,16 @@ void EMTFPrimitiveMatching::process(
 
   if (verbose_ > 0) {  // debug
     for (int izone = 0; izone < NUM_ZONES; ++izone) {
-      for (int istation = 0; istation < NUM_STATIONS; ++istation) {
-        const int zs = (izone*NUM_STATIONS) + istation;
-        int i = 0;
-        for (const auto& ph_diff_pair : zs_phi_differences.at(zs)) {
-          std::cout << "z: " << izone << " r: " << zone_roads.at(izone).at(i).winner << " ph_num: " << zone_roads.at(izone).at(i).ph_num << " st: " << istation+1 << " ihit: " << ph_diff_pair.first << " ph_diff: " << ph_diff_pair.second << std::endl;
-          ++i;
+      const int nroads = zone_roads.at(izone).size();
+      for (int iroad = 0; iroad < nroads; ++iroad) {
+        const auto& road = zone_roads.at(izone).at(iroad);
+        for (int istation = 0; istation < NUM_STATIONS; ++istation) {
+          const int zs = (izone*NUM_STATIONS) + istation;
+          int ihit    = zs_phi_differences.at(zs).at(iroad).first;
+          int ph_diff = zs_phi_differences.at(zs).at(iroad).second;
+          if (ph_diff != invalid_ph_diff) {
+            std::cout << "find seg: z: " << road.zone << " r: " << road.winner << " st: " << istation << " ph_diff: " << ph_diff << " ihit: " << ihit << std::endl;
+          }
         }
       }
     }

@@ -219,6 +219,7 @@ void EMTFPatternRecognition::process(
             << " ph_hit: " << (1ul<<conv_hit.ph_hit) << " phzvl: " << conv_hit.phzvl
             << " strip: " << conv_hit.strip << " wire: " << conv_hit.wire
             << " zone_hit: " << conv_hit.zone_hit << " zone_code: " << conv_hit.zone_code
+            << " bx: " << conv_hit.bx
             << std::endl;
       }
     }
@@ -244,11 +245,18 @@ void EMTFPatternRecognition::process(
       std::cout << "zone: " << izone << std::endl;
       std::cout << zone_images.at(izone-1) << std::endl;
     }
+    //for (const auto& kv : patt_lifetime_map) {
+    //  std::cout << "zone: " << kv.first.at(0) << " izhit: " << kv.first.at(1) << " ipatt: " << kv.first.at(2) << " lifetime: " << kv.second << std::endl;
+    //}
   }
+
   if (verbose_ > 0) {  // debug
     for (const auto& roads : zone_roads) {
       for (const auto& road : roads) {
-        std::cout << "pattern: z: " << road.zone << " ph: " << road.key_zhit << " q: " << to_hex(road.quality_code) << " ly: " << to_binary(road.layer_code, 3) << " str: " << to_binary(road.straightness, 3) << std::endl;
+        std::cout << "pattern: z: " << road.zone << " ph: " << road.key_zhit
+            << " q: " << to_hex(road.quality_code) << " ly: " << to_binary(road.layer_code, 3)
+            << " str: " << to_binary(road.straightness, 3) << " bx: " << road.bx
+            << std::endl;
       }
     }
   }
@@ -256,14 +264,6 @@ void EMTFPatternRecognition::process(
   // Sort patterns and select best three patterns in each zone
   for (int izone = 0; izone < NUM_ZONES; ++izone) {
     sort_single_zone(zone_roads.at(izone));
-  }
-
-  if (verbose_ > 0) {  // debug
-    for (const auto& roads : zone_roads) {
-      for (const auto& road : roads) {
-        std::cout << "z: " << road.zone << " r: " << road.winner << " ph_num: " << road.ph_num << " ph_q: " << to_hex(road.quality_code) << " ly: " << to_binary(road.layer_code, 3) << " str: " << to_binary(road.straightness, 3) << std::endl;
-      }
-    }
   }
 
 }
@@ -382,9 +382,9 @@ void EMTFPatternRecognition::process_single_zone(
           // Use 2nd earliest
           auto patt_ins = ins.first;  // iterator of patt_lifetime_map pointing to this pattern
           int bx_shifter = patt_ins->second;
-          int bx2 = bx_shifter & (1<<2);
-          int bx1 = bx_shifter & (1<<1);
-          int bx0 = bx_shifter & (1<<0);
+          int bx2 = bool(bx_shifter & (1<<2));
+          int bx1 = bool(bx_shifter & (1<<1));
+          int bx0 = bool(bx_shifter & (1<<0));
 
           if (bx2 == 0 && bx1 == 1) {  // is lifetime up? (note: drift_time is not being used)
             is_lifetime_up = true;
