@@ -173,10 +173,12 @@ void EMTFPrimitiveConversion::convert_csc(int selected, const TriggerPrimitive& 
 }
 
 void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const {
+  bool is_neighbor = (conv_hit.pc_station == 5);
+
   // Defined as in firmware
   int fw_endcap  = (endcap_-1);
   int fw_sector  = (sector_-1);
-  int fw_station = (conv_hit.station == 1) ? (conv_hit.subsector-1) : conv_hit.station;
+  int fw_station = (conv_hit.station == 1) ? (is_neighbor ? 0 : (conv_hit.subsector-1)) : conv_hit.station;
   int fw_cscid   = (conv_hit.cscn_ID-1);
   int fw_hstrip  = conv_hit.strip;  // it is half-strip, despite the name
   int fw_wg      = conv_hit.wire;   // it is wiregroup, despite the name
