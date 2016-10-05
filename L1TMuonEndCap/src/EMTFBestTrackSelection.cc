@@ -291,8 +291,8 @@ void EMTFBestTrackSelection::cancel_three_bx(
         for (const auto& conv_hit : track.xhits) {
           assert(conv_hit.valid);
 
-          // A segment identifier (chamber, strip, bx)
-          const segment_ref_t segment = {{conv_hit.pc_station*9 + conv_hit.pc_chamber, conv_hit.strip, conv_hit.bx}};  // due to GCC bug, use {{}} instead of {}
+          // A segment identifier (chamber, strip+wire, bx)
+          const segment_ref_t segment = {{conv_hit.pc_station*9 + conv_hit.pc_chamber, conv_hit.wire*256 + conv_hit.strip, conv_hit.bx}};  // due to GCC bug, use {{}} instead of {}
           segments.at(hzn).push_back(segment);
         }
       }  // end loop over n

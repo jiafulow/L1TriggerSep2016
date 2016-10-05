@@ -38,7 +38,10 @@ void EMTFPrimitiveMatching::process(
   if (verbose_ > 0) {  // debug
     for (const auto& roads : zone_roads) {
       for (const auto& road : roads) {
-        std::cout << "pattern on match input: z: " << road.zone << " r: " << road.winner << " ph_num: " << road.ph_num << " ph_q: " << to_hex(road.quality_code) << " ly: " << to_binary(road.layer_code, 3) << " str: " << to_binary(road.straightness, 3) << std::endl;
+        std::cout << "pattern on match input: z: " << road.zone << " r: " << road.winner
+            << " ph_num: " << road.ph_num << " ph_q: " << to_hex(road.quality_code)
+            << " ly: " << to_binary(road.layer_code, 3) << " str: " << to_binary(road.straightness, 3)
+            << std::endl;
       }
     }
   }
@@ -80,15 +83,17 @@ void EMTFPrimitiveMatching::process(
       for (int istation = 0; istation < NUM_STATIONS; ++istation) {
         const int zs = (izone*NUM_STATIONS) + istation;
         for (const auto& conv_hit : zs_conv_hits.at(zs)) {
-          std::cout << "z: " << izone << " st: " << istation+1 << " cscid: " << conv_hit.csc_ID << " ph_seg: " << conv_hit.phi_fp << " ph_seg_red: " << (conv_hit.phi_fp>>((bw_fph-bpow-1)))<< std::endl;
+          std::cout << "z: " << izone << " st: " << istation+1 << " cscid: " << conv_hit.csc_ID
+              << " ph_zone_phi: " << conv_hit.zone_hit << " ph_low_prec: " << (conv_hit.zone_hit<<5)
+              << " ph_high_prec: " << conv_hit.phi_fp << " ph_high_low_diff: " << (conv_hit.phi_fp - (conv_hit.zone_hit<<5))
+              << std::endl;
         }
       }
     }
   }
 
-
   // Keep the best phi difference for every road by (zone, station)
-  std::array<std::vector<std::pair<int, int> >, NUM_ZONES*NUM_STATIONS> zs_phi_differences;
+  std::array<std::vector<hit_sort_pair_t>, NUM_ZONES*NUM_STATIONS> zs_phi_differences;
 
   // Get the best-matching hits by comparing phi difference between
   // pattern and segment
@@ -109,15 +114,16 @@ void EMTFPrimitiveMatching::process(
 
   if (verbose_ > 0) {  // debug
     for (int izone = 0; izone < NUM_ZONES; ++izone) {
-      const int nroads = zone_roads.at(izone).size();
-      for (int iroad = 0; iroad < nroads; ++iroad) {
-        const auto& road = zone_roads.at(izone).at(iroad);
+      const auto& roads = zone_roads.at(izone);
+      for (unsigned iroad = 0; iroad < roads.size(); ++iroad) {
+        const auto& road = roads.at(iroad);
         for (int istation = 0; istation < NUM_STATIONS; ++istation) {
           const int zs = (izone*NUM_STATIONS) + istation;
-          int ihit    = zs_phi_differences.at(zs).at(iroad).first;
-          int ph_diff = zs_phi_differences.at(zs).at(iroad).second;
+          int ph_diff = zs_phi_differences.at(zs).at(iroad).first;
           if (ph_diff != invalid_ph_diff) {
-            std::cout << "find seg: z: " << road.zone << " r: " << road.winner << " st: " << istation << " ph_diff: " << ph_diff << " ihit: " << ihit << std::endl;
+            std::cout << "find seg: z: " << road.zone << " r: " << road.winner
+                << " st: " << istation << " ph_diff: " << ph_diff
+                << std::endl;
           }
         }
       }
@@ -128,9 +134,8 @@ void EMTFPrimitiveMatching::process(
   // Build all tracks in each zone
   for (int izone = 0; izone < NUM_ZONES; ++izone) {
     const EMTFRoadExtraCollection& roads = zone_roads.at(izone);
-    const int nroads = roads.size();
 
-    for (int iroad = 0; iroad < nroads; ++iroad) {
+    for (unsigned iroad = 0; iroad < roads.size(); ++iroad) {
       const EMTFRoadExtra& road = roads.at(iroad);
 
       // Create a track
@@ -140,22 +145,20 @@ void EMTFPrimitiveMatching::process(
       track.bx       = road.bx;
       track.zone     = road.zone;
 
-      track.num_xhits    = 0;
-      track.xhits        .clear();
-      track.xhits_ph_diff.clear();
+      track.xhits.clear();
 
       // Insert hits
       for (int istation = 0; istation < NUM_STATIONS; ++istation) {
         const int zs = (izone*NUM_STATIONS) + istation;
 
         const EMTFHitExtraCollection& conv_hits = zs_conv_hits.at(zs);
-        int ihit    = zs_phi_differences.at(zs).at(iroad).first;
-        int ph_diff = zs_phi_differences.at(zs).at(iroad).second;
-
+        int       ph_diff      = zs_phi_differences.at(zs).at(iroad).first;
+        hit_ptr_t conv_hit_ptr = zs_phi_differences.at(zs).at(iroad).second;
         if (ph_diff != invalid_ph_diff) {
-          insert_hits(ihit, ph_diff, conv_hits, track);
+          insert_hits(conv_hit_ptr, conv_hits, track);
         }
       }
+      assert(track.xhits.size() > 0);
 
       //track.road = static_cast<EMTFRoad>(road);
       track.xroad = road;
@@ -187,7 +190,7 @@ void EMTFPrimitiveMatching::process_single_zone_station(
     int station,
     const EMTFRoadExtraCollection& roads,
     const EMTFHitExtraCollection& conv_hits,
-    std::vector<std::pair<int, int> >& phi_differences
+    std::vector<hit_sort_pair_t>& phi_differences
 ) const {
   // max phi difference between pattern and segment
   int max_ph_diff = (station == 1) ? 15 : 7;
@@ -210,22 +213,27 @@ void EMTFPrimitiveMatching::process_single_zone_station(
     }
   }
 
-  const int nroads = roads.size();
-  const int nhits = conv_hits.size();
+  auto abs_diff = [](int a, int b) { return std::abs(a-b); };
 
-  for (int iroad = 0; iroad < nroads; ++iroad) {
-    int ph_pat = roads.at(iroad).ph_num;  // ph detected in pattern
-    int ph_q   = roads.at(iroad).ph_q;
+  EMTFRoadExtraCollection::const_iterator roads_it  = roads.begin();
+  EMTFRoadExtraCollection::const_iterator roads_end = roads.end();
+
+  for (; roads_it != roads_end; ++roads_it) {
+    int ph_pat = roads_it->ph_num;  // ph detected in pattern
+    int ph_q   = roads_it->ph_q;
     assert(ph_pat >= 0 && ph_q > 0);
 
     if (fixZonePhi_) {
       ph_pat <<= 5;  // add missing 5 lower bits to pattern phi
     }
 
-    std::vector<std::pair<int, int> > tmp_phi_differences;
+    std::vector<hit_sort_pair_t> tmp_phi_differences;
 
-    for (int ihit = 0; ihit < nhits; ++ihit) {
-      int ph_seg     = conv_hits.at(ihit).phi_fp;  // ph from segments
+    EMTFHitExtraCollection::const_iterator conv_hits_it  = conv_hits.begin();
+    EMTFHitExtraCollection::const_iterator conv_hits_end = conv_hits.end();
+
+    for (; conv_hits_it != conv_hits_end; ++conv_hits_it) {
+      int ph_seg     = conv_hits_it->phi_fp;  // ph from segments
       int ph_seg_red = ph_seg >> (bw_fph-bpow-1);  // remove unused low bits
       assert(ph_seg >= 0);
 
@@ -234,12 +242,11 @@ void EMTFPrimitiveMatching::process_single_zone_station(
       }
 
       // Get abs difference
-      int ph_diff = (ph_pat > ph_seg_red) ? (ph_pat - ph_seg_red) : (ph_seg_red - ph_pat);
-
+      int ph_diff = abs_diff(ph_pat, ph_seg_red);
       if (ph_diff > max_ph_diff)
         ph_diff = invalid_ph_diff;  // difference is too high, cannot be the same pattern
 
-      tmp_phi_differences.push_back(std::make_pair(ihit, ph_diff));  // make a key-value pair
+      tmp_phi_differences.push_back(std::make_pair(ph_diff, conv_hits_it));  // make a key-value pair
     }
 
     if (!tmp_phi_differences.empty()) {
@@ -251,20 +258,24 @@ void EMTFPrimitiveMatching::process_single_zone_station(
 
     } else {
       // No segment found
-      phi_differences.push_back(std::make_pair(0, invalid_ph_diff));
+      phi_differences.push_back(std::make_pair(invalid_ph_diff, conv_hits_end));  // make a key-value pair
     }
 
   }  // end loop over roads
 }
 
 void EMTFPrimitiveMatching::sort_ph_diff(
-    std::vector<std::pair<int, int> >& phi_differences
+    std::vector<hit_sort_pair_t>& phi_differences
 ) const {
   // Sort by value, but preserving the original order
   struct {
-    typedef std::pair<int, int> value_type;
-    constexpr bool operator()(const value_type& lhs, const value_type& rhs) {
-      return lhs.second < rhs.second;
+    typedef hit_sort_pair_t value_type;
+    bool operator()(const value_type& lhs, const value_type& rhs) const {
+      //return lhs.first < rhs.first;
+
+      // The firmware inputs later BX (history id = 0) before earlier BX (history id = 1,2)
+      // This seems to make the firmware sorter preferably pick later BX, but not necessarily
+      return std::make_pair(lhs.first, -lhs.second->bx) < std::make_pair(rhs.first, -rhs.second->bx);
     }
   } less_ph_diff_cmp;
 
@@ -272,57 +283,51 @@ void EMTFPrimitiveMatching::sort_ph_diff(
 }
 
 void EMTFPrimitiveMatching::insert_hits(
-    int ihit, int ph_diff, const EMTFHitExtraCollection& conv_hits,
+    hit_ptr_t conv_hit_ptr, const EMTFHitExtraCollection& conv_hits,
     EMTFTrackExtra& track
 ) const {
-  const int nhits = conv_hits.size();
+  EMTFHitExtraCollection::const_iterator conv_hits_it  = conv_hits.begin();
+  EMTFHitExtraCollection::const_iterator conv_hits_end = conv_hits.end();
 
-  // First, insert the hit
-  insert_hit(ihit, ph_diff, conv_hits, track);
+  // Find all possible duplicated hits, insert them
+  for (; conv_hits_it != conv_hits_end; ++conv_hits_it) {
+    const EMTFHitExtra& conv_hit_i = *conv_hits_it;
+    const EMTFHitExtra& conv_hit_j = *conv_hit_ptr;
 
-  // Second, find possible duplicated hits, insert them too
-  for (int jhit = 0; jhit < nhits; ++jhit) {
-    if (ihit == jhit)
-      continue;
-
-    const EMTFHitExtra& conv_hit_i = conv_hits.at(ihit);
-    const EMTFHitExtra& conv_hit_j = conv_hits.at(jhit);
-
+    // All these must match: [bx_history][station][chamber][segment]
     if (
       (conv_hit_i.pc_station == conv_hit_j.pc_station) &&
       (conv_hit_i.pc_chamber == conv_hit_j.pc_chamber) &&
       (conv_hit_i.strip      == conv_hit_j.strip) &&
-      (conv_hit_i.pattern    == conv_hit_j.pattern)
+      (conv_hit_i.wire       == conv_hit_j.wire) &&
+      (conv_hit_i.bx         == conv_hit_j.bx)
     ) {
       // Must have the same phi_fp
       assert(conv_hit_i.phi_fp == conv_hit_j.phi_fp);
 
-      insert_hit(jhit, ph_diff, conv_hits, track);
+      insert_hit(conv_hits_it, track);
     }
   }
 }
 
 void EMTFPrimitiveMatching::insert_hit(
-    int ihit, int ph_diff, const EMTFHitExtraCollection& conv_hits,
+    hit_ptr_t conv_hit_ptr,
     EMTFTrackExtra& track
 ) const {
-  const EMTFHitExtra& conv_hit = conv_hits.at(ihit);
-  //const EMTFHit& conv_hit = static_cast<EMTFHit>(conv_hits.at(ihit));
-
   struct {
     typedef EMTFHitExtra value_type;
     constexpr bool operator()(const value_type& lhs, const value_type& rhs) {
-      return std::make_pair(lhs.station, lhs.bx) < std::make_pair(rhs.station, rhs.bx);
+      //return lhs.station < rhs.station;
+
+      // The firmware inputs later BX (history id = 0) before earlier BX (history id = 1,2)
+      // This seems to make the firmware sorter preferably pick later BX, but not necessarily
+      return std::make_pair(lhs.station, -lhs.bx) < std::make_pair(rhs.station, -rhs.bx);
     }
   } less_station_cmp;
 
-  // Sorted insert
-  EMTFHitExtraCollection::iterator upper = std::upper_bound(track.xhits.begin(), track.xhits.end(), conv_hit, less_station_cmp);
-  unsigned pos = std::distance(track.xhits.begin(), upper);
-
-  track.num_xhits += 1;
-  track.xhits        .insert(track.xhits.begin()         + pos, conv_hit);
-  track.xhits_ph_diff.insert(track.xhits_ph_diff.begin() + pos, ph_diff);
+  // Sorted insert by station
+  EMTFHitExtraCollection::const_iterator upper = std::upper_bound(track.xhits.begin(), track.xhits.end(), *conv_hit_ptr, less_station_cmp);
+  track.xhits.insert(upper, *conv_hit_ptr);
 }
 
 unsigned int EMTFPrimitiveMatching::get_fs_zone_code(const EMTFHitExtra& conv_hit) const {

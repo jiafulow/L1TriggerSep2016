@@ -106,6 +106,8 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
   best_theta_arr       .fill(0);
   best_dtheta_valid_arr.fill(false);
 
+  auto abs_diff = [](int a, int b) { return std::abs(a-b); };
+
   // Calculate angles
   int ipair = 0;
 
@@ -119,7 +121,7 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
           // Calculate theta deltas
           int thA = conv_hitA.theta_fp;
           int thB = conv_hitB.theta_fp;
-          int dth = (thA > thB) ? thA - thB : thB - thA;
+          int dth = abs_diff(thA, thB);
           int dth_sign = (thA > thB);  // sign
           assert(dth < invalid_dtheta);
 
@@ -136,7 +138,7 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
           // Calculate phi deltas
           int phA = conv_hitA.phi_fp;
           int phB = conv_hitB.phi_fp;
-          int dph = (phA > phB) ? phA - phB : phB - phA;
+          int dph = abs_diff(phA, phB);
           int dph_sign = (phA <= phB);  // sign reversed according to Matt's oral request 2016-04-27
 
           if (best_dphi_arr.at(ipair) >= dph) {
@@ -234,7 +236,7 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
     less_dtheta_cmp.theta = theta_int;  // capture
 
     for (int istation = 0; istation < NUM_STATIONS; ++istation) {
-      std::sort(st_conv_hits.at(istation).begin(), st_conv_hits.at(istation).end(), less_dtheta_cmp);
+      std::stable_sort(st_conv_hits.at(istation).begin(), st_conv_hits.at(istation).end(), less_dtheta_cmp);
     }
   }
 
@@ -348,59 +350,36 @@ void EMTFAngleCalculation::erase_tracks(EMTFTrackExtraCollection& tracks) const 
 
   tracks.erase(std::remove_if(tracks.begin(), tracks.end(), rank_zero_pred), tracks.end());
 
-
   // Erase hits that are not selected as the best phi and theta in each station
   // using erase-remove idiom
   struct {
     typedef EMTFHitExtra value_type;
     bool operator()(const value_type& x) {
       int istation = (x.station-1);
-      bool match = (
-        (stations.at(istation) == true) &&
+      if (!stations.at(istation))  // not empty
+        return true;  // remove
+      bool selected = (
         (x.pattern  == ptlut_data.cpattern[istation]) &&
         (x.phi_fp   == ptlut_data.ph[istation]) &&
         (x.theta_fp == ptlut_data.th[istation])
       );
-      if (match)
-        stations.at(istation) = false;
-      return match;
+      if (!selected)
+        return true;  // remove
+      stations.at(istation) = false;
+      return false;   // do not remove
     }
     EMTFPtLUTData ptlut_data;
     std::array<bool, NUM_STATIONS> stations;  // keep track of which station is empty
-  } selected_hit_pred;
+  } not_selected_hit_pred;
 
-  const int ntracks = tracks.size();
+  for (auto&& track: tracks) {  // pass by reference
+    not_selected_hit_pred.ptlut_data = track.ptlut_data;  // capture
+    not_selected_hit_pred.stations.fill(true);
 
-  for (int itrack = 0; itrack < ntracks; ++itrack) {
-    EMTFTrackExtra& track = tracks.at(itrack);  // pass by reference
-    selected_hit_pred.ptlut_data = track.ptlut_data;  // capture
-    selected_hit_pred.stations.fill(true);
-
-    // begin mocked std::remove_if() to remove pairs of objects
-    typedef std::vector<EMTFHitExtra>::iterator hit_iter_t;
-    typedef std::vector<uint16_t>::iterator     uint_iter_t;
-
-    hit_iter_t  first   = track.xhits.begin();
-    hit_iter_t  last    = track.xhits.end();
-    hit_iter_t  result  = first;
-    uint_iter_t first2  = track.xhits_ph_diff.begin();
-    uint_iter_t result2 = first2;
-
-    for (; first != last; ++first, ++first2) {
-      if (selected_hit_pred(*first)) {
-        *result = std::move(*first);
-        ++result;
-        *result2 = std::move(*first2);
-        ++result2;
-      }
-    }
-    // end mocked std::remove_if()
-
-    track.xhits.erase(result, track.xhits.end());
-    track.xhits_ph_diff.erase(result2, track.xhits_ph_diff.end());
-
-    track.num_xhits = track.xhits.size();
-    assert(track.num_xhits <= NUM_STATIONS);
+    // Assume track.xhits are already ordered by station
+    track.xhits.erase(std::remove_if(track.xhits.begin(), track.xhits.end(), not_selected_hit_pred), track.xhits.end());
+    assert(track.xhits.size() > 0);
+    assert(track.xhits.size() <= NUM_STATIONS);
   }  // end loop over tracks
 }
 
