@@ -51,7 +51,10 @@ void EMTFBestTrackSelection::process(
           << " bx: " << track.bx
           << std::endl;
       for (const auto& conv_hit : track.xhits) {
-        std::cout << ".. track segments: st: " << conv_hit.pc_station << " ch: " << conv_hit.pc_chamber << " ph: " << conv_hit.phi_fp << " th: " << conv_hit.theta_fp << " cscid: " << (conv_hit.cscn_ID-1) << " bx: " << conv_hit.bx << std::endl;
+        std::cout << ".. track segments: st: " << conv_hit.pc_station << " ch: " << conv_hit.pc_chamber
+            << " ph: " << conv_hit.phi_fp << " th: " << conv_hit.theta_fp
+            << " cscid: " << (conv_hit.cscn_ID-1) << " bx: " << conv_hit.bx
+            << std::endl;
       }
     }
   }
@@ -191,9 +194,6 @@ void EMTFBestTrackSelection::cancel_one_bx(
       std::cout << killed[i];
     }
     std::cout << std::endl;
-  }
-
-  if (verbose_ > 1) {  // debug
     for (j = 0; j < max_zn; ++j) {
       std::cout << "larger: ";
       for (i = max_zn-1; i >= 0; --i) {
@@ -201,7 +201,6 @@ void EMTFBestTrackSelection::cancel_one_bx(
       }
       std::cout << std::endl;
     }
-    std::cout << std::endl;
   }
 
   // count zeros in the comparison results. The best track will have none, the next will have one, the third will have two
@@ -391,9 +390,6 @@ void EMTFBestTrackSelection::cancel_three_bx(
       if ((i%max_zn) == 0 && i != 0)  std::cout << "_";
     }
     std::cout << std::endl;
-  }
-
-  if (verbose_ > 1) {  // debug
     for (j = 0; j < max_hzn; ++j) {
       std::cout << "larger: ";
       for (i = max_hzn-1; i >= 0; --i) {
@@ -402,7 +398,6 @@ void EMTFBestTrackSelection::cancel_three_bx(
       }
       std::cout << std::endl;
     }
-    std::cout << std::endl;
   }
 
   // count zeros in the comparison results. The best track will have none, the next will have one, the third will have two

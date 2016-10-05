@@ -55,7 +55,9 @@ void EMTFAngleCalculation::process(
             << " delta_th: " << array_as_string(track.ptlut_data.delta_th)
             << " sign_ph: " << array_as_string(track.ptlut_data.sign_ph)
             << " sign_th: " << array_as_string(track.ptlut_data.sign_th)
-            << " phi: " << track.phi_int << " theta: " << track.theta_int
+            << " cpat: " << array_as_string(track.ptlut_data.cpattern)
+            << " ph: " << array_as_string(track.ptlut_data.ph)
+            << " th: " << array_as_string(track.ptlut_data.th)
             << std::endl;
       }
     }
@@ -219,6 +221,7 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
   if (best_pair != -1) {
     phi_int   = best_phi_arr.at(best_pair);
     theta_int = best_theta_arr.at(best_pair);
+    assert(theta_int != 0);
 
     // in addition, pick min dtheta (this does not happen in firmware)
     struct {

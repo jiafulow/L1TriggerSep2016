@@ -318,7 +318,7 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
   int th_tmp = th_orig;
 
   if (is_me11a || is_me11b) {
-    int pc_wire_strip_id = (((fw_wg >> 4) & 0x3) << 5) + ((eighth_strip >> 4) & 0x1f);
+    int pc_wire_strip_id = (((fw_wg >> 4) & 0x3) << 5) | ((eighth_strip >> 4) & 0x1f);
     int th_corr = lut().get_th_corr_lut(fw_endcap, fw_sector, pc_lut_id, pc_wire_strip_id);
     int th_corr_sign = (ph_reverse == 0) ? 1 : -1;
 

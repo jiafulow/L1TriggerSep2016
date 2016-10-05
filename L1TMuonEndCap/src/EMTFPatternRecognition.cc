@@ -252,7 +252,7 @@ void EMTFPatternRecognition::process(
 
   if (verbose_ > 0) {  // debug
     for (const auto& roads : zone_roads) {
-      for (const auto& road : roads) {
+      for (const auto& road : reversed(roads)) {
         std::cout << "pattern: z: " << road.zone << " ph: " << road.key_zhit
             << " q: " << to_hex(road.quality_code) << " ly: " << to_binary(road.layer_code, 3)
             << " str: " << to_binary(road.straightness, 3) << " bx: " << road.bx
