@@ -112,7 +112,7 @@ void EMTFPrimitiveMatching::process(
     }  // end loop over stations
   }  // end loop over zones
 
-  if (verbose_ > 0) {  // debug
+  if (verbose_ > 1) {  // debug
     for (int izone = 0; izone < NUM_ZONES; ++izone) {
       const auto& roads = zone_roads.at(izone);
       for (unsigned iroad = 0; iroad < roads.size(); ++iroad) {
@@ -120,11 +120,9 @@ void EMTFPrimitiveMatching::process(
         for (int istation = 0; istation < NUM_STATIONS; ++istation) {
           const int zs = (izone*NUM_STATIONS) + istation;
           int ph_diff = zs_phi_differences.at(zs).at(iroad).first;
-          if (ph_diff != invalid_ph_diff) {
-            std::cout << "find seg: z: " << road.zone << " r: " << road.winner
-                << " st: " << istation << " ph_diff: " << ph_diff
-                << std::endl;
-          }
+          std::cout << "find seg: z: " << road.zone << " r: " << road.winner
+              << " st: " << istation << " ph_diff: " << ph_diff
+              << std::endl;
         }
       }
     }
@@ -154,11 +152,15 @@ void EMTFPrimitiveMatching::process(
         const EMTFHitExtraCollection& conv_hits = zs_conv_hits.at(zs);
         int       ph_diff      = zs_phi_differences.at(zs).at(iroad).first;
         hit_ptr_t conv_hit_ptr = zs_phi_differences.at(zs).at(iroad).second;
+
         if (ph_diff != invalid_ph_diff) {
           insert_hits(conv_hit_ptr, conv_hits, track);
         }
       }
-      assert(track.xhits.size() > 0);
+
+      if (fixZonePhi_) {
+        assert(track.xhits.size() > 0);
+      }
 
       //track.road = static_cast<EMTFRoad>(road);
       track.xroad = road;
@@ -298,8 +300,10 @@ void EMTFPrimitiveMatching::insert_hits(
     if (
       (conv_hit_i.pc_station == conv_hit_j.pc_station) &&
       (conv_hit_i.pc_chamber == conv_hit_j.pc_chamber) &&
+      (conv_hit_i.ring       == conv_hit_j.ring) &&  // because of ME1/1
       (conv_hit_i.strip      == conv_hit_j.strip) &&
-      (conv_hit_i.wire       == conv_hit_j.wire) &&
+      //(conv_hit_i.wire       == conv_hit_j.wire) &&
+      (conv_hit_i.pattern    == conv_hit_j.pattern) &&
       (conv_hit_i.bx         == conv_hit_j.bx)
     ) {
       // Must have the same phi_fp

@@ -94,7 +94,7 @@ void EMTFPatternRecognition::configure_details() {
       // Remove the extra padding
       pattern.rotr(PATTERN_PADDING_EXTRA_W_ST1);
 
-      if (verbose_ > 1) {  // debug
+      if (verbose_ > 2) {  // debug
         std::cout << "Pattern definition: " << straightness << " "
             << st4_min << " " << st4_max << " "
             << st3_min << " " << st3_max << " "
@@ -217,7 +217,7 @@ void EMTFPatternRecognition::process(
         std::cout << "st: " << conv_hit.pc_station << " ch: " << conv_hit.pc_chamber
             << " ph: " << conv_hit.phi_fp << " th: " << conv_hit.theta_fp
             << " ph_hit: " << (1ul<<conv_hit.ph_hit) << " phzvl: " << conv_hit.phzvl
-            << " strip: " << conv_hit.strip << " wire: " << conv_hit.wire
+            << " strip: " << conv_hit.strip << " wire: " << conv_hit.wire << " cpat: " << conv_hit.pattern
             << " zone_hit: " << conv_hit.zone_hit << " zone_code: " << conv_hit.zone_code
             << " bx: " << conv_hit.bx
             << std::endl;

@@ -106,7 +106,7 @@ void EMTFTrackFinder::process(
     collector.extractPrimitives(RPCTag(), iEvent, tokenRPC_, muon_primitives);
 
   // Check trigger primitives
-  if (verbose_ > 1) {  // debug
+  if (verbose_ > 2) {  // debug
     std::cout << "Num of TriggerPrimitive: " << muon_primitives.size() << std::endl;
     for (const auto& p : muon_primitives) {
       p.print(std::cout);
