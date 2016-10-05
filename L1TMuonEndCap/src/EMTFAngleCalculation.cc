@@ -80,28 +80,29 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
   const int invalid_dphi = (1<<bw_fph) - 1;   // = 8191
 
   // Best theta deltas and phi deltas
-  // from 0 to 5: dphi12, dphi13, dphi14, dphi23, dphi24, dphi34
+  // from 0 to 5: dtheta12, dtheta13, dtheta14, dtheta23, dtheta24, dtheta34
   std::array<int,  NUM_STATION_PAIRS> best_dtheta_arr;
   std::array<int,  NUM_STATION_PAIRS> best_dtheta_sign_arr;
   std::array<int,  NUM_STATION_PAIRS> best_dphi_arr;
   std::array<int,  NUM_STATION_PAIRS> best_dphi_sign_arr;
+
+  // Best angles
+  // from 0 to 5: ME2,      ME3,      ME4,      ME2,      ME2,      ME3
+  //              dtheta12, dtheta13, dtheta14, dtheta23, dtheta24, dtheta34
+  std::array<int,  NUM_STATION_PAIRS> best_theta_arr;
+  std::array<int,  NUM_STATION_PAIRS> best_phi_arr;
+
+  // Keep track of which pair is valid
   std::array<bool, NUM_STATION_PAIRS> best_dtheta_valid_arr;
 
-  best_dtheta_arr.fill(invalid_dtheta);
-  best_dtheta_sign_arr.fill(0);
-  best_dphi_arr.fill(invalid_dphi);
-  best_dphi_sign_arr.fill(1);  // dphi sign reversed w.r.t dtheta
+  // Initialize
+  best_dtheta_arr      .fill(invalid_dtheta);
+  best_dtheta_sign_arr .fill(0);
+  best_dphi_arr        .fill(invalid_dphi);
+  best_dphi_sign_arr   .fill(1);  // dphi sign reversed w.r.t dtheta
+  best_phi_arr         .fill(0);
+  best_theta_arr       .fill(0);
   best_dtheta_valid_arr.fill(false);
-
-  // For phi and theta assignment
-  // from 0 to 3: st1, st2, st3, st4
-  std::array<int,  NUM_STATIONS> best_theta_arr;
-  std::array<int,  NUM_STATIONS> best_phi_arr;
-  std::array<bool, NUM_STATIONS> best_theta_valid_arr;
-
-  best_phi_arr.fill(0);
-  best_theta_arr.fill(0);
-  best_theta_valid_arr.fill(false);
 
   // Calculate angles
   int ipair = 0;
@@ -125,10 +126,9 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
             best_dtheta_sign_arr.at(ipair) = dth_sign;
             best_dtheta_valid_arr.at(ipair) = true;
 
-            best_theta_arr.at(ist1) = thA;
-            best_theta_arr.at(ist2) = thB;
-            best_theta_valid_arr.at(ist1) = true;
-            best_theta_valid_arr.at(ist2) = true;
+            // first 3 pairs, use station B
+            // last 3 pairs, use station A
+            best_theta_arr.at(ipair) = (ipair < 3) ? thB : thA;
           }
 
           // Calculate phi deltas
@@ -137,12 +137,13 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
           int dph = (phA > phB) ? phA - phB : phB - phA;
           int dph_sign = (phA <= phB);  // sign reversed according to Matt's oral request 2016-04-27
 
-          if (best_dtheta_valid_arr.at(ipair)) {
+          if (best_dphi_arr.at(ipair) >= dph) {
             best_dphi_arr.at(ipair) = dph;
             best_dphi_sign_arr.at(ipair) = dph_sign;
 
-            best_phi_arr.at(ist1) = phA;
-            best_phi_arr.at(ist2) = phB;
+            // first 3 pairs, use station B
+            // last 3 pairs, use station A
+            best_phi_arr.at(ipair) = (ipair < 3) ? phB : phA;
           }
         }  // end loop over conv_hits in station B
       }  // end loop over conv_hits in station A
@@ -158,29 +159,23 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
   int vmask3 = 0;
 
   // vmask contains valid station mask = {ME4,ME3,ME2,ME1}
-  if (best_dtheta_arr.at(0) <= thetaWindow_) {
+  if (best_dtheta_arr.at(0) <= thetaWindow_ && best_dtheta_valid_arr.at(0)) {
     vmask1 |= 0b0011;  // 12
-    best_dtheta_valid_arr.at(0) = false;
   }
-  if (best_dtheta_arr.at(1) <= thetaWindow_) {
+  if (best_dtheta_arr.at(1) <= thetaWindow_ && best_dtheta_valid_arr.at(1)) {
     vmask1 |= 0b0101;  // 13
-    best_dtheta_valid_arr.at(1) = false;
   }
-  if (best_dtheta_arr.at(2) <= thetaWindow_) {
+  if (best_dtheta_arr.at(2) <= thetaWindow_ && best_dtheta_valid_arr.at(2)) {
     vmask1 |= 0b1001;  // 14
-    best_dtheta_valid_arr.at(2) = false;
   }
-  if (best_dtheta_arr.at(3) <= thetaWindow_) {
+  if (best_dtheta_arr.at(3) <= thetaWindow_ && best_dtheta_valid_arr.at(3)) {
     vmask2 |= 0b0110;  // 23
-    best_dtheta_valid_arr.at(3) = false;
   }
-  if (best_dtheta_arr.at(4) <= thetaWindow_) {
+  if (best_dtheta_arr.at(4) <= thetaWindow_ && best_dtheta_valid_arr.at(4)) {
     vmask2 |= 0b1010;  // 24
-    best_dtheta_valid_arr.at(4) = false;
   }
-  if (best_dtheta_arr.at(5) <= thetaWindow_) {
+  if (best_dtheta_arr.at(5) <= thetaWindow_ && best_dtheta_valid_arr.at(5)) {
     vmask3 |= 0b1100;  // 34
-    best_dtheta_valid_arr.at(5) = false;
   }
 
   // merge station masks only if they share bits
@@ -194,28 +189,50 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
   for (int istation = 0; istation < NUM_STATIONS; ++istation) {
     if ((vstat & (1<<istation)) == 0) {  // station bit not set
       st_conv_hits.at(istation).clear();
-      best_theta_valid_arr.at(istation) = false;
     }
   }
 
   // assign precise phi and theta
-  int phi_int = 0;
+  int phi_int   = 0;
   int theta_int = 0;
+  int best_pair = -1;
 
-  if ((vstat & (1<<1)) != 0) {          // ME2 present
-    assert(best_theta_valid_arr.at(1));
-    phi_int   = best_phi_arr.at(1);
-    theta_int = best_theta_arr.at(1);
+  if ((vstat & (1<<1)) != 0) {            // ME2 present
+    if (best_dtheta_valid_arr.at(0))      // 12
+      best_pair = 0;
+    else if (best_dtheta_valid_arr.at(3)) // 23
+      best_pair = 3;
+    else if (best_dtheta_valid_arr.at(4)) // 24
+      best_pair = 4;
 
-  } else if ((vstat & (1<<2)) != 0) {   // ME3 present
-    assert(best_theta_valid_arr.at(2));
-    phi_int   = best_phi_arr.at(2);
-    theta_int = best_theta_arr.at(2);
+  } else if ((vstat & (1<<2)) != 0) {     // ME3 present
+    if (best_dtheta_valid_arr.at(1))      // 13
+      best_pair = 1;
+    else if (best_dtheta_valid_arr.at(5)) // 34
+      best_pair = 5;
 
-  } else if ((vstat & (1<<3)) != 0) {   // ME4 present
-    assert(best_theta_valid_arr.at(3));
-    phi_int   = best_phi_arr.at(3);
-    theta_int = best_theta_arr.at(3);
+  } else if ((vstat & (1<<3)) != 0) {     // ME4 present
+    if (best_dtheta_valid_arr.at(2))      // 14
+      best_pair = 2;
+  }
+
+  if (best_pair != -1) {
+    phi_int   = best_phi_arr.at(best_pair);
+    theta_int = best_theta_arr.at(best_pair);
+
+    // in addition, pick min dtheta (this does not happen in firmware)
+    struct {
+      typedef EMTFHitExtra value_type;
+      constexpr bool operator()(const value_type& lhs, const value_type& rhs) {
+        return std::abs(lhs.theta_fp-theta) < std::abs(rhs.theta_fp-theta);
+      }
+      int theta;
+    } less_dtheta_cmp;
+    less_dtheta_cmp.theta = theta_int;  // capture
+
+    for (int istation = 0; istation < NUM_STATIONS; ++istation) {
+      std::sort(st_conv_hits.at(istation).begin(), st_conv_hits.at(istation).end(), less_dtheta_cmp);
+    }
   }
 
   // update rank taking into account available stations after theta deltas
@@ -271,8 +288,8 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
     const auto& v = st_conv_hits.at(i);
     ptlut_data.cpattern[i]   = v.empty() ? 0 : v.front().pattern;
     ptlut_data.fr[i]         = v.empty() ? 0 : isFront(v.front().station, v.front().ring, v.front().chamber);
-    ptlut_data.ph[i]         = best_phi_arr.at(i);
-    ptlut_data.th[i]         = best_theta_arr.at(i);
+    ptlut_data.ph[i]         = v.empty() ? 0 : v.front().phi_fp;
+    ptlut_data.th[i]         = v.empty() ? 0 : v.front().theta_fp;
     ptlut_data.bt_chamber[i] = v.empty() ? 0 : get_bt_chamber(v.front());
   }
 
