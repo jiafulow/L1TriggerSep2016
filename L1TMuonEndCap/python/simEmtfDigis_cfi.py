@@ -21,17 +21,14 @@ simEmtfDigis = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
     # BX
     MinBX = cms.int32(-3),
     MaxBX = cms.int32(+4),
-    BXWindow = cms.int32(3),
 
     # Versioning
     Version = cms.int32(1),
     PtLUTVersion = cms.int32(1),
 
-    # LUT files
-    PhThLUT = cms.string('ph_lut_v1'),
-
     # Sector processor primitive-conversion parameters
     spPCParams16 = cms.PSet(
+        PhThLUT = cms.string('ph_lut_v1'),
         IncludeNeighbor = cms.bool(True),
         DuplicateTheta = cms.bool(True),
         FixZonePhi = cms.bool(False), ## False in FW through the present - AWB 04.10.16
@@ -74,7 +71,10 @@ simEmtfDigis = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
 
     # Sector processor pt-assignment parameters
     spPAParams16 = cms.PSet(
-        TreeDir = cms.string('v_16_02_21'),
+        BDTXMLDir = cms.string('v_16_02_21'),
+        ReadPtLUTFile = cms.bool(False),
+        FixMode15HighPt = cms.bool(True),
+        Fix9bDPhi = cms.bool(True),
     ),
 
     # Sector processor ghost-cancellation parameters

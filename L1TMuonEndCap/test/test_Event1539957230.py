@@ -29,41 +29,48 @@ class TestEvent1539957230(unittest.TestCase):
     hits = self.analyzer.handles["hits"].product()
 
     hit = hits[0]
+    self.assertEqual(hit.strip      , 47)
+    self.assertEqual(hit.wire       , 33)
     self.assertEqual(hit.phi_fp     , 3964)
     self.assertEqual(hit.theta_fp   , 37)
-    self.assertEqual((1<<hit.ph_hit), 512)
+    self.assertEqual((1<<hit.ph_hit), 1024)
     self.assertEqual(hit.phzvl      , 1)
 
     hit = hits[1]
+    self.assertEqual(hit.strip      , 141)
+    self.assertEqual(hit.wire       , 77)
     self.assertEqual(hit.phi_fp     , 3644)
     self.assertEqual(hit.theta_fp   , 33)
-    self.assertEqual((1<<hit.ph_hit), 137438953472)
+    self.assertEqual((1<<hit.ph_hit), 274877906944)
     self.assertEqual(hit.phzvl      , 1)
 
     hit = hits[2]
+    self.assertEqual(hit.strip      , 137)
+    self.assertEqual(hit.wire       , 71)
     self.assertEqual(hit.phi_fp     , 3879)
     self.assertEqual(hit.theta_fp   , 30)
     self.assertEqual((1<<hit.ph_hit), 256)
     self.assertEqual(hit.phzvl      , 1)
 
     hit = hits[3]
+    self.assertEqual(hit.strip      , 104)
+    self.assertEqual(hit.wire       , 74)
     self.assertEqual(hit.phi_fp     , 4146)
     self.assertEqual(hit.theta_fp   , 27)
-    self.assertEqual((1<<hit.ph_hit), 65536)
+    self.assertEqual((1<<hit.ph_hit), 131072)
     self.assertEqual(hit.phzvl      , 1)
 
   def test_tracks(self):
     tracks = self.analyzer.handles["tracks"].product()
 
     track = tracks[0]
-    self.assertEqual(track.rank         , 40)
-    self.assertEqual(track.mode         , 12)
-    self.assertEqual(track.ptlut_address, 218120512)
-
-    track = tracks[1]
-    self.assertEqual(track.rank         , 23)
-    self.assertEqual(track.mode         , 3)
-    self.assertEqual(track.ptlut_address, 820437771)
+    self.assertEqual(track.rank         , 0x2a)
+    self.assertEqual(track.ptlut_address, 486813690)
+    self.assertEqual(track.mode         , 14)
+    self.assertEqual(track.gmt_charge   , 0)
+    self.assertEqual(track.gmt_quality  , 14)
+    self.assertEqual(track.gmt_eta      , 169)
+    self.assertEqual(track.gmt_phi      , 60)
 
 
 # ______________________________________________________________________________

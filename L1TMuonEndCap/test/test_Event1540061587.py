@@ -28,18 +28,24 @@ class TestEvent1540061587(unittest.TestCase):
     hits = self.analyzer.handles["hits"].product()
 
     hit = hits[0]
+    self.assertEqual(hit.strip      , 65)
+    self.assertEqual(hit.wire       , 28)
     self.assertEqual(hit.phi_fp     , 3454)
     self.assertEqual(hit.theta_fp   , 36)
-    self.assertEqual((1<<hit.ph_hit), 4096)
+    self.assertEqual((1<<hit.ph_hit), 8192)
     self.assertEqual(hit.phzvl      , 1)
 
     hit = hits[1]
+    self.assertEqual(hit.strip      , 82)
+    self.assertEqual(hit.wire       , 28)
     self.assertEqual(hit.phi_fp     , 3543)
     self.assertEqual(hit.theta_fp   , 36)
-    self.assertEqual((1<<hit.ph_hit), 32768)
+    self.assertEqual((1<<hit.ph_hit), 65536)
     self.assertEqual(hit.phzvl      , 1)
 
     hit = hits[2]
+    self.assertEqual(hit.strip      , 34)
+    self.assertEqual(hit.wire       , 64)
     self.assertEqual(hit.phi_fp     , 3983)
     self.assertEqual(hit.theta_fp   , 29)
     self.assertEqual((1<<hit.ph_hit), 2048)
@@ -48,10 +54,7 @@ class TestEvent1540061587(unittest.TestCase):
   def test_tracks(self):
     tracks = self.analyzer.handles["tracks"].product()
 
-    track = tracks[0]
-    self.assertEqual(track.rank         , 105)
-    self.assertEqual(track.mode         , 13)
-    self.assertEqual(track.ptlut_address, 760262673)
+    # no tracks
 
 
 # ______________________________________________________________________________

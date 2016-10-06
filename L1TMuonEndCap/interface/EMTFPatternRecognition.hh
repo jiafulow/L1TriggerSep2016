@@ -12,7 +12,6 @@ public:
 
   void configure(
       int verbose, int endcap, int sector, int bx,
-      int minBX, int maxBX, int bxWindow,
       const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions,
       int maxRoadsPerZone, bool useSecondEarliest, bool useSymPatterns
   );
@@ -22,7 +21,13 @@ public:
   void process(
       const std::deque<EMTFHitExtraCollection>& extended_conv_hits,
       std::map<pattern_ref_t, int>& patt_lifetime_map,
-      std::vector<EMTFRoadExtraCollection>& zone_roads
+      zone_array<EMTFRoadExtraCollection>& zone_roads
+  ) const;
+
+  bool is_zone_empty(
+      int zone,
+      const std::deque<EMTFHitExtraCollection>& extended_conv_hits,
+      const std::map<pattern_ref_t, int>& patt_lifetime_map
   ) const;
 
   void make_zone_image(
@@ -44,15 +49,11 @@ public:
 private:
   int verbose_, endcap_, sector_, bx_;
 
-  int minBX_, maxBX_, bxWindow_;
-
   std::vector<std::string> pattDefinitions_, symPattDefinitions_;
   int maxRoadsPerZone_;
   bool useSecondEarliest_, useSymPatterns_;
 
   std::vector<EMTFPhiMemoryImage> patterns_;
 };
-
-typedef EMTFPatternRecognition::pattern_ref_t EMTFPatternRef;
 
 #endif

@@ -7,7 +7,7 @@
 class EMTFBestTrackSelection {
 public:
   void configure(
-      int verbose, int endcap, int sector, int bx, int bxWindow,
+      int verbose, int endcap, int sector, int bx,
       int maxRoadsPerZone, int maxTracks, bool useSecondEarliest
   );
 
@@ -29,7 +29,7 @@ public:
 private:
   int verbose_, endcap_, sector_, bx_;
 
-  int bxWindow_, maxRoadsPerZone_, maxTracks_;
+  int maxRoadsPerZone_, maxTracks_;
   bool useSecondEarliest_;
 };
 

@@ -277,7 +277,7 @@ static int getCLCT(int clct)
   int sign_ = 1;
 
   switch (clct) {
-  case 10: clct_ = 0; sign_ =  1; break;
+  case 10: clct_ = 0; sign_ = -1; break;
   case  9: clct_ = 1; sign_ =  1; break;
   case  8: clct_ = 1; sign_ = -1; break;
   case  7: clct_ = 2; sign_ =  1; break;
@@ -346,56 +346,45 @@ static int getdEta(int deta)
 }
 */
 
-/*
-static float getEta(float eta, int bits=5)
-{
-  float eta_ = 0;
-  float sign_ = 1;
-  if (eta<0)
-    sign_ = -1;
-
-  if (bits>5) bits = 5;
-  int shift = 5 - bits;
-  int etaInt = (fabs(eta) - 0.9)*(32.0/(1.6))-0.5;
-  etaInt = (etaInt>>shift)<<shift;
-
-  eta_ = 0.9 + (etaInt + 0.5)*(1.6/32.0);
-  return (eta_*sign_);
-}
-*/
-
 static int getEtaInt(float eta, int bits=5)
 {
-  if (bits>5) bits = 5;
+  eta = std::abs(eta);
+  eta = (eta < 0.9) ? 0.9 : eta;
+  bits = (bits > 5) ? 5 : bits;
+  // encode 0.9<abs(eta)<1.6 in 5-bit (32 possible values)
+  int etaInt = ((eta - 0.9)*32)/(1.6) - 0.5;
   int shift = 5 - bits;
-  int etaInt = (fabs(eta) - 0.9)*(32.0/(1.6))-0.5;
-  etaInt = (etaInt>>shift);
-  if(etaInt > 31){etaInt = 31;}
-
-  return (etaInt);
+  etaInt >>= shift;
+  etaInt = (etaInt > 31) ? 31 : etaInt;
+  return etaInt;
 }
 
-static int getEtaIntFromThetaInt(int theta, int bits=5)
+static float getEtaFromThetaInt(int thetaInt, int bits=5)
 {
-  theta = (theta<<2) & 127;
-  float ftheta = theta;
-  ftheta = (ftheta*0.2874016 + 8.5)*(3.14159265359/180);
-  float eta = (-1)*std::log(std::tan(ftheta/2));
-  return getEtaInt(eta, bits);
+  thetaInt = (thetaInt > 127) ? 127 : thetaInt;  // 7-bit
+  thetaInt = (thetaInt < 0) ? 0 : thetaInt;
+  float theta = thetaInt;
+  theta = (theta*0.2874016 + 8.5)*(3.14159265359/180);  //FIXME: check this
+  float eta = -std::log(std::tan(theta/2));
+  return eta;
+}
+
+static float getEtaFromEtaInt(int etaInt, int bits=5)
+{
+  etaInt = (etaInt > 31) ? 31 : etaInt;  // 5-bit
+  etaInt = (etaInt < 0) ? 0 : etaInt;
+  bits = (bits > 5) ? 5 : bits;
+  int shift = 5 - bits;
+  etaInt <<= shift;
+  // decode 5-bit etaInt to 0.9<abs(eta)<1.6
+  float eta = ((0.5 + etaInt)*1.6)/32 + 0.9;
+  return eta;
 }
 
 static float getEtaFromBin(int etaBin, int bits=5)
 {
-  if (etaBin>((1<<5)-1))
-    etaBin = ((1<<5)-1);
-  if (etaBin<0)
-    etaBin = 0;
-
-  if (bits>5) bits = 5;
-  int shift = 5 - bits;
-  int etaInt_ = etaBin << shift;
-  float eta_ = 0.9 + (etaInt_ + 0.5)*(1.6/32.0);
-  return (eta_);
+  // For backward compatibility
+  return getEtaFromEtaInt(etaBin, bits);
 }
 
 // front-rear LUTs

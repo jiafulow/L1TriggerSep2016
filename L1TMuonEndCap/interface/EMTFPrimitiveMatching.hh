@@ -6,6 +6,9 @@
 
 class EMTFPrimitiveMatching {
 public:
+  typedef EMTFHitExtraCollection::const_iterator hit_ptr_t;
+  typedef std::pair<int, hit_ptr_t> hit_sort_pair_t;  // key=ph_diff, value=hit
+
   void configure(
       int verbose, int endcap, int sector, int bx,
       bool fixZonePhi
@@ -13,28 +16,28 @@ public:
 
   void process(
       const std::deque<EMTFHitExtraCollection>& extended_conv_hits,
-      const std::vector<EMTFRoadExtraCollection>& zone_roads,
-      std::vector<EMTFTrackExtraCollection>& zone_tracks
+      const zone_array<EMTFRoadExtraCollection>& zone_roads,
+      zone_array<EMTFTrackExtraCollection>& zone_tracks
   ) const;
 
   void process_single_zone_station(
       int station,
       const EMTFRoadExtraCollection& roads,
       const EMTFHitExtraCollection& conv_hits,
-      std::vector<std::pair<int, int> >& phi_differences
+      std::vector<hit_sort_pair_t>& phi_differences
   ) const;
 
   void sort_ph_diff(
-      std::vector<std::pair<int, int> >& phi_differences
+      std::vector<hit_sort_pair_t>& phi_differences
   ) const;
 
   void insert_hits(
-      int ichit, int ph_diff, const EMTFHitExtraCollection& conv_hits,
+      hit_ptr_t conv_hit_ptr, const EMTFHitExtraCollection& conv_hits,
       EMTFTrackExtra& track
   ) const;
 
   void insert_hit(
-      int ichit, int ph_diff, const EMTFHitExtraCollection& conv_hits,
+      hit_ptr_t conv_hit_ptr,
       EMTFTrackExtra& track
   ) const;
 

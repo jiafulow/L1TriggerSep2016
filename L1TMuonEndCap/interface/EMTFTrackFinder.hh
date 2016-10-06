@@ -22,7 +22,9 @@ public:
   ~EMTFTrackFinder();
 
   void process(
+      // Input
       const edm::Event& iEvent, const edm::EventSetup& iSetup,
+      // Output
       EMTFHitExtraCollection& out_hits,
       EMTFTrackExtraCollection& out_tracks
   ) const;
@@ -32,7 +34,7 @@ private:
 
   EMTFPtAssignmentEngine pt_assignment_engine_;
 
-  std::array<EMTFSectorProcessor, 12> sector_processors_;
+  std::array<EMTFSectorProcessor, NUM_SECTORS> sector_processors_;
 
   const edm::ParameterSet config_;
 
@@ -42,11 +44,9 @@ private:
 
   bool useCSC_, useRPC_;
 
-  int minBX_, maxBX_, bxWindow_;
+  int minBX_, maxBX_;
 
   int version_, ptlut_ver_;
-
-  std::string ph_th_lut_;
 };
 
 #endif

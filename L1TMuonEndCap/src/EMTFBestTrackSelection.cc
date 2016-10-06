@@ -1,10 +1,10 @@
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFBestTrackSelection.hh"
 
-#include "helper.h"  // to_hex, to_binary
+#include "helper.hh"  // to_hex, to_binary
 
 
 void EMTFBestTrackSelection::configure(
-    int verbose, int endcap, int sector, int bx, int bxWindow,
+    int verbose, int endcap, int sector, int bx,
     int maxRoadsPerZone, int maxTracks, bool useSecondEarliest
 ) {
   verbose_ = verbose;
@@ -12,7 +12,6 @@ void EMTFBestTrackSelection::configure(
   sector_  = sector;
   bx_      = bx;
 
-  bxWindow_           = bxWindow;
   maxRoadsPerZone_    = maxRoadsPerZone;
   maxTracks_          = maxTracks;
   useSecondEarliest_  = useSecondEarliest;
@@ -22,6 +21,19 @@ void EMTFBestTrackSelection::process(
     const std::deque<EMTFTrackExtraCollection>& extended_best_track_cands,
     EMTFTrackExtraCollection& best_tracks
 ) const {
+  int num_cands = 0;
+  for (const auto& cands : extended_best_track_cands) {
+    for (const auto& cand : cands) {
+      if (cand.rank > 0) {
+        num_cands += 1;
+      }
+    }
+  }
+  bool early_exit = (num_cands == 0);
+
+  if (early_exit)
+    return;
+
 
   if (!useSecondEarliest_) {
     cancel_one_bx(extended_best_track_cands, best_tracks);
@@ -36,12 +48,17 @@ void EMTFBestTrackSelection::process(
           << " th_deltas: " << array_as_string(track.ptlut_data.delta_th)
           << " phi: " << track.phi_int << " theta: " << track.theta_int
           << " cpat: " << array_as_string(track.ptlut_data.cpattern)
+          << " bx: " << track.bx
           << std::endl;
       for (const auto& conv_hit : track.xhits) {
-        std::cout << ".. track segments: st: " << conv_hit.pc_station << " ch: " << conv_hit.pc_chamber << " ph: " << conv_hit.phi_fp << " th: " << conv_hit.theta_fp << " cscid: " << (conv_hit.cscn_ID-1) << std::endl;
+        std::cout << ".. track segments: st: " << conv_hit.pc_station << " ch: " << conv_hit.pc_chamber
+            << " ph: " << conv_hit.phi_fp << " th: " << conv_hit.theta_fp
+            << " cscid: " << (conv_hit.cscn_ID-1) << " bx: " << conv_hit.bx
+            << std::endl;
       }
     }
   }
+
 }
 
 void EMTFBestTrackSelection::cancel_one_bx(
@@ -57,20 +74,20 @@ void EMTFBestTrackSelection::cancel_one_bx(
   assert(maxTracks_ <= max_zn);
 
   // Emulate the arrays used in firmware
-  typedef std::array<int, 2> segment_ref_t;
+  typedef std::array<int, 3> segment_ref_t;
   std::vector<std::vector<segment_ref_t> > segments(max_zn, std::vector<segment_ref_t>());  // 2D array [zn][num segments]
 
   std::vector<std::vector<bool> > larger(max_zn, std::vector<bool>(max_zn, false));  // 2D array [zn][zn]
   std::vector<std::vector<bool> > winner(max_zn, std::vector<bool>(max_zn, false));
 
-  std::vector<bool> exists(max_zn, false);  // 1D array [zn]
-  std::vector<bool> killed(max_zn, false);
-  std::vector<int>  rank  (max_zn, 0);
+  std::vector<bool> exists (max_zn, false);  // 1D array [zn]
+  std::vector<bool> killed (max_zn, false);
+  std::vector<int>  rank   (max_zn, 0);
+  //std::vector<int>  good_bx(max_zn, 0);
 
-  std::deque<EMTFTrackExtraCollection>::const_iterator zone_tracks_begin = extended_best_track_cands.end();
-  zone_tracks_begin -= NUM_ZONES;
+  std::deque<EMTFTrackExtraCollection>::const_iterator zone_tracks_begin = extended_best_track_cands.end() - NUM_ZONES;
 
-  // Initialize arrays
+  // Initialize arrays: rank, segments
   for (int z = 0; z < max_z; ++z) {
     const EMTFTrackExtraCollection& tracks = *(zone_tracks_begin + z);
     const int ntracks = tracks.size();
@@ -80,125 +97,143 @@ void EMTFBestTrackSelection::cancel_one_bx(
       const int zn = (n * max_z) + z;  // for (i = 0; i < 12; i = i+1) rank[i%4][i/4]
       const EMTFTrackExtra& track = tracks.at(n);
 
-      rank[zn] = track.rank;
+      rank.at(zn) = track.rank;
 
       for (const auto& conv_hit : track.xhits) {
         assert(conv_hit.valid);
 
-        // A segment identifier (chamber, strip)
-        const segment_ref_t segment = {{conv_hit.pc_station*9 + conv_hit.pc_chamber, conv_hit.strip}};  // due to GCC bug, use {{}} instead of {}
+        // A segment identifier (chamber, strip, bx)
+        const segment_ref_t segment = {{conv_hit.pc_station*9 + conv_hit.pc_chamber, conv_hit.strip, 0}};  // due to GCC bug, use {{}} instead of {}
         segments.at(zn).push_back(segment);
       }
     }  // end loop over n
   }  // end loop over z
 
-  bool no_tracks = true;
-  for (int i = 0; i < max_zn; ++i) {
-    if (rank[i] > 0)
-      no_tracks = false;
-  }
-  if (no_tracks)  // early exit
-    return;
+  // Simultaneously compare each rank with each other
+  int i=0, j=0, ri=0, rj=0, gt=0, eq=0, sum=0;
 
-
-  // Copied from firmware (emulator version to come? - AWB 03.10.16)
-  bool use_fw_algo = true;
-
-  if (use_fw_algo) {
-    int ri=0, rj=0, gt=0, eq=0;
-
-    // Simultaneously compare each rank with each other
-    for (int i = 0; i < max_zn; ++i) {
-      for (int j = 0; j < max_zn; ++j) {
-        larger[i][j] = 0;
-      }
-      larger[i][i] = 1; // result of comparison with itself
-      //ri = rank[i%4][i/4]; // first index loops zone, second loops candidate. Zone loops faster, so we give equal priority to zones
-      ri = rank[i];
-
-      for (int j = 0; j < max_zn; ++j) {
-        // i&j bits show which rank is larger
-        // the comparison scheme below avoids problems
-        // when there are two or more tracks with the same rank
-        //rj = rank[j%4][j/4];
-        rj = rank[j];
-        gt = ri > rj;
-        eq = ri == rj;
-        if ((i < j && (gt || eq)) || (i > j && gt))
-          larger[i][j] = 1;
-      }
-
-      // "larger" array shows the result of comparison for each rank
-
-      // track exists if quality != 0
-      exists[i] = (ri != 0);
+  for (i = 0; i < max_zn; ++i) {
+    for (j = 0; j < max_zn; ++j) {
+      larger[i][j] = 0;
     }
+    larger[i][i] = 1; // result of comparison with itself
+    //ri = rank[i%4][i/4]; // first index loops zone, second loops candidate. Zone loops faster, so we give equal priority to zones
+    ri = rank[i];
 
-    // ghost cancellation, only in the current BX so far
-    for (int i = 0; i < max_zn-1; ++i) { // candidate loop
-      for (int j = i+1; j < max_zn; ++j) { // comparison candidate loop
-        int shared_segs = 0;
+    for (j = 0; j < max_zn; ++j) {
+      // i&j bits show which rank is larger
+      // the comparison scheme below avoids problems
+      // when there are two or more tracks with the same rank
+      //rj = rank[j%4][j/4];
+      rj = rank[j];
+      gt = ri > rj;
+      eq = ri == rj;
+      if ((i < j && (gt || eq)) || (i > j && gt))
+        larger[i][j] = 1;
+    }
+    // "larger" array shows the result of comparison for each rank
 
-        // count shared segments
-        for (const auto& isegment : segments.at(i)) {  // loop over all pairs of hits
-          for (const auto& jsegment : segments.at(j)) {
-            if (isegment == jsegment) {  // same chamber and same segment
-              shared_segs += 1;
-            }
+    // track exists if quality != 0
+    exists[i] = (ri != 0);
+  }
+
+  // ghost cancellation, only in the current BX so far
+  for (i = 0; i < max_zn-1; ++i) { // candidate loop
+    for (j = i+1; j < max_zn; ++j) { // comparison candidate loop
+      int shared_segs = 0;
+
+      // count shared segments
+      for (const auto& isegment : segments.at(i)) {  // loop over all pairs of hits
+        for (const auto& jsegment : segments.at(j)) {
+          if (isegment == jsegment) {  // same chamber and same segment
+            shared_segs += 1;
           }
         }
-
-        if (shared_segs > 0) {  // a single shared segment means it's ghost
-          // kill candidate that has lower rank
-          if (larger[i][j])
-            killed[j] = 1;
-          else
-            killed[i] = 1;
-        }
       }
-    }
 
-    // remove ghosts according to kill mask
-    //exists = exists & (~kill1);
-    for (int i = 0; i < max_zn; ++i) {
-      exists[i] = exists[i] & (!killed[i]);
-    }
-
-    for (int i = 0; i < max_zn; ++i) {
-      for (int j = 0; j < max_zn; ++j) {
-        //if  (exists[i]) larger[i] = larger[i] | (~exists); // if this track exists make it larger than all non-existing tracks
-        //else  larger[i] = 0; // else make it smaller than anything
-        if (exists[i])
-          larger[i][j] = larger[i][j] | (!exists[j]);
+      if (shared_segs > 0) {  // a single shared segment means it's ghost
+        // kill candidate that has lower rank
+        if (larger[i][j])
+          killed[j] = 1;
         else
-          larger[i][j] = 0;
+          killed[i] = 1;
       }
-
-      // count zeros in the comparison results. The best track will have none, the next will have one, the third will have two.
-      // skip the bits corresponding to the comparison of the track with itself
-      int sum = 0;
-      for (int j = 0; j < max_zn; ++j) {
-        if (larger[i][j] == 0)
-          sum += 1;
-      }
-
-      if (sum < maxTracks_)  winner[sum][i] = 1; // assign positional winner codes
     }
+  }
 
-  } else {
-    // Not implemented
+  // remove ghosts according to kill mask
+  //exists = exists & (~kill1);
+  for (i = 0; i < max_zn; ++i) {
+    exists[i] = exists[i] & (!killed[i]);
+  }
+
+  bool anything_exists = std::accumulate(exists.begin(), exists.end(), 0) != 0;
+  if (!anything_exists)
+    return;
+
+  // update "larger" array
+  for (i = 0; i < max_zn; ++i) {
+    for (j = 0; j < max_zn; ++j) {
+      //if  (exists[i]) larger[i] = larger[i] | (~exists); // if this track exists make it larger than all non-existing tracks
+      //else  larger[i] = 0; // else make it smaller than anything
+      if (exists[i])
+        larger[i][j] = larger[i][j] | (!exists[j]);
+      else
+        larger[i][j] = 0;
+    }
+  }
+
+  if (verbose_ > 0) {  // debug
+    std::cout << "exists: ";
+    for (i = max_zn-1; i >= 0; --i) {
+      std::cout << exists[i];
+    }
+    std::cout << std::endl;
+    std::cout << "killed: ";
+    for (i = max_zn-1; i >= 0; --i) {
+      std::cout << killed[i];
+    }
+    std::cout << std::endl;
+    for (j = 0; j < max_zn; ++j) {
+      std::cout << "larger: ";
+      for (i = max_zn-1; i >= 0; --i) {
+        std::cout << larger[j][i];
+      }
+      std::cout << std::endl;
+    }
+  }
+
+  // count zeros in the comparison results. The best track will have none, the next will have one, the third will have two
+  // skip the bits corresponding to the comparison of the track with itself
+  for (i = 0; i < max_zn; ++i) {
+    sum = 0;
+    for (j = 0; j < max_zn; ++j) {
+      if (larger[i][j] == 0)
+        sum += 1;
+    }
+    if (sum < maxTracks_)
+      winner[sum][i] = 1; // assign positional winner codes
   }
 
   // Output best tracks according to winner signals
   best_tracks.clear();
 
+  zone_tracks_begin = extended_best_track_cands.end() - NUM_ZONES;
+
   for (int o = 0; o < maxTracks_; ++o) { // output candidate loop
-    for (int i = 0; i < max_zn; ++i) { // winner bit loop
+    int z = 0, n = 0;
+    for (i = 0; i < max_zn; ++i) { // winner bit loop
       if (winner[o][i]) {
-        const EMTFTrackExtraCollection& tracks = *(zone_tracks_begin + (i%max_z));
-        const EMTFTrackExtra& track = tracks.at(i/max_z);
+        n = i / max_z;
+        z = i % max_z;
+
+        const EMTFTrackExtraCollection& tracks = *(zone_tracks_begin + z);
+        const EMTFTrackExtra& track = tracks.at(n);
         best_tracks.push_back(track);
+
+        // Update winner, BX
         best_tracks.back().winner = o;
+        best_tracks.back().bx = best_tracks.back().first_bx;
       }
     }
   }
@@ -211,11 +246,11 @@ void EMTFBestTrackSelection::cancel_multi_bx(
   const int num_h = extended_best_track_cands.size() / NUM_ZONES;  // num of bx history
   assert((int) extended_best_track_cands.size() == num_h * NUM_ZONES);
 
-  const int max_h = bxWindow_;               // = 3 bx history
-  const int max_z = NUM_ZONES;               // = 4 zones
-  const int max_n = maxRoadsPerZone_;        // = 3 candidates per zone
-  //const int max_zn = max_z * max_n;          // = 12 total candidates
-  const int max_hzn = max_h * max_z * max_n; // = 36 total candidates
+  const int max_h = BX_WINDOW;        // = 3 bx history
+  const int max_z = NUM_ZONES;        // = 4 zones
+  const int max_n = maxRoadsPerZone_; // = 3 candidates per zone
+  const int max_zn = max_z * max_n;   // = 12 total candidates
+  const int max_hzn = max_h * max_zn; // = 36 total candidates
   assert(maxTracks_ <= max_hzn);
 
   // Emulate the arrays used in firmware
@@ -230,16 +265,16 @@ void EMTFBestTrackSelection::cancel_multi_bx(
   std::vector<int>  rank   (max_hzn, 0);
   std::vector<int>  good_bx(max_hzn, 0);
 
-  std::deque<EMTFTrackExtraCollection>::const_iterator zone_tracks_begin;
+  std::deque<EMTFTrackExtraCollection>::const_iterator zone_tracks_begin = extended_best_track_cands.end() - NUM_ZONES;
 
-  // Initialize arrays: rank, segments
+  // Initialize arrays: rank, good_bx, segments
   for (int h = 0; h < num_h; ++h) {
-    if (h == 0)
-      zone_tracks_begin = extended_best_track_cands.end();
-    zone_tracks_begin -= NUM_ZONES;
+    // extended_best_track_cands[0..3] has 4 zones for road/pattern BX-2 with possible track [BX-2, BX-1, BX-0]
+    // extended_best_track_cands[4..7] has 4 zones for road/pattern BX-1 with possible track [BX-3, BX-2, BX-1]
+    // extended_best_track_cands[8..11] has 4 zones for road/pattern BX-0 with possible track [BX-4, BX-3, BX-2]
 
     for (int z = 0; z < max_z; ++z) {
-      const EMTFTrackExtraCollection& tracks = *(zone_tracks_begin + z);
+      const EMTFTrackExtraCollection& tracks = *(zone_tracks_begin + z - h*NUM_ZONES);
       const int ntracks = tracks.size();
       assert(ntracks <= max_n);
 
@@ -247,136 +282,155 @@ void EMTFBestTrackSelection::cancel_multi_bx(
         const int hzn = (h * max_z * max_n) + (n * max_z) + z;  // for (i = 0; i < 12; i = i+1) rank[i%4][i/4]
         const EMTFTrackExtra& track = tracks.at(n);
         int cand_bx = track.second_bx;
-        cand_bx = cand_bx - bx_ + 2;  // convert into 0..2 --> -2..0 relative to bx_
+        cand_bx -= (bx_ - 2);  // cand_bx=[0,1,2] --> [BX-2, BX-1, BX-0]
 
         rank.at(hzn) = track.rank;
-        if (cand_bx == h)
+        if (cand_bx == 0)
           good_bx.at(hzn) = 1;  // kill this rank if it's not the right BX
 
         for (const auto& conv_hit : track.xhits) {
           assert(conv_hit.valid);
 
-          // A segment identifier (chamber, strip, bx)
-          const segment_ref_t segment = {{conv_hit.pc_station*9 + conv_hit.pc_chamber, conv_hit.strip, conv_hit.bx}};  // due to GCC bug, use {{}} instead of {}
+          // A segment identifier (chamber, strip+wire, bx)
+          const segment_ref_t segment = {{conv_hit.pc_station*9 + conv_hit.pc_chamber, conv_hit.wire*256 + conv_hit.strip, conv_hit.bx}};  // due to GCC bug, use {{}} instead of {}
           segments.at(hzn).push_back(segment);
         }
       }  // end loop over n
     }  // end loop over z
-  }  // end loop over e
+  }  // end loop over h
 
-  bool no_tracks = true;
-  for (int i = 0; i < max_hzn; ++i) {
-    if (rank[i] > 0)
-      no_tracks = false;
-  }
-  if (no_tracks)  // early exit
-    return;
+  // Simultaneously compare each rank with each other
+  int i=0, j=0, ri=0, rj=0, sum=0;
 
+  for (i = 0; i < max_hzn; ++i) {
+    //for (j = 0; j < max_hzn; ++j) {
+    //  larger[i][j] = 0;
+    //}
+    larger[i][i] = 1; // result of comparison with itself
+    //ri = rank[i%4][i/4]; // first index loops zone, second loops candidate. Zone loops faster, so we give equal priority to zones
+    ri = rank[i];
 
-  // Copied from firmware (emulator version to come? - AWB 03.10.16)
-  bool use_fw_algo = true;
-
-  if (use_fw_algo) {
-    int ri=0, rj=0;
-
-    // Simultaneously compare each rank with each other
-    for (int i = 0; i < max_hzn; ++i) {
-      //for (int j = 0; j < max_hzn; ++j) {
-      //  larger[i][j] = 0;
-      //}
-      larger[i][i] = 1; // result of comparison with itself
-      //ri = rank[i%4][i/4]; // first index loops zone, second loops candidate. Zone loops faster, so we give equal priority to zones
-      ri = rank[i];
-
-      for (int j = i+1; j < max_hzn; ++j) {
-        // i&j bits show which rank is larger
-        //rj = rank[j%4][j/4];
-        rj = rank[j];
-        if (ri >= rj)
-          larger[i][j] = 1;
-        else
-          larger[j][i] = 1;
-      }
-
-      // "larger" array shows the result of comparison for each rank
-
-      // track exists if quality != 0
-      exists[i] = (ri != 0);
+    for (j = i+1; j < max_hzn; ++j) {
+      // i&j bits show which rank is larger
+      //rj = rank[j%4][j/4];
+      rj = rank[j];
+      if (ri >= rj)
+        larger[i][j] = 1;
+      else
+        larger[j][i] = 1;
     }
+    // "larger" array shows the result of comparison for each rank
 
-    // ghost cancellation, over multiple BX
-    for (int i = 0; i < max_hzn-1; ++i) { // candidate loop
-      for (int j = i+1; j < max_hzn; ++j) { // comparison candidate loop
-        int shared_segs = 0;
+    // track exists if quality != 0
+    exists[i] = (ri != 0);
+  }
 
-        // count shared segments
-        for (const auto& isegment : segments.at(i)) {  // loop over all pairs of hits
-          for (const auto& jsegment : segments.at(j)) {
-            if (isegment == jsegment) {  // same chamber and same segment
-              shared_segs += 1;
-            }
+  // ghost cancellation, over 3 BXs
+  for (i = 0; i < max_hzn-1; ++i) { // candidate loop
+    for (j = i+1; j < max_hzn; ++j) { // comparison candidate loop
+      int shared_segs = 0;
+
+      // count shared segments
+      for (const auto& isegment : segments.at(i)) {  // loop over all pairs of hits
+        for (const auto& jsegment : segments.at(j)) {
+          if (isegment == jsegment) {  // same chamber and same segment
+            shared_segs += 1;
           }
         }
-
-        if (shared_segs > 0) {  // a single shared segment means it's ghost
-          // kill candidate that has lower rank
-          if (larger[i][j])
-            killed[j] = 1;
-          else
-            killed[i] = 1;
-        }
       }
-    }
 
-    // remove ghosts according to kill mask
-    //exists = exists & (~kill1);
-    for (int i = 0; i < max_hzn; ++i) {
-      exists[i] = exists[i] & !killed[i];
-    }
-
-    // remove tracks that are not at correct BX number
-    //exists = exists & good_bx;
-    for (int i = 0; i < max_hzn; ++i) {
-      exists[i] = exists[i] & good_bx[i];
-    }
-
-    for (int i = 0; i < max_hzn; ++i) {
-      for (int j = 0; j < max_hzn; ++j) {
-        //if  (exists[i]) larger[i] = larger[i] | (~exists); // if this track exists make it larger than all non-existing tracks
-        //else  larger[i] = 0; // else make it smaller than anything
-        if (exists[i])
-          larger[i][j] = larger[i][j] | (!exists[j]);
+      if (shared_segs > 0) {  // a single shared segment means it's ghost
+        // kill candidate that has lower rank
+        if (larger[i][j])
+          killed[j] = 1;
         else
-          larger[i][j] = 0;
+          killed[i] = 1;
       }
-
-      // count zeros in the comparison results. The best track will have none, the next will have one, the third will have two.
-      int sum = 0;
-      for (int j = 0; j < max_hzn; ++j) {
-        if (larger[i][j] == 0)
-          sum += 1;
-      }
-
-      if (sum < maxTracks_)  winner[sum][i] = 1; // assign positional winner codes
     }
+  }
 
-  } else {
-    // Not implemented
+  // remove ghosts according to kill mask
+  //exists = exists & (~kill1);
+  for (i = 0; i < max_hzn; ++i) {
+    exists[i] = exists[i] & (!killed[i]);
+  }
+
+  // remove tracks that are not at correct BX number
+  //exists = exists & good_bx;
+  for (i = 0; i < max_hzn; ++i) {
+    exists[i] = exists[i] & good_bx[i];
+  }
+
+  bool anything_exists = std::accumulate(exists.begin(), exists.end(), 0) != 0;
+  if (!anything_exists)
+    return;
+
+  // update "larger" array
+  for (i = 0; i < max_hzn; ++i) {
+    for (j = 0; j < max_hzn; ++j) {
+      //if  (exists[i]) larger[i] = larger[i] | (~exists); // if this track exists make it larger than all non-existing tracks
+      //else  larger[i] = 0; // else make it smaller than anything
+      if (exists[i])
+        larger[i][j] = larger[i][j] | (!exists[j]);
+      else
+        larger[i][j] = 0;
+    }
+  }
+
+  if (verbose_ > 0) {  // debug
+    std::cout << "exists: ";
+    for (i = max_hzn-1; i >= 0; --i) {
+      std::cout << exists[i];
+      if ((i%max_zn) == 0 && i != 0)  std::cout << "_";
+    }
+    std::cout << std::endl;
+    std::cout << "killed: ";
+    for (i = max_hzn-1; i >= 0; --i) {
+      std::cout << killed[i];
+      if ((i%max_zn) == 0 && i != 0)  std::cout << "_";
+    }
+    std::cout << std::endl;
+    for (j = 0; j < max_hzn; ++j) {
+      std::cout << "larger: ";
+      for (i = max_hzn-1; i >= 0; --i) {
+        std::cout << larger[j][i];
+        if ((i%max_zn) == 0 && i != 0)  std::cout << "_";
+      }
+      std::cout << std::endl;
+    }
+  }
+
+  // count zeros in the comparison results. The best track will have none, the next will have one, the third will have two
+  for (i = 0; i < max_hzn; ++i) {
+    sum = 0;
+    for (j = 0; j < max_hzn; ++j) {
+      if (larger[i][j] == 0)
+        sum += 1;
+    }
+    if (sum < maxTracks_)
+      winner[sum][i] = 1; // assign positional winner codes
   }
 
   // Output best tracks according to winner signals
   best_tracks.clear();
 
-  for (int o = 0; o < maxTracks_; ++o) { // output candidate loop
-    for (int i = 0; i < max_hzn; ++i) { // winner bit loop
-      if (winner[o][i]) {
-        zone_tracks_begin = extended_best_track_cands.end();
-        zone_tracks_begin -= (i/(max_z * max_n)) * NUM_ZONES;
+  zone_tracks_begin = extended_best_track_cands.end() - NUM_ZONES;
 
-        const EMTFTrackExtraCollection& tracks = *(zone_tracks_begin + (i%max_z));
-        const EMTFTrackExtra& track = tracks.at(i/max_z);
+  for (int o = 0; o < maxTracks_; ++o) { // output candidate loop
+    int h = 0, n = 0, z = 0;
+    for (i = 0; i < max_hzn; ++i) { // winner bit loop
+      if (winner[o][i]) {
+        h = (i / max_z / max_n);
+        n = (i / max_z) % max_n;
+        z = i % max_z;
+
+        const EMTFTrackExtraCollection& tracks = *(zone_tracks_begin + z - h*NUM_ZONES);
+        const EMTFTrackExtra& track = tracks.at(n);
         best_tracks.push_back(track);
+
+        // Update winner, BX
         best_tracks.back().winner = o;
+        best_tracks.back().bx = best_tracks.back().second_bx;
       }
     }
   }

@@ -12,16 +12,18 @@ EMTFSectorProcessor::~EMTFSectorProcessor() {
 void EMTFSectorProcessor::configure(
     const EMTFSectorProcessorLUT* lut,
     const EMTFPtAssignmentEngine* pt_assign_engine,
-    int verbose, int minBX, int maxBX, int bxWindow,
+    int verbose, int minBX, int maxBX,
     int endcap, int sector,
     bool includeNeighbor, bool duplicateTheta, bool fixZonePhi,
     const std::vector<int>& zoneBoundaries1, const std::vector<int>& zoneBoundaries2, int zoneOverlap,
     const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions,
     int maxRoadsPerZone, int thetaWindow, int maxTracks,
-    bool useSecondEarliest, bool useSymPatterns
+    bool useSecondEarliest, bool useSymPatterns,
+    bool readPtLUTFile, bool fixMode15HighPt, bool fix9bDPhi
 ) {
   assert(MIN_ENDCAP <= endcap && endcap <= MAX_ENDCAP);
   assert(MIN_TRIGSECTOR <= sector && sector <= MAX_TRIGSECTOR);
+
   assert(lut != nullptr);
   assert(pt_assign_engine != nullptr);
 
@@ -32,7 +34,6 @@ void EMTFSectorProcessor::configure(
   verbose_  = verbose;
   minBX_    = minBX;
   maxBX_    = maxBX;
-  bxWindow_ = bxWindow;
 
   endcap_   = endcap;
   sector_   = sector;
@@ -51,6 +52,10 @@ void EMTFSectorProcessor::configure(
   maxTracks_          = maxTracks;
   useSecondEarliest_  = useSecondEarliest;
   useSymPatterns_     = useSymPatterns;
+
+  readPtLUTFile_   = readPtLUTFile;
+  fixMode15HighPt_ = fixMode15HighPt;
+  fix9bDPhi_       = fix9bDPhi;
 }
 
 void EMTFSectorProcessor::process(
@@ -68,9 +73,9 @@ void EMTFSectorProcessor::process(
   std::deque<EMTFTrackExtraCollection> extended_best_track_cands;
 
   // Map of pattern detector --> lifetime, tracked across BXs
-  std::map<EMTFPatternRef, int> patt_lifetime_map;
+  std::map<pattern_ref_t, int> patt_lifetime_map;
 
-  int delayBX = bxWindow_ - 1;
+  int delayBX = BX_WINDOW - 1;  // = 2
 
   for (int bx = minBX_; bx <= maxBX_ + delayBX; ++bx) {
     if (verbose_ > 0) {  // debug
@@ -90,9 +95,9 @@ void EMTFSectorProcessor::process(
     // Drop earliest BX outside of BX window
     if (bx >= minBX_ + delayBX) {
       extended_conv_hits.pop_front();
-      for (int izone = 0; izone < NUM_ZONES; ++izone) {
-        extended_best_track_cands.pop_front();
-      }
+
+      int n = zone_array<int>().size();
+      extended_best_track_cands.erase(extended_best_track_cands.begin(), extended_best_track_cands.begin() + n);
     }
   }  // end loop over bx
 
@@ -106,7 +111,7 @@ void EMTFSectorProcessor::process_single_bx(
     EMTFTrackExtraCollection& out_tracks,
     std::deque<EMTFHitExtraCollection>& extended_conv_hits,
     std::deque<EMTFTrackExtraCollection>& extended_best_track_cands,
-    std::map<EMTFPatternRef, int>& patt_lifetime_map
+    std::map<pattern_ref_t, int>& patt_lifetime_map
 ) const {
 
   // ___________________________________________________________________________
@@ -129,7 +134,6 @@ void EMTFSectorProcessor::process_single_bx(
   EMTFPatternRecognition patt_recog;
   patt_recog.configure(
       verbose_, endcap_, sector_, bx,
-      minBX_, maxBX_, bxWindow_,
       pattDefinitions_, symPattDefinitions_,
       maxRoadsPerZone_, useSecondEarliest_, useSymPatterns_
   );
@@ -143,29 +147,30 @@ void EMTFSectorProcessor::process_single_bx(
   EMTFAngleCalculation angle_calc;
   angle_calc.configure(
       verbose_, endcap_, sector_, 
-      bx, bxWindow_, thetaWindow_
+      bx, thetaWindow_
   );
 
   EMTFBestTrackSelection btrack_sel;
   btrack_sel.configure(
-      verbose_, endcap_, sector_, bx, bxWindow_,
+      verbose_, endcap_, sector_, bx,
       maxRoadsPerZone_, maxTracks_, useSecondEarliest_
   );
 
   EMTFPtAssignment pt_assign;
   pt_assign.configure(
       pt_assign_engine_,
-      verbose_, endcap_, sector_, bx
+      verbose_, endcap_, sector_, bx,
+      readPtLUTFile_, fixMode15HighPt_, fix9bDPhi_
   );
 
-  std::map<int, std::vector<TriggerPrimitive> > selected_csc_map;
-  std::map<int, std::vector<TriggerPrimitive> > selected_rpc_map;
+  std::map<int, TriggerPrimitiveCollection> selected_csc_map;
+  std::map<int, TriggerPrimitiveCollection> selected_rpc_map;
 
   EMTFHitExtraCollection conv_hits;
 
-  std::vector<EMTFRoadExtraCollection> zone_roads;  // each zone has its road collection
+  zone_array<EMTFRoadExtraCollection> zone_roads;  // each zone has its road collection
 
-  std::vector<EMTFTrackExtraCollection> zone_tracks;  // each zone has its track collection
+  zone_array<EMTFTrackExtraCollection> zone_tracks;  // each zone has its track collection
 
   EMTFTrackExtraCollection best_tracks;
 
@@ -181,7 +186,6 @@ void EMTFSectorProcessor::process_single_bx(
   // Convert trigger primitives into "converted hits"
   // A converted hit consists of integer representations of phi, theta, and zones
   // From src/EMTFPrimitiveConversion.cc
-  conv_hits.clear();
   prim_conv.process(CSCTag(), selected_csc_map, conv_hits);
   prim_conv.process(RPCTag(), selected_rpc_map, conv_hits);
   extended_conv_hits.push_back(conv_hits);
@@ -197,9 +201,7 @@ void EMTFSectorProcessor::process_single_bx(
   // Calculate deflection angles for each track and fill track variables
   // From src/EMTFAngleCalculation.cc
   angle_calc.process(zone_tracks);
-  for (int izone = 0; izone < NUM_ZONES; ++izone) {
-    extended_best_track_cands.push_back(zone_tracks.at(izone));
-  }
+  extended_best_track_cands.insert(extended_best_track_cands.end(), zone_tracks.begin(), zone_tracks.end());
 
   // Identify 3 best tracks
   // From src/EMTFBestTrackSelection.cc
@@ -211,6 +213,7 @@ void EMTFSectorProcessor::process_single_bx(
 
   // ___________________________________________________________________________
   // Output
+
   out_hits.insert(out_hits.end(), conv_hits.begin(), conv_hits.end());
   out_tracks.insert(out_tracks.end(), best_tracks.begin(), best_tracks.end());
 

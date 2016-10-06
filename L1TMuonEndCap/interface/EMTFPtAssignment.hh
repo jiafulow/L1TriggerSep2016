@@ -10,7 +10,8 @@ class EMTFPtAssignment {
 public:
   void configure(
       const EMTFPtAssignmentEngine* pt_assign_engine,
-      int verbose, int endcap, int sector, int bx
+      int verbose, int endcap, int sector, int bx,
+      bool readPtLUTFile, bool fixMode15HighPt, bool fix9bDPhi
   );
 
   void process(

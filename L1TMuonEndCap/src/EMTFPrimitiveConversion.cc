@@ -48,7 +48,8 @@ void EMTFPrimitiveConversion::process(
     TriggerPrimitiveCollection::const_iterator tp_end = map_tp_it->second.end();
 
     for (; tp_it != tp_end; ++tp_it) {
-      const EMTFHitExtra& conv_hit = convert_prim_csc(selected, *tp_it);
+      EMTFHitExtra conv_hit;
+      convert_csc(selected, *tp_it, conv_hit);
       conv_hits.push_back(conv_hit);
     }
   }
@@ -70,7 +71,8 @@ void EMTFPrimitiveConversion::process(
     TriggerPrimitiveCollection::const_iterator tp_end = map_tp_it->second.end();
 
     for (; tp_it != tp_end; ++tp_it) {
-      const EMTFHitExtra& conv_hit = convert_prim_rpc(selected, *tp_it);  // RPC
+      EMTFHitExtra conv_hit;
+      convert_rpc(selected, *tp_it, conv_hit);  // RPC
       conv_hits.push_back(conv_hit);
     }
   }
@@ -82,7 +84,7 @@ const EMTFSectorProcessorLUT& EMTFPrimitiveConversion::lut() const {
 }
 
 // CSC functions
-EMTFHitExtra EMTFPrimitiveConversion::convert_prim_csc(int selected, const TriggerPrimitive& muon_primitive) const {
+void EMTFPrimitiveConversion::convert_csc(int selected, const TriggerPrimitive& muon_primitive, EMTFHitExtra& conv_hit) const {
   const CSCDetId tp_detId = muon_primitive.detId<CSCDetId>();
   const CSCData& tp_data  = muon_primitive.getCSCData();
 
@@ -136,8 +138,7 @@ EMTFHitExtra EMTFPrimitiveConversion::convert_prim_csc(int selected, const Trigg
     }
   }
 
-  // Create a converted hit
-  EMTFHitExtra conv_hit;
+  // Set properties
   conv_hit.endcap      = tp_endcap;
   conv_hit.station     = tp_station;
   conv_hit.ring        = tp_ring;
@@ -169,15 +170,17 @@ EMTFHitExtra EMTFPrimitiveConversion::convert_prim_csc(int selected, const Trigg
   conv_hit.bx0         = tp_data.bx0; // Used? Delete from class? - AWB 29.09.16
   conv_hit.layer       = 0; // Used? Delete from class? - AWB 29.09.16
 
-  convert_csc(conv_hit);
-  return conv_hit;
+  convert_csc_details(conv_hit);
 }
 
-void EMTFPrimitiveConversion::convert_csc(EMTFHitExtra& conv_hit) const {
+void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const {
+  bool is_neighbor = (conv_hit.pc_station == 5);
+
   // Defined as in firmware
   int fw_endcap  = (endcap_-1); // 0 for ME+, 1 for ME-
   int fw_sector  = (sector_-1); // 0 - 5
-  int fw_station = (conv_hit.station == 1) ? (conv_hit.subsector-1) : conv_hit.station; // 0 - 4
+  // Does fw_station = 0 for any ME1 neighbor hit or subsector 1 hit, and = 1 for ME1 subsector 2 hits? - AWB 06.10.16
+  int fw_station = (conv_hit.station == 1) ? (is_neighbor ? 0 : (conv_hit.subsector-1)) : conv_hit.station; 
   int fw_cscid   = (conv_hit.cscn_ID-1); // 0 - 14 (excluding 11? - AWB 29.09.16)
   int fw_hstrip  = conv_hit.strip;  // it is half-strip, despite the name
   int fw_wg      = conv_hit.wire;   // it is wiregroup, despite the name
@@ -244,12 +247,14 @@ void EMTFPrimitiveConversion::convert_csc(EMTFHitExtra& conv_hit) const {
   assert(pc_lut_id < 61);
 
   if (verbose_ > 1) {  // debug
-    std::cout << "st: " << pc_station << " ch: " << pc_chamber
+    std::cout << "pc_station: " << pc_station << " pc_chamber: " << pc_chamber
+        << " fw_station: " << fw_station << " fw_cscid: " << fw_cscid
         << " lut_id: " << pc_lut_id
         << " ph_init: " << lut().get_ph_init(fw_endcap, fw_sector, pc_lut_id)
         << " ph_disp: " << lut().get_ph_disp(fw_endcap, fw_sector, pc_lut_id)
         << " th_init: " << lut().get_th_init(fw_endcap, fw_sector, pc_lut_id)
         << " th_disp: " << lut().get_th_disp(fw_endcap, fw_sector, pc_lut_id)
+        << " ph_init_hard: " << lut().get_ph_init_hard(fw_station, fw_cscid)
         << std::endl;
   }
 
@@ -319,7 +324,7 @@ void EMTFPrimitiveConversion::convert_csc(EMTFHitExtra& conv_hit) const {
   int th_tmp = th_orig;
 
   if (is_me11a || is_me11b) {
-    int pc_wire_strip_id = (((fw_wg >> 4) & 0x3) << 5) + ((eighth_strip >> 4) & 0x1f);
+    int pc_wire_strip_id = (((fw_wg >> 4) & 0x3) << 5) | ((eighth_strip >> 4) & 0x1f);
     int th_corr = lut().get_th_corr_lut(fw_endcap, fw_sector, pc_lut_id, pc_wire_strip_id);
     int th_corr_sign = (ph_reverse == 0) ? 1 : -1;
 
@@ -452,17 +457,13 @@ void EMTFPrimitiveConversion::convert_csc(EMTFHitExtra& conv_hit) const {
 }
 
 // RPC functions
-EMTFHitExtra EMTFPrimitiveConversion::convert_prim_rpc(int selected, const TriggerPrimitive& muon_primitive) const {
+void EMTFPrimitiveConversion::convert_rpc(int selected, const TriggerPrimitive& muon_primitive, EMTFHitExtra& conv_hit) const {
   //const RPCDetId tp_detId = muon_primitive.detId<RPCDetId>();
   //const RPCData& tp_data  = muon_primitive.getRPCData();
 
-  EMTFHitExtra conv_hit;
-
-  convert_rpc(conv_hit);
-
-  return conv_hit;
+  convert_rpc_details(conv_hit);
 }
 
-void EMTFPrimitiveConversion::convert_rpc(EMTFHitExtra& conv_hit) const {
+void EMTFPrimitiveConversion::convert_rpc_details(EMTFHitExtra& conv_hit) const {
 
 }
