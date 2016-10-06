@@ -39,19 +39,12 @@ void EMTFPtAssignment::process(
 
 
     // compressed pt = pt*2 (scale) + 1 (pt = 0 is empty candidate)
-    int gmt_pt = pt;
-    gmt_pt = (gmt_pt*2) + 1;
-    if (gmt_pt > 511)
-      gmt_pt = 511;
+    int gmt_pt = (pt * 2) + 1;
+    gmt_pt = (gmt_pt > 511) ? 511 : gmt_pt;
 
-    // convert phi into gmt scale according to DN15-017
-    // full scale is -16 to 100, or 116 values, covers range -10 to 62.5 deg
-    // my internal ph scale is 0..5000, covers from -22 to 63.333 deg
-    // converted to GMT scale it is from -35 to 95
-    // bt_phi * 107.01/4096, equivalent to bt_phi * 6849/0x40000
-    int gmt_phi_mult = track.phi_int * 6849;
-    int gmt_phi = (gmt_phi_mult>>18); // divide by 0x40000
-    gmt_phi -= 35; // offset of -22 deg
+    pt = (gmt_pt <= 0) ?  0 : (gmt_pt-1) * 0.5;
+
+    int gmt_phi = getGMTPhi(track.phi_int);
 
     int gmt_eta = getGMTEta(track.theta_int, endcap_);
     bool use_ones_complem_gmt_eta = true;
@@ -61,15 +54,15 @@ void EMTFPtAssignment::process(
 
     int gmt_quality = getGMTQuality(track.mode, track.theta_int);
 
-    std::vector<uint16_t> delta_ph(&(track.ptlut_data.delta_ph[0]), &(track.ptlut_data.delta_ph[0]) + 6);
-    std::vector<uint16_t> sign_ph(&(track.ptlut_data.sign_ph[0]), &(track.ptlut_data.sign_ph[0]) + 6);
+    std::vector<uint16_t> delta_ph(&(track.ptlut_data.delta_ph[0]), &(track.ptlut_data.delta_ph[0]) + NUM_STATION_PAIRS);
+    std::vector<uint16_t> sign_ph(&(track.ptlut_data.sign_ph[0]), &(track.ptlut_data.sign_ph[0]) + NUM_STATION_PAIRS);
     std::pair<int,int> gmt_charge = getGMTCharge(track.mode, delta_ph, sign_ph);
 
     // _________________________________________________________________________
     // Output
-    track.ptlut_address = address;
-    track.pt_xml        = xmlpt;
-    track.pt            = pt;
+    track.ptlut_address    = address;
+    track.pt_xml           = xmlpt;
+    track.pt               = pt;
 
     track.gmt_pt           = gmt_pt;
     track.gmt_phi          = gmt_phi;

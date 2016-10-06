@@ -56,6 +56,4 @@ private:
   std::vector<EMTFPhiMemoryImage> patterns_;
 };
 
-typedef EMTFPatternRecognition::pattern_ref_t EMTFPatternRef;
-
 #endif

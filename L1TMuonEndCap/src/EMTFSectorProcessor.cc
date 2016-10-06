@@ -74,7 +74,7 @@ void EMTFSectorProcessor::process(
   std::deque<EMTFTrackExtraCollection> extended_best_track_cands;
 
   // Map of pattern detector --> lifetime, tracked across BXs
-  std::map<EMTFPatternRef, int> patt_lifetime_map;
+  std::map<pattern_ref_t, int> patt_lifetime_map;
 
   int delayBX = BX_WINDOW - 1;  // = 2
 
@@ -112,7 +112,7 @@ void EMTFSectorProcessor::process_single_bx(
     EMTFTrackExtraCollection& out_tracks,
     std::deque<EMTFHitExtraCollection>& extended_conv_hits,
     std::deque<EMTFTrackExtraCollection>& extended_best_track_cands,
-    std::map<EMTFPatternRef, int>& patt_lifetime_map
+    std::map<pattern_ref_t, int>& patt_lifetime_map
 ) const {
 
   // ___________________________________________________________________________

@@ -11,6 +11,18 @@ static const int GMT_eta_from_theta[128] = {
    91,  91,  90,  89,  89,  88,  87,  87,  86,  85,  84,  84,  83,  83,  82,  81
 };
 
+static int getGMTPhi(int phi) {
+  // convert phi into gmt scale according to DN15-017
+  // full scale is -16 to 100, or 116 values, covers range -10 to 62.5 deg
+  // my internal ph scale is 0..5000, covers from -22 to 63.333 deg
+  // converted to GMT scale it is from -35 to 95
+  // bt_phi * 107.01/4096, equivalent to bt_phi * 6849/0x40000
+  phi *= 6849;
+  phi >>= 18; // divide by 0x40000
+  phi -= 35;  // offset of -22 deg
+  return phi;
+}
+
 static int getGMTEta(int theta, int endcap) {
   if (theta < 0)
     return 0;

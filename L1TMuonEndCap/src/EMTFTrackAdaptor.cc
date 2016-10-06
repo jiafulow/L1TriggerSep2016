@@ -56,6 +56,7 @@ void EMTFTrackAdaptor::convert_track(const EMTFTrackExtra& in_track, EMTFTrack& 
   int theta_int = in_track.theta_int;
   float theta_angle = l1t::calc_theta_rad_from_int( theta_int );
   float eta = l1t::calc_eta_from_theta_rad( theta_angle );
+  eta = (in_track.endcap == 2) ? -eta : eta;
 
   int phi_loc_int = in_track.phi_int;
   float phi_loc_deg = l1t::calc_phi_loc_deg( phi_loc_int );
@@ -71,6 +72,14 @@ void EMTFTrackAdaptor::convert_track(const EMTFTrackExtra& in_track, EMTFTrack& 
     return (sign == 1) ? (var * 1) : (var * -1);
   };
 
+  auto adapt_dphi = [](int x) {
+    return (x == 8191) ? -999 : x;
+  };
+
+  auto adapt_dtheta = [](int x) {
+    return (x == 127) ? -999 : x;
+  };
+
   out_track.set_endcap        ( (in_track.endcap == 2) ? -1 : 1       );
   out_track.set_sector        ( in_track.sector         );
   out_track.set_sector_GMT    ( in_track.sector-1       );
@@ -84,7 +93,7 @@ void EMTFTrackAdaptor::convert_track(const EMTFTrackExtra& in_track, EMTFTrack& 
   out_track.set_pt_LUT_addr   ( in_track.ptlut_address  );
   out_track.set_eta           ( eta                     );
   out_track.set_eta_GMT       ( in_track.gmt_eta        );
-  out_track.set_eta_LUT       ( 0                       );  // what is this?
+  out_track.set_eta_LUT       ( in_track.theta_int >> 2 );
   out_track.set_phi_loc_int   ( phi_loc_int             );
   out_track.set_phi_loc_deg   ( phi_loc_deg             );
   out_track.set_phi_loc_rad   ( phi_loc_rad             );
@@ -94,18 +103,18 @@ void EMTFTrackAdaptor::convert_track(const EMTFTrackExtra& in_track, EMTFTrack& 
   out_track.set_charge        ( (in_track.gmt_charge == 1) ? -1 : 1   );
   out_track.set_charge_GMT    ( in_track.gmt_charge     );
   out_track.set_charge_valid  ( 1                       );
-  out_track.set_dPhi_12       ( get_signed_int(ptlut_data.delta_ph[0], 1-ptlut_data.sign_ph[0]) );
-  out_track.set_dPhi_13       ( get_signed_int(ptlut_data.delta_ph[1], 1-ptlut_data.sign_ph[1]) );
-  out_track.set_dPhi_14       ( get_signed_int(ptlut_data.delta_ph[2], 1-ptlut_data.sign_ph[2]) );
-  out_track.set_dPhi_23       ( get_signed_int(ptlut_data.delta_ph[3], 1-ptlut_data.sign_ph[3]) );
-  out_track.set_dPhi_24       ( get_signed_int(ptlut_data.delta_ph[4], 1-ptlut_data.sign_ph[4]) );
-  out_track.set_dPhi_34       ( get_signed_int(ptlut_data.delta_ph[5], 1-ptlut_data.sign_ph[5]) );
-  out_track.set_dTheta_12     ( get_signed_int(ptlut_data.delta_th[0], ptlut_data.sign_th[0])   );
-  out_track.set_dTheta_13     ( get_signed_int(ptlut_data.delta_th[1], ptlut_data.sign_th[1])   );
-  out_track.set_dTheta_14     ( get_signed_int(ptlut_data.delta_th[2], ptlut_data.sign_th[2])   );
-  out_track.set_dTheta_23     ( get_signed_int(ptlut_data.delta_th[3], ptlut_data.sign_th[3])   );
-  out_track.set_dTheta_24     ( get_signed_int(ptlut_data.delta_th[4], ptlut_data.sign_th[4])   );
-  out_track.set_dTheta_34     ( get_signed_int(ptlut_data.delta_th[5], ptlut_data.sign_th[5])   );
+  out_track.set_dPhi_12       ( adapt_dphi(get_signed_int(ptlut_data.delta_ph[0], ptlut_data.sign_ph[0]) ) );
+  out_track.set_dPhi_13       ( adapt_dphi(get_signed_int(ptlut_data.delta_ph[1], ptlut_data.sign_ph[1]) ) );
+  out_track.set_dPhi_14       ( adapt_dphi(get_signed_int(ptlut_data.delta_ph[2], ptlut_data.sign_ph[2]) ) );
+  out_track.set_dPhi_23       ( adapt_dphi(get_signed_int(ptlut_data.delta_ph[3], ptlut_data.sign_ph[3]) ) );
+  out_track.set_dPhi_24       ( adapt_dphi(get_signed_int(ptlut_data.delta_ph[4], ptlut_data.sign_ph[4]) ) );
+  out_track.set_dPhi_34       ( adapt_dphi(get_signed_int(ptlut_data.delta_ph[5], ptlut_data.sign_ph[5]) ) );
+  out_track.set_dTheta_12     ( adapt_dtheta(get_signed_int(ptlut_data.delta_th[0], 1-ptlut_data.sign_th[0]) ) );
+  out_track.set_dTheta_13     ( adapt_dtheta(get_signed_int(ptlut_data.delta_th[1], 1-ptlut_data.sign_th[1]) ) );
+  out_track.set_dTheta_14     ( adapt_dtheta(get_signed_int(ptlut_data.delta_th[2], 1-ptlut_data.sign_th[2]) ) );
+  out_track.set_dTheta_23     ( adapt_dtheta(get_signed_int(ptlut_data.delta_th[3], 1-ptlut_data.sign_th[3]) ) );
+  out_track.set_dTheta_24     ( adapt_dtheta(get_signed_int(ptlut_data.delta_th[4], 1-ptlut_data.sign_th[4]) ) );
+  out_track.set_dTheta_34     ( adapt_dtheta(get_signed_int(ptlut_data.delta_th[5], 1-ptlut_data.sign_th[5]) ) );
   out_track.set_clct_1        ( ptlut_data.cpattern[0]  );
   out_track.set_clct_2        ( ptlut_data.cpattern[1]  );
   out_track.set_clct_3        ( ptlut_data.cpattern[2]  );

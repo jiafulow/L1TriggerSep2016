@@ -49,19 +49,11 @@ void EMTFPtAssignmentEngine::configure(
 EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(const EMTFTrackExtra& track) const {
   address_t address = 0;
 
+  const EMTFPtLUTData& ptlut_data = track.ptlut_data;
+
   int mode_inv  = track.mode_inv;
   int theta     = track.theta_int;
-  theta >>= 2;
-
-  bool use_eta = false;
-  if (use_eta) {
-    float ftheta = track.theta_int;
-    ftheta = (ftheta*0.2874016 + 8.5)*(3.14159265359/180);
-    float eta = (-1)*std::log(std::tan(ftheta/2));
-    theta = getEtaInt(eta, 5);
-  }
-
-  const EMTFPtLUTData& ptlut_data = track.ptlut_data;
+  theta >>= 2;  // truncate from 7-bit to 5-bit
 
   int dPhi12    = ptlut_data.delta_ph[0];
   int dPhi13    = ptlut_data.delta_ph[1];
@@ -107,12 +99,16 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
   int CSCID3    = ptlut_data.bt_chamber[2];
   int CSCID4    = ptlut_data.bt_chamber[3];
 
-  dTheta12 = getdTheta(dTheta12 * ((dTheta12Sign) ? -1 : 1));
-  dTheta13 = getdTheta(dTheta13 * ((dTheta13Sign) ? -1 : 1));
-  dTheta14 = getdTheta(dTheta14 * ((dTheta14Sign) ? -1 : 1));
-  dTheta23 = getdTheta(dTheta23 * ((dTheta23Sign) ? -1 : 1));
-  dTheta24 = getdTheta(dTheta24 * ((dTheta24Sign) ? -1 : 1));
-  dTheta34 = getdTheta(dTheta34 * ((dTheta34Sign) ? -1 : 1));
+  auto get_signed_int = [](int var, int sign) {
+    return (sign == 1) ? (var * 1) : (var * -1);
+  };
+
+  dTheta12 = getdTheta(get_signed_int(dTheta12, 1-dTheta12Sign));  // sign reversed
+  dTheta13 = getdTheta(get_signed_int(dTheta13, 1-dTheta13Sign));
+  dTheta14 = getdTheta(get_signed_int(dTheta14, 1-dTheta14Sign));
+  dTheta23 = getdTheta(get_signed_int(dTheta23, 1-dTheta23Sign));
+  dTheta24 = getdTheta(get_signed_int(dTheta24, 1-dTheta24Sign));
+  dTheta34 = getdTheta(get_signed_int(dTheta34, 1-dTheta34Sign));
 
   bool use_FRLUT = true;
   if (use_FRLUT) {
@@ -123,6 +119,7 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     FR4 = getFRLUT(sector, CSCID4/12, CSCID4%12);
   }
 
+  // Compose address
   switch(mode_inv) {
   case 3:   // 1-2
     if (fix9bDPhi_)  dPhi12 = std::min(511, dPhi12);
@@ -316,14 +313,6 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
   return address;
 }
 
-EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address_fw(const EMTFTrackExtra& track) const {
-  address_t address = 0;
-
-  // Not implemented
-
-  return address;
-}
-
 float EMTFPtAssignmentEngine::calculate_pt(const address_t& address) {
   float pt = 0.;
 
@@ -341,30 +330,30 @@ float EMTFPtAssignmentEngine::calculate_pt(const address_t& address) {
   if (!is_good_mode)  // invalid mode
     return pt;
 
-  int dPhi12    = 0;
-  int dPhi13    = 0;
-  int dPhi14    = 0;
-  int dPhi23    = 0;
-  int dPhi24    = 0;
-  int dPhi34    = 0;
-  int dTheta12  = 0;
-  int dTheta13  = 0;
-  int dTheta14  = 0;
-  int dTheta23  = 0;
-  int dTheta24  = 0;
-  int dTheta34  = 0;
-  int CLCT1     = 0;
-  int CLCT2     = 0;
-  int CLCT3     = 0;
-  int CLCT4     = 0;
-  int CSCID1    = 0;
-  int CSCID2    = 0;
-  int CSCID3    = 0;
-  int CSCID4    = 0;
-  int FR1       = 0;
-  int FR2       = 0;
-  int FR3       = 0;
-  int FR4       = 0;
+  int dPhi12    = -999;
+  int dPhi13    = -999;
+  int dPhi14    = -999;
+  int dPhi23    = -999;
+  int dPhi24    = -999;
+  int dPhi34    = -999;
+  int dTheta12  = -999;
+  int dTheta13  = -999;
+  int dTheta14  = -999;
+  int dTheta23  = -999;
+  int dTheta24  = -999;
+  int dTheta34  = -999;
+  int CLCT1     = -999;
+  int CLCT2     = -999;
+  int CLCT3     = -999;
+  int CLCT4     = -999;
+  int CSCID1    = -999;
+  int CSCID2    = -999;
+  int CSCID3    = -999;
+  int CSCID4    = -999;
+  int FR1       = -999;
+  int FR2       = -999;
+  int FR3       = -999;
+  int FR4       = -999;
 
   int sign12    = 1;
   int sign13    = 1;
@@ -378,7 +367,7 @@ float EMTFPtAssignmentEngine::calculate_pt(const address_t& address) {
   int CLCT3Sign = 1;
   int CLCT4Sign = 1;
 
-  int theta = 0;
+  int theta     = 0;
 
   switch(mode_inv) {
   case 3:   // 1-2
@@ -526,12 +515,13 @@ float EMTFPtAssignmentEngine::calculate_pt(const address_t& address) {
     sign34    = (address >> (0+7+5+6+1))            & ((1<<1)-1);
     FR1       = (address >> (0+7+5+6+1+1))          & ((1<<1)-1);
     theta     = (address >> (0+7+5+6+1+1+1))        & ((1<<5)-1);
-    break;
 
-  default:
     dPhi12 = getdPhiFromBin(dPhi12, 7, 512);
     dPhi23 = getdPhiFromBin(dPhi23, 5, 256);
     dPhi34 = getdPhiFromBin(dPhi34, 6, 256);
+    break;
+
+  default:
     break;
   }
 
@@ -552,8 +542,15 @@ float EMTFPtAssignmentEngine::calculate_pt(const address_t& address) {
   CLCT3  = get_signed_int(CLCT3, CLCT3Sign);
   CLCT4  = get_signed_int(CLCT4, CLCT4Sign);
 
-  //float ftheta = getEtaFromBin(theta, 5);  // eta = getEtaFromBin(eta, 5);
-  float ftheta = getEtaIntFromThetaInt(theta, 5);
+  theta <<= 2;
+  float eta = getEtaFromThetaInt(theta, 5);
+
+  bool use_lossy_eta = true;
+  if (use_lossy_eta) {
+    int etaInt = getEtaInt(eta, 5);
+    etaInt &= ((1<<5)-1);
+    eta = getEtaFromBin(etaInt, 5);
+  }
 
 
   // First fix to recover high pT muons with 3 hits in a line and one displaced hit - AWB 28.07.16
@@ -594,9 +591,10 @@ float EMTFPtAssignmentEngine::calculate_pt(const address_t& address) {
           dPhi34 = dPhi23;
       }
     }
-  }
+  }  // end if fixMode15HighPt_
 
 
+  // Get pT from XML (forest)
   const int (*mode_variables)[6] = ModeVariables_Scheme3;
 
   const int variables[24] = {
@@ -606,12 +604,15 @@ float EMTFPtAssignmentEngine::calculate_pt(const address_t& address) {
 
   std::vector<Double_t> tree_data;
   tree_data.push_back(1.0);
-  tree_data.push_back(ftheta);  // tree_data.push_back(eta);
+  tree_data.push_back(eta);
 
-  for (int i=0; i<6; i++) {
+  for (int i=0; i<6; i++) {  // loop over 6 variables (or less)
     int mv = mode_variables[mode_inv-3][i];
     if (mv != -999) {
       int v = variables[mv];
+      if (!(mode_inv == 13 && i == 3)) {  // somehow this uses CSCID1
+        assert(v != -999);
+      }
       tree_data.push_back(v);
     }
   }
@@ -627,6 +628,11 @@ float EMTFPtAssignmentEngine::calculate_pt(const address_t& address) {
   forests_.at(mode_inv).predictEvent(tree_event.get(), 64);
   float tmp_pt = tree_event->predictedValue;
   pt = (tmp_pt != 0) ? 1.0/tmp_pt : tmp_pt;
+  assert(pt > 0);
+
+  // Rather unnecessary
+  if (pt<0.0)   pt = 1.0;
+  if (pt>200.0) pt = 200.0;
 
   return pt;
 }
