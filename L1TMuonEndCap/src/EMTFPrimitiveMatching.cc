@@ -269,7 +269,7 @@ void EMTFPrimitiveMatching::process_single_zone_station(
 void EMTFPrimitiveMatching::sort_ph_diff(
     std::vector<hit_sort_pair_t>& phi_differences
 ) const {
-  // Sort by value, but preserving the original order
+  // Sort by key, but preserving the original order
   struct {
     typedef hit_sort_pair_t value_type;
     bool operator()(const value_type& lhs, const value_type& rhs) const {

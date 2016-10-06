@@ -8,7 +8,7 @@
 
 EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollector&& iConsumes) :
     sector_processor_lut_(),
-    pt_assignment_engine_(),
+    pt_assign_engine_(),
     sector_processors_(),
     config_(iConfig),
     tokenCSC_(iConsumes.consumes<CSCCorrelatedLCTDigiCollection>(iConfig.getParameter<edm::InputTag>("CSCInput"))),
@@ -54,7 +54,7 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
     sector_processor_lut_.read(phThLUT);
 
     // Configure pT assignment engine
-    pt_assignment_engine_.read(bdtXMLDir);
+    pt_assign_engine_.read(bdtXMLDir);
 
     // Configure sector processors
     for (int endcap = MIN_ENDCAP; endcap <= MAX_ENDCAP; ++endcap) {
@@ -63,7 +63,7 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
 
         sector_processors_.at(es).configure(
             &sector_processor_lut_,
-            &pt_assignment_engine_,
+            &pt_assign_engine_,
             verbose_, minBX_, maxBX_,
             endcap, sector,
             includeNeighbor, duplicateTheta, fixZonePhi,

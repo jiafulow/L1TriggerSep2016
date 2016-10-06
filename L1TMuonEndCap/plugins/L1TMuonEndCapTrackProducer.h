@@ -21,7 +21,7 @@
 class L1TMuonEndCapTrackProducer : public edm::EDProducer {
 public:
   explicit L1TMuonEndCapTrackProducer(const edm::ParameterSet&);
-  ~L1TMuonEndCapTrackProducer();
+  virtual ~L1TMuonEndCapTrackProducer();
 
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
