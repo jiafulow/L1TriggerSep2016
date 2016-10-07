@@ -93,6 +93,7 @@ class TestEvent1687278667(unittest.TestCase):
     track = tracks[0]
     self.assertEqual(track.rank         , 0xb)
     self.assertEqual(track.ptlut_address, 952114599)
+    self.assertEqual(track.gmt_pt       , 6)
     self.assertEqual(track.mode         , 7)
     self.assertEqual(track.gmt_charge   , 0)
     self.assertEqual(track.gmt_quality  , 11)
