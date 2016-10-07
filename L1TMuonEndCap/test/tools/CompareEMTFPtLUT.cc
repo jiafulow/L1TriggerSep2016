@@ -75,8 +75,9 @@ void CompareEMTFPtLUT::compareLUTs() {
   TFile* f = TFile::Open("diff.root", "RECREATE");
 
   std::map<int, TH1F*> histograms;
+  int diff_limit = 20;
   for (int mode_inv=0; mode_inv<16; ++mode_inv) {
-    histograms[mode_inv] = new TH1F(Form("diff_mode_%i", mode_inv), "", 200+1, -100-0.5, 100+0.5);
+    histograms[mode_inv] = new TH1F(Form("diff_mode_inv_%i", mode_inv), "", 2*diff_limit+1, -1.0*diff_limit-0.5, 1.0*diff_limit+0.5);
   }
 
   EMTFPtLUTReader::address_t address = 0;
@@ -91,11 +92,14 @@ void CompareEMTFPtLUT::compareLUTs() {
     int pt_value1 = ptlut_reader1_.lookup(address);
     int pt_value2 = ptlut_reader2_.lookup(address);
 
-    int diff = pt_value1 - pt_value2;
-    diff = std::min(std::max(-100, diff), 100);
+    int diff = pt_value2 - pt_value1;
+    diff = std::min(std::max(-diff_limit, diff), diff_limit);
 
     //if (address % (1<<20) == 0)
-    //  std::cout << mode_inv << " " << address << " " << pt_value1 << " " << pt_value2 << " " << diff << std::endl;
+    //  std::cout << mode_inv << " " << address << " " << pt_value1 << " " << pt_value2 << " " << pt_value2 - pt_value1 << std::endl;
+
+    //if (std::abs(pt_value2 - pt_value1) > diff_limit)
+    //  std::cout << mode_inv << " " << address << " " << pt_value1 << " " << pt_value2 << " " << pt_value2 - pt_value1 << std::endl;
 
     histograms[mode_inv]->Fill(diff);
   }

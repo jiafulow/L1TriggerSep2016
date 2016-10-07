@@ -91,15 +91,19 @@ void MakeEMTFPtLUT::makeLUT() {
   for (; address<PTLUT_SIZE; ++address) {
     show_progress_bar(address, PTLUT_SIZE);
 
-    //int mode_inv = (address >> (30-4)) & ((1<<4)-1);
+    int mode_inv = (address >> (30-4)) & ((1<<4)-1);
 
     // floats
-    xmlpt = pt_assign_engine_->calculate_pt_xml(address);
-    pt    = xmlpt * 1.4;
+    xmlpt   = pt_assign_engine_->calculate_pt_xml(address);
+    pt      = (xmlpt < 0.) ? 1. : xmlpt;  // Matt used fabs(-1) when mode is invalid
+    pt *= 1.4;  // multiply by 1.4 to keep efficiency above 90% when the L1 trigger pT cut is applied
 
     // integers
     gmt_pt = (pt * 2) + 1;
     gmt_pt = (gmt_pt > 511) ? 511 : gmt_pt;
+
+    //if (address % (1<<20) == 0)
+    //  std::cout << mode_inv << " " << address << " " << gmt_pt << std::endl;
 
     pt_value = gmt_pt;
     ptlut_writer_.push_back(pt_value);
