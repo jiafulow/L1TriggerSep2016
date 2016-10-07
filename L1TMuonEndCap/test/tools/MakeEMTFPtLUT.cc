@@ -89,9 +89,9 @@ void MakeEMTFPtLUT::makeLUT() {
   int gmt_pt = 0;
 
   for (; address<PTLUT_SIZE; ++address) {
-    //int mode_inv = (address >> (30-4)) & ((1<<4)-1);
-
     show_progress_bar(address, PTLUT_SIZE);
+
+    //int mode_inv = (address >> (30-4)) & ((1<<4)-1);
 
     // floats
     xmlpt = pt_assign_engine_->calculate_pt_xml(address);
