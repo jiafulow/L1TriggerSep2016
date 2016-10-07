@@ -352,7 +352,7 @@ float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
   float pt = 0.;
 
   if (address == 0)  // invalid address
-    return pt;
+    return -1;  // return pt;
 
   int mode_inv = (address >> (30-4)) & ((1<<4)-1);
 
@@ -363,7 +363,7 @@ float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
   bool is_good_mode = contain(allowedModes_, mode_inv);
 
   if (!is_good_mode)  // invalid mode
-    return pt;
+    return -1;  // return pt;
 
   int dPhi12    = -999;
   int dPhi13    = -999;
@@ -592,7 +592,7 @@ float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
   // Done by re-writing a few addresses in the original LUT, according to the following logic
   // Implemented in FW 26.07.16, as of run 2774278 / fill 5119
   if (fixMode15HighPt_) {
-    if (mode_inv == 15) {
+    if (mode_inv == 15) {  // 1-2-3-4
       bool st2_off = false;
       bool st3_off = false;
       bool st4_off = false;
@@ -658,6 +658,26 @@ float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
     }  // end if mode_inv == 15
   }  // end if fixMode15HighPt_
 
+  // Inherit some bugs
+  bool reproduceBug = true;
+  if (reproduceBug) {
+    if (mode_inv == 14) {  // 2-3-4
+      int bugged_CLCT2;
+      address_t bugged_address;
+
+      //CLCT2     = (address >> (0+7+6+1+1+3))          & ((1<<2)-1);
+      //address |= (CLCT2       & ((1<<2)-1)) << (0+7+6+1+1+3);
+      bugged_CLCT2    = (address >> (0+7+5+1+1+3))          & ((1<<2)-1);  // bad
+      bugged_address  = address & ~(((1<<2)-1) << (0+7+6+1+1+3));  // clear bits
+      bugged_address |= (bugged_CLCT2 & ((1<<2)-1)) << (0+7+6+1+1+3);
+      bugged_CLCT2    = (address >> (0+7+5+1+1+3))          & ((1<<2)-1);  // bad
+
+      CLCT2  = bugged_CLCT2;
+      CLCT2  = get_signed_int(CLCT2, CLCT2Sign);
+
+    }  // end if mode_inv == 14
+  }  // end if reproduceBug
+
 
   // Get pT from XML (forest)
   const int (*mode_variables)[6] = ModeVariables_Scheme3;
@@ -694,13 +714,11 @@ float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
 
   forests_.at(mode_inv).predictEvent(tree_event.get(), 64);
   float tmp_pt = tree_event->predictedValue;
-  tmp_pt = std::abs(tmp_pt);  // why does it go negative?
 
   pt = (tmp_pt != 0) ? 1.0/tmp_pt : tmp_pt;
-  assert(pt > 0);
+  //assert(pt > 0);  // why does it go negative?
 
-  // Rather unnecessary
-  if (pt<0.0)   pt = 1.0;
+  if (pt<0.0)   pt = 1.0;  // perhaps use if (pt<1.0)
   if (pt>200.0) pt = 200.0;
 
   return pt;

@@ -35,8 +35,8 @@ void EMTFPtAssignment::process(
 
     address_t address = pt_assign_engine_->calculate_address(track);
     float     xmlpt   = pt_assign_engine_->calculate_pt(address);
-    float     pt      = xmlpt * 1.4;
-
+    float     pt      = (xmlpt < 0.) ? 1. : xmlpt;  // Matt used fabs(-1) when mode is invalid
+    pt *= 1.4;  // multiply by 1.4 to keep efficiency above 90% when the L1 trigger pT cut is applied
 
     // compressed pt = pt*2 (scale) + 1 (pt = 0 is empty candidate)
     int gmt_pt = (pt * 2) + 1;
