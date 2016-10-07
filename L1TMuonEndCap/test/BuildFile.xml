@@ -9,3 +9,15 @@
     <use name="cppunit"/>
   </bin>
 </environment>
+
+
+<environment>
+  <export>
+  </export>
+
+  <library file="tools/*.cc" name="L1TriggerSep2016L1TMuonEndCap_tools">
+    <use name="L1TriggerSep2016/L1TMuonEndCap"/>
+    <use name="root"/>
+    <flags EDM_PLUGIN="1"/>
+  </library>
+</environment>
