@@ -74,7 +74,7 @@ void EMTFPtAssignment::process(
 
   if (verbose_ > 0) {  // debug
     for (const auto& track: best_tracks) {
-      std::cout << "track: " << track.winner << " pt address: " << track.ptlut_address
+      std::cout << "track: " << track.winner << " pt address: " << track.ptlut_address << " GMT pt: " << track.gmt_pt
           << " pt: " << track.pt << " mode: " << track.mode
           << " GMT charge: " << track.gmt_charge << " quality: " << track.gmt_quality
           << " eta: " << track.gmt_eta << " phi: " << track.gmt_phi
