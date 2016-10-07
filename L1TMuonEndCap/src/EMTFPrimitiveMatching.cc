@@ -49,7 +49,8 @@ void EMTFPrimitiveMatching::process(
   // Organize converted hits by (zone, station)
   std::array<EMTFHitExtraCollection, NUM_ZONES*NUM_STATIONS> zs_conv_hits;
 
-  bool use_fs_zone_code = true;  // use zone code as in firmware find_segment module
+  bool use_fs_zone_code = true;  // use zone code as in firmware find_segment module (Why? - AWB 07.10.16)
+  use_fs_zone_code = false;
 
   std::deque<EMTFHitExtraCollection>::const_iterator ext_conv_hits_it  = extended_conv_hits.begin();
   std::deque<EMTFHitExtraCollection>::const_iterator ext_conv_hits_end = extended_conv_hits.end();
@@ -205,7 +206,9 @@ void EMTFPrimitiveMatching::process_single_zone_station(
       //bw_ph_diff = 9;
       //invalid_ph_diff = 0x1ff;
     } else if (station == 2) {
-      max_ph_diff = 16;   // just rounding error for ME2 (pattern must match ME2 hit phi if there was one)
+      // max_ph_diff = 16;   // just rounding error for ME2 (pattern must match ME2 hit phi if there was one)
+      // max_ph_diff = 32;   // allow neighbor phi bit
+      max_ph_diff = 240;  // same as stations 3 & 4
       //bw_ph_diff = 5;
       //invalid_ph_diff = 0x1f;
     } else {

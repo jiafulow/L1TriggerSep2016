@@ -320,6 +320,7 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
 
   int zone_hit_fixed = lut().get_ph_init_hard(fw_station, fw_cscid);
   zone_hit_fixed += ph_hit;
+  // Since ph_hit_fixed = ((fph + 16) >> 5) - lut().get_ph_init_hard(), zone_hit_fixed = ((fph + 16) >> 5)
 
   if (fixZonePhi_)
     zone_hit = zone_hit_fixed;
@@ -375,6 +376,19 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
   if (fw_station == 3 && ((fw_cscid >= 3 && fw_cscid <= 8) || fw_cscid == 10))  // ME3/2
     ph_zone_bnd2 = zoneBoundaries2_.at(2);  // = 87
 
+  bool new_zones_AWB = true;
+  if (new_zones_AWB) {
+    if (fw_station == 3 && (fw_cscid <= 2 || fw_cscid == 9))  // ME3/1
+      ph_zone_bnd1 = zoneBoundaries2_.at(0);  // = 36
+    else if (fw_station <= 1 && ((fw_cscid >= 3 && fw_cscid <= 5) || fw_cscid == 13))  // ME1/2
+      ph_zone_bnd1 = zoneBoundaries2_.at(1);  // = 54
+    else if (fw_station == 2 && ((fw_cscid >= 3 && fw_cscid <= 8) || fw_cscid == 10))  // ME2/2
+      ph_zone_bnd1 = zoneBoundaries2_.at(1);  // = 54
+
+    if (fw_station == 2 && ((fw_cscid >= 3 && fw_cscid <= 8) || fw_cscid == 10))  // ME2/2
+      ph_zone_bnd2 = zoneBoundaries2_.at(2);  // = 96
+  }
+
   int zone_overlap = zoneOverlap_;
 
   // Check which zones ph hits should be applied to
@@ -400,11 +414,17 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
         zone_code |= (1<<0);  // zone 0: [-,41+2]
       if (phzvl & (1<<1))
         zone_code |= (1<<1);  // zone 1: [41-1,127+2]
-
+      
     } else if (fw_cscid <= 5 || fw_cscid == 13) {  // ring 2
-      if (phzvl & (1<<0))
-        zone_code |= (1<<2);  // zone 2: [-,127+2]
-
+      if (not new_zones_AWB) {
+	if (phzvl & (1<<0))
+	  zone_code |= (1<<2);  // zone 2: [-,127+2]
+      } else {
+	if (phzvl & (1<<0))
+	  zone_code |= (1<<1);  // zone 1
+	if (phzvl & (1<<1))
+	  zone_code |= (1<<2);  // zone 2
+      }
     } else if (fw_cscid <= 8 || fw_cscid == 14) {  // ring 3
       if (true)  // ME1/3 does not need phzvl
         zone_code |= (1<<3);  // zone 3: [-,-]
@@ -418,17 +438,32 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
         zone_code |= (1<<1);  // zone 1: [41-1,127+2]
 
     } else if (fw_cscid <= 8 || fw_cscid == 10) {  // ring 2
-      if (phzvl & (1<<0))
-        zone_code |= (1<<2);  // zone 2: [-,87+2]
-      if (phzvl & (1<<1))
-        zone_code |= (1<<3);  // zone 3: [87-1,127+2]
+      if (not new_zones_AWB) {
+	if (phzvl & (1<<0))
+	  zone_code |= (1<<2);  // zone 2: [-,87+2]
+	if (phzvl & (1<<1))
+	  zone_code |= (1<<3);  // zone 3: [87-1,127+2]
+      } else {
+	if (phzvl & (1<<0))
+	  zone_code |= (1<<1);  // zone 1
+	if (phzvl & (1<<1))
+	  zone_code |= (1<<2);  // zone 2
+	if (phzvl & (1<<2))
+	  zone_code |= (1<<3);  // zone 3
+      }
     }
 
   } else if (fw_station == 3) {  // station 3
     if (fw_cscid <= 2 || fw_cscid == 9) {  // ring 1
-      if (phzvl & (1<<0))
-        zone_code |= (1<<0);  // zone 0: [-,127+2]
-
+      if (not new_zones_AWB) {
+	if (phzvl & (1<<0))
+	  zone_code |= (1<<0);  // zone 0: [-,127+2]
+      } else {
+	if (phzvl & (1<<0))
+	  zone_code |= (1<<0);  // zone 0
+	if (phzvl & (1<<1))
+	  zone_code |= (1<<1);  // zone 1
+      }
     } else if (fw_cscid <= 8 || fw_cscid == 10) {  // ring 2
       if (phzvl & (1<<0))
         zone_code |= (1<<1);  // zone 1: [-,49+2]
@@ -455,12 +490,13 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
   // ___________________________________________________________________________
   // Output
 
-  conv_hit.phi_fp     = fph;
-  conv_hit.theta_fp   = th;
-  conv_hit.phzvl      = phzvl;
-  conv_hit.ph_hit     = ph_hit;
-  conv_hit.zone_hit   = zone_hit;
-  conv_hit.zone_code  = zone_code;
+  conv_hit.phi_fp     = fph;        // Full-precision integer phi (within chamber? - AWB 29.09.16)
+  conv_hit.theta_fp   = th;         // Full-precision integer theta
+  conv_hit.phzvl      = phzvl;      // Local zone word: (1*low) + (2*mid) + (4*low)  (Remove from EMTFHitExtra? - AWB 29.09.16)  
+  conv_hit.ph_hit     = ph_hit;     // What is this? Doesn't appear to be used outside EMTFPrimitiveConversion.cc ... - AWB 29.09.16
+  conv_hit.zone_hit   = zone_hit;   // Phi value for building patterns (0.53333 deg precision) 
+  conv_hit.zone_code  = zone_code;  // Full zone word: 1*(zone 0) + 2*(zone 1) + 4*(zone 2) + 8*(zone 3) 
+
 }
 
 // RPC functions

@@ -40,8 +40,9 @@ simEmtfDigis = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
 
     # Sector processor pattern-recognition parameters
     spPRParams16 = cms.PSet(
-        ZoneBoundaries1 = cms.vint32(0,42,50,88),
-        ZoneBoundaries2 = cms.vint32(41,49,87,127),
+        ZoneBoundaries1 = cms.vint32(0,42,50,88),   ## Are these used for anything? - AWB 07.10.16
+        # ZoneBoundaries2 = cms.vint32(41,49,87,127),
+        ZoneBoundaries2 = cms.vint32(36,54,96,127), ## Proposed for new_zones_AWB - AWB 07.10.16
         ZoneOverlap = cms.int32(2),
         PatternDefinitions = cms.vstring(
             # straightness, hits in ME1, hits in ME2, hits in ME3, hits in ME4
@@ -66,8 +67,8 @@ simEmtfDigis = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
         MaxRoadsPerZone = cms.int32(3),
         ThetaWindow = cms.int32(4),
         MaxTracks = cms.int32(3),
-        UseSecondEarliest = cms.bool(True),
-        UseSymmetricalPatterns = cms.bool(True),
+        UseSecondEarliest = cms.bool(False), ## Code for this not 100% at the moment - AWB 07.10.16
+        UseSymmetricalPatterns = cms.bool(False), ## False in FW through the present - AWB 04.10.16
     ),
 
     # Sector processor pt-assignment parameters
@@ -75,7 +76,7 @@ simEmtfDigis = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
         BDTXMLDir = cms.string('v_16_02_21'),
         ReadPtLUTFile = cms.bool(False),
         FixMode15HighPt = cms.bool(True),
-        Fix9bDPhi = cms.bool(True),
+        Fix9bDPhi = cms.bool(False), ## False in FW through present - AWB 06.10.16
     ),
 
     # Sector processor ghost-cancellation parameters
