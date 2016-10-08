@@ -36,6 +36,13 @@ private:
   EMTFPtLUTReader ptlut_reader1_;
   EMTFPtLUTReader ptlut_reader2_;
 
+  const edm::ParameterSet config_;
+
+  int verbose_;
+
+  std::string infile1_;
+  std::string infile2_;
+
   bool done_;
 };
 
@@ -45,19 +52,14 @@ private:
 CompareEMTFPtLUT::CompareEMTFPtLUT(const edm::ParameterSet& iConfig) :
     ptlut_reader1_(),
     ptlut_reader2_(),
+    config_(iConfig),
+    verbose_(iConfig.getUntrackedParameter<int>("verbosity")),
+    infile1_(iConfig.getParameter<std::string>("infile1")),
+    infile2_(iConfig.getParameter<std::string>("infile2")),
     done_(false)
 {
-  std::stringstream ss;
-  ss << std::getenv("CMSSW_BASE") << "/" << "src/L1TriggerSep2016/L1TMuonEndCap/data/emtf_luts/v_16_02_21_ptlut/LUT_AndrewFix_25July16.dat";  // hardcoded, it does not exist in CMSSW
-  std::string lut_full_path1 = ss.str();
-
-  ss.str("");
-  //ss << std::getenv("CMSSW_BASE") << "/" << "src/L1TriggerSep2016/L1TMuonEndCap/data/emtf_luts/v_16_02_21_ptlut_madorsky/LUT_AndrewFix_25July16.dat";  // hardcoded, it does not exist in CMSSW
-  ss << std::getenv("CMSSW_BASE") << "/" << "src/L1TriggerSep2016/L1TMuonEndCap/data/emtf_luts/v_16_02_21_ptlut_jftest/LUT_AndrewFix_25July16.dat";  // hardcoded, it does not exist in CMSSW
-  std::string lut_full_path2 = ss.str();
-
-  ptlut_reader1_.read(lut_full_path1);
-  ptlut_reader2_.read(lut_full_path2);
+  ptlut_reader1_.read(infile1_);
+  ptlut_reader2_.read(infile2_);
 }
 
 CompareEMTFPtLUT::~CompareEMTFPtLUT() {}
@@ -98,8 +100,8 @@ void CompareEMTFPtLUT::compareLUTs() {
     //if (address % (1<<20) == 0)
     //  std::cout << mode_inv << " " << address << " " << pt_value1 << " " << pt_value2 << " " << pt_value2 - pt_value1 << std::endl;
 
-    //if (std::abs(pt_value2 - pt_value1) > diff_limit)
-    //  std::cout << mode_inv << " " << address << " " << pt_value1 << " " << pt_value2 << " " << pt_value2 - pt_value1 << std::endl;
+    if (std::abs(pt_value2 - pt_value1) > diff_limit)
+      std::cout << mode_inv << " " << address << " " << pt_value1 << " " << pt_value2 << " " << pt_value2 - pt_value1 << std::endl;
 
     histograms[mode_inv]->Fill(diff);
   }

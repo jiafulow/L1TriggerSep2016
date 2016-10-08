@@ -659,8 +659,8 @@ float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
   }  // end if fixMode15HighPt_
 
   // Inherit some bugs
-  bool reproduceBug = true;
-  if (reproduceBug) {
+  bool reproduceBug1 = true;
+  if (reproduceBug1) {
     if (mode_inv == 14) {  // 2-3-4
       int bugged_CLCT2;
       address_t bugged_address;
@@ -713,13 +713,19 @@ float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
   tree_event->data = tree_data;
 
   forests_.at(mode_inv).predictEvent(tree_event.get(), 64);
-  float tmp_pt = tree_event->predictedValue;
+  float tmp_pt = tree_event->predictedValue;  // is actually 1/pT
 
-  pt = (tmp_pt != 0) ? 1.0/tmp_pt : tmp_pt;
-  //assert(pt > 0);  // why does it go negative?
+  bool reproduceBug2 = true;
+  if (reproduceBug2) {
+    pt = (tmp_pt == 0) ? tmp_pt : 1.0/tmp_pt;
+    if (pt<0.0)   pt = 1.0;
+    if (pt>200.0) pt = 200.0;
 
-  if (pt<0.0)   pt = 1.0;  // perhaps use if (pt<1.0)
-  if (pt>200.0) pt = 200.0;
+  } else {
+    if (tmp_pt < 0.0)  tmp_pt = 1.0/7000;
+    pt = (tmp_pt == 0) ? tmp_pt : 1.0/tmp_pt;
+  }
 
+  assert(pt > 0);
   return pt;
 }
