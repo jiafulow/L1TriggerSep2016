@@ -9,6 +9,7 @@
 EMTFPtAssignmentEngine::EMTFPtAssignmentEngine() :
     allowedModes_({3,5,9,6,10,12,7,11,13,14,15}),
     forests_(),
+    ptlut_reader_(),
     ok_(false)
 {
 
@@ -44,6 +45,19 @@ void EMTFPtAssignmentEngine::configure(
   readPtLUTFile_   = readPtLUTFile;
   fixMode15HighPt_ = fixMode15HighPt;
   fix9bDPhi_       = fix9bDPhi;
+
+  configure_details();
+}
+
+void EMTFPtAssignmentEngine::configure_details() {
+  if (readPtLUTFile_) {
+    std::stringstream ss;
+    ss << std::getenv("CMSSW_BASE") << "/" << "src/L1TriggerSep2016/L1TMuonEndCap/data/emtf_luts/v_16_02_21_ptlut/LUT_AndrewFix_25July16.dat";  // hardcoded, it does not exist in CMSSW
+    //ss << std::getenv("CMSSW_BASE") << "/" << "src/L1TriggerSep2016/L1TMuonEndCap/data/emtf_luts/v_16_02_21_ptlut_madorsky/LUT_AndrewFix_25July16.dat";  // hardcoded, it does not exist in CMSSW
+    std::string lut_full_path = ss.str();
+
+    ptlut_reader_.read(lut_full_path);
+  }
 }
 
 EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(const EMTFTrackExtra& track) const {
@@ -316,10 +330,31 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
 float EMTFPtAssignmentEngine::calculate_pt(const address_t& address) {
   float pt = 0.;
 
-  if (address == 0)  // invalid address
-    return pt;
+  if (readPtLUTFile_) {
+    pt = calculate_pt_lut(address);
+  } else {
+    pt = calculate_pt_xml(address);
+  }
 
-  uint16_t mode_inv = (address >> (30-4)) & ((1<<4)-1);
+  return pt;
+}
+
+float EMTFPtAssignmentEngine::calculate_pt_lut(const address_t& address) {
+  float pt = 0.;
+
+  int pt_value = ptlut_reader_.lookup(address);
+  pt = (pt_value-1) * 0.5;
+
+  return pt;
+}
+
+float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
+  float pt = 0.;
+
+  if (address == 0)  // invalid address
+    return -1;  // return pt;
+
+  int mode_inv = (address >> (30-4)) & ((1<<4)-1);
 
   auto contain = [](const auto& vec, const auto& elem) {
     return (std::find(vec.begin(), vec.end(), elem) != vec.end());
@@ -328,7 +363,7 @@ float EMTFPtAssignmentEngine::calculate_pt(const address_t& address) {
   bool is_good_mode = contain(allowedModes_, mode_inv);
 
   if (!is_good_mode)  // invalid mode
-    return pt;
+    return -1;  // return pt;
 
   int dPhi12    = -999;
   int dPhi13    = -999;
@@ -557,41 +592,91 @@ float EMTFPtAssignmentEngine::calculate_pt(const address_t& address) {
   // Done by re-writing a few addresses in the original LUT, according to the following logic
   // Implemented in FW 26.07.16, as of run 2774278 / fill 5119
   if (fixMode15HighPt_) {
-    if (mode_inv == 15) {
+    if (mode_inv == 15) {  // 1-2-3-4
       bool st2_off = false;
       bool st3_off = false;
       bool st4_off = false;
 
-      int dPhi13 = dPhi12 + dPhi23;
-      int dPhi14 = dPhi13 + dPhi34;
-      int dPhi24 = dPhi23 + dPhi34;
+      dPhi13 = dPhi12 + dPhi23;
+      dPhi14 = dPhi13 + dPhi34;
+      dPhi24 = dPhi23 + dPhi34;
 
       int sum_st1 = abs( dPhi12 + dPhi13 + dPhi14);
       int sum_st2 = abs(-dPhi12 + dPhi23 + dPhi24);
       int sum_st3 = abs(-dPhi13 - dPhi23 + dPhi34);
       int sum_st4 = abs(-dPhi14 - dPhi24 - dPhi34);
 
+      // Detect outliers
       if (sum_st2 > sum_st1 && sum_st2 > sum_st3 && sum_st2 > sum_st4) st2_off = true;
       if (sum_st3 > sum_st1 && sum_st3 > sum_st2 && sum_st3 > sum_st4) st3_off = true;
       if (sum_st4 > sum_st1 && sum_st4 > sum_st2 && sum_st4 > sum_st3) st4_off = true;
 
-      if ( st2_off && ( abs(dPhi12) > 9 || abs(dPhi23) > 9 || abs(dPhi24) > 9 ) &&
-           abs(dPhi13) < 10 && abs(dPhi14) < 10 && abs(dPhi34) < 10 ) {
-        dPhi12 = ceil(dPhi13 / 2); dPhi23 = floor(dPhi13 / 2);
+      // Recover outliers
+      if (st2_off) {
+        if (
+            (abs(dPhi12) > 9 || abs(dPhi23) > 9 || abs(dPhi24) > 9) &&
+            (abs(dPhi13) < 10 && abs(dPhi14) < 10 && abs(dPhi34) < 10)
+        ) {
+          dPhi12 = dPhi13 / 2;
+          dPhi23 = dPhi13 / 2;
+        }
       }
-      if ( st3_off && ( abs(dPhi13) > 9 || abs(dPhi23) > 9 || abs(dPhi34) > 9 ) &&
-           abs(dPhi12) < 10 && abs(dPhi14) < 10 && abs(dPhi24) < 10 ) {
-        dPhi23 = ceil(dPhi24 / 2); dPhi34 = floor(dPhi24 / 2);
+      if (st3_off) {
+        if (
+            (abs(dPhi13) > 9 || abs(dPhi23) > 9 || abs(dPhi34) > 9) &&
+            (abs(dPhi12) < 10 && abs(dPhi14) < 10 && abs(dPhi24) < 10)
+        ) {
+          dPhi23 = dPhi24 / 2;
+          dPhi34 = dPhi24 / 2;
+        }
       }
-      if ( st4_off && ( abs(dPhi14) > 9 || abs(dPhi24) > 9 || abs(dPhi34) > 9 ) &&
-           abs(dPhi12) < 10 && abs(dPhi13) < 10 && abs(dPhi23) < 10 ) {
-        if ( abs(dPhi13) < abs(dPhi23) )
-          dPhi34 = dPhi13;
-        else
-          dPhi34 = dPhi23;
+      if (st4_off) {
+        if (
+            (abs(dPhi14) > 9 || abs(dPhi24) > 9 || abs(dPhi34) > 9 ) &&
+            (abs(dPhi12) < 10 && abs(dPhi13) < 10 && abs(dPhi23) < 10)
+        ) {
+          if (abs(dPhi13) < abs(dPhi23))
+            dPhi34 = dPhi13;
+          else
+            dPhi34 = dPhi23;
+        }
       }
-    }
+
+      // Now set RELATIVE sign bits
+      sign12 = 1;
+      if (dPhi12 > 0) {
+        sign23 = (dPhi23 > 0) ? 1 : 0;
+        sign34 = (dPhi34 > 0) ? 1 : 0;
+      } else {
+        sign23 = (dPhi23 < 0) ? 1 : 0;
+        sign34 = (dPhi34 < 0) ? 1 : 0;
+      }
+      dPhi12 = get_signed_int(abs(dPhi12), sign12);
+      dPhi23 = get_signed_int(abs(dPhi23), sign23);
+      dPhi34 = get_signed_int(abs(dPhi34), sign34);
+
+    }  // end if mode_inv == 15
   }  // end if fixMode15HighPt_
+
+  // Inherit some bugs
+  bool reproduceBug1 = true;
+  if (reproduceBug1) {
+    if (mode_inv == 14) {  // 2-3-4
+      int bugged_CLCT2;
+      address_t bugged_address;
+
+      //CLCT2     = (address >> (0+7+6+1+1+3))          & ((1<<2)-1);
+      //address |= (CLCT2       & ((1<<2)-1)) << (0+7+6+1+1+3);
+      bugged_CLCT2    = (address >> (0+7+5+1+1+3))          & ((1<<2)-1);  // bad
+      bugged_address  = address & ~(((1<<2)-1) << (0+7+6+1+1+3));  // clear bits
+      bugged_address |= (bugged_CLCT2 & ((1<<2)-1)) << (0+7+6+1+1+3);
+      bugged_CLCT2    = (address >> (0+7+5+1+1+3))          & ((1<<2)-1);  // bad
+
+      CLCT2  = bugged_CLCT2;
+      CLCT2  = get_signed_int(CLCT2, CLCT2Sign);
+
+    }  // end if mode_inv == 14
+  }  // end if reproduceBug
 
 
   // Get pT from XML (forest)
@@ -617,23 +702,31 @@ float EMTFPtAssignmentEngine::calculate_pt(const address_t& address) {
     }
   }
 
-  //std::cout << "mode_inv: " << mode_inv << " variables: ";
-  //for (const auto& v: tree_data)
-  //  std::cout << v << " ";
-  //std::cout << std::endl;
+  if (verbose_ > 2) {
+    std::cout << "mode_inv: " << mode_inv << " variables: ";
+    for (const auto& v: tree_data)
+      std::cout << v << " ";
+    std::cout << std::endl;
+  }
 
   auto tree_event = std::make_unique<Event>();
   tree_event->data = tree_data;
 
   forests_.at(mode_inv).predictEvent(tree_event.get(), 64);
-  float tmp_pt = tree_event->predictedValue;
 
-  pt = (tmp_pt != 0) ? 1.0/tmp_pt : 0;
+  float tmp_pt = tree_event->predictedValue;  // is actually 1/pT
+
+  bool reproduceBug2 = true;
+  if (reproduceBug2) {
+    pt = (tmp_pt == 0) ? tmp_pt : 1.0/tmp_pt;
+    if (pt<0.0)   pt = 1.0;
+    if (pt>200.0) pt = 200.0;
+
+  } else {
+    if (tmp_pt < 0.0)  tmp_pt = 1.0/7000;
+    pt = (tmp_pt == 0) ? tmp_pt : 1.0/tmp_pt;
+  }
+
   assert(pt > 0);
-
-  // Rather unnecessary (then why have it? Especially after "assert" ... AWB 06.10.16)
-  if (pt<0.0)   pt = 1.0;
-  if (pt>200.0) pt = 200.0;
-
   return pt;
 }

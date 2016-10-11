@@ -35,14 +35,14 @@ void EMTFPtAssignment::process(
 
     address_t address = pt_assign_engine_->calculate_address(track);
     float     xmlpt   = pt_assign_engine_->calculate_pt(address);
-    float     pt      = xmlpt * 1.4; // Should do proper rounding (to 0.5) here. - AWB 03.10.16
-
+    float     pt      = (xmlpt < 0.) ? 1. : xmlpt;  // Matt used fabs(-1) when mode is invalid
+    pt *= 1.4;  // multiply by 1.4 to keep efficiency above 90% when the L1 trigger pT cut is applied
 
     // compressed pt = pt*2 (scale) + 1 (pt = 0 is empty candidate)
-    int gmt_pt = (pt * 2) + 1;
+    int gmt_pt = (pt * 2) + 1;  // How is the rounding done here? Is it correct? - AWB 11.10.16
     gmt_pt = (gmt_pt > 511) ? 511 : gmt_pt;
 
-    pt = (gmt_pt <= 0) ?  0 : (gmt_pt-1) * 0.5;
+    pt = (gmt_pt <= 0) ?  0 : (gmt_pt-1) * 0.5; // Round to 0.5 GeV
 
     int gmt_phi = getGMTPhi(track.phi_int);
 
@@ -74,7 +74,7 @@ void EMTFPtAssignment::process(
 
   if (verbose_ > 0) {  // debug
     for (const auto& track: best_tracks) {
-      std::cout << "track: " << track.winner << " pt address: " << track.ptlut_address
+      std::cout << "track: " << track.winner << " pt address: " << track.ptlut_address << " GMT pt: " << track.gmt_pt
           << " pt: " << track.pt << " mode: " << track.mode
           << " GMT charge: " << track.gmt_charge << " quality: " << track.gmt_quality
           << " eta: " << track.gmt_eta << " phi: " << track.gmt_phi

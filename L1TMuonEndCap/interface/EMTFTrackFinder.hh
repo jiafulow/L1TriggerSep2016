@@ -32,7 +32,7 @@ public:
 private:
   EMTFSectorProcessorLUT sector_processor_lut_;
 
-  EMTFPtAssignmentEngine pt_assignment_engine_;
+  EMTFPtAssignmentEngine pt_assign_engine_;
 
   std::array<EMTFSectorProcessor, NUM_SECTORS> sector_processors_;
 
