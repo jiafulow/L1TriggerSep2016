@@ -20,6 +20,8 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
 
   minBX_       = iConfig.getParameter<int>("MinBX");
   maxBX_       = iConfig.getParameter<int>("MaxBX");
+  bxWindow_    = iConfig.getParameter<int>("BXWindow");
+  bxShiftCSC_  = iConfig.getParameter<int>("CSCInputBXShift");
 
   version_     = iConfig.getParameter<int>("Version");
   ptlut_ver_   = iConfig.getParameter<int>("PtLUTVersion");
@@ -64,8 +66,8 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
         sector_processors_.at(es).configure(
             &sector_processor_lut_,
             &pt_assign_engine_,
-            verbose_, minBX_, maxBX_,
-            endcap, sector,
+            verbose_, endcap, sector,
+            minBX_, maxBX_, bxWindow_, bxShiftCSC_,
             includeNeighbor, duplicateTheta, fixZonePhi,
             zoneBoundaries1, zoneBoundaries2, zoneOverlap,
             pattDefinitions, symPattDefinitions,

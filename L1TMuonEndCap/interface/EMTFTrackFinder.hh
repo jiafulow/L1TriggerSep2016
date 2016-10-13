@@ -44,7 +44,7 @@ private:
 
   bool useCSC_, useRPC_;
 
-  int minBX_, maxBX_;
+  int minBX_, maxBX_, bxWindow_, bxShiftCSC_;
 
   int version_, ptlut_ver_;
 };

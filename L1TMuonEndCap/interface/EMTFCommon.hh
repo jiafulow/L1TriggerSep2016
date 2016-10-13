@@ -52,9 +52,6 @@ typedef L1TMuonEndCap::RPCTag RPCTag;
 #define NUM_ZONES 4
 #define NUM_ZONE_HITS 160
 
-// BX window
-#define BX_WINDOW 3
-
 // Stations
 #define NUM_STATIONS 4
 #define NUM_STATION_PAIRS 6
@@ -63,9 +60,6 @@ typedef L1TMuonEndCap::RPCTag RPCTag;
 #include <array>
 template<typename T>
 using zone_array = std::array<T, NUM_ZONES>;
-
-template<typename T>
-using bx_array = std::array<T, BX_WINDOW>;
 
 #endif
 

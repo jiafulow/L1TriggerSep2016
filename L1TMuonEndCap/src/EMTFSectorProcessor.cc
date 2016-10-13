@@ -12,8 +12,8 @@ EMTFSectorProcessor::~EMTFSectorProcessor() {
 void EMTFSectorProcessor::configure(
     const EMTFSectorProcessorLUT* lut,
     const EMTFPtAssignmentEngine* pt_assign_engine,
-    int verbose, int minBX, int maxBX,
-    int endcap, int sector,
+    int verbose, int endcap, int sector,
+    int minBX, int maxBX, int bxWindow, int bxShiftCSC,
     bool includeNeighbor, bool duplicateTheta, bool fixZonePhi,
     const std::vector<int>& zoneBoundaries1, const std::vector<int>& zoneBoundaries2, int zoneOverlap,
     const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions,
@@ -32,11 +32,13 @@ void EMTFSectorProcessor::configure(
   pt_assign_engine_ = pt_assign_engine;
 
   verbose_  = verbose;
-  minBX_    = minBX;
-  maxBX_    = maxBX;
-
   endcap_   = endcap;
   sector_   = sector;
+
+  minBX_       = minBX;
+  maxBX_       = maxBX;
+  bxWindow_    = bxWindow;
+  bxShiftCSC_  = bxShiftCSC;
 
   includeNeighbor_ = includeNeighbor;
   duplicateTheta_  = duplicateTheta;
@@ -76,7 +78,7 @@ void EMTFSectorProcessor::process(
   // Map of pattern detector --> lifetime, tracked across BXs
   std::map<pattern_ref_t, int> patt_lifetime_map;
 
-  int delayBX = BX_WINDOW - 1;  // = 2
+  int delayBX = bxWindow_ - 1;  // = 2
 
   for (int bx = minBX_; bx <= maxBX_ + delayBX; ++bx) {
     if (verbose_ > 0) {  // debug
