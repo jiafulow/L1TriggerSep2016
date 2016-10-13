@@ -8,6 +8,7 @@ class EMTFBestTrackSelection {
 public:
   void configure(
       int verbose, int endcap, int sector, int bx,
+      int bxWindow,
       int maxRoadsPerZone, int maxTracks, bool useSecondEarliest
   );
 
@@ -21,7 +22,7 @@ public:
       EMTFTrackExtraCollection& best_tracks
   ) const;
 
-  void cancel_three_bx(
+  void cancel_multi_bx(
       const std::deque<EMTFTrackExtraCollection>& extended_best_track_cands,
       EMTFTrackExtraCollection& best_tracks
   ) const;
@@ -29,6 +30,7 @@ public:
 private:
   int verbose_, endcap_, sector_, bx_;
 
+  int bxWindow_;
   int maxRoadsPerZone_, maxTracks_;
   bool useSecondEarliest_;
 };

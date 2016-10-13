@@ -61,7 +61,8 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
     // Configure sector processors
     for (int endcap = MIN_ENDCAP; endcap <= MAX_ENDCAP; ++endcap) {
       for (int sector = MIN_TRIGSECTOR; sector <= MAX_TRIGSECTOR; ++sector) {
-        const int es = (endcap-1) * 6 + (sector-1);
+        //const int es = (endcap-1) * 6 + (sector-1);
+        const int es = (endcap - MIN_ENDCAP) * (MAX_TRIGSECTOR - MIN_TRIGSECTOR + 1) + (sector - MIN_TRIGSECTOR);
 
         sector_processors_.at(es).configure(
             &sector_processor_lut_,
@@ -120,7 +121,8 @@ void EMTFTrackFinder::process(
 
   for (int endcap = MIN_ENDCAP; endcap <= MAX_ENDCAP; ++endcap) {
     for (int sector = MIN_TRIGSECTOR; sector <= MAX_TRIGSECTOR; ++sector) {
-      const int es = (endcap-1) * 6 + (sector-1);
+      //const int es = (endcap-1) * 6 + (sector-1);
+      const int es = (endcap - MIN_ENDCAP) * (MAX_TRIGSECTOR - MIN_TRIGSECTOR + 1) + (sector - MIN_TRIGSECTOR);
 
       sector_processors_.at(es).process(
           iEvent.id().event(),

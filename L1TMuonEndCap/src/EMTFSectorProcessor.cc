@@ -78,7 +78,7 @@ void EMTFSectorProcessor::process(
   // Map of pattern detector --> lifetime, tracked across BXs
   std::map<pattern_ref_t, int> patt_lifetime_map;
 
-  int delayBX = bxWindow_ - 1;  // = 2
+  int delayBX = bxWindow_ - 1;
 
   for (int bx = minBX_; bx <= maxBX_ + delayBX; ++bx) {
     if (verbose_ > 0) {  // debug
@@ -130,6 +130,7 @@ void EMTFSectorProcessor::process_single_bx(
   prim_conv.configure(
       lut_,
       verbose_, endcap_, sector_, bx,
+      bxShiftCSC_,
       duplicateTheta_, fixZonePhi_,
       zoneBoundaries1_, zoneBoundaries2_, zoneOverlap_
   );
@@ -137,6 +138,7 @@ void EMTFSectorProcessor::process_single_bx(
   EMTFPatternRecognition patt_recog;
   patt_recog.configure(
       verbose_, endcap_, sector_, bx,
+      bxWindow_,
       pattDefinitions_, symPattDefinitions_,
       maxRoadsPerZone_, useSecondEarliest_, useSymPatterns_
   );
@@ -150,12 +152,14 @@ void EMTFSectorProcessor::process_single_bx(
   EMTFAngleCalculation angle_calc;
   angle_calc.configure(
       verbose_, endcap_, sector_, bx,
+      bxWindow_,
       thetaWindow_
   );
 
   EMTFBestTrackSelection btrack_sel;
   btrack_sel.configure(
       verbose_, endcap_, sector_, bx,
+      bxWindow_,
       maxRoadsPerZone_, maxTracks_, useSecondEarliest_
   );
 
@@ -198,7 +202,7 @@ void EMTFSectorProcessor::process_single_bx(
   // Match the trigger primitives to the roads, create tracks
   prim_match.process(extended_conv_hits, zone_roads, zone_tracks);
 
-  // Calculate deflection angles for each track
+  // Calculate deflection angles and other track variables
   angle_calc.process(zone_tracks);
   extended_best_track_cands.insert(extended_best_track_cands.end(), zone_tracks.begin(), zone_tracks.end());
 

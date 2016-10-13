@@ -5,7 +5,7 @@
 #include "DataFormats/MuonDetId/interface/RPCDetId.h"
 
 #define NUM_CSC_CHAMBERS 6*9
-#define NUM_RPC_CHAMBERS 6*9  // ??
+#define NUM_RPC_CHAMBERS 6*9  // not implemented
 
 using CSCData = TriggerPrimitive::CSCData;
 using RPCData = TriggerPrimitive::RPCData;

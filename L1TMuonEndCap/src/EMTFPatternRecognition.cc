@@ -23,6 +23,7 @@ namespace {
 
 void EMTFPatternRecognition::configure(
     int verbose, int endcap, int sector, int bx,
+    int bxWindow,
     const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions,
     int maxRoadsPerZone, bool useSecondEarliest, bool useSymPatterns
 ) {
@@ -31,6 +32,7 @@ void EMTFPatternRecognition::configure(
   sector_  = sector;
   bx_      = bx;
 
+  bxWindow_           = bxWindow;
   pattDefinitions_    = pattDefinitions;
   symPattDefinitions_ = symPattDefinitions;
   maxRoadsPerZone_    = maxRoadsPerZone;
@@ -334,7 +336,7 @@ void EMTFPatternRecognition::process_single_zone(
 ) const {
   roads.clear();
 
-  const int drift_time = BX_WINDOW - 1;
+  const int drift_time = bxWindow_ - 1;
   const int npatterns = patterns_.size();
 
   // The zone hit image is rotated/shifted before comparing with patterns

@@ -10,6 +10,7 @@ namespace {
 
 void EMTFAngleCalculation::configure(
     int verbose, int endcap, int sector, int bx,
+    int bxWindow,
     int thetaWindow
 ) {
   verbose_ = verbose;
@@ -17,6 +18,7 @@ void EMTFAngleCalculation::configure(
   sector_  = sector;
   bx_      = bx;
 
+  bxWindow_           = bxWindow;
   thetaWindow_        = thetaWindow;
 }
 
@@ -310,26 +312,41 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
 }
 
 void EMTFAngleCalculation::calculate_bx(EMTFTrackExtra& track) const {
-  int h2 = 0;
-  int h1 = 0;
+  int delayBX = bxWindow_ - 1;
+
+  std::vector<int> counter(delayBX+1, 0);
 
   for (const auto& conv_hit : track.xhits) {
-    if (conv_hit.bx == bx_ - 2)  // count stubs delayed by 2 BX
-      h2 += 1;
-    if (conv_hit.bx <= bx_ - 1)  // count stubs delayed by 1 BX or more
-      h1 += 1;
+    //if (conv_hit.bx == bx_ - 2)  // count stubs delayed by 2 BX
+    //  h2 += 1;
+    //if (conv_hit.bx <= bx_ - 1)  // count stubs delayed by 1 BX or more
+    //  h1 += 1;
+
+    for (int i = delayBX; i >= 0; i--) {
+      if (conv_hit.bx <= bx_ - i)
+        counter.at(i) += 1;  // Count stubs delayed by i BX or more
+    }
   }
 
-  int first_bx = bx_ - 2;
+  int first_bx = bx_ - delayBX;
 
-  int second_bx = bx_ - 2;
-  if (h2 >= 2) {
-    second_bx = bx_ - 2;  // two stubs in earliest BX, analyze immediately
-  } else if (h1 >= 2) {
-    second_bx = bx_ - 1;  // second-earliest stub one BX late
-  } else {
-    second_bx = bx_ - 0;  // second-earliest stub two BXs late
+  //int second_bx = bx_ - delayBX;
+  //if (h2 >= 2) {
+  //  second_bx = bx_ - 2;  // two stubs in earliest BX, analyze immediately
+  //} else if (h1 >= 2) {
+  //  second_bx = bx_ - 1;  // second-earliest stub one BX late
+  //} else {
+  //  second_bx = bx_ - 0;  // second-earliest stub two BXs late
+  //}
+
+  int second_bx = 99;
+  for (int i = delayBX; i >= 0; i--) {
+    if (counter.at(i) >= 2) { // If 2 or more stubs are delayed by i BX or more
+      second_bx = bx_ - i; // if i == delayBX, analyze immediately
+      break;
+    }
   }
+  assert(second_bx != 99);
 
   // ___________________________________________________________________________
   // Output
