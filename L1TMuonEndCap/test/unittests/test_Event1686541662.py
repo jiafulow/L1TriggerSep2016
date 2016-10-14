@@ -82,14 +82,14 @@ class TestEvent1686541662(unittest.TestCase):
     tracks = self.analyzer.handles["tracks"].product()
 
     track = tracks[0]
-    self.assertEqual(track.rank         , 0x36)
-    self.assertEqual(track.ptlut_address, 343309867)
-    self.assertEqual(track.gmt_pt       , 6)
-    self.assertEqual(track.mode         , 10)
+    self.assertEqual(track.rank         , 0x3e)
+    self.assertEqual(track.ptlut_address, 474472433)
+    self.assertEqual(track.gmt_pt       , 5)
+    self.assertEqual(track.mode         , 14)
     self.assertEqual(track.gmt_charge   , 1)
-    self.assertEqual(track.gmt_quality  , 10)
-    self.assertEqual(track.gmt_eta      , 306-512)
-    self.assertEqual(track.gmt_phi      , 2)
+    self.assertEqual(track.gmt_quality  , 14)
+    self.assertEqual(track.gmt_eta      , 299-512)
+    self.assertEqual(track.gmt_phi      , 6)
 
 
 # ______________________________________________________________________________

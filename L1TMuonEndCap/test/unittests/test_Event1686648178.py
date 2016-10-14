@@ -92,14 +92,14 @@ class TestEvent1686648178(unittest.TestCase):
     self.assertEqual(track.gmt_phi      , 90)
 
     track = tracks[3]
-    self.assertEqual(track.rank         , 0x31)
-    self.assertEqual(track.ptlut_address, 624961733)
-    self.assertEqual(track.gmt_pt       , 14)
-    self.assertEqual(track.mode         , 9)
+    self.assertEqual(track.rank         , 0x39)
+    self.assertEqual(track.ptlut_address, 759344630)
+    self.assertEqual(track.gmt_pt       , 11)
+    self.assertEqual(track.mode         , 13)
     self.assertEqual(track.gmt_charge   , 0)
-    self.assertEqual(track.gmt_quality  , 5)
+    self.assertEqual(track.gmt_quality  , 13)
     self.assertEqual(track.gmt_eta      , 156)
-    self.assertEqual(track.gmt_phi      , 249-256)
+    self.assertEqual(track.gmt_phi      , 247-256)
 
 
 # ______________________________________________________________________________
