@@ -295,15 +295,11 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     break;
 
   case 15:  // 1-2-3-4
-    // Calculate two signs based on three input signs
-    if (sign12==0 && sign23==0 && sign34==0) {
-      sign12=1; sign23=1; sign34=1;
-    } else if (sign12==0 && sign23==1 && sign34==1) {
-      sign12=1; sign23=0; sign34=0;
-    } else if (sign12==0 && sign23==0 && sign34==1) {
-      sign12=1; sign23=1; sign34=0;
-    } else if (sign12==0 && sign23==1 && sign34==0) {
-      sign12=1; sign23=0; sign34=1;
+    // Set sign23 and sign34 relative to sign12
+    if (!sign12) {
+      sign12 = !sign12;
+      sign23 = !sign23;
+      sign34 = !sign34;
     }
 
     dPhi12 = getNLBdPhiBin(dPhi12, 7, 512);
@@ -642,7 +638,16 @@ float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
         }
       }
 
-      // Now set RELATIVE sign bits
+      // Set sign23 and sign34 relative to sign12
+      //sign12 = (dPhi12 >= 0);
+      //sign23 = (dPhi23 >= 0);
+      //sign34 = (dPhi34 >= 0);
+      //if (!sign12) {
+      //  sign12 = !sign12;
+      //  sign23 = !sign23;
+      //  sign34 = !sign34;
+      //}
+
       sign12 = 1;
       if (dPhi12 > 0) {
         sign23 = (dPhi23 > 0) ? 1 : 0;
@@ -651,6 +656,7 @@ float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
         sign23 = (dPhi23 < 0) ? 1 : 0;
         sign34 = (dPhi34 < 0) ? 1 : 0;
       }
+
       dPhi12 = get_signed_int(abs(dPhi12), sign12);
       dPhi23 = get_signed_int(abs(dPhi23), sign23);
       dPhi34 = get_signed_int(abs(dPhi34), sign34);
@@ -676,7 +682,7 @@ float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
       CLCT2  = get_signed_int(CLCT2, CLCT2Sign);
 
     }  // end if mode_inv == 14
-  }  // end if reproduceBug
+  }
 
 
   // Get pT from XML (forest)

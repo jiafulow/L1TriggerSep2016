@@ -312,7 +312,7 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
 }
 
 void EMTFAngleCalculation::calculate_bx(EMTFTrackExtra& track) const {
-  int delayBX = bxWindow_ - 1;
+  const int delayBX = bxWindow_ - 1;
 
   std::vector<int> counter(delayBX+1, 0);
 

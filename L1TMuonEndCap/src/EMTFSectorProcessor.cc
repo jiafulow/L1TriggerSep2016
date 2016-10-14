@@ -100,7 +100,7 @@ void EMTFSectorProcessor::process(
       extended_conv_hits.pop_front();
 
       int n = zone_array<int>().size();
-      extended_best_track_cands.erase(extended_best_track_cands.begin(), extended_best_track_cands.begin() + n);
+      extended_best_track_cands.erase(extended_best_track_cands.end()-n, extended_best_track_cands.end());  // pop_back
     }
   }  // end loop over bx
 
@@ -204,7 +204,7 @@ void EMTFSectorProcessor::process_single_bx(
 
   // Calculate deflection angles and other track variables
   angle_calc.process(zone_tracks);
-  extended_best_track_cands.insert(extended_best_track_cands.end(), zone_tracks.begin(), zone_tracks.end());
+  extended_best_track_cands.insert(extended_best_track_cands.begin(), zone_tracks.begin(), zone_tracks.end());  // push_front
 
   // Identify 3 best tracks
   btrack_sel.process(extended_best_track_cands, best_tracks);
