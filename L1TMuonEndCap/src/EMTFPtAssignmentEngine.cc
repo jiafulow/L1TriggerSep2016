@@ -336,12 +336,13 @@ float EMTFPtAssignmentEngine::calculate_pt(const address_t& address) {
 }
 
 float EMTFPtAssignmentEngine::calculate_pt_lut(const address_t& address) {
-  float pt = 0.;
+  // LUT outputs 'gmt_pt', so need to convert back to 'xmlpt'
+  int gmt_pt = ptlut_reader_.lookup(address);
+  float pt = (gmt_pt <= 0) ?  0 : (gmt_pt-1) * 0.5;
+  float xmlpt = pt;
+  xmlpt /= 1.4;
 
-  int pt_value = ptlut_reader_.lookup(address);
-  pt = (pt_value-1) * 0.5;
-
-  return pt;
+  return xmlpt;
 }
 
 float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
@@ -662,7 +663,7 @@ float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
       dPhi34 = get_signed_int(abs(dPhi34), sign34);
 
     }  // end if mode_inv == 15
-  }  // end if fixMode15HighPt_
+  }
 
   // Inherit some bugs
   bool reproduceBug1 = true;
@@ -673,10 +674,11 @@ float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
 
       //CLCT2     = (address >> (0+7+6+1+1+3))          & ((1<<2)-1);
       //address |= (CLCT2       & ((1<<2)-1)) << (0+7+6+1+1+3);
+
       bugged_CLCT2    = (address >> (0+7+5+1+1+3))          & ((1<<2)-1);  // bad
       bugged_address  = address & ~(((1<<2)-1) << (0+7+6+1+1+3));  // clear bits
       bugged_address |= (bugged_CLCT2 & ((1<<2)-1)) << (0+7+6+1+1+3);
-      bugged_CLCT2    = (address >> (0+7+5+1+1+3))          & ((1<<2)-1);  // bad
+      bugged_CLCT2    = (bugged_address >> (0+7+5+1+1+3))   & ((1<<2)-1);  // bad
 
       CLCT2  = bugged_CLCT2;
       CLCT2  = get_signed_int(CLCT2, CLCT2Sign);
@@ -705,6 +707,8 @@ float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
         assert(v != -999);
       }
       tree_data.push_back(v);
+    } else {
+      tree_data.push_back(0);  // pad with zeroes, somehow BDT tries to access out of bounds
     }
   }
 
@@ -716,6 +720,7 @@ float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
   }
 
   auto tree_event = std::make_unique<Event>();
+  tree_event->predictedValue = 0;  // must explicitly initialize
   tree_event->data = tree_data;
 
   forests_.at(mode_inv).predictEvent(tree_event.get(), 64);
