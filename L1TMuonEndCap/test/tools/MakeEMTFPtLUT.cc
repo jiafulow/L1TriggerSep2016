@@ -29,6 +29,8 @@ private:
 
   void makeLUT();
 
+  void checkAddresses();
+
 private:
   std::unique_ptr<EMTFPtAssignmentEngine> pt_assign_engine_;
 
@@ -39,6 +41,9 @@ private:
   int verbose_;
 
   std::string outfile_;
+
+  bool onlyCheck_;
+  std::vector<unsigned long long> addressesToCheck_;
 
   bool done_;
 };
@@ -52,6 +57,8 @@ MakeEMTFPtLUT::MakeEMTFPtLUT(const edm::ParameterSet& iConfig) :
     config_(iConfig),
     verbose_(iConfig.getUntrackedParameter<int>("verbosity")),
     outfile_(iConfig.getParameter<std::string>("outfile")),
+    onlyCheck_(iConfig.getParameter<bool>("onlyCheck")),
+    addressesToCheck_(iConfig.getParameter<std::vector<unsigned long long> >("addressesToCheck")),
     done_(false)
 {
   const edm::ParameterSet spPAParams16 = config_.getParameter<edm::ParameterSet>("spPAParams16");
@@ -72,7 +79,12 @@ MakeEMTFPtLUT::~MakeEMTFPtLUT() {}
 void MakeEMTFPtLUT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
   if (done_)  return;
 
-  makeLUT();
+  if (onlyCheck_) {
+    checkAddresses();
+
+  } else {
+    makeLUT();
+  }
 
   done_ = true;
   return;
@@ -82,7 +94,6 @@ void MakeEMTFPtLUT::makeLUT() {
   std::cout << "Calculating pT for " << PTLUT_SIZE << " addresses, please sit tight..." << std::endl;
 
   EMTFPtLUTWriter::address_t address = 0;
-  EMTFPtLUTWriter::content_t pt_value = 0;
 
   float xmlpt = 0.;
   float pt = 0.;
@@ -91,10 +102,10 @@ void MakeEMTFPtLUT::makeLUT() {
   for (; address<PTLUT_SIZE; ++address) {
     show_progress_bar(address, PTLUT_SIZE);
 
-    int mode_inv = (address >> (30-4)) & ((1<<4)-1);
+    //int mode_inv = (address >> (30-4)) & ((1<<4)-1);
 
     // floats
-    xmlpt   = pt_assign_engine_->calculate_pt_xml(address);
+    xmlpt   = pt_assign_engine_->calculate_pt(address);
     pt      = (xmlpt < 0.) ? 1. : xmlpt;  // Matt used fabs(-1) when mode is invalid
     pt *= 1.4;  // multiply by 1.4 to keep efficiency above 90% when the L1 trigger pT cut is applied
 
@@ -103,13 +114,42 @@ void MakeEMTFPtLUT::makeLUT() {
     gmt_pt = (gmt_pt > 511) ? 511 : gmt_pt;
 
     //if (address % (1<<20) == 0)
-    //  std::cout << mode_inv << " " << address << " " << gmt_pt << std::endl;
+    //  std::cout << mode_inv << " " << address << " " << print_subaddresses(address) << " " << gmt_pt << std::endl;
 
-    pt_value = gmt_pt;
-    ptlut_writer_.push_back(pt_value);
+    ptlut_writer_.push_back(gmt_pt);
   }
 
   ptlut_writer_.write(outfile_);
+}
+
+void MakeEMTFPtLUT::checkAddresses() {
+  unsigned int n = addressesToCheck_.size();
+  std::cout << "Calculating pT for " << n << " addresses, please sit tight..." << std::endl;
+
+  EMTFPtLUTWriter::address_t address = 0;
+
+  float xmlpt = 0.;
+  float pt = 0.;
+  int gmt_pt = 0;
+
+  for (unsigned int i=0; i<n; ++i) {
+    //show_progress_bar(i, n);
+
+    address = addressesToCheck_.at(i);
+
+    int mode_inv = (address >> (30-4)) & ((1<<4)-1);
+
+    // floats
+    xmlpt   = pt_assign_engine_->calculate_pt(address);
+    pt      = (xmlpt < 0.) ? 1. : xmlpt;  // Matt used fabs(-1) when mode is invalid
+    pt *= 1.4;  // multiply by 1.4 to keep efficiency above 90% when the L1 trigger pT cut is applied
+
+    // integers
+    gmt_pt = (pt * 2) + 1;
+    gmt_pt = (gmt_pt > 511) ? 511 : gmt_pt;
+
+    std::cout << mode_inv << " " << address << " " << print_subaddresses(address) << " " << gmt_pt << std::endl;
+  }
 }
 
 // DEFINE THIS AS A PLUG-IN
