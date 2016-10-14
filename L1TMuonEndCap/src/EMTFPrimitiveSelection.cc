@@ -123,6 +123,8 @@ int EMTFPrimitiveSelection::select_csc(const TriggerPrimitive& muon_primitive) c
 
     assert(MIN_ENDCAP <= tp_endcap && tp_endcap <= MAX_ENDCAP);
     assert(MIN_TRIGSECTOR <= tp_sector && tp_sector <= MAX_TRIGSECTOR);
+    assert(1 <= tp_station && tp_station <= 4);
+    assert(1 <= tp_csc_ID && tp_csc_ID <= 9);
 
     if (is_in_bx_csc(tp_bx)) {
       if (is_in_sector_csc(tp_endcap, tp_sector)) {
@@ -152,7 +154,7 @@ bool EMTFPrimitiveSelection::is_in_neighbor_sector_csc(
   if (includeNeighbor_) {
     if ((endcap_ == tp_endcap) && (get_neighbor(sector_) == tp_sector)) {
       if (tp_station == 1) {
-        if ((tp_subsector == 2) && (tp_csc_ID == 3 || tp_csc_ID == 6 || tp_csc_ID == 9 || tp_csc_ID == 12))
+        if ((tp_subsector == 2) && (tp_csc_ID == 3 || tp_csc_ID == 6 || tp_csc_ID == 9))
           return true;
 
       } else {
@@ -173,18 +175,14 @@ int EMTFPrimitiveSelection::get_index_csc(int tp_subsector, int tp_station, int 
   int selected = -1;
 
   if (!is_neighbor) {
-    if (tp_station == 1 && tp_csc_ID-1 >= 9) {  // ME1/1a
-      selected = (tp_subsector-1) * 9 + (tp_csc_ID-1-9);
-    } else if (tp_station == 1) {  // ME1/1b, ME1/2, ME1/3
+    if (tp_station == 1) {  // ME1
       selected = (tp_subsector-1) * 9 + (tp_csc_ID-1);
     } else {  // ME2,3,4
       selected = (tp_station) * 9 + (tp_csc_ID-1);
     }
 
   } else {
-    if (tp_station == 1 && tp_csc_ID-1 >= 9) {  // ME1/1a
-      selected = (5) * 9 + (tp_csc_ID-1-9)/3;
-    } else if (tp_station == 1) {  // ME1/1b, ME1/2, ME1/3
+    if (tp_station == 1) {  // ME1
       selected = (5) * 9 + (tp_csc_ID-1)/3;
     } else {  // ME2,3,4
       selected = (5) * 9 + (tp_station) * 2 - 1 + (tp_csc_ID-1 < 3 ? 0 : 1);
