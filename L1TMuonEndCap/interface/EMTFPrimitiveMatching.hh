@@ -41,10 +41,6 @@ public:
       EMTFTrackExtra& track
   ) const;
 
-  unsigned int get_fs_zone_code(const EMTFHitExtra& conv_hit) const;
-
-  unsigned int get_fs_segment(const EMTFHitExtra& conv_hit) const;
-
 private:
   int verbose_, endcap_, sector_, bx_;
 

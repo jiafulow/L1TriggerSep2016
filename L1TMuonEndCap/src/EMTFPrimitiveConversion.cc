@@ -60,6 +60,8 @@ void EMTFPrimitiveConversion::process(
       conv_hits.push_back(conv_hit);
       pc_segment += 1;
     }
+
+    assert(pc_segment <= 4);
   }
 }
 
@@ -135,7 +137,7 @@ void EMTFPrimitiveConversion::convert_csc(
   assert(tp_data.pattern <= 10);
   assert(tp_data.quality > 0);
 
-  bool is_neighbor = (pc_station == 5);
+  const bool is_neighbor = (pc_station == 5);
 
   int cscn_ID      = tp_csc_ID;  // modify csc_ID if coming from neighbor sector
   if (is_neighbor) {
@@ -187,29 +189,29 @@ void EMTFPrimitiveConversion::convert_csc(
 }
 
 void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const {
-  bool is_neighbor = (conv_hit.pc_station == 5);
+  const bool is_neighbor = (conv_hit.pc_station == 5);
 
   // Defined as in firmware
   // endcap : 0-1 for ME+,ME-
   // sector : 0-5
   // station: 0-4 for st1 sub1, st1 sub2, st2, st3, st4
   // cscid  : 0-14 including neighbors
-  int fw_endcap  = (endcap_-1);
-  int fw_sector  = (sector_-1);
-  int fw_station = (conv_hit.station == 1) ? (is_neighbor ? 0 : (conv_hit.subsector-1)) : conv_hit.station;
-  int fw_cscid   = (conv_hit.cscn_ID-1);
-  int fw_hstrip  = conv_hit.strip;  // it is half-strip, despite the name
-  int fw_wg      = conv_hit.wire;   // it is wiregroup, despite the name
+  const int fw_endcap  = (endcap_-1);
+  const int fw_sector  = (sector_-1);
+  const int fw_station = (conv_hit.station == 1) ? (is_neighbor ? 0 : (conv_hit.subsector-1)) : conv_hit.station;
+  const int fw_cscid   = (conv_hit.cscn_ID-1);
+  const int fw_hstrip  = conv_hit.strip;  // it is half-strip, despite the name
+  const int fw_wg      = conv_hit.wire;   // it is wiregroup, despite the name
 
   // Primitive converter unit
   // station: 0-5 for st1 sub1, st1 sub2, st2, st3, st4, neigh all st*
   // chamber: 0-8
-  int pc_station = conv_hit.pc_station;
-  int pc_chamber = conv_hit.pc_chamber;
+  const int pc_station = conv_hit.pc_station;
+  const int pc_chamber = conv_hit.pc_chamber;
 
-  bool is_me11a = (conv_hit.station == 1 && conv_hit.ring == 4);
-  bool is_me11b = (conv_hit.station == 1 && conv_hit.ring == 1);
-  bool is_me13  = (conv_hit.station == 1 && conv_hit.ring == 3);
+  const bool is_me11a = (conv_hit.station == 1 && conv_hit.ring == 4);
+  const bool is_me11b = (conv_hit.station == 1 && conv_hit.ring == 1);
+  const bool is_me13  = (conv_hit.station == 1 && conv_hit.ring == 3);
 
   // Is this chamber mounted in reverse direction?
   bool ph_reverse = false;
@@ -275,7 +277,7 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
   }
 
   // ___________________________________________________________________________
-  // ph conversion
+  // phi conversion
 
   // Convert half-strip into 1/8-strip
   int eighth_strip = 0;
@@ -334,7 +336,7 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
     zone_hit = zone_hit_fixed;
 
   // ___________________________________________________________________________
-  // th conversion
+  // theta conversion
 
   int pc_wire_id = (fw_wg & 0x7f);
   int th_orig = lut().get_th_lut(fw_endcap, fw_sector, pc_lut_id, pc_wire_id);
@@ -549,6 +551,48 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
   if (new_zones_AWB)
     zone_code = zone_code_AWB;
 
+  // ___________________________________________________________________________
+  // For later use in primitive matching
+  // (in the firmware, this happens in the find_segment module)
+
+  int fs_history = 0;                     // history id: not set here, to be set in primitive matching
+  int fs_chamber = -1;                    // chamber id
+  int fs_segment = conv_hit.pc_segment%2; // segment id
+
+  // For ME1
+  //   j = 0 is neighbor sector chamber
+  //   j = 1,2,3 are native subsector 1 chambers
+  //   j = 4,5,6 are native subsector 2 chambers
+  // For ME2,3,4:
+  //   j = 0 is neighbor sector chamber
+  //   j = 1,2,3,4,5,6 are native sector chambers
+  if (fw_station <= 1) {  // ME1
+    int n = (conv_hit.csc_ID-1) % 3;
+    fs_chamber = is_neighbor ? 0 : ((conv_hit.subsector == 1) ? 1+n : 4+n);
+  } else {  // ME2,3,4
+    int n = (conv_hit.ring == 1) ? (conv_hit.csc_ID-1) : (conv_hit.csc_ID-1-3);
+    fs_chamber = is_neighbor ? 0 : 1+n;
+  }
+
+  assert(fs_history >= 0 && fs_chamber != -1 && fs_segment < 2);
+  fs_segment = ((fs_history & 0x3)<<4) | ((fs_chamber & 0x7)<<1) | (fs_segment & 0x1);
+
+  int fs_zone_code = 0;
+
+  static const int fs_zone_code_table[4][4] = {  // map (station,ring) to fs_zone_code
+    {0b0011, 0b0100, 0b1000, 0b0011},  // st1 r1: [z0,z1], r2: [z2], r3: [z3], r4: [z0, z1]
+    {0b0011, 0b1100, 0b0000, 0b0000},  // st2 r1: [z0,z1], r2: [z2,z3]
+    {0b0001, 0b1110, 0b0000, 0b0000},  // st3 r1: [z0], r2: [z1,z2,z3]
+    {0b0001, 0b0110, 0b0000, 0b0000}   // st4 r1: [z0], r2: [z1,z2]
+  };
+
+  if (1) {
+    unsigned istation = conv_hit.station-1;
+    unsigned iring    = conv_hit.ring-1;
+    assert(istation < 4 && iring < 4);
+    fs_zone_code = fs_zone_code_table[istation][iring];
+  }
+
 
   // ___________________________________________________________________________
   // Output
@@ -559,6 +603,9 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
   conv_hit.ph_hit     = ph_hit;
   conv_hit.zone_hit   = zone_hit;
   conv_hit.zone_code  = zone_code;
+
+  conv_hit.fs_segment   = fs_segment;
+  conv_hit.fs_zone_code = fs_zone_code;
 }
 
 // RPC functions
