@@ -120,7 +120,7 @@ def main():
   dump_array_into_file(th_init_array, "th_init_neighbor.txt")
   dump_array_into_file(th_disp_array, "th_disp_neighbor.txt")
   dump_array_into_file(th_lut_array, "th_lut_neighbor.txt")
-  dump_array_into_file(th_corr_lut_array, "th_corr_lut_neighbor.txt
+  dump_array_into_file(th_corr_lut_array, "th_corr_lut_neighbor.txt")
 
   return
 

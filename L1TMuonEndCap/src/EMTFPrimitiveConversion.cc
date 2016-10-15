@@ -137,14 +137,15 @@ void EMTFPrimitiveConversion::convert_csc(
 
   bool is_neighbor = (pc_station == 5);
 
-  int cscn_ID      = tp_csc_ID;
+  int cscn_ID      = tp_csc_ID;  // modify csc_ID if coming from neighbor sector
   if (is_neighbor) {
-    // station 1 has 3 neighbor chambers: 13, 14, 15
-    // station 2,3,4 have 2 neighbor chambers: 10, 11
+    // station 1 has 3 neighbor chambers: 13,14,15 in rings 1,2,3
+    // (where are chambers 10,11,12 in station 1? they used to be for ME1/1a, but not anymore)
+    // station 2,3,4 have 2 neighbor chambers: 10,11 in rings 1,2
     cscn_ID = (pc_chamber < 3) ? (pc_chamber + 12) : (((pc_chamber-1)%2) + 9);
     cscn_ID += 1;
 
-    if (tp_station == 1) {  // ME1
+    if (tp_station == 1) {  // neighbor ME1
       assert(tp_subsector == 2);
     }
   }
@@ -189,6 +190,10 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
   bool is_neighbor = (conv_hit.pc_station == 5);
 
   // Defined as in firmware
+  // endcap : 0-1 for ME+,ME-
+  // sector : 0-5
+  // station: 0-4 for st1 sub1, st1 sub2, st2, st3, st4
+  // cscid  : 0-14 including neighbors
   int fw_endcap  = (endcap_-1);
   int fw_sector  = (sector_-1);
   int fw_station = (conv_hit.station == 1) ? (is_neighbor ? 0 : (conv_hit.subsector-1)) : conv_hit.station;
@@ -196,6 +201,9 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
   int fw_hstrip  = conv_hit.strip;  // it is half-strip, despite the name
   int fw_wg      = conv_hit.wire;   // it is wiregroup, despite the name
 
+  // Primitive converter unit
+  // station: 0-5 for st1 sub1, st1 sub2, st2, st3, st4, neigh all st*
+  // chamber: 0-8
   int pc_station = conv_hit.pc_station;
   int pc_chamber = conv_hit.pc_chamber;
 
@@ -219,9 +227,7 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
       ph_coverage = 20;
   }
 
-  int th_negative = 50;
-  int th_coverage = 45;
-
+  // Is this 10-deg or 20-deg chamber?
   bool is_10degree = false;
   if (
       (fw_station <= 1) || // ME1
@@ -232,25 +238,26 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
 
   // LUT index
   // There are 54 CSC chambers including the neighbors in a sector, but 61 LUT indices
+  // This comes from dividing the 6 chambers + 1 neighbor in ME1/1 into ME1/1a and ME1/1b
   int pc_lut_id = pc_chamber;
-  if (pc_station == 0) {
+  if (pc_station == 0) {         // ME1 sub 1: 0 - 11
     pc_lut_id = is_me11a ? pc_lut_id + 9 : pc_lut_id;
-  } else if (pc_station == 1) {
+  } else if (pc_station == 1) {  // ME1 sub 2: 16 - 27
     pc_lut_id += 16;
     pc_lut_id = is_me11a ? pc_lut_id + 9 : pc_lut_id;
-  } else if (pc_station == 2) {
+  } else if (pc_station == 2) {  // ME2: 28 - 36
     pc_lut_id += 28;
-  } else if (pc_station == 3) {
+  } else if (pc_station == 3) {  // ME3: 39 - 47
     pc_lut_id += 39;
-  } else if (pc_station == 4) {
+  } else if (pc_station == 4) {  // ME4 : 50 - 58
     pc_lut_id += 50;
-  } else if (pc_station == 5 && pc_chamber < 3) {
+  } else if (pc_station == 5 && pc_chamber < 3) {  // neighbor ME1: 12 - 15
     pc_lut_id = is_me11a ? pc_lut_id + 15 : pc_lut_id + 12;
-  } else if (pc_station == 5 && pc_chamber < 5) {
+  } else if (pc_station == 5 && pc_chamber < 5) {  // neighbor ME2: 37 - 38
     pc_lut_id += 28 + 9 - 3;
-  } else if (pc_station == 5 && pc_chamber < 7) {
+  } else if (pc_station == 5 && pc_chamber < 7) {  // neighbor ME3: 48 - 49
     pc_lut_id += 39 + 9 - 5;
-  } else if (pc_station == 5 && pc_chamber < 9) {
+  } else if (pc_station == 5 && pc_chamber < 9) {  // neighbor ME4: 59 - 60
     pc_lut_id += 50 + 9 - 7;
   }
   assert(pc_lut_id < 61);
@@ -342,6 +349,9 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
     th_tmp = th_tmp + th_corr_sign * th_corr;
 
     // Check that correction did not make invalid value outside chamber coverage
+    const int th_negative = 50;
+    const int th_coverage = 45;
+
     if (th_tmp > th_negative || fw_wg == 0)
       th_tmp = 0;  // limit at the bottom
     if (th_tmp > th_coverage)
@@ -360,7 +370,7 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
   // zones
 
   // ph zone boundaries for chambers that cover more than one zone
-  // hardcoded boundaries must match boundaries in ph_th_match module
+  // bnd1 is the lower boundary, bnd2 the upper boundary
   int ph_zone_bnd1 = zoneBoundaries2_.at(3);  // = 127
   if (fw_station <= 1 && (fw_cscid <= 2 || fw_cscid == 12))  // ME1/1
     ph_zone_bnd1 = zoneBoundaries2_.at(0);  // = 41

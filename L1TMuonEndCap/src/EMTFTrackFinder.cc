@@ -146,6 +146,7 @@ void EMTFTrackFinder::process(
     }
 
     std::cout << "Converted hits: " << std::endl;
+    std::cout << "st ch ph th ph_hit phzvl" << std::endl;
     for (const auto& h : out_hits) {
       std::cout << h.pc_station << " " << h.pc_chamber << " " << h.phi_fp << " " << h.theta_fp << " " << (1ul<<h.ph_hit) << " " << h.phzvl << std::endl;
     }
