@@ -48,4 +48,18 @@ namespace {
   }
   template <class T> details::_reversed<T> reversed(T& t) { return details::_reversed<T>(t); }
 
+  // See http://stackoverflow.com/a/53878
+  template <class STR=std::string>
+  std::vector<STR> split_string(const std::string& s, char c = ' ', char d = ' ') {
+    std::vector<STR> result;
+    const char* str = s.c_str();
+    do {
+      const char* begin = str;
+      while(*str != c && *str != d && *str)
+        str++;
+      result.emplace_back(begin, str);
+    } while (0 != *str++);
+    return result;
+  }
+
 }  // namespace

@@ -2,23 +2,11 @@
 
 #include "helper.hh"  // to_hex, to_binary
 
-#define PATTERN_KEY_ZHIT 7
-#define PATTERN_PADDING_EXTRA_W_ST1 15-7
-
 namespace {
-  // See http://stackoverflow.com/a/53878
-  std::vector<std::string> split_string(const std::string& s, char c = ' ', char d = ' ') {
-    std::vector<std::string> result;
-    const char* str = s.c_str();
-    do {
-      const char* begin = str;
-      while(*str != c && *str != d && *str)
-        str++;
-      result.push_back(std::string(begin, str));
-    } while (0 != *str++);
-    return result;
-  }
-}  // namespace
+  static const int padding_w_st1 = 15;
+  static const int padding_w_st3 = 7;
+  static const int padding_extra_w_st1 = padding_w_st1 - padding_w_st3;
+}
 
 
 void EMTFPatternRecognition::configure(
@@ -68,16 +56,16 @@ void EMTFPatternRecognition::configure_details() {
 
       // There can only be one zone hit in the key station in the pattern
       // and it has to be this magic number
-      assert(st2_max == PATTERN_KEY_ZHIT && st2_min == PATTERN_KEY_ZHIT);
+      assert(st2_max == padding_w_st3 && st2_min == padding_w_st3);
 
       // There is extra "padding" in st1 w.r.t st2,3,4
       // Add the extra padding to st2,3,4
-      st2_max += PATTERN_PADDING_EXTRA_W_ST1;
-      st2_min += PATTERN_PADDING_EXTRA_W_ST1;
-      st3_max += PATTERN_PADDING_EXTRA_W_ST1;
-      st3_min += PATTERN_PADDING_EXTRA_W_ST1;
-      st4_max += PATTERN_PADDING_EXTRA_W_ST1;
-      st4_min += PATTERN_PADDING_EXTRA_W_ST1;
+      st2_max += padding_extra_w_st1;
+      st2_min += padding_extra_w_st1;
+      st3_max += padding_extra_w_st1;
+      st3_min += padding_extra_w_st1;
+      st4_max += padding_extra_w_st1;
+      st4_min += padding_extra_w_st1;
 
       // Create a pattern
       EMTFPhiMemoryImage pattern;
@@ -94,18 +82,7 @@ void EMTFPatternRecognition::configure_details() {
         pattern.set_bit(3, i);
 
       // Remove the extra padding
-      pattern.rotr(PATTERN_PADDING_EXTRA_W_ST1);
-
-      if (verbose_ > 2) {  // debug
-        std::cout << "Pattern definition: " << straightness << " "
-            << st4_min << " " << st4_max << " "
-            << st3_min << " " << st3_max << " "
-            << st2_min << " " << st2_max << " "
-            << st1_min << " " << st1_max << " "
-            << std::endl;
-        std::cout << pattern << std::endl;
-      }
-
+      pattern.rotr(padding_extra_w_st1);
       patterns_.push_back(pattern);
     }
     assert(patterns_.size() == pattDefinitions_.size());
@@ -140,23 +117,23 @@ void EMTFPatternRecognition::configure_details() {
 
       // There can only be one zone hit in the key station in the pattern
       // and it has to be this magic number
-      assert(st2_max1 == PATTERN_KEY_ZHIT && st2_min1 == PATTERN_KEY_ZHIT);
-      assert(st2_max2 == PATTERN_KEY_ZHIT && st2_min2 == PATTERN_KEY_ZHIT);
+      assert(st2_max1 == padding_w_st3 && st2_min1 == padding_w_st3);
+      assert(st2_max2 == padding_w_st3 && st2_min2 == padding_w_st3);
 
       // There is extra "padding" in st1 w.r.t st2,3,4
       // Add the extra padding to st2,3,4
-      st2_max1 += PATTERN_PADDING_EXTRA_W_ST1;
-      st2_min1 += PATTERN_PADDING_EXTRA_W_ST1;
-      st2_max2 += PATTERN_PADDING_EXTRA_W_ST1;
-      st2_min2 += PATTERN_PADDING_EXTRA_W_ST1;
-      st3_max1 += PATTERN_PADDING_EXTRA_W_ST1;
-      st3_min1 += PATTERN_PADDING_EXTRA_W_ST1;
-      st3_max2 += PATTERN_PADDING_EXTRA_W_ST1;
-      st3_min2 += PATTERN_PADDING_EXTRA_W_ST1;
-      st4_max1 += PATTERN_PADDING_EXTRA_W_ST1;
-      st4_min1 += PATTERN_PADDING_EXTRA_W_ST1;
-      st4_max2 += PATTERN_PADDING_EXTRA_W_ST1;
-      st4_min2 += PATTERN_PADDING_EXTRA_W_ST1;
+      st2_max1 += padding_extra_w_st1;
+      st2_min1 += padding_extra_w_st1;
+      st2_max2 += padding_extra_w_st1;
+      st2_min2 += padding_extra_w_st1;
+      st3_max1 += padding_extra_w_st1;
+      st3_min1 += padding_extra_w_st1;
+      st3_max2 += padding_extra_w_st1;
+      st3_min2 += padding_extra_w_st1;
+      st4_max1 += padding_extra_w_st1;
+      st4_min1 += padding_extra_w_st1;
+      st4_max2 += padding_extra_w_st1;
+      st4_min2 += padding_extra_w_st1;
 
       // Create a pattern
       EMTFPhiMemoryImage pattern;
@@ -181,21 +158,17 @@ void EMTFPatternRecognition::configure_details() {
         pattern.set_bit(3, i);
 
       // Remove the extra padding
-      pattern.rotr(PATTERN_PADDING_EXTRA_W_ST1);
-
-      if (verbose_ > 1) {  // debug
-        std::cout << "Pattern definition: " << straightness << " "
-            << st4_min1 << " " << st4_max1 << " " << st4_min2 << " " << st4_max2 << " "
-            << st3_min1 << " " << st3_max1 << " " << st3_min2 << " " << st3_max2 << " "
-            << st2_min1 << " " << st2_max1 << " " << st2_min2 << " " << st2_max2 << " "
-            << st1_min1 << " " << st1_max1 << " " << st1_min2 << " " << st1_max2 << " "
-            << std::endl;
-        std::cout << pattern << std::endl;
-      }
-
+      pattern.rotr(padding_extra_w_st1);
       patterns_.push_back(pattern);
     }
     assert(patterns_.size() == symPattDefinitions_.size());
+  }
+
+  if (verbose_ > 2) {  // debug
+    for (const auto& pattern : patterns_) {
+      std::cout << "Pattern straightness: " << pattern.get_straightness() << " image: " << std::endl;
+      std::cout << pattern << std::endl;
+    }
   }
 }
 
@@ -341,7 +314,7 @@ void EMTFPatternRecognition::process_single_zone(
 
   // The zone hit image is rotated/shifted before comparing with patterns
   // First, rotate left/shift up to the zone hit in the key station
-  cloned_image.rotl(PATTERN_KEY_ZHIT);
+  cloned_image.rotl(padding_w_st3);
 
   for (int izhit = 0; izhit < NUM_ZONE_HITS; ++izhit) {
     // The zone hit image is rotated/shift before comparing with patterns

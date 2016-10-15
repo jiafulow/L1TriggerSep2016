@@ -164,7 +164,7 @@ void EMTFBestTrackSelection::cancel_one_bx(
     exists[i] = exists[i] & (!killed[i]);
   }
 
-  bool anything_exists = std::accumulate(exists.begin(), exists.end(), 0) != 0;
+  bool anything_exists = (std::find(exists.begin(), exists.end(), 1) != exists.end());
   if (!anything_exists)
     return;
 
@@ -354,7 +354,7 @@ void EMTFBestTrackSelection::cancel_multi_bx(
     exists[i] = exists[i] & good_bx[i];
   }
 
-  bool anything_exists = std::accumulate(exists.begin(), exists.end(), 0) != 0;
+  bool anything_exists = (std::find(exists.begin(), exists.end(), 1) != exists.end());
   if (!anything_exists)
     return;
 

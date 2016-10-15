@@ -5,6 +5,8 @@
 namespace {
   static const int bw_fph = 13;  // bit width of ph, full precision
   static const int bw_th = 7;    // bit width of th
+  static const int invalid_dtheta = (1<<bw_th) - 1;  // = 127
+  static const int invalid_dphi = (1<<bw_fph) - 1;   // = 8191
 }
 
 
@@ -44,6 +46,7 @@ void EMTFAngleCalculation::process(
     tracks_end = tracks.end();
 
     // Calculate bx
+    // (in the firmware, this happens during best track selection.)
     for (; tracks_it != tracks_end; ++tracks_it) {
       calculate_bx(*tracks_it);
     }
@@ -79,9 +82,6 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
     }
   }
   assert(st_conv_hits.size() == NUM_STATIONS);
-
-  const int invalid_dtheta = (1<<bw_th) - 1;  // = 127
-  const int invalid_dphi = (1<<bw_fph) - 1;   // = 8191
 
   // Best theta deltas and phi deltas
   // from 0 to 5: dtheta12, dtheta13, dtheta14, dtheta23, dtheta24, dtheta34
@@ -243,7 +243,7 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
   }
 
   // update rank taking into account available stations after theta deltas
-  // keep straightness as it was
+  // keep straightness as it was (perhaps it should be recalculated?)
   int rank = (track.xroad.quality_code << 1);  // output rank is one bit longer than input, to accomodate ME4 separately
   int rank2 = (
       (((rank>>6)  & 1) << 6) |  // straightness

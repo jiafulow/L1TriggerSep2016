@@ -61,19 +61,19 @@ void EMTFPrimitiveSelection::process(
             (tmp_primitives.at(0).getWire() != tmp_primitives.at(1).getWire())
         ) {
           // Swap wire numbers
-          TriggerPrimitive tp0 = tmp_primitives.at(0);  // clone
-          TriggerPrimitive tp1 = tmp_primitives.at(1);  // clone
+          TriggerPrimitive tp0 = tmp_primitives.at(0);  // (s1,w1)
+          TriggerPrimitive tp1 = tmp_primitives.at(1);  // (s2,w2)
 
           TriggerPrimitive::CSCData tp0_data_tmp = tp0.getCSCData();
           TriggerPrimitive::CSCData tp0_data     = tp0.getCSCData();
           TriggerPrimitive::CSCData tp1_data     = tp1.getCSCData();
           tp0_data.keywire = tp1_data.keywire;
           tp1_data.keywire = tp0_data_tmp.keywire;
-          tp0.setCSCData(tp0_data);
-          tp1.setCSCData(tp1_data);
+          tp0.setCSCData(tp0_data);  // (s1,w2)
+          tp1.setCSCData(tp1_data);  // (s2,w1)
 
-          tmp_primitives.insert(tmp_primitives.begin()+1, tp1);
-          tmp_primitives.insert(tmp_primitives.begin()+2, tp0);
+          tmp_primitives.insert(tmp_primitives.begin()+1, tp1);  // (s2,w1) at 2nd pos
+          tmp_primitives.insert(tmp_primitives.begin()+2, tp0);  // (s1,w2) at 3rd pos
         }
       }  // end if tmp_primitives.size() == 2
     }  // end loop over selected_csc_map
