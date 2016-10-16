@@ -17,6 +17,8 @@ void EMTFPrimitiveConversion::configure(
     bool duplicateTheta, bool fixZonePhi,
     const std::vector<int>& zoneBoundaries1, const std::vector<int>& zoneBoundaries2, int zoneOverlap
 ) {
+  assert(lut != nullptr);
+
   lut_ = lut;
 
   verbose_ = verbose;
@@ -94,7 +96,6 @@ void EMTFPrimitiveConversion::process(
 }
 
 const EMTFSectorProcessorLUT& EMTFPrimitiveConversion::lut() const {
-  assert(lut_ != nullptr);
   return *lut_;
 }
 
