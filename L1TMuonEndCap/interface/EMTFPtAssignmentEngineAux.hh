@@ -45,9 +45,7 @@ public:
 
   int getGMTQuality(int mode, int theta) const;
 
-  std::pair<int,int> getGMTCharge(
-      int mode, const std::vector<uint16_t>& delta_ph, const std::vector<uint16_t>& sign_ph
-  ) const;
+  std::pair<int,int> getGMTCharge(int mode, const std::vector<int>& phidiffs) const;
 
 };
 

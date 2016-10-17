@@ -370,185 +370,67 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
   // ___________________________________________________________________________
   // zones
 
-  // ph zone boundaries for chambers that cover more than one zone
-  // bnd1 is the lower boundary, bnd2 the upper boundary
-  int ph_zone_bnd1 = zoneBoundaries2_.at(3);  // = 127
-  if (fw_station <= 1 && (fw_cscid <= 2 || fw_cscid == 12))  // ME1/1
-    ph_zone_bnd1 = zoneBoundaries2_.at(0);  // = 41
-  else if (fw_station == 2 && (fw_cscid <= 2 || fw_cscid == 9))  // ME2/1
-    ph_zone_bnd1 = zoneBoundaries2_.at(0);  // = 41
-  else if (fw_station == 2 && ((fw_cscid >= 3 && fw_cscid <= 8) || fw_cscid == 10))  // ME2/2
-    ph_zone_bnd1 = zoneBoundaries2_.at(2);  // = 87
-  else if (fw_station == 3 && ((fw_cscid >= 3 && fw_cscid <= 8) || fw_cscid == 10))  // ME3/2
-    ph_zone_bnd1 = zoneBoundaries2_.at(1);  // = 49
-  else if (fw_station == 4 && ((fw_cscid >= 3 && fw_cscid <= 8) || fw_cscid == 10))  // ME4/2
-    ph_zone_bnd1 = zoneBoundaries2_.at(1);  // = 49
+  static const unsigned int zone_code_table[4][3] = {  // map (station,ring) to zone_code
+    {0b0011, 0b0100, 0b1000},  // st1 r1: [z0,z1], r2: [z2], r3: [z3]
+    {0b0011, 0b1100, 0b0000},  // st2 r1: [z0,z1], r2: [z2,z3]
+    {0b0001, 0b1110, 0b0000},  // st3 r1: [z0], r2: [z1,z2,z3]
+    {0b0001, 0b0110, 0b0000}   // st4 r1: [z0], r2: [z1,z2]
+  };
 
-  int ph_zone_bnd2 = zoneBoundaries2_.at(3);  // = 127
-  if (fw_station == 3 && ((fw_cscid >= 3 && fw_cscid <= 8) || fw_cscid == 10))  // ME3/2
-    ph_zone_bnd2 = zoneBoundaries2_.at(2);  // = 87
+  static const unsigned int zone_code_table_new[4][3] = {  // map (station,ring) to zone_code
+    {0b0011, 0b0110, 0b1000},  // st1 r1: [z0,z1], r2: [z1,z2], r3: [z3]
+    {0b0011, 0b1110, 0b0000},  // st2 r1: [z0,z1], r2: [z1,z2,z3]
+    {0b0011, 0b1110, 0b0000},  // st3 r1: [z0,z1], r2: [z1,z2,z3]
+    {0b0001, 0b0110, 0b0000}   // st4 r1: [z0], r2: [z1,z2]
+  };
 
-  bool new_zones_AWB = false;
-  int ph_zone_bnd1_AWB = ph_zone_bnd1;
-  if (fw_station == 3 && (fw_cscid <= 2 || fw_cscid == 9))  // ME3/1
-    ph_zone_bnd1_AWB = zoneBoundaries2_.at(0);  // = 36
-  else if (fw_station <= 1 && ((fw_cscid >= 3 && fw_cscid <= 5) || fw_cscid == 13))  // ME1/2
-    ph_zone_bnd1_AWB = zoneBoundaries2_.at(1);  // = 54
-  else if (fw_station == 2 && ((fw_cscid >= 3 && fw_cscid <= 8) || fw_cscid == 10))  // ME2/2
-    ph_zone_bnd1_AWB = zoneBoundaries2_.at(1);  // = 54
-
-  int ph_zone_bnd2_AWB = ph_zone_bnd2;
-  if (fw_station == 2 && ((fw_cscid >= 3 && fw_cscid <= 8) || fw_cscid == 10))  // ME2/2
-    ph_zone_bnd2_AWB = zoneBoundaries2_.at(2);  // = 96
-
-  if (new_zones_AWB) {
-    ph_zone_bnd1 = ph_zone_bnd1_AWB;
-    ph_zone_bnd2 = ph_zone_bnd2_AWB;
-  }
-
-  int zone_overlap = zoneOverlap_;
-
-  // Check which zones ph hits should be applied to
-  int phzvl = 0;
-  if (th <= (ph_zone_bnd1 + zone_overlap)) {
-    phzvl |= (1<<0);
-  }
-  if (th >  (ph_zone_bnd2 - zone_overlap)) {
-    phzvl |= (1<<2);
-  }
-  if (
-      (th >  (ph_zone_bnd1 - zone_overlap)) &&
-      (th <= (ph_zone_bnd2 + zone_overlap))
-  ) {
-    phzvl |= (1<<1);
-  }
+  struct {
+    constexpr unsigned int operator()(int tp_station, int tp_ring, bool use_new_table) {
+      unsigned int istation = (tp_station-1);
+      unsigned int iring = (tp_ring == 4) ? 0 : (tp_ring-1);
+      assert(istation < 4 && iring < 3);
+      unsigned int zone_code = (use_new_table) ? zone_code_table_new[istation][iring] : zone_code_table[istation][iring];
+      return zone_code;
+    }
+  } zone_code_func;
 
   int zone_code = 0;
-  if (fw_station <= 1) {  // station 1
-    if (fw_cscid <= 2 || fw_cscid == 12) {  // ring 1
-      if (phzvl & (1<<0))
-        zone_code |= (1<<0);  // zone 0: [-,41+2]
-      if (phzvl & (1<<1))
-        zone_code |= (1<<1);  // zone 1: [41-1,127+2]
+  for (int izone = 0; izone < NUM_ZONES; ++izone) {
+    int zone_code_tmp = zone_code_func(conv_hit.station, conv_hit.ring, useNewZones_);
+    if (zone_code_tmp & (1<<izone)) {
+      bool no_use_bnd1 = ((izone==0) || ((zone_code_tmp & (1<<(izone-1))) == 0) || is_me13);  // first possible zone for this hit
+      bool no_use_bnd2 = (((zone_code_tmp & (1<<(izone+1))) == 0) || is_me13);  // last possible zone for this hit
 
-    } else if (fw_cscid <= 5 || fw_cscid == 13) {  // ring 2
-      if (phzvl & (1<<0))
-        zone_code |= (1<<2);  // zone 2: [-,127+2]
+      int ph_zone_bnd1 = no_use_bnd1 ? zoneBoundaries_.at(0) : zoneBoundaries_.at(izone);
+      int ph_zone_bnd2 = no_use_bnd2 ? zoneBoundaries_.at(NUM_ZONES) : zoneBoundaries_.at(izone+1);
+      int zone_overlap = zoneOverlap_;
 
-    } else if (fw_cscid <= 8 || fw_cscid == 14) {  // ring 3
-      if (true)  // ME1/3 does not need phzvl
-        zone_code |= (1<<3);  // zone 3: [-,-]
-    }
-
-  } else if (fw_station == 2) {  // station 2
-    if (fw_cscid <= 2 || fw_cscid == 9) {  // ring 1
-      if (phzvl & (1<<0))
-        zone_code |= (1<<0);  // zone 0: [-,41+2]
-      if (phzvl & (1<<1))
-        zone_code |= (1<<1);  // zone 1: [41-1,127+2]
-
-    } else if (fw_cscid <= 8 || fw_cscid == 10) {  // ring 2
-      if (phzvl & (1<<0))
-        zone_code |= (1<<2);  // zone 2: [-,87+2]
-      if (phzvl & (1<<1))
-        zone_code |= (1<<3);  // zone 3: [87-1,127+2]
-    }
-
-  } else if (fw_station == 3) {  // station 3
-    if (fw_cscid <= 2 || fw_cscid == 9) {  // ring 1
-      if (phzvl & (1<<0))
-        zone_code |= (1<<0);  // zone 0: [-,127+2]
-
-    } else if (fw_cscid <= 8 || fw_cscid == 10) {  // ring 2
-      if (phzvl & (1<<0))
-        zone_code |= (1<<1);  // zone 1: [-,49+2]
-      if (phzvl & (1<<1))
-        zone_code |= (1<<2);  // zone 2: [49-1,87+2]
-      if (phzvl & (1<<2))
-        zone_code |= (1<<3);  // zone 3: [87-1,-]
-    }
-
-  } else if (fw_station == 4) {  // station 4
-    if (fw_cscid <= 2 || fw_cscid == 9) {  // ring 1
-      if (phzvl & (1<<0))
-        zone_code |= (1<<0);  // zone 0: [-,127+2]
-
-    } else if (fw_cscid <= 8 || fw_cscid == 10) {  // ring 2
-      if (phzvl & (1<<0))
-        zone_code |= (1<<1);  // zone 1: [-,49+2]
-      if (phzvl & (1<<1))
-        zone_code |= (1<<2);  // zone 2: [49-1,127+2]
+      //if (th <= (ph_zone_bnd1 + zone_overlap)) {
+      //  zone_code |= (1<<izone);
+      //}
+      //if (th >  (ph_zone_bnd2 - zone_overlap)) {
+      //  zone_code |= (1<<izone);
+      //}
+      if ((th > (ph_zone_bnd1 - zone_overlap)) && (th <= (ph_zone_bnd2 + zone_overlap))) {
+        zone_code |= (1<<izone);
+      }
     }
   }
   assert(zone_code > 0);
 
-  int zone_code_AWB = 0;
-  if (fw_station <= 1) {  // station 1
-    if (fw_cscid <= 2 || fw_cscid == 12) {  // ring 1
-      if (phzvl & (1<<0))
-        zone_code_AWB |= (1<<0);  // zone 0: [-,36+2]
-      if (phzvl & (1<<1))
-        zone_code_AWB |= (1<<1);  // zone 1: [36-1,127+2]
-
-    } else if (fw_cscid <= 5 || fw_cscid == 13) {  // ring 2
-      if (phzvl & (1<<0))
-        zone_code_AWB |= (1<<1);  // zone 1: [-,54+2]
-      if (phzvl & (1<<1))
-        zone_code_AWB |= (1<<2);  // zone 2: [54-1,127+2]
-
-    } else if (fw_cscid <= 8 || fw_cscid == 14) {  // ring 3
-      if (true)  // ME1/3 does not need phzvl
-        zone_code_AWB |= (1<<3);  // zone 3: [-,-]
+  // For backward compatibility, no longer needed
+  int phzvl = 0;
+  if (conv_hit.ring == 1 || conv_hit.ring == 4) {
+    phzvl = (zone_code >> 0);
+  } else if (conv_hit.ring == 2) {
+    if (conv_hit.station == 3 || conv_hit.station == 4) {
+      phzvl = (zone_code >> 1);
+    } else if (conv_hit.station == 1 || conv_hit.station == 2) {
+      phzvl = (zone_code >> 2);
     }
-
-  } else if (fw_station == 2) {  // station 2
-    if (fw_cscid <= 2 || fw_cscid == 9) {  // ring 1
-      if (phzvl & (1<<0))
-        zone_code_AWB |= (1<<0);  // zone 0: [-,36+2]
-      if (phzvl & (1<<1))
-        zone_code_AWB |= (1<<1);  // zone 1: [36-1,127+2]
-
-    } else if (fw_cscid <= 8 || fw_cscid == 10) {  // ring 2
-      if (phzvl & (1<<0))
-        zone_code_AWB |= (1<<1);  // zone 1: [-,54+2]
-      if (phzvl & (1<<1))
-        zone_code_AWB |= (1<<2);  // zone 2: [54-1,96+2]
-      if (phzvl & (1<<2))
-        zone_code_AWB |= (1<<3);  // zone 3: [96-1,127+2]
-    }
-
-  } else if (fw_station == 3) {  // station 3
-    if (fw_cscid <= 2 || fw_cscid == 9) {  // ring 1
-      if (phzvl & (1<<0))
-        zone_code_AWB |= (1<<0);  // zone 0: [-,36+2]
-      if (phzvl & (1<<1))
-        zone_code_AWB |= (1<<1);  // zone 1: [36-1,127+2]
-
-    } else if (fw_cscid <= 8 || fw_cscid == 10) {  // ring 2
-      if (phzvl & (1<<0))
-        zone_code_AWB |= (1<<1);  // zone 1: [-,54+2]
-      if (phzvl & (1<<1))
-        zone_code_AWB |= (1<<2);  // zone 2: [54-1,96+2]
-      if (phzvl & (1<<2))
-        zone_code_AWB |= (1<<3);  // zone 3: [96-1,127+2]
-    }
-
-  } else if (fw_station == 4) {  // station 4
-    if (fw_cscid <= 2 || fw_cscid == 9) {  // ring 1
-      if (phzvl & (1<<0))
-        zone_code_AWB |= (1<<0);  // zone 0: [-,127+2]
-
-    } else if (fw_cscid <= 8 || fw_cscid == 10) {  // ring 2
-      if (phzvl & (1<<0))
-        zone_code_AWB |= (1<<1);  // zone 1: [-,54+2]
-      if (phzvl & (1<<1))
-        zone_code_AWB |= (1<<2);  // zone 2: [54-1,127+2]
-    }
+  } else if (conv_hit.ring == 3) {
+    phzvl = (zone_code >> 3);
   }
-  assert(zone_code_AWB > 0);
-
-  if (new_zones_AWB)
-    zone_code = zone_code_AWB;
 
   // ___________________________________________________________________________
   // For later use in primitive matching
@@ -557,6 +439,7 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
   int fs_history = 0;                     // history id: not set here, to be set in primitive matching
   int fs_chamber = -1;                    // chamber id
   int fs_segment = conv_hit.pc_segment%2; // segment id
+  int fs_zone_code = zone_code_func(conv_hit.station, conv_hit.ring, useNewZones_);
 
   // For ME1
   //   j = 0 is neighbor sector chamber
@@ -575,22 +458,6 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
 
   assert(fs_history >= 0 && fs_chamber != -1 && fs_segment < 2);
   fs_segment = ((fs_history & 0x3)<<4) | ((fs_chamber & 0x7)<<1) | (fs_segment & 0x1);
-
-  int fs_zone_code = 0;
-
-  static const int fs_zone_code_table[4][4] = {  // map (station,ring) to fs_zone_code
-    {0b0011, 0b0100, 0b1000, 0b0011},  // st1 r1: [z0,z1], r2: [z2], r3: [z3], r4: [z0, z1]
-    {0b0011, 0b1100, 0b0000, 0b0000},  // st2 r1: [z0,z1], r2: [z2,z3]
-    {0b0001, 0b1110, 0b0000, 0b0000},  // st3 r1: [z0], r2: [z1,z2,z3]
-    {0b0001, 0b0110, 0b0000, 0b0000}   // st4 r1: [z0], r2: [z1,z2]
-  };
-
-  if (1) {
-    unsigned istation = conv_hit.station-1;
-    unsigned iring    = conv_hit.ring-1;
-    assert(istation < 4 && iring < 4);
-    fs_zone_code = fs_zone_code_table[istation][iring];
-  }
 
 
   // ___________________________________________________________________________

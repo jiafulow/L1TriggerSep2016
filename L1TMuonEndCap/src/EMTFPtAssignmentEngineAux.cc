@@ -460,100 +460,99 @@ int EMTFPtAssignmentEngineAux::getGMTQuality(int mode, int theta) const {
   return quality;
 }
 
-std::pair<int,int> EMTFPtAssignmentEngineAux::getGMTCharge(
-    int mode, const std::vector<uint16_t>& delta_ph, const std::vector<uint16_t>& sign_ph
-) const {
+std::pair<int,int> EMTFPtAssignmentEngineAux::getGMTCharge(int mode, const std::vector<int>& phidiffs) const {
   // -1 = postive physical charge to match pdgId code (i.e. -13 is positive, anti-muon). +1 = negative physical charge.
   // Also matches DN-2015/017 format for track finder --> uGMT interface format, where 0 indicates positive, 1 negative.
   int emuCharge = 0;
 
-  // Note: sign_ph[0] == 1 actually translates to phidiffs[0] >= 0 (instead of phidiffs[0] > 0 in the old code)
+  // Note: sign_ph[0] == 1 in firmware actually translates to phidiffs[0] >= 0 (instead of phidiffs[0] > 0 in the old emulator)
   // The effect needs to be checked
-  switch(mode) {
+
+  switch (mode) {
   case 15:  // 1-2-3-4
-    if (sign_ph[0] == 1)                          // 1-2
+    if (phidiffs[0] >= 0)                         // 1-2 (should use > 0)
       emuCharge = 1;
-    else if (delta_ph[0] == 0 && sign_ph[1] == 0) // 1-3
+    else if (phidiffs[0] == 0 && phidiffs[1] < 0) // 1-3
       emuCharge = 1;
-    else if (delta_ph[1] == 0 && sign_ph[2] == 0) // 1-4
+    else if (phidiffs[1] == 0 && phidiffs[2] < 0) // 1-4
       emuCharge = 1;
     else
       emuCharge = -1;
     break;
 
   case 14:  // 1-2-3
-    if (sign_ph[0] == 0)                          // 1-2
+    if (phidiffs[0] < 0)                          // 1-2
       emuCharge = -1;
-    else if (delta_ph[0] == 0 && sign_ph[1] == 0) // 1-3
+    else if (phidiffs[0] == 0 && phidiffs[1] < 0) // 1-3
       emuCharge = -1;
     else
       emuCharge = 1;
     break;
 
   case 13:  // 1-2-4
-    if (sign_ph[0] == 1)                          // 1-2
+    if (phidiffs[0] >= 0)                         // 1-2 (should use > 0)
       emuCharge = 1;
-    else if (delta_ph[0] == 0 && sign_ph[2] == 0) // 1-4
+    else if (phidiffs[0] == 0 && phidiffs[2] < 0) // 1-4
       emuCharge = 1;
     else
       emuCharge = -1;
     break;
 
   case 12:  // 1-2
-    if (sign_ph[0] == 1)                          // 1-2
+    if (phidiffs[0] >= 0)                         // 1-2
       emuCharge = 1;
     else
       emuCharge = -1;
     break;
 
   case 11:  // 1-3-4
-    if (sign_ph[1] == 1)                          // 1-3
+    if (phidiffs[1] >= 0)                         // 1-3 (should use > 0)
       emuCharge = 1;
-    else if (delta_ph[1] == 0 && sign_ph[2] == 0) // 1-4
+    else if (phidiffs[1] == 0 && phidiffs[2] < 0) // 1-4
       emuCharge = 1;
     else
       emuCharge = -1;
     break;
 
   case 10:  // 1-3
-    if (sign_ph[1] == 1)                          // 1-3
+    if (phidiffs[1] >= 0)                         // 1-3
       emuCharge = 1;
     else
       emuCharge = -1;
     break;
 
   case 9:   // 1-4
-    if (sign_ph[2] == 1)                          // 1-4
+    if (phidiffs[2] >= 0)                         // 1-4
       emuCharge = 1;
     else
       emuCharge = -1;
     break;
 
   case 7:   // 2-3-4
-    if (sign_ph[3] == 1)                          // 2-3
+    if (phidiffs[3] >= 0)                         // 2-3 (should use > 0)
       emuCharge = 1;
-    else if (delta_ph[3] == 0 && sign_ph[4] == 0) // 2-4
+    else if (phidiffs[3] == 0 && phidiffs[4] < 0) // 2-4
       emuCharge = 1;
     else
       emuCharge = -1;
     break;
 
   case 6:   // 2-3
-    if (sign_ph[3] == 1)                          // 2-3
+    if (phidiffs[3] >= 0)                         // 2-3
       emuCharge = 1;
     else
       emuCharge = -1;
     break;
 
   case 5:   // 2-4
-    if (sign_ph[4] == 1)                          // 2-4
+    if (phidiffs[4] >= 0)                         // 2-4
       emuCharge = 1;
     else
       emuCharge = -1;
     break;
 
   case 3:   // 3-4
-    if (sign_ph[5] == 1)                          // 3-4
+    if (phidiffs[5] >= 0)                         // 3-4
       emuCharge = 1;
     else
       emuCharge = -1;

@@ -137,7 +137,7 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
   }
 
   // Compose address
-  switch(mode_inv) {
+  switch (mode_inv) {
   case 3:   // 1-2
     if (fix9bDPhi_)  dPhi12 = std::min(511, dPhi12);
 
@@ -404,7 +404,7 @@ float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
 
   int theta     = 0;
 
-  switch(mode_inv) {
+  switch (mode_inv) {
   case 3:   // 1-2
     dPhi12    = (address >> (0))                    & ((1<<9)-1);
     sign12    = (address >> (0+9))                  & ((1<<1)-1);

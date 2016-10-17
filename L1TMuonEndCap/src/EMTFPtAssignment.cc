@@ -53,9 +53,12 @@ void EMTFPtAssignment::process(
 
     int gmt_quality = aux().getGMTQuality(track.mode, track.theta_int);
 
-    std::vector<uint16_t> delta_ph(&(track.ptlut_data.delta_ph[0]), &(track.ptlut_data.delta_ph[0]) + NUM_STATION_PAIRS);
-    std::vector<uint16_t> sign_ph(&(track.ptlut_data.sign_ph[0]), &(track.ptlut_data.sign_ph[0]) + NUM_STATION_PAIRS);
-    std::pair<int,int> gmt_charge = aux().getGMTCharge(track.mode, delta_ph, sign_ph);
+    std::vector<int> phidiffs;
+    for (int i = 0; i < NUM_STATION_PAIRS; ++i) {
+      int phidiff = (track.ptlut_data.sign_ph[i] == 1) ? track.ptlut_data.delta_ph[i] : -track.ptlut_data.delta_ph[i];
+      phidiffs.push_back(phidiff);
+    }
+    std::pair<int,int> gmt_charge = aux().getGMTCharge(track.mode, phidiffs);
 
     // _________________________________________________________________________
     // Output
