@@ -12,8 +12,7 @@ public:
       const EMTFSectorProcessorLUT* lut,
       int verbose, int endcap, int sector, int bx,
       int bxShiftCSC,
-      bool duplicateTheta, bool fixZonePhi,
-      const std::vector<int>& zoneBoundaries1, const std::vector<int>& zoneBoundaries2, int zoneOverlap
+      const std::vector<int>& zoneBoundaries, int zoneOverlap, bool duplicateTheta, bool fixZonePhi, bool useNewZones
   );
 
   template<typename T>
@@ -48,10 +47,9 @@ private:
 
   int bxShiftCSC_;
 
-  bool duplicateTheta_, fixZonePhi_;
-
-  std::vector<int> zoneBoundaries1_, zoneBoundaries2_;
+  std::vector<int> zoneBoundaries_;
   int zoneOverlap_;
+  bool duplicateTheta_, fixZonePhi_, useNewZones_;
 };
 
 #endif

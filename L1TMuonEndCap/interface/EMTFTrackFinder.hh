@@ -43,10 +43,6 @@ private:
   int verbose_;
 
   bool useCSC_, useRPC_;
-
-  int minBX_, maxBX_, bxWindow_, bxShiftCSC_;
-
-  int version_, ptlut_ver_;
 };
 
 #endif

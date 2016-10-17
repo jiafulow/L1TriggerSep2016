@@ -13,8 +13,8 @@ public:
   void configure(
       int verbose, int endcap, int sector, int bx,
       int bxWindow,
-      const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions,
-      int maxRoadsPerZone, bool useSecondEarliest, bool useSymPatterns
+      const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions, bool useSymPatterns,
+      int maxRoadsPerZone, bool useSecondEarliest
   );
 
   void configure_details();
@@ -52,8 +52,9 @@ private:
 
   int bxWindow_;
   std::vector<std::string> pattDefinitions_, symPattDefinitions_;
+  bool useSymPatterns_;
   int maxRoadsPerZone_;
-  bool useSecondEarliest_, useSymPatterns_;
+  bool useSecondEarliest_;
 
   std::vector<EMTFPhiMemoryImage> patterns_;
 };

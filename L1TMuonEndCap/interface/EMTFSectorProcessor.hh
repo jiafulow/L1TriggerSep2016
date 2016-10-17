@@ -33,11 +33,9 @@ public:
       const EMTFPtAssignmentEngine* pt_assign_engine,
       int verbose, int endcap, int sector,
       int minBX, int maxBX, int bxWindow, int bxShiftCSC,
-      bool includeNeighbor, bool duplicateTheta, bool fixZonePhi,
-      const std::vector<int>& zoneBoundaries1, const std::vector<int>& zoneBoundaries2, int zoneOverlap,
-      const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions,
-      int maxRoadsPerZone, int thetaWindow, int maxTracks,
-      bool useSecondEarliest, bool useSymPatterns,
+      const std::vector<int>& zoneBoundaries, int zoneOverlap, bool includeNeighbor, bool duplicateTheta, bool fixZonePhi, bool useNewZones,
+      const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions, int thetaWindow, bool useSymPatterns,
+      int maxRoadsPerZone, int maxTracks, bool useSecondEarliest,
       bool readPtLUTFile, bool fixMode15HighPt, bool fix9bDPhi
   );
 
@@ -72,14 +70,21 @@ private:
 
   int minBX_, maxBX_, bxWindow_, bxShiftCSC_;
 
-  bool includeNeighbor_, duplicateTheta_, fixZonePhi_;
-
-  std::vector<int> zoneBoundaries1_, zoneBoundaries2_;
+  // For primitive conversion
+  std::vector<int> zoneBoundaries_;
   int zoneOverlap_;
-  std::vector<std::string> pattDefinitions_, symPattDefinitions_;
-  int maxRoadsPerZone_, thetaWindow_, maxTracks_;
-  bool useSecondEarliest_, useSymPatterns_;
+  bool includeNeighbor_, duplicateTheta_, fixZonePhi_, useNewZones_;
 
+  // For pattern recognition
+  std::vector<std::string> pattDefinitions_, symPattDefinitions_;
+  int thetaWindow_;
+  bool useSymPatterns_;
+
+  // For ghost cancellation
+  int maxRoadsPerZone_, maxTracks_;
+  bool useSecondEarliest_;
+
+  // For pt assignment
   bool readPtLUTFile_, fixMode15HighPt_, fix9bDPhi_;
 };
 

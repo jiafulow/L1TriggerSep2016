@@ -14,11 +14,9 @@ void EMTFSectorProcessor::configure(
     const EMTFPtAssignmentEngine* pt_assign_engine,
     int verbose, int endcap, int sector,
     int minBX, int maxBX, int bxWindow, int bxShiftCSC,
-    bool includeNeighbor, bool duplicateTheta, bool fixZonePhi,
-    const std::vector<int>& zoneBoundaries1, const std::vector<int>& zoneBoundaries2, int zoneOverlap,
-    const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions,
-    int maxRoadsPerZone, int thetaWindow, int maxTracks,
-    bool useSecondEarliest, bool useSymPatterns,
+    const std::vector<int>& zoneBoundaries, int zoneOverlap, bool includeNeighbor, bool duplicateTheta, bool fixZonePhi, bool useNewZones,
+    const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions, int thetaWindow, bool useSymPatterns,
+    int maxRoadsPerZone, int maxTracks, bool useSecondEarliest,
     bool readPtLUTFile, bool fixMode15HighPt, bool fix9bDPhi
 ) {
   assert(MIN_ENDCAP <= endcap && endcap <= MAX_ENDCAP);
@@ -40,24 +38,25 @@ void EMTFSectorProcessor::configure(
   bxWindow_    = bxWindow;
   bxShiftCSC_  = bxShiftCSC;
 
-  includeNeighbor_ = includeNeighbor;
-  duplicateTheta_  = duplicateTheta;
-  fixZonePhi_      = fixZonePhi;
-
-  zoneBoundaries1_    = zoneBoundaries1;
-  zoneBoundaries2_    = zoneBoundaries2;
+  zoneBoundaries_     = zoneBoundaries;
   zoneOverlap_        = zoneOverlap;
+  includeNeighbor_    = includeNeighbor;
+  duplicateTheta_     = duplicateTheta;
+  fixZonePhi_         = fixZonePhi;
+  useNewZones_        = useNewZones;
+
   pattDefinitions_    = pattDefinitions;
   symPattDefinitions_ = symPattDefinitions;
-  maxRoadsPerZone_    = maxRoadsPerZone;
   thetaWindow_        = thetaWindow;
-  maxTracks_          = maxTracks;
-  useSecondEarliest_  = useSecondEarliest;
   useSymPatterns_     = useSymPatterns;
 
-  readPtLUTFile_   = readPtLUTFile;
-  fixMode15HighPt_ = fixMode15HighPt;
-  fix9bDPhi_       = fix9bDPhi;
+  maxRoadsPerZone_    = maxRoadsPerZone;
+  maxTracks_          = maxTracks;
+  useSecondEarliest_  = useSecondEarliest;
+
+  readPtLUTFile_      = readPtLUTFile;
+  fixMode15HighPt_    = fixMode15HighPt;
+  fix9bDPhi_          = fix9bDPhi;
 }
 
 void EMTFSectorProcessor::process(
@@ -131,16 +130,15 @@ void EMTFSectorProcessor::process_single_bx(
       lut_,
       verbose_, endcap_, sector_, bx,
       bxShiftCSC_,
-      duplicateTheta_, fixZonePhi_,
-      zoneBoundaries1_, zoneBoundaries2_, zoneOverlap_
+      zoneBoundaries_, zoneOverlap_, duplicateTheta_, fixZonePhi_, useNewZones_
   );
 
   EMTFPatternRecognition patt_recog;
   patt_recog.configure(
       verbose_, endcap_, sector_, bx,
       bxWindow_,
-      pattDefinitions_, symPattDefinitions_,
-      maxRoadsPerZone_, useSecondEarliest_, useSymPatterns_
+      pattDefinitions_, symPattDefinitions_, useSymPatterns_,
+      maxRoadsPerZone_, useSecondEarliest_
   );
 
   EMTFPrimitiveMatching prim_match;

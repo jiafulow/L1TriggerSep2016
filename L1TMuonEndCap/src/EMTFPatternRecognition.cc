@@ -12,8 +12,8 @@ namespace {
 void EMTFPatternRecognition::configure(
     int verbose, int endcap, int sector, int bx,
     int bxWindow,
-    const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions,
-    int maxRoadsPerZone, bool useSecondEarliest, bool useSymPatterns
+    const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions, bool useSymPatterns,
+    int maxRoadsPerZone, bool useSecondEarliest
 ) {
   verbose_ = verbose;
   endcap_  = endcap;
@@ -23,9 +23,9 @@ void EMTFPatternRecognition::configure(
   bxWindow_           = bxWindow;
   pattDefinitions_    = pattDefinitions;
   symPattDefinitions_ = symPattDefinitions;
+  useSymPatterns_     = useSymPatterns;
   maxRoadsPerZone_    = maxRoadsPerZone;
   useSecondEarliest_  = useSecondEarliest;
-  useSymPatterns_     = useSymPatterns;
 
   configure_details();
 }

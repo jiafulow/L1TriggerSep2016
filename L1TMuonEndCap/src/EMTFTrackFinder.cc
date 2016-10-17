@@ -13,38 +13,38 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
     config_(iConfig),
     tokenCSC_(iConsumes.consumes<CSCCorrelatedLCTDigiCollection>(iConfig.getParameter<edm::InputTag>("CSCInput"))),
     tokenRPC_(iConsumes.consumes<RPCDigiCollection>(iConfig.getParameter<edm::InputTag>("RPCInput"))),
-    verbose_(iConfig.getUntrackedParameter<int>("verbosity"))
+    verbose_(iConfig.getUntrackedParameter<int>("verbosity")),
+    useCSC_(iConfig.getParameter<bool>("CSCEnable")),
+    useRPC_(iConfig.getParameter<bool>("RPCEnable"))
 {
-  useCSC_      = iConfig.getParameter<bool>("CSCEnable");
-  useRPC_      = iConfig.getParameter<bool>("RPCEnable");
+  auto minBX       = iConfig.getParameter<int>("MinBX");
+  auto maxBX       = iConfig.getParameter<int>("MaxBX");
+  auto bxWindow    = iConfig.getParameter<int>("BXWindow");
+  auto bxShiftCSC  = iConfig.getParameter<int>("CSCInputBXShift");
+  auto version     = iConfig.getParameter<int>("Version");        // not yet used
+  auto ptlut_ver   = iConfig.getParameter<int>("PtLUTVersion");   // not yet used
 
-  minBX_       = iConfig.getParameter<int>("MinBX");
-  maxBX_       = iConfig.getParameter<int>("MaxBX");
-  bxWindow_    = iConfig.getParameter<int>("BXWindow");
-  bxShiftCSC_  = iConfig.getParameter<int>("CSCInputBXShift");
-
-  version_     = iConfig.getParameter<int>("Version");
-  ptlut_ver_   = iConfig.getParameter<int>("PtLUTVersion");
-
-  const edm::ParameterSet spPCParams16 = config_.getParameter<edm::ParameterSet>("spPCParams16");
+  const auto& spPCParams16 = config_.getParameter<edm::ParameterSet>("spPCParams16");
+  auto zoneBoundaries     = spPCParams16.getParameter<std::vector<int> >("ZoneBoundaries");
+  auto zoneOverlap        = spPCParams16.getParameter<int>("ZoneOverlap");
   auto phThLUT            = spPCParams16.getParameter<std::string>("PhThLUT");
   auto includeNeighbor    = spPCParams16.getParameter<bool>("IncludeNeighbor");
   auto duplicateTheta     = spPCParams16.getParameter<bool>("DuplicateTheta");
   auto fixZonePhi         = spPCParams16.getParameter<bool>("FixZonePhi");
+  auto useNewZones        = spPCParams16.getParameter<bool>("UseNewZones");
 
-  const edm::ParameterSet spPRParams16 = config_.getParameter<edm::ParameterSet>("spPRParams16");
-  auto zoneBoundaries1    = spPRParams16.getParameter<std::vector<int> >("ZoneBoundaries1");
-  auto zoneBoundaries2    = spPRParams16.getParameter<std::vector<int> >("ZoneBoundaries2");
-  auto zoneOverlap        = spPRParams16.getParameter<int>("ZoneOverlap");
+  const auto& spPRParams16 = config_.getParameter<edm::ParameterSet>("spPRParams16");
   auto pattDefinitions    = spPRParams16.getParameter<std::vector<std::string> >("PatternDefinitions");
   auto symPattDefinitions = spPRParams16.getParameter<std::vector<std::string> >("SymPatternDefinitions");
-  auto maxRoadsPerZone    = spPRParams16.getParameter<int>("MaxRoadsPerZone");
   auto thetaWindow        = spPRParams16.getParameter<int>("ThetaWindow");
-  auto maxTracks          = spPRParams16.getParameter<int>("MaxTracks");
-  auto useSecondEarliest  = spPRParams16.getParameter<bool>("UseSecondEarliest");
   auto useSymPatterns     = spPRParams16.getParameter<bool>("UseSymmetricalPatterns");
 
-  const edm::ParameterSet spPAParams16 = config_.getParameter<edm::ParameterSet>("spPAParams16");
+  const auto& spGCParams16 = config_.getParameter<edm::ParameterSet>("spGCParams16");
+  auto maxRoadsPerZone    = spGCParams16.getParameter<int>("MaxRoadsPerZone");
+  auto maxTracks          = spGCParams16.getParameter<int>("MaxTracks");
+  auto useSecondEarliest  = spGCParams16.getParameter<bool>("UseSecondEarliest");
+
+  const auto& spPAParams16 = config_.getParameter<edm::ParameterSet>("spPAParams16");
   auto bdtXMLDir          = spPAParams16.getParameter<std::string>("BDTXMLDir");
   auto readPtLUTFile      = spPAParams16.getParameter<bool>("ReadPtLUTFile");
   auto fixMode15HighPt    = spPAParams16.getParameter<bool>("FixMode15HighPt");
@@ -68,12 +68,10 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
             &sector_processor_lut_,
             &pt_assign_engine_,
             verbose_, endcap, sector,
-            minBX_, maxBX_, bxWindow_, bxShiftCSC_,
-            includeNeighbor, duplicateTheta, fixZonePhi,
-            zoneBoundaries1, zoneBoundaries2, zoneOverlap,
-            pattDefinitions, symPattDefinitions,
-            maxRoadsPerZone, thetaWindow, maxTracks,
-            useSecondEarliest, useSymPatterns,
+            minBX, maxBX, bxWindow, bxShiftCSC,
+            zoneBoundaries, zoneOverlap, includeNeighbor, duplicateTheta, fixZonePhi, useNewZones,
+            pattDefinitions, symPattDefinitions, thetaWindow, useSymPatterns,
+            maxRoadsPerZone, maxTracks, useSecondEarliest,
             readPtLUTFile, fixMode15HighPt, fix9bDPhi
         );
       }

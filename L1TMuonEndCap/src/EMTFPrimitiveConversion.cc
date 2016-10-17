@@ -14,8 +14,7 @@ void EMTFPrimitiveConversion::configure(
     const EMTFSectorProcessorLUT* lut,
     int verbose, int endcap, int sector, int bx,
     int bxShiftCSC,
-    bool duplicateTheta, bool fixZonePhi,
-    const std::vector<int>& zoneBoundaries1, const std::vector<int>& zoneBoundaries2, int zoneOverlap
+    const std::vector<int>& zoneBoundaries, int zoneOverlap, bool duplicateTheta, bool fixZonePhi, bool useNewZones
 ) {
   assert(lut != nullptr);
 
@@ -28,12 +27,11 @@ void EMTFPrimitiveConversion::configure(
 
   bxShiftCSC_      = bxShiftCSC;
 
+  zoneBoundaries_  = zoneBoundaries;
+  zoneOverlap_     = zoneOverlap;
   duplicateTheta_  = duplicateTheta;
   fixZonePhi_      = fixZonePhi;
-
-  zoneBoundaries1_ = zoneBoundaries1;  // not used, can be removed
-  zoneBoundaries2_ = zoneBoundaries2;
-  zoneOverlap_     = zoneOverlap;
+  useNewZones_     = useNewZones;
 }
 
 
