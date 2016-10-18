@@ -10,6 +10,9 @@ process.analyzer1 = cms.EDAnalyzer("MakeEMTFPtLUT",
     # Verbosity level
     verbosity = cms.untracked.int32(0),
 
+    # Versioning
+    PtLUTVersion = cms.int32(4),
+
     # Sector processor pt-assignment parameters
     spPAParams16 = cms.PSet(
         BDTXMLDir = cms.string('v_16_02_21'),

@@ -19,8 +19,11 @@ public:
 
   content_t lookup(const address_t& address) const;
 
+  content_t get_version() const { return version_; }
+
 private:
-  table_t ptlut_;
+  mutable table_t ptlut_;
+  content_t version_;
   bool ok_;
 };
 

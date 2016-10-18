@@ -19,8 +19,13 @@ public:
 
   void push_back(const content_t& pt);
 
+  void set_version(content_t ver) { version_ = ver; }
+
+  content_t get_version() const { return version_; }
+
 private:
-  table_t ptlut_;
+  mutable table_t ptlut_;
+  content_t version_;
   bool ok_;
 };
 

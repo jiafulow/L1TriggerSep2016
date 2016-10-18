@@ -8,6 +8,7 @@
 
 EMTFPtLUTWriter::EMTFPtLUTWriter() :
     ptlut_(),
+    version_(4),
     ok_(false)
 {
   ptlut_.reserve(PTLUT_SIZE);
@@ -28,6 +29,14 @@ void EMTFPtLUTWriter::write(const std::string& lut_full_path) const {
     snprintf(what, sizeof(what), "Fail to open %s", lut_full_path.c_str());
     throw std::invalid_argument(what);
   }
+
+  if (ptlut_.size() != PTLUT_SIZE) {
+    char what[256];
+    snprintf(what, sizeof(what), "ptlut_.size() is %lu != %i", ptlut_.size(), PTLUT_SIZE);
+    throw std::invalid_argument(what);
+  }
+
+  ptlut_.at(0) = version_;  // address 0 is the pT LUT version number
 
   typedef uint64_t full_word_t;
   full_word_t full_word;
