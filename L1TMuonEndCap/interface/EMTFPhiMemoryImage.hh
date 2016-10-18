@@ -38,10 +38,10 @@ public:
   int get_straightness() const { return _straightness; }
 
   // Left rotation by n bits
-  void rotl(const value_type n);
+  void rotl(unsigned int n);
 
   // Right rotation by n bits
-  void rotr(const value_type n);
+  void rotr(unsigned int n);
 
   // Kind of like AND operator
   // It returns a layer code which encodes

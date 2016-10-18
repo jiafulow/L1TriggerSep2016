@@ -91,7 +91,7 @@ class TestEvent1687278667(unittest.TestCase):
     tracks = self.analyzer.handles["tracks"].product()
 
     track = tracks[0]
-    self.assertEqual(track.rank         , 0xb)
+    self.assertEqual(track.rank         , 0x0f)
     self.assertEqual(track.ptlut_address, 952114599)
     self.assertEqual(track.gmt_pt       , 6)
     self.assertEqual(track.mode         , 7)

@@ -5,11 +5,14 @@
 namespace {
   static const int bw_fph = 13;  // bit width of ph, full precision
   static const int bw_th = 7;    // bit width of th
+  static const int invalid_dtheta = (1<<bw_th) - 1;  // = 127
+  static const int invalid_dphi = (1<<bw_fph) - 1;   // = 8191
 }
 
 
 void EMTFAngleCalculation::configure(
     int verbose, int endcap, int sector, int bx,
+    int bxWindow,
     int thetaWindow
 ) {
   verbose_ = verbose;
@@ -17,7 +20,8 @@ void EMTFAngleCalculation::configure(
   sector_  = sector;
   bx_      = bx;
 
-  thetaWindow_ = thetaWindow;
+  bxWindow_           = bxWindow;
+  thetaWindow_        = thetaWindow;
 }
 
 void EMTFAngleCalculation::process(
@@ -42,6 +46,7 @@ void EMTFAngleCalculation::process(
     tracks_end = tracks.end();
 
     // Calculate bx
+    // (in the firmware, this happens during best track selection.)
     for (; tracks_it != tracks_end; ++tracks_it) {
       calculate_bx(*tracks_it);
     }
@@ -76,9 +81,6 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
     }
   }
   assert(st_conv_hits.size() == NUM_STATIONS);
-
-  const int invalid_dtheta = (1<<bw_th) - 1;  // = 127
-  const int invalid_dphi = (1<<bw_fph) - 1;   // = 8191
 
   // Best theta deltas and phi deltas
   // from 0 to 5: dtheta12, dtheta13, dtheta14, dtheta23, dtheta24, dtheta34
@@ -115,7 +117,7 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
       const EMTFHitExtraCollection& conv_hitsA = st_conv_hits.at(ist1);
       const EMTFHitExtraCollection& conv_hitsB = st_conv_hits.at(ist2);
 
-      for (const auto& conv_hitA : conv_hitsA) { // When would we have more than 1 hit per station? - AWB 03.10.16
+      for (const auto& conv_hitA : conv_hitsA) { // More than 1 hit per station when hit has ambigous theta
         for (const auto& conv_hitB : conv_hitsB) {
           // Calculate theta deltas
           int thA = conv_hitA.theta_fp;
@@ -162,7 +164,7 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
   int vmask2 = 0;
   int vmask3 = 0;
 
-  // vmask contains valid station mask = {ME4,ME3,ME2,ME1}
+  // vmask contains valid station mask = {ME4,ME3,ME2,ME1}. "0b" prefix for binary.
   if (best_dtheta_arr.at(0) <= thetaWindow_ && best_dtheta_valid_arr.at(0)) {
     vmask1 |= 0b0011;  // 12
   }
@@ -242,7 +244,7 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
   }
 
   // update rank taking into account available stations after theta deltas
-  // keep straightness as it was
+  // keep straightness as it was (perhaps it should be recalculated?)
   int rank = (track.xroad.quality_code << 1);  // output rank is one bit longer than input, to accomodate ME4 separately
   int rank2 = (
       (((rank >> 6)  & 1) << 6) |  // straightness
@@ -297,7 +299,7 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
 
     ptlut_data.ph[i]         = v.empty() ? 0 : v.front().phi_fp;          // Is "0" ambiguous for phi? - AWB 03.10.16
     ptlut_data.th[i]         = v.empty() ? 0 : v.front().theta_fp;
-    ptlut_data.bt_chamber[i] = v.empty() ? 0 : get_bt_chamber(v.front()); // What is this variable for? - AWB 03.10.16
+    ptlut_data.bt_chamber[i] = v.empty() ? 0 : get_bt_chamber(v.front()); // Only used to check against FW simulator
   }
 
   // ___________________________________________________________________________
@@ -313,24 +315,21 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
 
 void EMTFAngleCalculation::calculate_bx(EMTFTrackExtra& track) const {
 
-  int delayBX = BX_WINDOW - 1;
-  assert(delayBX > 0);
-  int hbx[delayBX];
-  for (int i = delayBX; i >= 0; i--) 
-    hbx[i] = 0;
+  const int delayBX = bxWindow_ - 1;
+  assert(delayBX >= 0);
+  std::vector<int> counter(delayBX+1, 0);
 
   for (const auto& conv_hit : track.xhits) {
     for (int i = delayBX; i >= 0; i--) {
       if (conv_hit.bx <= bx_ - i)
-	hbx[i] += 1;  // Count stubs delayed by i BX or more
+        counter.at(i) += 1;  // Count stubs delayed by i BX or more
     }
   }
 
-  int first_bx = bx_ - delayBX; // Is this always true? - AWB 04.10.16
-
+  int first_bx = bx_ - delayBX;
   int second_bx = 99;
   for (int i = delayBX; i >= 0; i--) {
-    if (hbx[i] >= 2) { // If 2 or more stubs are delayed by i BX or more
+    if (counter.at(i) >= 2) { // If 2 or more stubs are delayed by i BX or more
       second_bx = bx_ - i; // if i == delayBX, analyze immediately
       break;
     }

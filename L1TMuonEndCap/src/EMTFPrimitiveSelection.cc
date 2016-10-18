@@ -5,7 +5,7 @@
 #include "DataFormats/MuonDetId/interface/RPCDetId.h"
 
 #define NUM_CSC_CHAMBERS 6*9  // 18 in ME1, 9 in ME2/3/4, 9 from neighbor sector
-#define NUM_RPC_CHAMBERS 6*9  // Is this correct? - AWB 28.09.16
+#define NUM_RPC_CHAMBERS 6*9  // not yet implemented
 
 using CSCData = TriggerPrimitive::CSCData;
 using RPCData = TriggerPrimitive::RPCData;
@@ -61,19 +61,19 @@ void EMTFPrimitiveSelection::process(
             (tmp_primitives.at(0).getWire() != tmp_primitives.at(1).getWire())
         ) {
           // Swap wire numbers
-          TriggerPrimitive tp0 = tmp_primitives.at(0);  // clone
-          TriggerPrimitive tp1 = tmp_primitives.at(1);  // clone
+          TriggerPrimitive tp0 = tmp_primitives.at(0);  // (s1,w1)
+          TriggerPrimitive tp1 = tmp_primitives.at(1);  // (s2,w2)
 
           TriggerPrimitive::CSCData tp0_data_tmp = tp0.getCSCData();
           TriggerPrimitive::CSCData tp0_data     = tp0.getCSCData();
           TriggerPrimitive::CSCData tp1_data     = tp1.getCSCData();
           tp0_data.keywire = tp1_data.keywire;
           tp1_data.keywire = tp0_data_tmp.keywire;
-          tp0.setCSCData(tp0_data);
-          tp1.setCSCData(tp1_data);
+          tp0.setCSCData(tp0_data);  // (s1,w2)
+          tp1.setCSCData(tp1_data);  // (s2,w1)
 
-          tmp_primitives.insert(tmp_primitives.begin()+1, tp1);
-          tmp_primitives.insert(tmp_primitives.begin()+2, tp0);
+          tmp_primitives.insert(tmp_primitives.begin()+1, tp1);  // (s2,w1) at 2nd pos
+          tmp_primitives.insert(tmp_primitives.begin()+2, tp0);  // (s1,w2) at 3rd pos
         }
       }  // end if tmp_primitives.size() == 2
     }  // end loop over selected_csc_map
@@ -123,6 +123,8 @@ int EMTFPrimitiveSelection::select_csc(const TriggerPrimitive& muon_primitive) c
 
     assert(MIN_ENDCAP <= tp_endcap && tp_endcap <= MAX_ENDCAP);
     assert(MIN_TRIGSECTOR <= tp_sector && tp_sector <= MAX_TRIGSECTOR);
+    assert(1 <= tp_station && tp_station <= 4);
+    assert(1 <= tp_csc_ID && tp_csc_ID <= 9);
 
     if (is_in_bx_csc(tp_bx)) {
       if (is_in_sector_csc(tp_endcap, tp_sector)) {
@@ -152,7 +154,7 @@ bool EMTFPrimitiveSelection::is_in_neighbor_sector_csc(
   if (includeNeighbor_) {
     if ((endcap_ == tp_endcap) && (get_neighbor(sector_) == tp_sector)) {
       if (tp_station == 1) {
-        if ((tp_subsector == 2) && (tp_csc_ID == 3 || tp_csc_ID == 6 || tp_csc_ID == 9 || tp_csc_ID == 12))
+        if ((tp_subsector == 2) && (tp_csc_ID == 3 || tp_csc_ID == 6 || tp_csc_ID == 9))
           return true;
 
       } else {
@@ -169,26 +171,22 @@ bool EMTFPrimitiveSelection::is_in_bx_csc(int tp_bx) const {
   return (bx_ == tp_bx);
 }
 
-// Returns "roughly" the "input link". But what does this mean? And why does it matter? - AWB 28.09.16
+// Returns "roughly" the "input link".  Index used by FW for unique chamber identification.
 int EMTFPrimitiveSelection::get_index_csc(int tp_subsector, int tp_station, int tp_csc_ID, bool is_neighbor) const {
   int selected = -1;
 
   if (!is_neighbor) {
-    if (tp_station == 1 && tp_csc_ID > 9) { // ME1/1a (using CSC_ID > 9 convention? - AWB 28.09.16)
-      selected = (tp_subsector - 1) * 9 + (tp_csc_ID - 9) - 1; // 0 - 2, 9 - 11
-    } else if (tp_station == 1) {           // ME1/1b, ME1/2, ME1/3
-      selected = (tp_subsector - 1) * 9 + tp_csc_ID - 1;       // 0 - 8, 9 - 17
-    } else {                                // ME2, ME3, ME4
-      selected = (tp_station) * 9 + tp_csc_ID - 1; // 18 - 26, 27 - 35, 36 - 44 
+    if (tp_station == 1) {  // ME1: 0 - 8, 9 - 17
+      selected = (tp_subsector-1) * 9 + (tp_csc_ID-1);
+    } else {            // ME2,3,4: 18 - 26, 27 - 35, 36 - 44
+      selected = (tp_station) * 9 + (tp_csc_ID-1);
     }
 
   } else {
-    if (tp_station == 1 && tp_csc_ID > 9) { // ME1/1a (using CSC_ID > 9 convention? - AWB 28.09.16)
-      selected = (5) * 9 + ((tp_csc_ID - 9) / 3) - 1; // 45
-    } else if (tp_station == 1) {           // ME1/1b, ME1/2, ME1/3
-      selected = (5) * 9 + (tp_csc_ID / 3) - 1;       // 45 - 47
-    } else {                                // ME2, ME3, ME4
-      selected = (5) * 9 + (tp_station) * 2 + (tp_csc_ID == 3 ? 0 : 1) - 1; // 48 - 53
+    if (tp_station == 1) {  // ME1: 45 - 47
+      selected = (5) * 9 + (tp_csc_ID-1)/3;
+    } else {            // ME2,3,4: 48 - 53
+      selected = (5) * 9 + (tp_station) * 2 - 1 + (tp_csc_ID-1 < 3 ? 0 : 1);
     }
   }
 

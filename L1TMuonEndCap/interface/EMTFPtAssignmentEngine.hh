@@ -3,14 +3,15 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <cmath>
 #include <string>
 #include <vector>
 #include <array>
 
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/bdt/Forest.h"
-
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFCommon.hh"
+#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPtAssignmentEngineAux.hh"
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPtLUTReader.hh"
+#include "L1TriggerSep2016/L1TMuonEndCap/interface/bdt/Forest.h"
 
 
 class EMTFPtAssignmentEngine {
@@ -28,6 +29,8 @@ public:
   );
 
   void configure_details();
+
+  const EMTFPtAssignmentEngineAux& aux() const;
 
   address_t calculate_address(const EMTFTrackExtra& track) const;
 

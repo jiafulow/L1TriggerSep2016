@@ -142,7 +142,16 @@ uint32_t EMTFSectorProcessorLUT::get_th_disp(int fw_endcap, int fw_sector, int p
 }
 
 uint32_t EMTFSectorProcessorLUT::get_th_lut(int fw_endcap, int fw_sector, int pc_lut_id, int pc_wire_id) const {
-  size_t index = ((fw_endcap * 6 + fw_sector) * 61 + pc_lut_id) * 128 + pc_wire_id;
+  int pc_lut_id2 = pc_lut_id;
+
+  // Make ME1/1a the same as ME1/1b
+  if ((9 <= pc_lut_id2 && pc_lut_id2 < 12) || (25 <= pc_lut_id2 && pc_lut_id2 < 28))
+    pc_lut_id2 -= 9;
+  // Make ME1/1a neighbor the same as ME1/1b
+  if (pc_lut_id2 == 15)
+    pc_lut_id2 -= 3;
+
+  size_t index = ((fw_endcap * 6 + fw_sector) * 61 + pc_lut_id2) * 128 + pc_wire_id;
   return th_lut_neighbor_.at(index);
 }
 

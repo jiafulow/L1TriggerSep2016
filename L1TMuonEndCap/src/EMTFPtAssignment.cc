@@ -1,7 +1,6 @@
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPtAssignment.hh"
 
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPtAssignmentEngine.hh"
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPtAssignmentHelper.hh"
 
 
 void EMTFPtAssignment::configure(
@@ -9,6 +8,8 @@ void EMTFPtAssignment::configure(
     int verbose, int endcap, int sector, int bx,
     bool readPtLUTFile, bool fixMode15HighPt, bool fix9bDPhi
 ) {
+  assert(pt_assign_engine != nullptr);
+
   //pt_assign_engine_ = pt_assign_engine;
   pt_assign_engine_ = const_cast<EMTFPtAssignmentEngine*>(pt_assign_engine);
 
@@ -28,35 +29,36 @@ void EMTFPtAssignment::process(
 ) {
   using address_t = EMTFPtAssignmentEngine::address_t;
 
-  const int ntracks = best_tracks.size();
+  EMTFTrackExtraCollection::iterator best_tracks_it  = best_tracks.begin();
+  EMTFTrackExtraCollection::iterator best_tracks_end = best_tracks.end();
 
-  for (int i = 0; i < ntracks; ++i) {
-    EMTFTrackExtra& track = best_tracks.at(i);  // pass by reference
+  for (; best_tracks_it != best_tracks_end; ++best_tracks_it) {
+    EMTFTrackExtra& track = *best_tracks_it;  // pass by reference
 
     address_t address = pt_assign_engine_->calculate_address(track);
     float     xmlpt   = pt_assign_engine_->calculate_pt(address);
     float     pt      = (xmlpt < 0.) ? 1. : xmlpt;  // Matt used fabs(-1) when mode is invalid
     pt *= 1.4;  // multiply by 1.4 to keep efficiency above 90% when the L1 trigger pT cut is applied
-
-    // compressed pt = pt*2 (scale) + 1 (pt = 0 is empty candidate)
-    int gmt_pt = (pt * 2) + 1;  // How is the rounding done here? Is it correct? - AWB 11.10.16
-    gmt_pt = (gmt_pt > 511) ? 511 : gmt_pt;
-
+    
+    int gmt_pt = aux().getGMTPt(pt);            // How is the rounding done here? Is it correct? - AWB 11.10.16
     pt = (gmt_pt <= 0) ?  0 : (gmt_pt-1) * 0.5; // Round to 0.5 GeV
-
-    int gmt_phi = getGMTPhi(track.phi_int);
-
-    int gmt_eta = getGMTEta(track.theta_int, endcap_); // From EMTFPtAssignmentHelper.hh. Does this bit-wise match the FW? - AWB 03.10.16
+    
+    int gmt_phi = aux().getGMTPhi(track.phi_int);
+    
+    int gmt_eta = aux().getGMTEta(track.theta_int, endcap_);  // From EMTFPtAssignmentHelper.hh. Does this bit-wise match the FW? - AWB 03.10.16
     bool use_ones_complem_gmt_eta = true;
     if (use_ones_complem_gmt_eta) { // Is this the proper thing to do? - AWB 04.10.16
       gmt_eta = (gmt_eta < 0) ? ~(-gmt_eta) : gmt_eta;
     }
 
-    int gmt_quality = getGMTQuality(track.mode, track.theta_int);
+    int gmt_quality = aux().getGMTQuality(track.mode, track.theta_int);
 
-    std::vector<uint16_t> delta_ph(&(track.ptlut_data.delta_ph[0]), &(track.ptlut_data.delta_ph[0]) + NUM_STATION_PAIRS);
-    std::vector<uint16_t> sign_ph(&(track.ptlut_data.sign_ph[0]), &(track.ptlut_data.sign_ph[0]) + NUM_STATION_PAIRS);
-    std::pair<int,int> gmt_charge = getGMTCharge(track.mode, delta_ph, sign_ph);
+    std::vector<int> phidiffs;
+    for (int i = 0; i < NUM_STATION_PAIRS; ++i) {
+      int phidiff = (track.ptlut_data.sign_ph[i] == 1) ? track.ptlut_data.delta_ph[i] : -track.ptlut_data.delta_ph[i];
+      phidiffs.push_back(phidiff);
+    }
+    std::pair<int,int> gmt_charge = aux().getGMTCharge(track.mode, phidiffs);
 
     // _________________________________________________________________________
     // Output
@@ -81,5 +83,8 @@ void EMTFPtAssignment::process(
           << std::endl;
     }
   }
+}
 
+const EMTFPtAssignmentEngineAux& EMTFPtAssignment::aux() const {
+  return pt_assign_engine_->aux();
 }

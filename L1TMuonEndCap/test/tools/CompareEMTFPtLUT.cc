@@ -82,32 +82,59 @@ void CompareEMTFPtLUT::compareLUTs() {
     histograms[mode_inv] = new TH1F(Form("diff_mode_inv_%i", mode_inv), "", 2*diff_limit+1, -1.0*diff_limit-0.5, 1.0*diff_limit+0.5);
   }
 
+  for (int ivar=0; ivar<10; ++ivar) {
+    histograms[100+ivar] = new TH1F(Form("diff_subaddress_%i", ivar), "", 32+1, 0.-0.5, 32.+0.5);
+  }
+
   EMTFPtLUTReader::address_t address = 0;
-  //EMTFPtLUTReader::content_t pt_value1 = 0;
-  //EMTFPtLUTReader::content_t pt_value2 = 0;
 
   for (; address<PTLUT_SIZE; ++address) {
     show_progress_bar(address, PTLUT_SIZE);
 
     int mode_inv = (address >> (30-4)) & ((1<<4)-1);
 
-    int pt_value1 = ptlut_reader1_.lookup(address);
-    int pt_value2 = ptlut_reader2_.lookup(address);
+    int gmt_pt1 = ptlut_reader1_.lookup(address);
+    int gmt_pt2 = ptlut_reader2_.lookup(address);
 
-    int diff = pt_value2 - pt_value1;
+    int diff = gmt_pt2 - gmt_pt1;
     diff = std::min(std::max(-diff_limit, diff), diff_limit);
 
     //if (address % (1<<20) == 0)
-    //  std::cout << mode_inv << " " << address << " " << pt_value1 << " " << pt_value2 << " " << pt_value2 - pt_value1 << std::endl;
+    //  std::cout << mode_inv << " " << address << " " << print_subaddresses(address) << " " << gmt_pt1 << " " << gmt_pt2 << " " << gmt_pt2 - gmt_pt1 << std::endl;
 
-    if (std::abs(pt_value2 - pt_value1) > diff_limit)
-      std::cout << mode_inv << " " << address << " " << pt_value1 << " " << pt_value2 << " " << pt_value2 - pt_value1 << std::endl;
+    if (std::abs(gmt_pt2 - gmt_pt1) > diff_limit) {
+      std::cout << mode_inv << " " << address << " " << print_subaddresses(address) << " " << gmt_pt1 << " " << gmt_pt2 << " " << gmt_pt2 - gmt_pt1 << std::endl;
+
+      //if (mode_inv == 5) {  // debug
+      //  histograms[100+0]->Fill(get_subword(address,25,21));  // theta
+      //  histograms[100+1]->Fill(get_subword(address,20,20));  // FR3
+      //  histograms[100+2]->Fill(get_subword(address,19,19));  // FR1
+      //  histograms[100+3]->Fill(get_subword(address,18,18));  // CLCT3Sign
+      //  histograms[100+4]->Fill(get_subword(address,17,16));  // CLCT3
+      //  histograms[100+5]->Fill(get_subword(address,15,15));  // CLCT1Sign
+      //  histograms[100+6]->Fill(get_subword(address,14,13));  // CLCT1
+      //  histograms[100+7]->Fill(get_subword(address,12,10));  // dTheta13
+      //  histograms[100+8]->Fill(get_subword(address, 9, 9));  // sign13
+      //  histograms[100+9]->Fill(get_subword(address, 8, 0));  // dPhi13
+      //}
+
+      //if (mode_inv == 14) {  // debug
+      //  histograms[100+0]->Fill(get_subword(address,25,21));  // theta
+      //  histograms[100+1]->Fill(get_subword(address,20,20));  // CLCT2Sign
+      //  histograms[100+2]->Fill(get_subword(address,19,18));  // CLCT2
+      //  histograms[100+3]->Fill(get_subword(address,17,15));  // dTheta24
+      //  histograms[100+4]->Fill(get_subword(address,14,14));  // sign34
+      //  histograms[100+5]->Fill(get_subword(address,13,13));  // sign23
+      //  histograms[100+6]->Fill(get_subword(address,12, 7));  // dPhi34
+      //  histograms[100+7]->Fill(get_subword(address, 6, 0));  // dPhi23
+      //}
+    }
 
     histograms[mode_inv]->Fill(diff);
   }
 
-  for (int mode_inv=0; mode_inv<16; ++mode_inv) {
-    histograms[mode_inv]->Write();
+  for (const auto& kv : histograms) {
+    kv.second->Write();
   }
   f->Close();
 }

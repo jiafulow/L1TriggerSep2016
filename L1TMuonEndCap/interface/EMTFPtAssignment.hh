@@ -5,6 +5,7 @@
 
 
 class EMTFPtAssignmentEngine;
+class EMTFPtAssignmentEngineAux;
 
 class EMTFPtAssignment {
 public:
@@ -17,6 +18,8 @@ public:
   void process(
       EMTFTrackExtraCollection& best_tracks
   );
+
+  const EMTFPtAssignmentEngineAux& aux() const;
 
 private:
   EMTFPtAssignmentEngine* pt_assign_engine_;

@@ -12,13 +12,11 @@ EMTFSectorProcessor::~EMTFSectorProcessor() {
 void EMTFSectorProcessor::configure(
     const EMTFSectorProcessorLUT* lut,
     const EMTFPtAssignmentEngine* pt_assign_engine,
-    int verbose, int minBX, int maxBX,
-    int endcap, int sector,
-    bool includeNeighbor, bool duplicateTheta, bool fixZonePhi,
-    const std::vector<int>& zoneBoundaries1, const std::vector<int>& zoneBoundaries2, int zoneOverlap,
-    const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions,
-    int maxRoadsPerZone, int thetaWindow, int maxTracks,
-    bool useSecondEarliest, bool useSymPatterns,
+    int verbose, int endcap, int sector,
+    int minBX, int maxBX, int bxWindow, int bxShiftCSC,
+    const std::vector<int>& zoneBoundaries, int zoneOverlap, bool includeNeighbor, bool duplicateTheta, bool fixZonePhi, bool useNewZones,
+    const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions, int thetaWindow, bool useSymPatterns,
+    int maxRoadsPerZone, int maxTracks, bool useSecondEarliest,
     bool readPtLUTFile, bool fixMode15HighPt, bool fix9bDPhi
 ) {
   assert(MIN_ENDCAP <= endcap && endcap <= MAX_ENDCAP);
@@ -32,30 +30,33 @@ void EMTFSectorProcessor::configure(
   pt_assign_engine_ = pt_assign_engine;
 
   verbose_  = verbose;
-  minBX_    = minBX;
-  maxBX_    = maxBX;
-
   endcap_   = endcap;
   sector_   = sector;
 
-  includeNeighbor_ = includeNeighbor;
-  duplicateTheta_  = duplicateTheta;
-  fixZonePhi_      = fixZonePhi;
+  minBX_       = minBX;
+  maxBX_       = maxBX;
+  bxWindow_    = bxWindow;
+  bxShiftCSC_  = bxShiftCSC;
 
-  zoneBoundaries1_    = zoneBoundaries1;
-  zoneBoundaries2_    = zoneBoundaries2;
+  zoneBoundaries_     = zoneBoundaries;
   zoneOverlap_        = zoneOverlap;
+  includeNeighbor_    = includeNeighbor;
+  duplicateTheta_     = duplicateTheta;
+  fixZonePhi_         = fixZonePhi;
+  useNewZones_        = useNewZones;
+
   pattDefinitions_    = pattDefinitions;
   symPattDefinitions_ = symPattDefinitions;
-  maxRoadsPerZone_    = maxRoadsPerZone;
   thetaWindow_        = thetaWindow;
-  maxTracks_          = maxTracks;
-  useSecondEarliest_  = useSecondEarliest;
   useSymPatterns_     = useSymPatterns;
 
-  readPtLUTFile_   = readPtLUTFile;
-  fixMode15HighPt_ = fixMode15HighPt;
-  fix9bDPhi_       = fix9bDPhi;
+  maxRoadsPerZone_    = maxRoadsPerZone;
+  maxTracks_          = maxTracks;
+  useSecondEarliest_  = useSecondEarliest;
+
+  readPtLUTFile_      = readPtLUTFile;
+  fixMode15HighPt_    = fixMode15HighPt;
+  fix9bDPhi_          = fix9bDPhi;
 }
 
 void EMTFSectorProcessor::process(
@@ -75,7 +76,7 @@ void EMTFSectorProcessor::process(
   // Map of pattern detector --> lifetime, tracked across BXs
   std::map<pattern_ref_t, int> patt_lifetime_map;
 
-  int delayBX = BX_WINDOW - 1;  // = 2
+  int delayBX = bxWindow_ - 1;
 
   for (int bx = minBX_; bx <= maxBX_ + delayBX; ++bx) {
     if (verbose_ > 0) {  // debug
@@ -97,7 +98,7 @@ void EMTFSectorProcessor::process(
       extended_conv_hits.pop_front();
 
       int n = zone_array<int>().size();
-      extended_best_track_cands.erase(extended_best_track_cands.begin(), extended_best_track_cands.begin() + n);
+      extended_best_track_cands.erase(extended_best_track_cands.end()-n, extended_best_track_cands.end());  // pop_back
     }
   }  // end loop over bx
 
@@ -127,15 +128,15 @@ void EMTFSectorProcessor::process_single_bx(
   prim_conv.configure(
       lut_,
       verbose_, endcap_, sector_, bx,
-      duplicateTheta_, fixZonePhi_,
-      zoneBoundaries1_, zoneBoundaries2_, zoneOverlap_
+      bxShiftCSC_,
+      zoneBoundaries_, zoneOverlap_, duplicateTheta_, fixZonePhi_, useNewZones_
   );
 
   EMTFPatternRecognition patt_recog;
   patt_recog.configure(
-      verbose_, endcap_, sector_, bx,
-      pattDefinitions_, symPattDefinitions_,
-      maxRoadsPerZone_, useSecondEarliest_, useSymPatterns_
+      verbose_, endcap_, sector_, bx, bxWindow_,
+      pattDefinitions_, symPattDefinitions_, useSymPatterns_,
+      maxRoadsPerZone_, useSecondEarliest_
   );
 
   EMTFPrimitiveMatching prim_match;
@@ -146,13 +147,13 @@ void EMTFSectorProcessor::process_single_bx(
 
   EMTFAngleCalculation angle_calc;
   angle_calc.configure(
-      verbose_, endcap_, sector_, 
-      bx, thetaWindow_
+      verbose_, endcap_, sector_, bx,
+      bxWindow_, thetaWindow_
   );
 
   EMTFBestTrackSelection btrack_sel;
   btrack_sel.configure(
-      verbose_, endcap_, sector_, bx,
+      verbose_, endcap_, sector_, bx, bxWindow_,
       maxRoadsPerZone_, maxTracks_, useSecondEarliest_
   );
 
@@ -201,7 +202,7 @@ void EMTFSectorProcessor::process_single_bx(
   // Calculate deflection angles for each track and fill track variables
   // From src/EMTFAngleCalculation.cc
   angle_calc.process(zone_tracks);
-  extended_best_track_cands.insert(extended_best_track_cands.end(), zone_tracks.begin(), zone_tracks.end());
+  extended_best_track_cands.insert(extended_best_track_cands.begin(), zone_tracks.begin(), zone_tracks.end());  // push_front
 
   // Identify 3 best tracks
   // From src/EMTFBestTrackSelection.cc

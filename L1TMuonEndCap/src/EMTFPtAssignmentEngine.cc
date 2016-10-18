@@ -1,7 +1,5 @@
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPtAssignmentEngine.hh"
 
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPtAssignmentEngineHelper.hh"
-
 #include <cassert>
 #include <iostream>
 
@@ -60,6 +58,11 @@ void EMTFPtAssignmentEngine::configure_details() {
   }
 }
 
+const EMTFPtAssignmentEngineAux& EMTFPtAssignmentEngine::aux() const {
+  static const EMTFPtAssignmentEngineAux instance;
+  return instance;
+}
+
 EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(const EMTFTrackExtra& track) const {
   address_t address = 0;
 
@@ -99,14 +102,14 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
   int dTheta24Sign = ptlut_data.sign_th [4];
   int dTheta34Sign = ptlut_data.sign_th [5];
 
-  int CLCT1     = std::abs(getCLCT(ptlut_data.cpattern[0]));
-  int CLCT2     = std::abs(getCLCT(ptlut_data.cpattern[1]));
-  int CLCT3     = std::abs(getCLCT(ptlut_data.cpattern[2]));
-  int CLCT4     = std::abs(getCLCT(ptlut_data.cpattern[3]));
-  int CLCT1Sign = (getCLCT(ptlut_data.cpattern[0]) > 0);
-  int CLCT2Sign = (getCLCT(ptlut_data.cpattern[1]) > 0);
-  int CLCT3Sign = (getCLCT(ptlut_data.cpattern[2]) > 0);
-  int CLCT4Sign = (getCLCT(ptlut_data.cpattern[3]) > 0);
+  int CLCT1     = std::abs(aux().getCLCT(ptlut_data.cpattern[0]));
+  int CLCT2     = std::abs(aux().getCLCT(ptlut_data.cpattern[1]));
+  int CLCT3     = std::abs(aux().getCLCT(ptlut_data.cpattern[2]));
+  int CLCT4     = std::abs(aux().getCLCT(ptlut_data.cpattern[3]));
+  int CLCT1Sign = (aux().getCLCT(ptlut_data.cpattern[0]) > 0);
+  int CLCT2Sign = (aux().getCLCT(ptlut_data.cpattern[1]) > 0);
+  int CLCT3Sign = (aux().getCLCT(ptlut_data.cpattern[2]) > 0);
+  int CLCT4Sign = (aux().getCLCT(ptlut_data.cpattern[3]) > 0);
 
   int CSCID1    = ptlut_data.bt_chamber[0];
   int CSCID2    = ptlut_data.bt_chamber[1];
@@ -117,24 +120,24 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     return (sign == 1) ? (var * 1) : (var * -1);
   };
 
-  dTheta12 = getdTheta(get_signed_int(dTheta12, 1-dTheta12Sign));  // sign reversed
-  dTheta13 = getdTheta(get_signed_int(dTheta13, 1-dTheta13Sign));
-  dTheta14 = getdTheta(get_signed_int(dTheta14, 1-dTheta14Sign));
-  dTheta23 = getdTheta(get_signed_int(dTheta23, 1-dTheta23Sign));
-  dTheta24 = getdTheta(get_signed_int(dTheta24, 1-dTheta24Sign));
-  dTheta34 = getdTheta(get_signed_int(dTheta34, 1-dTheta34Sign));
+  dTheta12 = aux().getdTheta(get_signed_int(dTheta12, 1-dTheta12Sign));  // sign reversed
+  dTheta13 = aux().getdTheta(get_signed_int(dTheta13, 1-dTheta13Sign));
+  dTheta14 = aux().getdTheta(get_signed_int(dTheta14, 1-dTheta14Sign));
+  dTheta23 = aux().getdTheta(get_signed_int(dTheta23, 1-dTheta23Sign));
+  dTheta24 = aux().getdTheta(get_signed_int(dTheta24, 1-dTheta24Sign));
+  dTheta34 = aux().getdTheta(get_signed_int(dTheta34, 1-dTheta34Sign));
 
   bool use_FRLUT = true; // Why don't we use the FR bit assigned in ptlut_data? - AWB 03.10.16
   if (use_FRLUT) {
     int sector = track.sector;
-    FR1 = getFRLUT(sector, CSCID1/12, CSCID1%12);
-    FR2 = getFRLUT(sector, CSCID2/12, CSCID2%12);
-    FR3 = getFRLUT(sector, CSCID3/12, CSCID3%12);
-    FR4 = getFRLUT(sector, CSCID4/12, CSCID4%12);
+    FR1 = aux().getFRLUT(sector, CSCID1/12, CSCID1%12);
+    FR2 = aux().getFRLUT(sector, CSCID2/12, CSCID2%12);
+    FR3 = aux().getFRLUT(sector, CSCID3/12, CSCID3%12);
+    FR4 = aux().getFRLUT(sector, CSCID4/12, CSCID4%12);
   }
 
   // Can we automate the assigning of addresses?  Would decrease typos, speed future development. - AWB 03.10.16
-  switch(mode_inv) {
+  switch (mode_inv) {
   case 3:   // 1-2
     if (fix9bDPhi_)  dPhi12 = std::min(511, dPhi12);
 
@@ -232,8 +235,8 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     break;
 
   case 7:   // 1-2-3
-    dPhi12 = getNLBdPhiBin(dPhi12, 7, 512);
-    dPhi23 = getNLBdPhiBin(dPhi23, 5, 256);
+    dPhi12 = aux().getNLBdPhiBin(dPhi12, 7, 512);
+    dPhi23 = aux().getNLBdPhiBin(dPhi23, 5, 256);
 
     address |= (dPhi12      & ((1<<7)-1)) << (0);
     address |= (dPhi23      & ((1<<5)-1)) << (0+7);
@@ -248,8 +251,8 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     break;
 
   case 11:  // 1-2-4
-    dPhi12 = getNLBdPhiBin(dPhi12, 7, 512);
-    dPhi24 = getNLBdPhiBin(dPhi24, 5, 256);
+    dPhi12 = aux().getNLBdPhiBin(dPhi12, 7, 512);
+    dPhi24 = aux().getNLBdPhiBin(dPhi24, 5, 256);
 
     address |= (dPhi12      & ((1<<7)-1)) << (0);
     address |= (dPhi24      & ((1<<5)-1)) << (0+7);
@@ -264,8 +267,8 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     break;
 
   case 13:  // 1-3-4
-    dPhi13 = getNLBdPhiBin(dPhi13, 7, 512);
-    dPhi34 = getNLBdPhiBin(dPhi34, 5, 256);
+    dPhi13 = aux().getNLBdPhiBin(dPhi13, 7, 512);
+    dPhi34 = aux().getNLBdPhiBin(dPhi34, 5, 256);
 
     address |= (dPhi13      & ((1<<7)-1)) << (0);
     address |= (dPhi34      & ((1<<5)-1)) << (0+7);
@@ -280,8 +283,8 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     break;
 
   case 14:  // 2-3-4
-    dPhi23 = getNLBdPhiBin(dPhi23, 7, 512);
-    dPhi34 = getNLBdPhiBin(dPhi34, 6, 256);
+    dPhi23 = aux().getNLBdPhiBin(dPhi23, 7, 512);
+    dPhi34 = aux().getNLBdPhiBin(dPhi34, 6, 256);
 
     address |= (dPhi23      & ((1<<7)-1)) << (0);
     address |= (dPhi34      & ((1<<6)-1)) << (0+7);
@@ -295,20 +298,16 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     break;
 
   case 15:  // 1-2-3-4
-    // Calculate two signs based on three input signs
-    if (sign12==0 && sign23==0 && sign34==0) {
-      sign12=1; sign23=1; sign34=1;
-    } else if (sign12==0 && sign23==1 && sign34==1) {
-      sign12=1; sign23=0; sign34=0;
-    } else if (sign12==0 && sign23==0 && sign34==1) {
-      sign12=1; sign23=1; sign34=0;
-    } else if (sign12==0 && sign23==1 && sign34==0) {
-      sign12=1; sign23=0; sign34=1;
+    // Set sign23 and sign34 relative to sign12
+    if (!sign12) {
+      sign12 = !sign12;
+      sign23 = !sign23;
+      sign34 = !sign34;
     }
 
-    dPhi12 = getNLBdPhiBin(dPhi12, 7, 512);
-    dPhi23 = getNLBdPhiBin(dPhi23, 5, 256);
-    dPhi34 = getNLBdPhiBin(dPhi34, 6, 256);
+    dPhi12 = aux().getNLBdPhiBin(dPhi12, 7, 512);
+    dPhi23 = aux().getNLBdPhiBin(dPhi23, 5, 256);
+    dPhi34 = aux().getNLBdPhiBin(dPhi34, 6, 256);
 
     address |= (dPhi12      & ((1<<7)-1)) << (0);
     address |= (dPhi23      & ((1<<5)-1)) << (0+7);
@@ -340,12 +339,13 @@ float EMTFPtAssignmentEngine::calculate_pt(const address_t& address) {
 }
 
 float EMTFPtAssignmentEngine::calculate_pt_lut(const address_t& address) {
-  float pt = 0.;
+  // LUT outputs 'gmt_pt', so need to convert back to 'xmlpt'
+  int gmt_pt = ptlut_reader_.lookup(address);
+  float pt = aux().getPtFromGMTPt(gmt_pt);
+  float xmlpt = pt;
+  xmlpt /= 1.4;
 
-  int pt_value = ptlut_reader_.lookup(address);
-  pt = (pt_value-1) * 0.5;
-
-  return pt;
+  return xmlpt;
 }
 
 float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
@@ -356,7 +356,7 @@ float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
 
   int mode_inv = (address >> (30-4)) & ((1<<4)-1);
 
-  auto contain = [](const auto& vec, const auto& elem) {
+  auto contain = [](const std::vector<int>& vec, int elem) {
     return (std::find(vec.begin(), vec.end(), elem) != vec.end());
   };
 
@@ -404,7 +404,7 @@ float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
 
   int theta     = 0;
 
-  switch(mode_inv) {
+  switch (mode_inv) {
   case 3:   // 1-2
     dPhi12    = (address >> (0))                    & ((1<<9)-1);
     sign12    = (address >> (0+9))                  & ((1<<1)-1);
@@ -494,8 +494,8 @@ float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
     FR1       = (address >> (0+7+5+1+1+3+2+1))      & ((1<<1)-1);
     theta     = (address >> (0+7+5+1+1+3+2+1+1))    & ((1<<5)-1);
 
-    dPhi12 = getdPhiFromBin(dPhi12, 7, 512);
-    dPhi23 = getdPhiFromBin(dPhi23, 5, 256);
+    dPhi12 = aux().getdPhiFromBin(dPhi12, 7, 512);
+    dPhi23 = aux().getdPhiFromBin(dPhi23, 5, 256);
     break;
 
   case 11:  // 1-2-4
@@ -509,8 +509,8 @@ float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
     FR1       = (address >> (0+7+5+1+1+3+2+1))      & ((1<<1)-1);
     theta     = (address >> (0+7+5+1+1+3+2+1+1))    & ((1<<5)-1);
 
-    dPhi12 = getdPhiFromBin(dPhi12, 7, 512);
-    dPhi24 = getdPhiFromBin(dPhi24, 5, 256);
+    dPhi12 = aux().getdPhiFromBin(dPhi12, 7, 512);
+    dPhi24 = aux().getdPhiFromBin(dPhi24, 5, 256);
     break;
 
   case 13:  // 1-3-4
@@ -524,8 +524,8 @@ float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
     FR1       = (address >> (0+7+5+1+1+3+2+1))      & ((1<<1)-1);
     theta     = (address >> (0+7+5+1+1+3+2+1+1))    & ((1<<5)-1);
 
-    dPhi13 = getdPhiFromBin(dPhi13, 7, 512);
-    dPhi34 = getdPhiFromBin(dPhi34, 5, 256);
+    dPhi13 = aux().getdPhiFromBin(dPhi13, 7, 512);
+    dPhi34 = aux().getdPhiFromBin(dPhi34, 5, 256);
     break;
 
   case 14:  // 2-3-4
@@ -538,8 +538,8 @@ float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
     CLCT2Sign = (address >> (0+7+6+1+1+3+2))        & ((1<<1)-1);
     theta     = (address >> (0+7+6+1+1+3+2+1))      & ((1<<5)-1);
 
-    dPhi23 = getdPhiFromBin(dPhi23, 7, 512);
-    dPhi34 = getdPhiFromBin(dPhi34, 6, 256);
+    dPhi23 = aux().getdPhiFromBin(dPhi23, 7, 512);
+    dPhi34 = aux().getdPhiFromBin(dPhi34, 6, 256);
     break;
 
   case 15:  // 1-2-3-4
@@ -551,9 +551,9 @@ float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
     FR1       = (address >> (0+7+5+6+1+1))          & ((1<<1)-1);
     theta     = (address >> (0+7+5+6+1+1+1))        & ((1<<5)-1);
 
-    dPhi12 = getdPhiFromBin(dPhi12, 7, 512);
-    dPhi23 = getdPhiFromBin(dPhi23, 5, 256);
-    dPhi34 = getdPhiFromBin(dPhi34, 6, 256);
+    dPhi12 = aux().getdPhiFromBin(dPhi12, 7, 512);
+    dPhi23 = aux().getdPhiFromBin(dPhi23, 5, 256);
+    dPhi34 = aux().getdPhiFromBin(dPhi34, 6, 256);
     break;
 
   default:
@@ -578,13 +578,13 @@ float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
   CLCT4  = get_signed_int(CLCT4, CLCT4Sign);
 
   theta <<= 2;
-  float eta = getEtaFromThetaInt(theta, 5);
+  float eta = aux().getEtaFromThetaInt(theta, 5);
 
   bool use_lossy_eta = true;
   if (use_lossy_eta) {
-    int etaInt = getEtaInt(eta, 5);
+    int etaInt = aux().getEtaInt(eta, 5);
     etaInt &= ((1<<5)-1);
-    eta = getEtaFromBin(etaInt, 5);
+    eta = aux().getEtaFromEtaInt(etaInt, 5);
   }
 
 
@@ -642,7 +642,16 @@ float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
         }
       }
 
-      // Now set RELATIVE sign bits
+      // Set sign23 and sign34 relative to sign12
+      //sign12 = (dPhi12 >= 0);
+      //sign23 = (dPhi23 >= 0);
+      //sign34 = (dPhi34 >= 0);
+      //if (!sign12) {
+      //  sign12 = !sign12;
+      //  sign23 = !sign23;
+      //  sign34 = !sign34;
+      //}
+
       sign12 = 1;
       if (dPhi12 > 0) {
         sign23 = (dPhi23 > 0) ? 1 : 0;
@@ -651,12 +660,13 @@ float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
         sign23 = (dPhi23 < 0) ? 1 : 0;
         sign34 = (dPhi34 < 0) ? 1 : 0;
       }
+
       dPhi12 = get_signed_int(abs(dPhi12), sign12);
       dPhi23 = get_signed_int(abs(dPhi23), sign23);
       dPhi34 = get_signed_int(abs(dPhi34), sign34);
 
     }  // end if mode_inv == 15
-  }  // end if fixMode15HighPt_
+  }
 
   // Inherit some bugs
   bool reproduceBug1 = true;
@@ -667,20 +677,21 @@ float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
 
       //CLCT2     = (address >> (0+7+6+1+1+3))          & ((1<<2)-1);
       //address |= (CLCT2       & ((1<<2)-1)) << (0+7+6+1+1+3);
+
       bugged_CLCT2    = (address >> (0+7+5+1+1+3))          & ((1<<2)-1);  // bad
       bugged_address  = address & ~(((1<<2)-1) << (0+7+6+1+1+3));  // clear bits
       bugged_address |= (bugged_CLCT2 & ((1<<2)-1)) << (0+7+6+1+1+3);
-      bugged_CLCT2    = (address >> (0+7+5+1+1+3))          & ((1<<2)-1);  // bad
+      bugged_CLCT2    = (bugged_address >> (0+7+5+1+1+3))   & ((1<<2)-1);  // bad
 
       CLCT2  = bugged_CLCT2;
       CLCT2  = get_signed_int(CLCT2, CLCT2Sign);
 
     }  // end if mode_inv == 14
-  }  // end if reproduceBug
+  }
 
 
   // Get pT from XML (forest)
-  const int (*mode_variables)[6] = ModeVariables_Scheme3;
+  const int (*mode_variables)[6] = aux().getModeVariables();
 
   const int variables[24] = {
     dPhi12, dPhi13, dPhi14, dPhi23, dPhi24, dPhi34, dTheta12, dTheta13, dTheta14, dTheta23, dTheta24, dTheta34,
@@ -699,6 +710,8 @@ float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
         assert(v != -999);
       }
       tree_data.push_back(v);
+    } else {
+      tree_data.push_back(0);  // pad with zeroes, somehow BDT tries to access out of bounds
     }
   }
 
@@ -710,6 +723,7 @@ float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
   }
 
   auto tree_event = std::make_unique<Event>();
+  tree_event->predictedValue = 0;  // must explicitly initialize
   tree_event->data = tree_data;
 
   forests_.at(mode_inv).predictEvent(tree_event.get(), 64);

@@ -5,7 +5,7 @@
 namespace {
   static const int bw_fph = 13;  // bit width of ph, full precision
   static const int bpow = 7;     // (1 << bpow) is count of input ranks
-  static const int invalid_ph_diff = 0x1ff;  // 512 (9-bit)
+  static const int invalid_ph_diff = 0x1ff;  // 511 (9-bit)
 }
 
 
@@ -63,7 +63,7 @@ void EMTFPrimitiveMatching::process(
       int istation = conv_hits_it->station-1;
       int zone_code = conv_hits_it->zone_code;  // decide based on original zone code
       if (use_fs_zone_code)
-        zone_code = get_fs_zone_code(*conv_hits_it);  // decide based on new zone code
+        zone_code = conv_hits_it->fs_zone_code;  // decide based on new zone code
 
       // A hit can go into multiple zones
       for (int izone = 0; izone < NUM_ZONES; ++izone) {
@@ -72,6 +72,10 @@ void EMTFPrimitiveMatching::process(
           if (zone_code & (1<<izone)) {
             const int zs = (izone*NUM_STATIONS) + istation;
             zs_conv_hits.at(zs).push_back(*conv_hits_it);
+
+            // Update fs_history encoded in fs_segment
+            int fs_history = bx_ - (conv_hits_it->bx);
+            zs_conv_hits.at(zs).back().fs_segment |= ((fs_history & 0x3)<<4);
           }
         }
       }
@@ -176,10 +180,9 @@ void EMTFPrimitiveMatching::process(
     for (const auto& tracks : zone_tracks) {
       for (const auto& track : tracks) {
         for (const auto& xhit : track.xhits) {
-          int fs_segment = get_fs_segment(xhit);
           std::cout << "match seg: z: " << track.xroad.zone << " pat: " << track.xroad.winner <<  " st: " << xhit.station
-              << " vi: " << to_binary(0b1, 2) << " hi: " << ((fs_segment>>4) & 0x3)
-              << " ci: " << ((fs_segment>>1) & 0x7) << " si: " << (fs_segment & 0x1)
+              << " vi: " << to_binary(0b1, 2) << " hi: " << ((xhit.fs_segment>>4) & 0x3)
+              << " ci: " << ((xhit.fs_segment>>1) & 0x7) << " si: " << (xhit.fs_segment & 0x1)
               << " ph: " << xhit.phi_fp << " th: " << xhit.theta_fp
               << std::endl;
         }
@@ -209,7 +212,7 @@ void EMTFPrimitiveMatching::process_single_zone_station(
     } else if (station == 2) {
       // max_ph_diff = 16;   // just rounding error for ME2 (pattern must match ME2 hit phi if there was one)
       // max_ph_diff = 32;   // allow neighbor phi bit
-      max_ph_diff = 240;  // same as stations 3 & 4
+      max_ph_diff = 240;  // same as ME3,4
       //bw_ph_diff = 5;
       //invalid_ph_diff = 0x1f;
     } else {
@@ -278,10 +281,7 @@ void EMTFPrimitiveMatching::sort_ph_diff(
     typedef hit_sort_pair_t value_type;
     bool operator()(const value_type& lhs, const value_type& rhs) const {
       //return lhs.first < rhs.first;
-
-      // The firmware inputs later BX (history id = 0) before earlier BX (history id = 1,2)
-      // This seems to make the firmware sorter preferably pick later BX, but not necessarily
-      return std::make_pair(lhs.first, -lhs.second->bx) < std::make_pair(rhs.first, -rhs.second->bx);
+      return std::make_pair(lhs.first, lhs.second->fs_segment) < std::make_pair(rhs.first, rhs.second->fs_segment);
     }
   } less_ph_diff_cmp;
 
@@ -322,67 +322,14 @@ void EMTFPrimitiveMatching::insert_hit(
     hit_ptr_t conv_hit_ptr,
     EMTFTrackExtra& track
 ) const {
+  // Sort by station
   struct {
     typedef EMTFHitExtra value_type;
     constexpr bool operator()(const value_type& lhs, const value_type& rhs) {
-      //return lhs.station < rhs.station;
-
-      // The firmware inputs later BX (history id = 0) before earlier BX (history id = 1,2)
-      // This seems to make the firmware sorter preferably pick later BX, but not necessarily
-      return std::make_pair(lhs.station, -lhs.bx) < std::make_pair(rhs.station, -rhs.bx);
+      return lhs.station < rhs.station;
     }
   } less_station_cmp;
 
-  // Sorted insert by station
-  EMTFHitExtraCollection::const_iterator upper = std::upper_bound(track.xhits.begin(), track.xhits.end(), *conv_hit_ptr, less_station_cmp);
-  track.xhits.insert(upper, *conv_hit_ptr);
-}
-
-unsigned int EMTFPrimitiveMatching::get_fs_zone_code(const EMTFHitExtra& conv_hit) const {
-  static const int _table[4][3] = {  // [station][ring]
-    {0b0011, 0b0100, 0b1000},  // st1 r1: [z0,z1], r2: [z2], r3: [z3]
-    {0b0011, 0b1100, 0b0000},  // st2 r1: [z0,z1], r2: [z2,z3]
-    {0b0001, 0b1110, 0b0000},  // st3 r1: [z0], r2: [z1,z2,z3]
-    {0b0001, 0b0110, 0b0000}   // st4 r1: [z0], r2: [z1,z2]
-  };
-
-  unsigned istation = conv_hit.station-1;
-  unsigned iring    = (conv_hit.station == 1 && conv_hit.ring == 4) ? conv_hit.ring-4 : conv_hit.ring-1;
-  assert(istation < 4 && iring < 3);
-  return _table[istation][iring];
-}
-
-unsigned int EMTFPrimitiveMatching::get_fs_segment(const EMTFHitExtra& conv_hit) const {
-  bool is_neighbor = (conv_hit.pc_station == 5);
-  bool is_ring1    = (conv_hit.ring == 1);
-  bool is_me1      = (conv_hit.station == 1);
-  bool is_sub1     = (conv_hit.subsector == 1);
-
-  int fs_history = bx_ - conv_hit.bx;  // history id
-  int fs_chamber = -1;                 // chamber id
-  int fs_segment = 0;                  // segment id, not emulated
-
-  // For station 1
-  //   j = 0 is neighbor sector chamber
-  //   j = 1,2,3 are subsector 1 chambers
-  //   j = 4,5,6 are subsector 2 chambers
-  // For stations 2,3,4:
-  //   j = 0 is neighbor sector chamber
-  //   j = 1,2,3,4,5,6 are native sector chambers
-
-  if (is_me1) {
-    if (conv_hit.ring == 1 || conv_hit.ring == 4) {
-      fs_chamber = is_neighbor ? 0 : (is_sub1 ? conv_hit.csc_ID : conv_hit.csc_ID+3);
-    } else if (conv_hit.ring == 2) {
-      fs_chamber = is_neighbor ? 0 : (is_sub1 ? conv_hit.csc_ID-3 : conv_hit.csc_ID-3+3);
-    } else if (conv_hit.ring == 3) {
-      fs_chamber = is_neighbor ? 0 : (is_sub1 ? conv_hit.csc_ID-6 : conv_hit.csc_ID-6+3);
-    }
-  } else {
-    fs_chamber = is_neighbor ? 0 : (is_ring1 ? conv_hit.csc_ID : conv_hit.csc_ID-3);
-  }
-  assert(fs_chamber != -1);
-
-  fs_segment = ((fs_history & 0x3)<<4) | ((fs_chamber & 0x7)<<1) | (fs_segment & 0x1);
-  return fs_segment;
+  track.xhits.push_back(*conv_hit_ptr);
+  std::stable_sort(track.xhits.begin(), track.xhits.end(), less_station_cmp);
 }
