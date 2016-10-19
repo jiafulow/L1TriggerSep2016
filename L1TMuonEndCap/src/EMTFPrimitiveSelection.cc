@@ -4,8 +4,8 @@
 #include "DataFormats/MuonDetId/interface/CSCDetId.h"
 #include "DataFormats/MuonDetId/interface/RPCDetId.h"
 
-#define NUM_CSC_CHAMBERS 6*9
-#define NUM_RPC_CHAMBERS 6*9  // ??
+#define NUM_CSC_CHAMBERS 6*9  // 18 in ME1, 9 in ME2/3/4, 9 from neighbor sector
+#define NUM_RPC_CHAMBERS 6*9  // not yet implemented
 
 using CSCData = TriggerPrimitive::CSCData;
 using RPCData = TriggerPrimitive::RPCData;
@@ -35,7 +35,7 @@ void EMTFPrimitiveSelection::process(
   TriggerPrimitiveCollection::const_iterator tp_end = muon_primitives.end();
 
   for (; tp_it != tp_end; ++tp_it) {
-    int selected_csc = select_csc(*tp_it);  // CSC
+    int selected_csc = select_csc(*tp_it); // Returns CSC "link" index (0 - 53) 
 
     if (selected_csc >= 0) {
       assert(selected_csc < NUM_CSC_CHAMBERS);
@@ -43,7 +43,7 @@ void EMTFPrimitiveSelection::process(
     }
   }
 
-  // Duplicate CSC muon primitives
+  // Duplicate CSC muon primitives - is this supposed to be done before pattern matching / zone assignment? - AWB 29.09.16
   // If there are 2 LCTs in the same chamber with (strip, wire) = (s1, w1) and (s2, w2)
   // make all combinations with (s1, w1), (s2, w1), (s1, w2), (s2, w2)
   if (duplicateTheta_) {
@@ -61,19 +61,19 @@ void EMTFPrimitiveSelection::process(
             (tmp_primitives.at(0).getWire() != tmp_primitives.at(1).getWire())
         ) {
           // Swap wire numbers
-          TriggerPrimitive tp0 = tmp_primitives.at(0);  // clone
-          TriggerPrimitive tp1 = tmp_primitives.at(1);  // clone
+          TriggerPrimitive tp0 = tmp_primitives.at(0);  // (s1,w1)
+          TriggerPrimitive tp1 = tmp_primitives.at(1);  // (s2,w2)
 
           TriggerPrimitive::CSCData tp0_data_tmp = tp0.getCSCData();
           TriggerPrimitive::CSCData tp0_data     = tp0.getCSCData();
           TriggerPrimitive::CSCData tp1_data     = tp1.getCSCData();
           tp0_data.keywire = tp1_data.keywire;
           tp1_data.keywire = tp0_data_tmp.keywire;
-          tp0.setCSCData(tp0_data);
-          tp1.setCSCData(tp1_data);
+          tp0.setCSCData(tp0_data);  // (s1,w2)
+          tp1.setCSCData(tp1_data);  // (s2,w1)
 
-          tmp_primitives.insert(tmp_primitives.begin()+1, tp1);
-          tmp_primitives.insert(tmp_primitives.begin()+2, tp0);
+          tmp_primitives.insert(tmp_primitives.begin()+1, tp1);  // (s2,w1) at 2nd pos
+          tmp_primitives.insert(tmp_primitives.begin()+2, tp0);  // (s1,w2) at 3rd pos
         }
       }  // end if tmp_primitives.size() == 2
     }  // end loop over selected_csc_map
@@ -123,6 +123,8 @@ int EMTFPrimitiveSelection::select_csc(const TriggerPrimitive& muon_primitive) c
 
     assert(MIN_ENDCAP <= tp_endcap && tp_endcap <= MAX_ENDCAP);
     assert(MIN_TRIGSECTOR <= tp_sector && tp_sector <= MAX_TRIGSECTOR);
+    assert(1 <= tp_station && tp_station <= 4);
+    assert(1 <= tp_csc_ID && tp_csc_ID <= 9);
 
     if (is_in_bx_csc(tp_bx)) {
       if (is_in_sector_csc(tp_endcap, tp_sector)) {
@@ -152,7 +154,7 @@ bool EMTFPrimitiveSelection::is_in_neighbor_sector_csc(
   if (includeNeighbor_) {
     if ((endcap_ == tp_endcap) && (get_neighbor(sector_) == tp_sector)) {
       if (tp_station == 1) {
-        if ((tp_subsector == 2) && (tp_csc_ID == 3 || tp_csc_ID == 6 || tp_csc_ID == 9 || tp_csc_ID == 12))
+        if ((tp_subsector == 2) && (tp_csc_ID == 3 || tp_csc_ID == 6 || tp_csc_ID == 9))
           return true;
 
       } else {
@@ -165,28 +167,25 @@ bool EMTFPrimitiveSelection::is_in_neighbor_sector_csc(
 }
 
 bool EMTFPrimitiveSelection::is_in_bx_csc(int tp_bx) const {
-  tp_bx -= 6;
+  tp_bx -= 6; // Need to verify (or impose) central BX = 6 condition, or make this offset configurable - AWB 28.09.16
   return (bx_ == tp_bx);
 }
 
+// Returns "roughly" the "input link".  Index used by FW for unique chamber identification.
 int EMTFPrimitiveSelection::get_index_csc(int tp_subsector, int tp_station, int tp_csc_ID, bool is_neighbor) const {
   int selected = -1;
 
   if (!is_neighbor) {
-    if (tp_station == 1 && tp_csc_ID-1 >= 9) {  // ME1/1a
-      selected = (tp_subsector-1) * 9 + (tp_csc_ID-1-9);
-    } else if (tp_station == 1) {  // ME1/1b, ME1/2, ME1/3
+    if (tp_station == 1) {  // ME1: 0 - 8, 9 - 17
       selected = (tp_subsector-1) * 9 + (tp_csc_ID-1);
-    } else {  // ME2,3,4
+    } else {            // ME2,3,4: 18 - 26, 27 - 35, 36 - 44
       selected = (tp_station) * 9 + (tp_csc_ID-1);
     }
 
   } else {
-    if (tp_station == 1 && tp_csc_ID-1 >= 9) {  // ME1/1a
-      selected = (5) * 9 + (tp_csc_ID-1-9)/3;
-    } else if (tp_station == 1) {  // ME1/1b, ME1/2, ME1/3
+    if (tp_station == 1) {  // ME1: 45 - 47
       selected = (5) * 9 + (tp_csc_ID-1)/3;
-    } else {  // ME2,3,4
+    } else {            // ME2,3,4: 48 - 53
       selected = (5) * 9 + (tp_station) * 2 - 1 + (tp_csc_ID-1 < 3 ? 0 : 1);
     }
   }

@@ -26,54 +26,67 @@ public:
   ~EMTFSectorProcessor();
 
   typedef unsigned long long EventNumber_t;
+  typedef EMTFPatternRecognition::pattern_ref_t pattern_ref_t;
 
   void configure(
       const EMTFSectorProcessorLUT* lut,
       const EMTFPtAssignmentEngine* pt_assign_engine,
-      int verbose, int minBX, int maxBX, int bxWindow,
-      int endcap, int sector,
-      bool includeNeighbor, bool duplicateTheta, bool fixZonePhi,
-      const std::vector<int>& zoneBoundaries1, const std::vector<int>& zoneBoundaries2, int zoneOverlap,
-      const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions,
-      int maxRoadsPerZone, int thetaWindow, int maxTracks,
-      bool useSecondEarliest, bool useSymPatterns
+      int verbose, int endcap, int sector,
+      int minBX, int maxBX, int bxWindow, int bxShiftCSC,
+      const std::vector<int>& zoneBoundaries, int zoneOverlap, bool includeNeighbor, bool duplicateTheta, bool fixZonePhi, bool useNewZones,
+      const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions, int thetaWindow, bool useSymPatterns,
+      int maxRoadsPerZone, int maxTracks, bool useSecondEarliest,
+      bool readPtLUTFile, bool fixMode15HighPt, bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt
   );
 
   void process(
+      // Input
       EventNumber_t ievent,
       const TriggerPrimitiveCollection& muon_primitives,
+      // Output
       EMTFHitExtraCollection& out_hits,
       EMTFTrackExtraCollection& out_tracks
   ) const;
 
   void process_single_bx(
+      // Input
       int bx,
       const TriggerPrimitiveCollection& muon_primitives,
+      // Output
       EMTFHitExtraCollection& out_hits,
       EMTFTrackExtraCollection& out_tracks,
+      // Intermediate objects
       std::deque<EMTFHitExtraCollection>& extended_conv_hits,
       std::deque<EMTFTrackExtraCollection>& extended_best_track_cands,
-      std::map<EMTFPatternRef, int>& patt_lifetime_map
+      std::map<pattern_ref_t, int>& patt_lifetime_map
   ) const;
-
-  int sector() const { return sector_; }
 
 private:
   const EMTFSectorProcessorLUT* lut_;
 
   const EMTFPtAssignmentEngine* pt_assign_engine_;
 
-  int verbose_, minBX_, maxBX_, bxWindow_;
+  int verbose_, endcap_, sector_;
 
-  int endcap_, sector_;
+  int minBX_, maxBX_, bxWindow_, bxShiftCSC_;
 
-  bool includeNeighbor_, duplicateTheta_, fixZonePhi_;
-
-  std::vector<int> zoneBoundaries1_, zoneBoundaries2_;
+  // For primitive conversion
+  std::vector<int> zoneBoundaries_;
   int zoneOverlap_;
+  bool includeNeighbor_, duplicateTheta_, fixZonePhi_, useNewZones_;
+
+  // For pattern recognition
   std::vector<std::string> pattDefinitions_, symPattDefinitions_;
-  int maxRoadsPerZone_, thetaWindow_, maxTracks_;
-  bool useSecondEarliest_, useSymPatterns_;
+  int thetaWindow_;
+  bool useSymPatterns_;
+
+  // For ghost cancellation
+  int maxRoadsPerZone_, maxTracks_;
+  bool useSecondEarliest_;
+
+  // For pt assignment
+  bool readPtLUTFile_, fixMode15HighPt_;
+  bool bug9BitDPhi_, bugMode7CLCT_, bugNegPt_;
 };
 
 #endif

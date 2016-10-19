@@ -8,11 +8,12 @@ class EMTFAngleCalculation {
 public:
   void configure(
       int verbose, int endcap, int sector, int bx,
+      int bxWindow,
       int thetaWindow
   );
 
   void process(
-      std::vector<EMTFTrackExtraCollection>& zone_tracks
+      zone_array<EMTFTrackExtraCollection>& zone_tracks
   ) const;
 
   void calculate_angles(EMTFTrackExtra& track) const;
@@ -26,6 +27,7 @@ public:
 private:
   int verbose_, endcap_, sector_, bx_;
 
+  int bxWindow_;
   int thetaWindow_;
 };
 

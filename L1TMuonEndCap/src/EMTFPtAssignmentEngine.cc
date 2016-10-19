@@ -1,7 +1,5 @@
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPtAssignmentEngine.hh"
 
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPtAssignmentEngineHelper.hh"
-
 #include <cassert>
 #include <iostream>
 
@@ -9,6 +7,7 @@
 EMTFPtAssignmentEngine::EMTFPtAssignmentEngine() :
     allowedModes_({3,5,9,6,10,12,7,11,13,14,15}),
     forests_(),
+    ptlut_reader_(),
     ok_(false)
 {
 
@@ -18,16 +17,16 @@ EMTFPtAssignmentEngine::~EMTFPtAssignmentEngine() {
 
 }
 
-void EMTFPtAssignmentEngine::read(const std::string& treeDir) {
+void EMTFPtAssignmentEngine::read(const std::string& xml_dir) {
   if (ok_)  return;
 
-  //std::string treeDirFull = "L1Trigger/L1TMuon/data/emtf_luts/" + treeDir + "/ModeVariables/trees";
-  std::string treeDirFull = "L1TriggerSep2016/L1TMuonEndCap/data/emtf_luts/" + treeDir + "/ModeVariables/trees";
+  //std::string xml_dir_full = "L1Trigger/L1TMuon/data/emtf_luts/" + xml_dir + "/ModeVariables/trees";
+  std::string xml_dir_full = "L1TriggerSep2016/L1TMuonEndCap/data/emtf_luts/" + xml_dir + "/ModeVariables/trees";
 
   for (unsigned i = 0; i < allowedModes_.size(); ++i) {
     int mode_inv = allowedModes_.at(i);  // inverted mode because reasons
     std::stringstream ss;
-    ss << treeDirFull << "/" << mode_inv;
+    ss << xml_dir_full << "/" << mode_inv;
     forests_.at(mode_inv).loadForestFromXML(ss.str().c_str(), 64);
   }
 
@@ -35,22 +34,46 @@ void EMTFPtAssignmentEngine::read(const std::string& treeDir) {
   return;
 }
 
+void EMTFPtAssignmentEngine::configure(
+    int verbose,
+    bool readPtLUTFile, bool fixMode15HighPt, 
+    bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt
+) {
+  verbose_ = verbose;
+
+  readPtLUTFile_   = readPtLUTFile;
+  fixMode15HighPt_ = fixMode15HighPt;
+  bug9BitDPhi_     = bug9BitDPhi;
+  bugMode7CLCT_    = bugMode7CLCT;
+  bugNegPt_        = bugNegPt;
+
+  configure_details();
+}
+
+void EMTFPtAssignmentEngine::configure_details() {
+  if (readPtLUTFile_) {
+    std::stringstream ss;
+    ss << std::getenv("CMSSW_BASE") << "/" << "src/L1TriggerSep2016/L1TMuonEndCap/data/emtf_luts/v_16_02_21_ptlut/LUT_AndrewFix_25July16.dat";  // hardcoded, it does not exist in CMSSW
+    //ss << std::getenv("CMSSW_BASE") << "/" << "src/L1TriggerSep2016/L1TMuonEndCap/data/emtf_luts/v_16_02_21_ptlut_madorsky/LUT_AndrewFix_25July16.dat";  // hardcoded, it does not exist in CMSSW
+    std::string lut_full_path = ss.str();
+
+    ptlut_reader_.read(lut_full_path);
+  }
+}
+
+const EMTFPtAssignmentEngineAux& EMTFPtAssignmentEngine::aux() const {
+  static const EMTFPtAssignmentEngineAux instance;
+  return instance;
+}
+
 EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(const EMTFTrackExtra& track) const {
   address_t address = 0;
 
+  const EMTFPtLUTData& ptlut_data = track.ptlut_data;
+
   int mode_inv  = track.mode_inv;
   int theta     = track.theta_int;
-  theta >>= 2;
-
-  bool use_eta = false;
-  if (use_eta) {
-    float ftheta = track.theta_int;
-    ftheta = (ftheta*0.2874016 + 8.5)*(3.14159265359/180);
-    float eta = (-1)*std::log(std::tan(ftheta/2));
-    theta = getEtaInt(eta, 5);
-  }
-
-  const EMTFPtLUTData& ptlut_data = track.ptlut_data;
+  theta >>= 2;  // truncate from 7-bit to 5-bit
 
   int dPhi12    = ptlut_data.delta_ph[0];
   int dPhi13    = ptlut_data.delta_ph[1];
@@ -82,41 +105,44 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
   int dTheta24Sign = ptlut_data.sign_th [4];
   int dTheta34Sign = ptlut_data.sign_th [5];
 
-  int CLCT1     = std::abs(getCLCT(ptlut_data.cpattern[0]));
-  int CLCT2     = std::abs(getCLCT(ptlut_data.cpattern[1]));
-  int CLCT3     = std::abs(getCLCT(ptlut_data.cpattern[2]));
-  int CLCT4     = std::abs(getCLCT(ptlut_data.cpattern[3]));
-  int CLCT1Sign = (getCLCT(ptlut_data.cpattern[0]) > 0);
-  int CLCT2Sign = (getCLCT(ptlut_data.cpattern[1]) > 0);
-  int CLCT3Sign = (getCLCT(ptlut_data.cpattern[2]) > 0);
-  int CLCT4Sign = (getCLCT(ptlut_data.cpattern[3]) > 0);
+  int CLCT1     = std::abs(aux().getCLCT(ptlut_data.cpattern[0]));
+  int CLCT2     = std::abs(aux().getCLCT(ptlut_data.cpattern[1]));
+  int CLCT3     = std::abs(aux().getCLCT(ptlut_data.cpattern[2]));
+  int CLCT4     = std::abs(aux().getCLCT(ptlut_data.cpattern[3]));
+  int CLCT1Sign = (aux().getCLCT(ptlut_data.cpattern[0]) > 0);
+  int CLCT2Sign = (aux().getCLCT(ptlut_data.cpattern[1]) > 0);
+  int CLCT3Sign = (aux().getCLCT(ptlut_data.cpattern[2]) > 0);
+  int CLCT4Sign = (aux().getCLCT(ptlut_data.cpattern[3]) > 0);
 
   int CSCID1    = ptlut_data.bt_chamber[0];
   int CSCID2    = ptlut_data.bt_chamber[1];
   int CSCID3    = ptlut_data.bt_chamber[2];
   int CSCID4    = ptlut_data.bt_chamber[3];
 
-  dTheta12 = getdTheta(dTheta12 * ((dTheta12Sign) ? -1 : 1));
-  dTheta13 = getdTheta(dTheta13 * ((dTheta13Sign) ? -1 : 1));
-  dTheta14 = getdTheta(dTheta14 * ((dTheta14Sign) ? -1 : 1));
-  dTheta23 = getdTheta(dTheta23 * ((dTheta23Sign) ? -1 : 1));
-  dTheta24 = getdTheta(dTheta24 * ((dTheta24Sign) ? -1 : 1));
-  dTheta34 = getdTheta(dTheta34 * ((dTheta34Sign) ? -1 : 1));
+  auto get_signed_int = [](int var, int sign) {
+    return (sign == 1) ? (var * 1) : (var * -1);
+  };
 
-  bool use_FRLUT = true;
+  dTheta12 = aux().getdTheta(get_signed_int(dTheta12, 1-dTheta12Sign));  // sign reversed
+  dTheta13 = aux().getdTheta(get_signed_int(dTheta13, 1-dTheta13Sign));
+  dTheta14 = aux().getdTheta(get_signed_int(dTheta14, 1-dTheta14Sign));
+  dTheta23 = aux().getdTheta(get_signed_int(dTheta23, 1-dTheta23Sign));
+  dTheta24 = aux().getdTheta(get_signed_int(dTheta24, 1-dTheta24Sign));
+  dTheta34 = aux().getdTheta(get_signed_int(dTheta34, 1-dTheta34Sign));
+
+  bool use_FRLUT = true; // Why don't we use the FR bit assigned in ptlut_data? - AWB 03.10.16
   if (use_FRLUT) {
     int sector = track.sector;
-    FR1 = getFRLUT(sector, CSCID1/12, CSCID1%12);
-    FR2 = getFRLUT(sector, CSCID2/12, CSCID2%12);
-    FR3 = getFRLUT(sector, CSCID3/12, CSCID3%12);
-    FR4 = getFRLUT(sector, CSCID4/12, CSCID4%12);
+    FR1 = aux().getFRLUT(sector, CSCID1/12, CSCID1%12);
+    FR2 = aux().getFRLUT(sector, CSCID2/12, CSCID2%12);
+    FR3 = aux().getFRLUT(sector, CSCID3/12, CSCID3%12);
+    FR4 = aux().getFRLUT(sector, CSCID4/12, CSCID4%12);
   }
 
-  bool fix_dPhi9Bits = true;
-
-  switch(mode_inv) {
+  // Can we automate the assigning of addresses?  Would decrease typos, speed future development. - AWB 03.10.16
+  switch (mode_inv) {
   case 3:   // 1-2
-    if (fix_dPhi9Bits)  dPhi12 = std::min(511, dPhi12);
+    if (not bug9BitDPhi_)  dPhi12 = std::min(511, dPhi12);
 
     address |= (dPhi12      & ((1<<9)-1)) << (0);
     address |= (sign12      & ((1<<1)-1)) << (0+9);
@@ -132,7 +158,7 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     break;
 
   case 5:   // 1-3
-    if (fix_dPhi9Bits)  dPhi13 = std::min(511, dPhi13);
+    if (not bug9BitDPhi_)  dPhi13 = std::min(511, dPhi13);
 
     address |= (dPhi13      & ((1<<9)-1)) << (0);
     address |= (sign13      & ((1<<1)-1)) << (0+9);
@@ -148,7 +174,7 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     break;
 
   case 9:   // 1-4
-    if (fix_dPhi9Bits)  dPhi14 = std::min(511, dPhi14);
+    if (not bug9BitDPhi_)  dPhi14 = std::min(511, dPhi14);
 
     address |= (dPhi14      & ((1<<9)-1)) << (0);
     address |= (sign14      & ((1<<1)-1)) << (0+9);
@@ -164,7 +190,7 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     break;
 
   case 6:   // 2-3
-    if (fix_dPhi9Bits)  dPhi23 = std::min(511, dPhi23);
+    if (not bug9BitDPhi_)  dPhi23 = std::min(511, dPhi23);
 
     address |= (dPhi23      & ((1<<9)-1)) << (0);
     address |= (sign23      & ((1<<1)-1)) << (0+9);
@@ -180,7 +206,7 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     break;
 
   case 10:  // 2-4
-    if (fix_dPhi9Bits)  dPhi24 = std::min(511, dPhi24);
+    if (not bug9BitDPhi_)  dPhi24 = std::min(511, dPhi24);
 
     address |= (dPhi24      & ((1<<9)-1)) << (0);
     address |= (sign24      & ((1<<1)-1)) << (0+9);
@@ -196,7 +222,7 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     break;
 
   case 12:  // 3-4
-    if (fix_dPhi9Bits)  dPhi34 = std::min(511, dPhi34);
+    if (not bug9BitDPhi_)  dPhi34 = std::min(511, dPhi34);
 
     address |= (dPhi34      & ((1<<9)-1)) << (0);
     address |= (sign34      & ((1<<1)-1)) << (0+9);
@@ -212,8 +238,8 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     break;
 
   case 7:   // 1-2-3
-    dPhi12 = getNLBdPhiBin(dPhi12, 7, 512);
-    dPhi23 = getNLBdPhiBin(dPhi23, 5, 256);
+    dPhi12 = aux().getNLBdPhiBin(dPhi12, 7, 512);
+    dPhi23 = aux().getNLBdPhiBin(dPhi23, 5, 256);
 
     address |= (dPhi12      & ((1<<7)-1)) << (0);
     address |= (dPhi23      & ((1<<5)-1)) << (0+7);
@@ -228,8 +254,8 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     break;
 
   case 11:  // 1-2-4
-    dPhi12 = getNLBdPhiBin(dPhi12, 7, 512);
-    dPhi24 = getNLBdPhiBin(dPhi24, 5, 256);
+    dPhi12 = aux().getNLBdPhiBin(dPhi12, 7, 512);
+    dPhi24 = aux().getNLBdPhiBin(dPhi24, 5, 256);
 
     address |= (dPhi12      & ((1<<7)-1)) << (0);
     address |= (dPhi24      & ((1<<5)-1)) << (0+7);
@@ -244,8 +270,8 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     break;
 
   case 13:  // 1-3-4
-    dPhi13 = getNLBdPhiBin(dPhi13, 7, 512);
-    dPhi34 = getNLBdPhiBin(dPhi34, 5, 256);
+    dPhi13 = aux().getNLBdPhiBin(dPhi13, 7, 512);
+    dPhi34 = aux().getNLBdPhiBin(dPhi34, 5, 256);
 
     address |= (dPhi13      & ((1<<7)-1)) << (0);
     address |= (dPhi34      & ((1<<5)-1)) << (0+7);
@@ -260,8 +286,8 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     break;
 
   case 14:  // 2-3-4
-    dPhi23 = getNLBdPhiBin(dPhi23, 7, 512);
-    dPhi34 = getNLBdPhiBin(dPhi34, 6, 256);
+    dPhi23 = aux().getNLBdPhiBin(dPhi23, 7, 512);
+    dPhi34 = aux().getNLBdPhiBin(dPhi34, 6, 256);
 
     address |= (dPhi23      & ((1<<7)-1)) << (0);
     address |= (dPhi34      & ((1<<6)-1)) << (0+7);
@@ -275,20 +301,16 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     break;
 
   case 15:  // 1-2-3-4
-    // Calculate two signs based on three input signs
-    if (sign12==0 && sign23==0 && sign34==0) {
-      sign12=1; sign23=1; sign34=1;
-    } else if (sign12==0 && sign23==1 && sign34==1) {
-      sign12=1; sign23=0; sign34=0;
-    } else if (sign12==0 && sign23==0 && sign34==1) {
-      sign12=1; sign23=1; sign34=0;
-    } else if (sign12==0 && sign23==1 && sign34==0) {
-      sign12=1; sign23=0; sign34=1;
+    // Set sign23 and sign34 relative to sign12
+    if (!sign12) {
+      sign12 = !sign12;
+      sign23 = !sign23;
+      sign34 = !sign34;
     }
 
-    dPhi12 = getNLBdPhiBin(dPhi12, 7, 512);
-    dPhi23 = getNLBdPhiBin(dPhi23, 5, 256);
-    dPhi34 = getNLBdPhiBin(dPhi34, 6, 256);
+    dPhi12 = aux().getNLBdPhiBin(dPhi12, 7, 512);
+    dPhi23 = aux().getNLBdPhiBin(dPhi23, 5, 256);
+    dPhi34 = aux().getNLBdPhiBin(dPhi34, 6, 256);
 
     address |= (dPhi12      & ((1<<7)-1)) << (0);
     address |= (dPhi23      & ((1<<5)-1)) << (0+7);
@@ -307,55 +329,69 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
   return address;
 }
 
-EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address_fw(const EMTFTrackExtra& track) const {
-  address_t address = 0;
-
-  // Not implemented
-
-  return address;
-}
-
 float EMTFPtAssignmentEngine::calculate_pt(const address_t& address) {
   float pt = 0.;
 
+  if (readPtLUTFile_) {
+    pt = calculate_pt_lut(address);
+  } else {
+    pt = calculate_pt_xml(address);
+  }
+
+  return pt;
+}
+
+float EMTFPtAssignmentEngine::calculate_pt_lut(const address_t& address) {
+  // LUT outputs 'gmt_pt', so need to convert back to 'xmlpt'
+  int gmt_pt = ptlut_reader_.lookup(address);
+  float pt = aux().getPtFromGMTPt(gmt_pt);
+  float xmlpt = pt;
+  xmlpt /= 1.4;
+
+  return xmlpt;
+}
+
+float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
+  float pt = 0.;
+
   if (address == 0)  // invalid address
-    return pt;
+    return -1;  // return pt;
 
-  uint16_t mode_inv = (address >> (30-4)) & ((1<<4)-1);
+  int mode_inv = (address >> (30-4)) & ((1<<4)-1);
 
-  auto contain = [](const auto& vec, const auto& elem) {
+  auto contain = [](const std::vector<int>& vec, int elem) {
     return (std::find(vec.begin(), vec.end(), elem) != vec.end());
   };
 
   bool is_good_mode = contain(allowedModes_, mode_inv);
 
   if (!is_good_mode)  // invalid mode
-    return pt;
+    return -1;  // return pt;
 
-  int dPhi12    = 0;
-  int dPhi13    = 0;
-  int dPhi14    = 0;
-  int dPhi23    = 0;
-  int dPhi24    = 0;
-  int dPhi34    = 0;
-  int dTheta12  = 0;
-  int dTheta13  = 0;
-  int dTheta14  = 0;
-  int dTheta23  = 0;
-  int dTheta24  = 0;
-  int dTheta34  = 0;
-  int CLCT1     = 0;
-  int CLCT2     = 0;
-  int CLCT3     = 0;
-  int CLCT4     = 0;
-  int CSCID1    = 0;
-  int CSCID2    = 0;
-  int CSCID3    = 0;
-  int CSCID4    = 0;
-  int FR1       = 0;
-  int FR2       = 0;
-  int FR3       = 0;
-  int FR4       = 0;
+  int dPhi12    = -999;
+  int dPhi13    = -999;
+  int dPhi14    = -999;
+  int dPhi23    = -999;
+  int dPhi24    = -999;
+  int dPhi34    = -999;
+  int dTheta12  = -999;
+  int dTheta13  = -999;
+  int dTheta14  = -999;
+  int dTheta23  = -999;
+  int dTheta24  = -999;
+  int dTheta34  = -999;
+  int CLCT1     = -999;
+  int CLCT2     = -999;
+  int CLCT3     = -999;
+  int CLCT4     = -999;
+  int CSCID1    = -999;
+  int CSCID2    = -999;
+  int CSCID3    = -999;
+  int CSCID4    = -999;
+  int FR1       = -999;
+  int FR2       = -999;
+  int FR3       = -999;
+  int FR4       = -999;
 
   int sign12    = 1;
   int sign13    = 1;
@@ -369,9 +405,9 @@ float EMTFPtAssignmentEngine::calculate_pt(const address_t& address) {
   int CLCT3Sign = 1;
   int CLCT4Sign = 1;
 
-  int theta = 0;
+  int theta     = 0;
 
-  switch(mode_inv) {
+  switch (mode_inv) {
   case 3:   // 1-2
     dPhi12    = (address >> (0))                    & ((1<<9)-1);
     sign12    = (address >> (0+9))                  & ((1<<1)-1);
@@ -461,8 +497,8 @@ float EMTFPtAssignmentEngine::calculate_pt(const address_t& address) {
     FR1       = (address >> (0+7+5+1+1+3+2+1))      & ((1<<1)-1);
     theta     = (address >> (0+7+5+1+1+3+2+1+1))    & ((1<<5)-1);
 
-    dPhi12 = getdPhiFromBin(dPhi12, 7, 512);
-    dPhi23 = getdPhiFromBin(dPhi23, 5, 256);
+    dPhi12 = aux().getdPhiFromBin(dPhi12, 7, 512);
+    dPhi23 = aux().getdPhiFromBin(dPhi23, 5, 256);
     break;
 
   case 11:  // 1-2-4
@@ -476,8 +512,8 @@ float EMTFPtAssignmentEngine::calculate_pt(const address_t& address) {
     FR1       = (address >> (0+7+5+1+1+3+2+1))      & ((1<<1)-1);
     theta     = (address >> (0+7+5+1+1+3+2+1+1))    & ((1<<5)-1);
 
-    dPhi12 = getdPhiFromBin(dPhi12, 7, 512);
-    dPhi24 = getdPhiFromBin(dPhi24, 5, 256);
+    dPhi12 = aux().getdPhiFromBin(dPhi12, 7, 512);
+    dPhi24 = aux().getdPhiFromBin(dPhi24, 5, 256);
     break;
 
   case 13:  // 1-3-4
@@ -491,8 +527,8 @@ float EMTFPtAssignmentEngine::calculate_pt(const address_t& address) {
     FR1       = (address >> (0+7+5+1+1+3+2+1))      & ((1<<1)-1);
     theta     = (address >> (0+7+5+1+1+3+2+1+1))    & ((1<<5)-1);
 
-    dPhi13 = getdPhiFromBin(dPhi13, 7, 512);
-    dPhi34 = getdPhiFromBin(dPhi34, 5, 256);
+    dPhi13 = aux().getdPhiFromBin(dPhi13, 7, 512);
+    dPhi34 = aux().getdPhiFromBin(dPhi34, 5, 256);
     break;
 
   case 14:  // 2-3-4
@@ -505,8 +541,8 @@ float EMTFPtAssignmentEngine::calculate_pt(const address_t& address) {
     CLCT2Sign = (address >> (0+7+6+1+1+3+2))        & ((1<<1)-1);
     theta     = (address >> (0+7+6+1+1+3+2+1))      & ((1<<5)-1);
 
-    dPhi23 = getdPhiFromBin(dPhi23, 7, 512);
-    dPhi34 = getdPhiFromBin(dPhi34, 6, 256);
+    dPhi23 = aux().getdPhiFromBin(dPhi23, 7, 512);
+    dPhi34 = aux().getdPhiFromBin(dPhi34, 6, 256);
     break;
 
   case 15:  // 1-2-3-4
@@ -517,12 +553,13 @@ float EMTFPtAssignmentEngine::calculate_pt(const address_t& address) {
     sign34    = (address >> (0+7+5+6+1))            & ((1<<1)-1);
     FR1       = (address >> (0+7+5+6+1+1))          & ((1<<1)-1);
     theta     = (address >> (0+7+5+6+1+1+1))        & ((1<<5)-1);
+
+    dPhi12 = aux().getdPhiFromBin(dPhi12, 7, 512);
+    dPhi23 = aux().getdPhiFromBin(dPhi23, 5, 256);
+    dPhi34 = aux().getdPhiFromBin(dPhi34, 6, 256);
     break;
 
   default:
-    dPhi12 = getdPhiFromBin(dPhi12, 7, 512);
-    dPhi23 = getdPhiFromBin(dPhi23, 5, 256);
-    dPhi34 = getdPhiFromBin(dPhi34, 6, 256);
     break;
   }
 
@@ -543,54 +580,120 @@ float EMTFPtAssignmentEngine::calculate_pt(const address_t& address) {
   CLCT3  = get_signed_int(CLCT3, CLCT3Sign);
   CLCT4  = get_signed_int(CLCT4, CLCT4Sign);
 
-  //float ftheta = getEtaFromBin(theta, 5);  // eta = getEtaFromBin(eta, 5);
-  float ftheta = getEtaIntFromThetaInt(theta, 5);
+  theta <<= 2;
+  float eta = aux().getEtaFromThetaInt(theta, 5);
+
+  bool use_lossy_eta = true;
+  if (use_lossy_eta) {
+    int etaInt = aux().getEtaInt(eta, 5);
+    etaInt &= ((1<<5)-1);
+    eta = aux().getEtaFromEtaInt(etaInt, 5);
+  }
 
 
   // First fix to recover high pT muons with 3 hits in a line and one displaced hit - AWB 28.07.16
   // Done by re-writing a few addresses in the original LUT, according to the following logic
   // Implemented in FW 26.07.16, as of run 2774278 / fill 5119
-  bool era_4 = true;
-
-  if (era_4) {
-    if (mode_inv == 15) {
+  if (fixMode15HighPt_) {
+    if (mode_inv == 15) {  // 1-2-3-4
       bool st2_off = false;
       bool st3_off = false;
       bool st4_off = false;
 
-      int dPhi13 = dPhi12 + dPhi23;
-      int dPhi14 = dPhi13 + dPhi34;
-      int dPhi24 = dPhi23 + dPhi34;
+      dPhi13 = dPhi12 + dPhi23;
+      dPhi14 = dPhi13 + dPhi34;
+      dPhi24 = dPhi23 + dPhi34;
 
       int sum_st1 = abs( dPhi12 + dPhi13 + dPhi14);
       int sum_st2 = abs(-dPhi12 + dPhi23 + dPhi24);
       int sum_st3 = abs(-dPhi13 - dPhi23 + dPhi34);
       int sum_st4 = abs(-dPhi14 - dPhi24 - dPhi34);
 
+      // Detect outliers
       if (sum_st2 > sum_st1 && sum_st2 > sum_st3 && sum_st2 > sum_st4) st2_off = true;
       if (sum_st3 > sum_st1 && sum_st3 > sum_st2 && sum_st3 > sum_st4) st3_off = true;
       if (sum_st4 > sum_st1 && sum_st4 > sum_st2 && sum_st4 > sum_st3) st4_off = true;
 
-      if ( st2_off && ( abs(dPhi12) > 9 || abs(dPhi23) > 9 || abs(dPhi24) > 9 ) &&
-           abs(dPhi13) < 10 && abs(dPhi14) < 10 && abs(dPhi34) < 10 ) {
-        dPhi12 = ceil(dPhi13 / 2); dPhi23 = floor(dPhi13 / 2);
+      // Recover outliers
+      if (st2_off) {
+        if (
+            (abs(dPhi12) > 9 || abs(dPhi23) > 9 || abs(dPhi24) > 9) &&
+            (abs(dPhi13) < 10 && abs(dPhi14) < 10 && abs(dPhi34) < 10)
+        ) {
+          dPhi12 = dPhi13 / 2;
+          dPhi23 = dPhi13 / 2;
+        }
       }
-      if ( st3_off && ( abs(dPhi13) > 9 || abs(dPhi23) > 9 || abs(dPhi34) > 9 ) &&
-           abs(dPhi12) < 10 && abs(dPhi14) < 10 && abs(dPhi24) < 10 ) {
-        dPhi23 = ceil(dPhi24 / 2); dPhi34 = floor(dPhi24 / 2);
+      if (st3_off) {
+        if (
+            (abs(dPhi13) > 9 || abs(dPhi23) > 9 || abs(dPhi34) > 9) &&
+            (abs(dPhi12) < 10 && abs(dPhi14) < 10 && abs(dPhi24) < 10)
+        ) {
+          dPhi23 = dPhi24 / 2;
+          dPhi34 = dPhi24 / 2;
+        }
       }
-      if ( st4_off && ( abs(dPhi14) > 9 || abs(dPhi24) > 9 || abs(dPhi34) > 9 ) &&
-           abs(dPhi12) < 10 && abs(dPhi13) < 10 && abs(dPhi23) < 10 ) {
-        if ( abs(dPhi13) < abs(dPhi23) )
-          dPhi34 = dPhi13;
-        else
-          dPhi34 = dPhi23;
+      if (st4_off) {
+        if (
+            (abs(dPhi14) > 9 || abs(dPhi24) > 9 || abs(dPhi34) > 9 ) &&
+            (abs(dPhi12) < 10 && abs(dPhi13) < 10 && abs(dPhi23) < 10)
+        ) {
+          if (abs(dPhi13) < abs(dPhi23))
+            dPhi34 = dPhi13;
+          else
+            dPhi34 = dPhi23;
+        }
       }
-    }
-  } // end if era_4
+
+      // Set sign23 and sign34 relative to sign12
+      //sign12 = (dPhi12 >= 0);
+      //sign23 = (dPhi23 >= 0);
+      //sign34 = (dPhi34 >= 0);
+      //if (!sign12) {
+      //  sign12 = !sign12;
+      //  sign23 = !sign23;
+      //  sign34 = !sign34;
+      //}
+
+      sign12 = 1;
+      if (dPhi12 > 0) {
+        sign23 = (dPhi23 > 0) ? 1 : 0;
+        sign34 = (dPhi34 > 0) ? 1 : 0;
+      } else {
+        sign23 = (dPhi23 < 0) ? 1 : 0;
+        sign34 = (dPhi34 < 0) ? 1 : 0;
+      }
+
+      dPhi12 = get_signed_int(abs(dPhi12), sign12);
+      dPhi23 = get_signed_int(abs(dPhi23), sign23);
+      dPhi34 = get_signed_int(abs(dPhi34), sign34);
+
+    }  // end if mode_inv == 15
+  }
+
+  // Inherit some bugs
+  if (bugMode7CLCT_) {
+    if (mode_inv == 14) {  // 2-3-4
+      int bugged_CLCT2;
+      address_t bugged_address;
+
+      //CLCT2     = (address >> (0+7+6+1+1+3))          & ((1<<2)-1);
+      //address |= (CLCT2       & ((1<<2)-1)) << (0+7+6+1+1+3);
+
+      bugged_CLCT2    = (address >> (0+7+5+1+1+3))          & ((1<<2)-1);  // bad
+      bugged_address  = address & ~(((1<<2)-1) << (0+7+6+1+1+3));  // clear bits
+      bugged_address |= (bugged_CLCT2 & ((1<<2)-1)) << (0+7+6+1+1+3);
+      bugged_CLCT2    = (bugged_address >> (0+7+5+1+1+3))   & ((1<<2)-1);  // bad
+
+      CLCT2  = bugged_CLCT2;
+      CLCT2  = get_signed_int(CLCT2, CLCT2Sign);
+
+    }  // end if mode_inv == 14
+  }
 
 
-  const int (*mode_variables)[6] = ModeVariables_Scheme3;
+  // Get pT from XML (forest)
+  const int (*mode_variables)[6] = aux().getModeVariables();
 
   const int variables[24] = {
     dPhi12, dPhi13, dPhi14, dPhi23, dPhi24, dPhi34, dTheta12, dTheta13, dTheta14, dTheta23, dTheta24, dTheta34,
@@ -599,27 +702,57 @@ float EMTFPtAssignmentEngine::calculate_pt(const address_t& address) {
 
   std::vector<Double_t> tree_data;
   tree_data.push_back(1.0);
-  tree_data.push_back(ftheta);  // tree_data.push_back(eta);
+  tree_data.push_back(eta);
 
-  for (int i=0; i<6; i++) {
+  for (int i=0; i<6; i++) {  // loop over 6 variables (or less)
     int mv = mode_variables[mode_inv-3][i];
     if (mv != -999) {
       int v = variables[mv];
+      if (!(mode_inv == 13 && i == 3)) {  // somehow this uses CSCID1
+        assert(v != -999);
+      }
       tree_data.push_back(v);
+    } else {
+      tree_data.push_back(0);  // pad with zeroes, somehow BDT tries to access out of bounds
     }
   }
 
-  //std::cout << "mode_inv: " << mode_inv << " variables: ";
-  //for (const auto& v: tree_data)
-  //  std::cout << v << " ";
-  //std::cout << std::endl;
+  if (verbose_ > 2) {
+    std::cout << "mode_inv: " << mode_inv << " variables: ";
+    for (const auto& v: tree_data)
+      std::cout << v << " ";
+    std::cout << std::endl;
+  }
 
   auto tree_event = std::make_unique<Event>();
+  tree_event->predictedValue = 0;  // must explicitly initialize
   tree_event->data = tree_data;
 
   forests_.at(mode_inv).predictEvent(tree_event.get(), 64);
-  float tmp_pt = tree_event->predictedValue;
-  pt = (tmp_pt != 0) ? 1.0/tmp_pt : tmp_pt;
 
+  float tmp_pt = tree_event->predictedValue;  // is actually 1/pT
+
+  if (verbose_ > 0) {
+    std::cout << "\nTrack with mode_inv = " << mode_inv << " has 1/pT = " << tmp_pt << std::endl;
+    std::cout << "dPhi12 = " << dPhi12 << ", dPhi13 = " << dPhi13 << ", dPhi14 = " << dPhi14 
+	      << ", dPhi23 = " << dPhi23 << ", dPhi24 = " << dPhi24 << ", dPhi34 = " << dPhi34 << std::endl;
+    std::cout << "dTheta12 = " << dTheta12 << ", dTheta13 = " << dTheta13 << ", dTheta14 = " << dTheta14 
+	      << ", dTheta23 = " << dTheta23 << ", dTheta24 = " << dTheta24 << ", dTheta34 = " << dTheta34 << std::endl;
+    std::cout << "CLCT1 = " << CLCT1 << ", CLCT2 = " << CLCT2 << ", CLCT3 = " << CLCT3 << ", CLCT4 = " << CLCT4 << std::endl;
+    std::cout << "CSCID1 = " << CSCID1 << ", CSCID2 = " << CSCID2 << ", CSCID3 = " << CSCID3 << ", CSCID4 = " << CSCID4 << std::endl;
+    std::cout << "FR1 = " << FR1 << ", FR2 = " << FR2 << ", FR3 = " << FR3 << ", FR4 = " << FR4 << std::endl;
+  }
+
+  if (bugNegPt_) {
+    pt = (tmp_pt == 0) ? tmp_pt : 1.0/tmp_pt;
+    if (pt<0.0)   pt = 1.0;
+    if (pt>200.0) pt = 200.0;
+
+  } else {
+    if (tmp_pt < 0.0)  tmp_pt = 1.0/7000;
+    pt = (tmp_pt == 0) ? tmp_pt : 1.0/tmp_pt;
+  }
+
+  assert(pt > 0);
   return pt;
 }

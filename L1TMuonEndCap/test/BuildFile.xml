@@ -1,11 +1,23 @@
 <environment>
-  <bin name="TestL1TriggerSep2016L1TMuonEndCap" file="TestDriver.cpp">
-    <flags TEST_RUNNER_ARGS=" /bin/bash L1TriggerSep2016/L1TMuonEndCap/test runtests.sh"/>
+  <bin name="TestL1TriggerSep2016L1TMuonEndCap" file="unittests/TestDriver.cpp">
+    <flags TEST_RUNNER_ARGS=" /bin/bash L1TriggerSep2016/L1TMuonEndCap/test/unittests runtests.sh"/>
     <use name="FWCore/Utilities"/>
   </bin>
 
-  <bin name="TestEMTFPhiMemoryImage" file="TestEMTFPhiMemoryImage.cpp">
+  <bin name="TestEMTFPhiMemoryImage" file="unittests/TestEMTFPhiMemoryImage.cpp">
     <use name="L1TriggerSep2016/L1TMuonEndCap"/>
     <use name="cppunit"/>
   </bin>
+</environment>
+
+
+<environment>
+  <export>
+  </export>
+
+  <library file="tools/*.cc" name="L1TriggerSep2016L1TMuonEndCap_tools">
+    <use name="L1TriggerSep2016/L1TMuonEndCap"/>
+    <use name="root"/>
+    <flags EDM_PLUGIN="1"/>
+  </library>
 </environment>

@@ -91,17 +91,17 @@ void EMTFPhiMemoryImage::check_input(unsigned int layer, unsigned int bit) const
 
 // See https://en.wikipedia.org/wiki/Circular_shift#Implementing_circular_shifts
 // return (val << len) | ((unsigned) val >> (-len & (sizeof(INT) * CHAR_BIT - 1)));
-void EMTFPhiMemoryImage::rotl(const value_type n) {
+void EMTFPhiMemoryImage::rotl(unsigned int n) {
   if (n >= _units*UINT64_BITS)
     return;
 
   value_type tmp[_layers][_units];
   std::copy(&(_buffer[0][0]), &(_buffer[0][0]) + (_layers*_units), &(tmp[0][0]));
 
-  const value_type mask = UINT64_BITS - 1;
-  const value_type n1 = n % UINT64_BITS;
-  const value_type n2 = _units - (n / UINT64_BITS);
-  const value_type n3 = (n1 == 0) ? n2+1 : n2;
+  const unsigned int mask = UINT64_BITS - 1;
+  const unsigned int n1 = n % UINT64_BITS;
+  const unsigned int n2 = _units - (n / UINT64_BITS);
+  const unsigned int n3 = (n1 == 0) ? n2+1 : n2;
 
   unsigned int i = 0, j = 0, j_curr = 0, j_next = 0;
   for (i = 0; i < _layers; ++i) {
@@ -119,17 +119,17 @@ void EMTFPhiMemoryImage::rotl(const value_type n) {
   }
 }
 
-void EMTFPhiMemoryImage::rotr(const value_type n) {
+void EMTFPhiMemoryImage::rotr(unsigned int n) {
   if (n >= _units*UINT64_BITS)
     return;
 
   value_type tmp[_layers][_units];
   std::copy(&(_buffer[0][0]), &(_buffer[0][0]) + (_layers*_units), &(tmp[0][0]));
 
-  const value_type mask = UINT64_BITS - 1;
-  const value_type n1 = n % UINT64_BITS;
-  const value_type n2 = n / UINT64_BITS;
-  const value_type n3 = (n1 == 0) ? n2+_units-1 : n2;
+  const unsigned int mask = UINT64_BITS - 1;
+  const unsigned int n1 = n % UINT64_BITS;
+  const unsigned int n2 = n / UINT64_BITS;
+  const unsigned int n3 = (n1 == 0) ? n2+_units-1 : n2;
 
   unsigned int i = 0, j = 0, j_curr = 0, j_next = 0;
   for (i = 0; i < _layers; ++i) {
@@ -148,6 +148,8 @@ void EMTFPhiMemoryImage::rotr(const value_type n) {
 }
 
 unsigned int EMTFPhiMemoryImage::op_and(const EMTFPhiMemoryImage& other) const {
+  static_assert((_layers == 4 && _units == 3), "This function assumes (_layers == 4 && _units == 3)");
+
   // Unroll
   bool b_st1 = (_buffer[0][0] & other._buffer[0][0]) ||
                (_buffer[0][1] & other._buffer[0][1]) ||

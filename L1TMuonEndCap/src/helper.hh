@@ -38,4 +38,28 @@ namespace {
     return s.str();
   }
 
+  // See http://stackoverflow.com/a/21510185
+  namespace details {
+    template <class T> struct _reversed {
+      T& t; _reversed(T& _t): t(_t) {}
+      decltype(t.rbegin()) begin() { return t.rbegin(); }
+      decltype(t.rend()) end() { return t.rend(); }
+    };
+  }
+  template <class T> details::_reversed<T> reversed(T& t) { return details::_reversed<T>(t); }
+
+  // See http://stackoverflow.com/a/53878
+  template <class STR=std::string>
+  std::vector<STR> split_string(const std::string& s, char c = ' ', char d = ' ') {
+    std::vector<STR> result;
+    const char* str = s.c_str();
+    do {
+      const char* begin = str;
+      while(*str != c && *str != d && *str)
+        str++;
+      result.emplace_back(begin, str);
+    } while (0 != *str++);
+    return result;
+  }
+
 }  // namespace

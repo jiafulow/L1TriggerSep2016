@@ -11,8 +11,8 @@ public:
   void configure(
       const EMTFSectorProcessorLUT* lut,
       int verbose, int endcap, int sector, int bx,
-      bool duplicateTheta, bool fixZonePhi,
-      const std::vector<int>& zoneBoundaries1, const std::vector<int>& zoneBoundaries2, int zoneOverlap
+      int bxShiftCSC,
+      const std::vector<int>& zoneBoundaries, int zoneOverlap, bool duplicateTheta, bool fixZonePhi, bool useNewZones
   );
 
   template<typename T>
@@ -25,22 +25,31 @@ public:
   const EMTFSectorProcessorLUT& lut() const;
 
   // CSC functions
-  EMTFHitExtra convert_prim_csc(int selected, const TriggerPrimitive& muon_primitive) const;
-  void convert_csc(EMTFHitExtra& conv_hit) const;
+  void convert_csc(
+      int pc_sector, int pc_station, int pc_chamber, int pc_segment,
+      const TriggerPrimitive& muon_primitive,
+      EMTFHitExtra& conv_hit
+  ) const;
+  void convert_csc_details(EMTFHitExtra& conv_hit) const;
 
   // RPC functions
-  EMTFHitExtra convert_prim_rpc(int selected, const TriggerPrimitive& muon_primitive) const;
-  void convert_rpc(EMTFHitExtra& conv_hit) const;
+  void convert_rpc(
+      int pc_sector, int pc_station, int pc_chamber, int pc_segment,
+      const TriggerPrimitive& muon_primitive,
+      EMTFHitExtra& conv_hit
+  ) const;
+  void convert_rpc_details(EMTFHitExtra& conv_hit) const;
 
 private:
   const EMTFSectorProcessorLUT* lut_;
 
   int verbose_, endcap_, sector_, bx_;
 
-  bool duplicateTheta_, fixZonePhi_;
+  int bxShiftCSC_;
 
-  std::vector<int> zoneBoundaries1_, zoneBoundaries2_;
+  std::vector<int> zoneBoundaries_;
   int zoneOverlap_;
+  bool duplicateTheta_, fixZonePhi_, useNewZones_;
 };
 
 #endif

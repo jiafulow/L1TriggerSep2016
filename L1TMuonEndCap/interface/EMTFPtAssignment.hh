@@ -5,17 +5,22 @@
 
 
 class EMTFPtAssignmentEngine;
+class EMTFPtAssignmentEngineAux;
 
 class EMTFPtAssignment {
 public:
   void configure(
       const EMTFPtAssignmentEngine* pt_assign_engine,
-      int verbose, int endcap, int sector, int bx
+      int verbose, int endcap, int sector, int bx,
+      bool readPtLUTFile, bool fixMode15HighPt, 
+      bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt
   );
 
   void process(
       EMTFTrackExtraCollection& best_tracks
   );
+
+  const EMTFPtAssignmentEngineAux& aux() const;
 
 private:
   EMTFPtAssignmentEngine* pt_assign_engine_;

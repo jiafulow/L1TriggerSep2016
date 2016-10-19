@@ -10,7 +10,7 @@ def main():
   mode = int(sys.argv[1])
 
   if mode > 15:
-    raise Exception("Mode must be 0-15")
+    raise Exception("mode must be 0-15")
 
   printme = []
   if (mode & 8):  printme.append("1")
