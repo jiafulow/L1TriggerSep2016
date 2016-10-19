@@ -28,7 +28,7 @@ simEmtfDigis = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
 
     # Versioning
     Version      = cms.int32(1),
-    PtLUTVersion = cms.int32(1),
+    PtLUTVersion = cms.int32(4),
 
     # Sector processor primitive-conversion parameters
     spPCParams16 = cms.PSet(

@@ -8,6 +8,7 @@
 
 EMTFPtLUTReader::EMTFPtLUTReader() :
     ptlut_(),
+    version_(4),
     ok_(false)
 {
 
@@ -54,6 +55,7 @@ void EMTFPtLUTReader::read(const std::string& lut_full_path) {
     throw std::invalid_argument(what);
   }
 
+  version_ = ptlut_.at(0);  // address 0 is the pT LUT version number
   ok_ = true;
   return;
 }

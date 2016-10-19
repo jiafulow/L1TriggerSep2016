@@ -61,6 +61,8 @@ MakeEMTFPtLUT::MakeEMTFPtLUT(const edm::ParameterSet& iConfig) :
     addressesToCheck_(iConfig.getParameter<std::vector<unsigned long long> >("addressesToCheck")),
     done_(false)
 {
+  auto ptlut_ver   = iConfig.getParameter<int>("PtLUTVersion");
+
   const edm::ParameterSet spPAParams16 = config_.getParameter<edm::ParameterSet>("spPAParams16");
   auto bdtXMLDir          = spPAParams16.getParameter<std::string>("BDTXMLDir");
   auto readPtLUTFile      = spPAParams16.getParameter<bool>("ReadPtLUTFile");
@@ -68,6 +70,8 @@ MakeEMTFPtLUT::MakeEMTFPtLUT(const edm::ParameterSet& iConfig) :
   auto bug9BitDPhi        = spPAParams16.getParameter<bool>("Bug9BitDPhi");
   auto bugMode7CLCT       = spPAParams16.getParameter<bool>("BugMode7CLCT");
   auto bugNegPt           = spPAParams16.getParameter<bool>("BugNegPt");
+
+  ptlut_writer_.set_version(ptlut_ver);
 
   pt_assign_engine_->read(bdtXMLDir);
   pt_assign_engine_->configure(
