@@ -6,7 +6,8 @@
 void EMTFPtAssignment::configure(
     const EMTFPtAssignmentEngine* pt_assign_engine,
     int verbose, int endcap, int sector, int bx,
-    bool readPtLUTFile, bool fixMode15HighPt, bool fix9bDPhi
+    bool readPtLUTFile, bool fixMode15HighPt, 
+    bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt
 ) {
   assert(pt_assign_engine != nullptr);
 
@@ -20,7 +21,8 @@ void EMTFPtAssignment::configure(
 
   pt_assign_engine_->configure(
       verbose_,
-      readPtLUTFile, fixMode15HighPt, fix9bDPhi
+      readPtLUTFile, fixMode15HighPt, 
+      bug9BitDPhi, bugMode7CLCT, bugNegPt
   );
 }
 

@@ -25,7 +25,8 @@ public:
 
   void configure(
       int verbose,
-      bool readPtLUTFile, bool fixMode15HighPt, bool fix9bDPhi
+      bool readPtLUTFile, bool fixMode15HighPt, 
+      bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt
   );
 
   void configure_details();
@@ -48,7 +49,8 @@ private:
 
   int verbose_;
 
-  bool readPtLUTFile_, fixMode15HighPt_, fix9bDPhi_;
+  bool readPtLUTFile_, fixMode15HighPt_;
+  bool bug9BitDPhi_, bugMode7CLCT_, bugNegPt_;
 };
 
 #endif

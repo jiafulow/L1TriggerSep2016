@@ -249,7 +249,7 @@ void EMTFBestTrackSelection::cancel_multi_bx(
   const int num_h = extended_best_track_cands.size() / max_z;  // num of bx history so far
 
   // Emulate the arrays used in firmware
-  typedef std::array<int, 3> segment_ref_t; // Should this be max_h or max_n, instead of 3? - AWB 04.10.16
+  typedef std::array<int, 3> segment_ref_t;
   std::vector<std::vector<segment_ref_t> > segments(max_hzn, std::vector<segment_ref_t>());  // 2D array [hzn][num segments]
 
   std::vector<std::vector<bool> > larger(max_hzn, std::vector<bool>(max_hzn, false));  // 2D array [hzn][hzn]

@@ -36,13 +36,16 @@ void EMTFPtAssignmentEngine::read(const std::string& xml_dir) {
 
 void EMTFPtAssignmentEngine::configure(
     int verbose,
-    bool readPtLUTFile, bool fixMode15HighPt, bool fix9bDPhi
+    bool readPtLUTFile, bool fixMode15HighPt, 
+    bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt
 ) {
   verbose_ = verbose;
 
   readPtLUTFile_   = readPtLUTFile;
   fixMode15HighPt_ = fixMode15HighPt;
-  fix9bDPhi_       = fix9bDPhi;
+  bug9BitDPhi_     = bug9BitDPhi;
+  bugMode7CLCT_    = bugMode7CLCT;
+  bugNegPt_        = bugNegPt;
 
   configure_details();
 }
@@ -139,7 +142,7 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
   // Can we automate the assigning of addresses?  Would decrease typos, speed future development. - AWB 03.10.16
   switch (mode_inv) {
   case 3:   // 1-2
-    if (fix9bDPhi_)  dPhi12 = std::min(511, dPhi12);
+    if (not bug9BitDPhi_)  dPhi12 = std::min(511, dPhi12);
 
     address |= (dPhi12      & ((1<<9)-1)) << (0);
     address |= (sign12      & ((1<<1)-1)) << (0+9);
@@ -155,7 +158,7 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     break;
 
   case 5:   // 1-3
-    if (fix9bDPhi_)  dPhi13 = std::min(511, dPhi13);
+    if (not bug9BitDPhi_)  dPhi13 = std::min(511, dPhi13);
 
     address |= (dPhi13      & ((1<<9)-1)) << (0);
     address |= (sign13      & ((1<<1)-1)) << (0+9);
@@ -171,7 +174,7 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     break;
 
   case 9:   // 1-4
-    if (fix9bDPhi_)  dPhi14 = std::min(511, dPhi14);
+    if (not bug9BitDPhi_)  dPhi14 = std::min(511, dPhi14);
 
     address |= (dPhi14      & ((1<<9)-1)) << (0);
     address |= (sign14      & ((1<<1)-1)) << (0+9);
@@ -187,7 +190,7 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     break;
 
   case 6:   // 2-3
-    if (fix9bDPhi_)  dPhi23 = std::min(511, dPhi23);
+    if (not bug9BitDPhi_)  dPhi23 = std::min(511, dPhi23);
 
     address |= (dPhi23      & ((1<<9)-1)) << (0);
     address |= (sign23      & ((1<<1)-1)) << (0+9);
@@ -203,7 +206,7 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     break;
 
   case 10:  // 2-4
-    if (fix9bDPhi_)  dPhi24 = std::min(511, dPhi24);
+    if (not bug9BitDPhi_)  dPhi24 = std::min(511, dPhi24);
 
     address |= (dPhi24      & ((1<<9)-1)) << (0);
     address |= (sign24      & ((1<<1)-1)) << (0+9);
@@ -219,7 +222,7 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     break;
 
   case 12:  // 3-4
-    if (fix9bDPhi_)  dPhi34 = std::min(511, dPhi34);
+    if (not bug9BitDPhi_)  dPhi34 = std::min(511, dPhi34);
 
     address |= (dPhi34      & ((1<<9)-1)) << (0);
     address |= (sign34      & ((1<<1)-1)) << (0+9);
@@ -669,8 +672,7 @@ float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
   }
 
   // Inherit some bugs
-  bool reproduceBug1 = true;
-  if (reproduceBug1) {
+  if (bugMode7CLCT_) {
     if (mode_inv == 14) {  // 2-3-4
       int bugged_CLCT2;
       address_t bugged_address;
@@ -730,8 +732,18 @@ float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
 
   float tmp_pt = tree_event->predictedValue;  // is actually 1/pT
 
-  bool reproduceBug2 = true;
-  if (reproduceBug2) {
+  if (verbose_ > 0) {
+    std::cout << "\nTrack with mode_inv = " << mode_inv << " has 1/pT = " << tmp_pt << std::endl;
+    std::cout << "dPhi12 = " << dPhi12 << ", dPhi13 = " << dPhi13 << ", dPhi14 = " << dPhi14 
+	      << ", dPhi23 = " << dPhi23 << ", dPhi24 = " << dPhi24 << ", dPhi34 = " << dPhi34 << std::endl;
+    std::cout << "dTheta12 = " << dTheta12 << ", dTheta13 = " << dTheta13 << ", dTheta14 = " << dTheta14 
+	      << ", dTheta23 = " << dTheta23 << ", dTheta24 = " << dTheta24 << ", dTheta34 = " << dTheta34 << std::endl;
+    std::cout << "CLCT1 = " << CLCT1 << ", CLCT2 = " << CLCT2 << ", CLCT3 = " << CLCT3 << ", CLCT4 = " << CLCT4 << std::endl;
+    std::cout << "CSCID1 = " << CSCID1 << ", CSCID2 = " << CSCID2 << ", CSCID3 = " << CSCID3 << ", CSCID4 = " << CSCID4 << std::endl;
+    std::cout << "FR1 = " << FR1 << ", FR2 = " << FR2 << ", FR3 = " << FR3 << ", FR4 = " << FR4 << std::endl;
+  }
+
+  if (bugNegPt_) {
     pt = (tmp_pt == 0) ? tmp_pt : 1.0/tmp_pt;
     if (pt<0.0)   pt = 1.0;
     if (pt>200.0) pt = 200.0;

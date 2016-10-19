@@ -1,5 +1,5 @@
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFSubsystemCollector.hh" // Why .hh and not .h? - AWB 27.09.16
-// Why aren't the includes below in EMTFSubsystemCollector.hh? - AWB 27.09.16
+#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFSubsystemCollector.hh"
+
 #include "FWCore/Framework/interface/Event.h"
 #include "DataFormats/Common/interface/Handle.h"
 
@@ -22,7 +22,8 @@ void EMTFSubsystemCollector::extractPrimitives(
     auto digi = (*chamber).second.first;
     auto dend = (*chamber).second.second;
     for( ; digi != dend; ++digi ) {
-      out.emplace_back((*chamber).first,*digi); // emplace_back does the same thing as push_back: appends to the end of the vector - AWB 28.09.16
+      // emplace_back does the same thing as push_back: appends to the end of the vector
+      out.emplace_back((*chamber).first,*digi);
     }
   }
   return;

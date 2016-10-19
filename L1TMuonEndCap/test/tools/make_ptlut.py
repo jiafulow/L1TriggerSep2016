@@ -15,7 +15,9 @@ process.analyzer1 = cms.EDAnalyzer("MakeEMTFPtLUT",
         BDTXMLDir = cms.string('v_16_02_21'),
         ReadPtLUTFile = cms.bool(False),
         FixMode15HighPt = cms.bool(True),
-        Fix9bDPhi = cms.bool(True),
+        Bug9BitDPhi = cms.bool(False),
+        BugMode7CLCT = cms.bool(False),
+        BugNegPt = cms.bool(False),
     ),
 
     # Output file

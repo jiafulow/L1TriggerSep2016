@@ -19,27 +19,27 @@ simEmtfDigis = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
     RPCEnable = cms.bool(False),
 
     # BX
-    MinBX = cms.int32(-3),
-    MaxBX = cms.int32(+4),
+    MinBX    = cms.int32(-3),
+    MaxBX    = cms.int32(+3),
     BXWindow = cms.int32(3),
 
     # CSC LCT BX offset correction
     CSCInputBXShift = cms.int32(-6),
 
     # Versioning
-    Version = cms.int32(1),
+    Version      = cms.int32(1),
     PtLUTVersion = cms.int32(1),
 
     # Sector processor primitive-conversion parameters
     spPCParams16 = cms.PSet(
-        ZoneBoundaries = cms.vint32(0,41,49,87,127),  # 5 boundaries for 4 zones
-        #ZoneBoundaries = cms.vint32(0,36,54,96,127), # new proposed zone boundaries
-        ZoneOverlap = cms.int32(2),
-        PhThLUT = cms.string('ph_lut_v1'),
+        ZoneBoundaries  = cms.vint32(0,41,49,87,127),  # 5 boundaries for 4 zones
+        #ZoneBoundaries  = cms.vint32(0,36,54,96,127), # new proposed zone boundaries
+        ZoneOverlap     = cms.int32(2),
+        PhThLUT         = cms.string('ph_lut_v1'),
         IncludeNeighbor = cms.bool(True),
-        DuplicateTheta = cms.bool(True),
-        FixZonePhi = cms.bool(True),
-        UseNewZones = cms.bool(False),
+        DuplicateTheta  = cms.bool(True),
+        FixZonePhi      = cms.bool(True),
+        UseNewZones     = cms.bool(False),
     ),
 
     # Sector processor pattern-recognition parameters
@@ -67,23 +67,25 @@ simEmtfDigis = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
             "1,22:19:11:8,7:7:7:7,14:7:7:0,14:7:7:0",
             "0,30:23:7:0,7:7:7:7,14:7:7:0,14:7:7:0",
         ),
-        ThetaWindow = cms.int32(4),
+        ThetaWindow            = cms.int32(4),
         UseSymmetricalPatterns = cms.bool(True),
     ),
 
     # Sector processor ghost-cancellation parameters
     spGCParams16 = cms.PSet(
-        MaxRoadsPerZone = cms.int32(3),
-        MaxTracks = cms.int32(3),
+        MaxRoadsPerZone   = cms.int32(3),
+        MaxTracks         = cms.int32(3),
         UseSecondEarliest = cms.bool(True),
     ),
 
     # Sector processor pt-assignment parameters
     spPAParams16 = cms.PSet(
-        BDTXMLDir = cms.string('v_16_02_21'),
-        ReadPtLUTFile = cms.bool(False),
+        BDTXMLDir       = cms.string('v_16_02_21'),
+        ReadPtLUTFile   = cms.bool(False),
         FixMode15HighPt = cms.bool(True),
-        Fix9bDPhi = cms.bool(False), ## False in FW through present - AWB 06.10.16
+        Bug9BitDPhi     = cms.bool(False), ## True in FW through when? - AWB 19.10.16
+        BugMode7CLCT    = cms.bool(True),
+        BugNegPt        = cms.bool(True),
     ),
 
 )

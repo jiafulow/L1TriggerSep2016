@@ -36,7 +36,7 @@ public:
       const std::vector<int>& zoneBoundaries, int zoneOverlap, bool includeNeighbor, bool duplicateTheta, bool fixZonePhi, bool useNewZones,
       const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions, int thetaWindow, bool useSymPatterns,
       int maxRoadsPerZone, int maxTracks, bool useSecondEarliest,
-      bool readPtLUTFile, bool fixMode15HighPt, bool fix9bDPhi
+      bool readPtLUTFile, bool fixMode15HighPt, bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt
   );
 
   void process(
@@ -85,7 +85,8 @@ private:
   bool useSecondEarliest_;
 
   // For pt assignment
-  bool readPtLUTFile_, fixMode15HighPt_, fix9bDPhi_;
+  bool readPtLUTFile_, fixMode15HighPt_;
+  bool bug9BitDPhi_, bugMode7CLCT_, bugNegPt_;
 };
 
 #endif

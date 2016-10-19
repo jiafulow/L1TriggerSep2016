@@ -65,12 +65,15 @@ MakeEMTFPtLUT::MakeEMTFPtLUT(const edm::ParameterSet& iConfig) :
   auto bdtXMLDir          = spPAParams16.getParameter<std::string>("BDTXMLDir");
   auto readPtLUTFile      = spPAParams16.getParameter<bool>("ReadPtLUTFile");
   auto fixMode15HighPt    = spPAParams16.getParameter<bool>("FixMode15HighPt");
-  auto fix9bDPhi          = spPAParams16.getParameter<bool>("Fix9bDPhi");
+  auto bug9BitDPhi        = spPAParams16.getParameter<bool>("Bug9BitDPhi");
+  auto bugMode7CLCT       = spPAParams16.getParameter<bool>("BugMode7CLCT");
+  auto bugNegPt           = spPAParams16.getParameter<bool>("BugNegPt");
 
   pt_assign_engine_->read(bdtXMLDir);
   pt_assign_engine_->configure(
     verbose_,
-    readPtLUTFile, fixMode15HighPt, fix9bDPhi
+    readPtLUTFile, fixMode15HighPt, 
+    bug9BitDPhi, bugMode7CLCT, bugNegPt
   );
 }
 
