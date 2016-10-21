@@ -102,7 +102,7 @@ void EMTFTrackAdaptor::convert_track(const EMTFTrackExtra& in_track, EMTFTrack& 
   out_track.set_phi_glob_rad  ( phi_glob_rad            );
   out_track.set_charge        ( (in_track.gmt_charge == 1) ? -1 : 1   );
   out_track.set_charge_GMT    ( in_track.gmt_charge     );
-  out_track.set_charge_valid  ( 1                       );
+  out_track.set_charge_valid  ( in_track.gmt_charge_valid );
   out_track.set_dPhi_12       ( adapt_dphi(get_signed_int(ptlut_data.delta_ph[0], ptlut_data.sign_ph[0]) ) );
   out_track.set_dPhi_13       ( adapt_dphi(get_signed_int(ptlut_data.delta_ph[1], ptlut_data.sign_ph[1]) ) );
   out_track.set_dPhi_14       ( adapt_dphi(get_signed_int(ptlut_data.delta_ph[2], ptlut_data.sign_ph[2]) ) );

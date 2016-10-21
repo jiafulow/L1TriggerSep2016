@@ -154,6 +154,8 @@ void EMTFPrimitiveConversion::convert_csc(
   }
 
   // Set properties
+  conv_hit.detId       = tp_detId.rawId();
+
   conv_hit.endcap      = tp_endcap;
   conv_hit.station     = tp_station;
   conv_hit.ring        = tp_ring;

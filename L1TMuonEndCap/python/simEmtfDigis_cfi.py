@@ -90,7 +90,11 @@ simEmtfDigis = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
 
 )
 
+simEmtfDigisMC = simEmtfDigis.clone(
+)
+
 simEmtfDigisData = simEmtfDigis.clone(
     CSCInput = cms.InputTag('emtfStage2Digis'),
     RPCInput = cms.InputTag('muonRPCDigis'),
 )
+
