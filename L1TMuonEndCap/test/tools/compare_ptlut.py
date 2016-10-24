@@ -21,7 +21,8 @@ infile1 += "src/L1TriggerSep2016/L1TMuonEndCap/data/emtf_luts/v_16_02_21_ptlut/L
 infile2 = os.environ.get("CMSSW_BASE") + "/"
 #infile2 += "src/L1TriggerSep2016/L1TMuonEndCap/data/emtf_luts/v_16_02_21_ptlut_madorsky/LUT_AndrewFix_25July16.dat"
 #infile2 += "src/L1TriggerSep2016/L1TMuonEndCap/data/emtf_luts/v_16_02_21_ptlut_jftest/LUT_AndrewFix_25July16.dat"
-infile2 += "src/L1TriggerSep2016/L1TMuonEndCap/data/emtf_luts/v_16_02_21_ptlut_jftest2/LUT_AndrewFix_25July16.dat"
+#infile2 += "src/L1TriggerSep2016/L1TMuonEndCap/data/emtf_luts/v_16_02_21_ptlut_jftest2/LUT_AndrewFix_25July16.dat"
+infile2 += "src/L1TriggerSep2016/L1TMuonEndCap/data/emtf_luts/v_16_02_21_ptlut_jftest2/LUT_v5_24Oct16.dat"
 process.analyzer1.infile1 = infile1
 process.analyzer1.infile2 = infile2
 
