@@ -1,4 +1,5 @@
 #include <memory>
+#include <vector>
 #include <iostream>
 
 #include "FWCore/Framework/interface/Frameworkfwd.h"
