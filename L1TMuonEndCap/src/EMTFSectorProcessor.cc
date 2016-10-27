@@ -13,7 +13,7 @@ void EMTFSectorProcessor::configure(
     const EMTFSectorProcessorLUT* lut,
     const EMTFPtAssignmentEngine* pt_assign_engine,
     int verbose, int endcap, int sector,
-    int minBX, int maxBX, int bxWindow, int bxShiftCSC,
+    int minBX, int maxBX, int bxWindow, int bxShiftCSC, int bxShiftRPC,
     const std::vector<int>& zoneBoundaries, int zoneOverlap, bool includeNeighbor, bool duplicateTheta, bool fixZonePhi, bool useNewZones,
     const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions, int thetaWindow, bool useSymPatterns,
     int maxRoadsPerZone, int maxTracks, bool useSecondEarliest,
@@ -37,6 +37,7 @@ void EMTFSectorProcessor::configure(
   maxBX_       = maxBX;
   bxWindow_    = bxWindow;
   bxShiftCSC_  = bxShiftCSC;
+  bxShiftRPC_  = bxShiftRPC;
 
   zoneBoundaries_     = zoneBoundaries;
   zoneOverlap_        = zoneOverlap;
@@ -63,6 +64,7 @@ void EMTFSectorProcessor::configure(
 
 void EMTFSectorProcessor::process(
     EventNumber_t ievent,
+    const std::unique_ptr<L1TMuonEndCap::GeometryTranslator>& tp_geom,
     const TriggerPrimitiveCollection& muon_primitives,
     EMTFHitExtraCollection& out_hits,
     EMTFTrackExtraCollection& out_tracks
@@ -87,6 +89,7 @@ void EMTFSectorProcessor::process(
 
     process_single_bx(
         bx,
+	tp_geom,
         muon_primitives,
         out_hits,
         out_tracks,
@@ -109,6 +112,7 @@ void EMTFSectorProcessor::process(
 
 void EMTFSectorProcessor::process_single_bx(
     int bx,
+    const std::unique_ptr<L1TMuonEndCap::GeometryTranslator>& tp_geom,
     const TriggerPrimitiveCollection& muon_primitives,
     EMTFHitExtraCollection& out_hits,
     EMTFTrackExtraCollection& out_tracks,
@@ -130,7 +134,7 @@ void EMTFSectorProcessor::process_single_bx(
   prim_conv.configure(
       lut_,
       verbose_, endcap_, sector_, bx,
-      bxShiftCSC_,
+      bxShiftCSC_, bxShiftRPC_,
       zoneBoundaries_, zoneOverlap_, duplicateTheta_, fixZonePhi_, useNewZones_
   );
 
@@ -190,8 +194,8 @@ void EMTFSectorProcessor::process_single_bx(
   // Convert trigger primitives into "converted hits"
   // A converted hit consists of integer representations of phi, theta, and zones
   // From src/EMTFPrimitiveConversion.cc
-  prim_conv.process(CSCTag(), selected_csc_map, conv_hits);
-  prim_conv.process(RPCTag(), selected_rpc_map, conv_hits);
+  prim_conv.process(CSCTag(), selected_csc_map, conv_hits, tp_geom);
+  prim_conv.process(RPCTag(), selected_rpc_map, conv_hits, tp_geom);
   extended_conv_hits.push_back(conv_hits);
 
   // Detect patterns in all zones, find 3 best roads in each zone

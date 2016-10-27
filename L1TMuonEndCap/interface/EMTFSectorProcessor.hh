@@ -32,7 +32,7 @@ public:
       const EMTFSectorProcessorLUT* lut,
       const EMTFPtAssignmentEngine* pt_assign_engine,
       int verbose, int endcap, int sector,
-      int minBX, int maxBX, int bxWindow, int bxShiftCSC,
+      int minBX, int maxBX, int bxWindow, int bxShiftCSC, int bxShiftRPC,
       const std::vector<int>& zoneBoundaries, int zoneOverlap, bool includeNeighbor, bool duplicateTheta, bool fixZonePhi, bool useNewZones,
       const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions, int thetaWindow, bool useSymPatterns,
       int maxRoadsPerZone, int maxTracks, bool useSecondEarliest,
@@ -42,6 +42,7 @@ public:
   void process(
       // Input
       EventNumber_t ievent,
+      const std::unique_ptr<L1TMuonEndCap::GeometryTranslator>& tp_geom,
       const TriggerPrimitiveCollection& muon_primitives,
       // Output
       EMTFHitExtraCollection& out_hits,
@@ -51,6 +52,7 @@ public:
   void process_single_bx(
       // Input
       int bx,
+      const std::unique_ptr<L1TMuonEndCap::GeometryTranslator>& tp_geom,
       const TriggerPrimitiveCollection& muon_primitives,
       // Output
       EMTFHitExtraCollection& out_hits,
@@ -68,7 +70,7 @@ private:
 
   int verbose_, endcap_, sector_;
 
-  int minBX_, maxBX_, bxWindow_, bxShiftCSC_;
+  int minBX_, maxBX_, bxWindow_, bxShiftCSC_, bxShiftRPC_;
 
   // For primitive conversion
   std::vector<int> zoneBoundaries_;

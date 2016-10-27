@@ -13,12 +13,12 @@ using RPCData = TriggerPrimitive::RPCData;
 void EMTFPrimitiveConversion::configure(
     const EMTFSectorProcessorLUT* lut,
     int verbose, int endcap, int sector, int bx,
-    int bxShiftCSC,
+    int bxShiftCSC, int bxShiftRPC,
     const std::vector<int>& zoneBoundaries, int zoneOverlap, bool duplicateTheta, bool fixZonePhi, bool useNewZones
 ) {
   assert(lut != nullptr);
 
-  lut_ = lut;
+  lut_      = lut;
 
   verbose_ = verbose;
   endcap_  = endcap;
@@ -26,6 +26,7 @@ void EMTFPrimitiveConversion::configure(
   bx_      = bx;
 
   bxShiftCSC_      = bxShiftCSC;
+  bxShiftRPC_      = bxShiftRPC;
 
   zoneBoundaries_  = zoneBoundaries;
   zoneOverlap_     = zoneOverlap;
@@ -40,7 +41,8 @@ template<>
 void EMTFPrimitiveConversion::process(
     CSCTag tag,
     const std::map<int, TriggerPrimitiveCollection>& selected_csc_map,
-    EMTFHitExtraCollection& conv_hits
+    EMTFHitExtraCollection& conv_hits,
+    const std::unique_ptr<L1TMuonEndCap::GeometryTranslator>& tp_geom
 ) const {
   std::map<int, TriggerPrimitiveCollection>::const_iterator map_tp_it  = selected_csc_map.begin();
   std::map<int, TriggerPrimitiveCollection>::const_iterator map_tp_end = selected_csc_map.end();
@@ -72,7 +74,8 @@ template<>
 void EMTFPrimitiveConversion::process(
     RPCTag tag,
     const std::map<int, TriggerPrimitiveCollection>& selected_rpc_map,
-    EMTFHitExtraCollection& conv_hits
+    EMTFHitExtraCollection& conv_hits,
+    const std::unique_ptr<L1TMuonEndCap::GeometryTranslator>& tp_geom
 ) const {
   std::map<int, TriggerPrimitiveCollection>::const_iterator map_tp_it  = selected_rpc_map.begin();
   std::map<int, TriggerPrimitiveCollection>::const_iterator map_tp_end = selected_rpc_map.end();
@@ -88,7 +91,7 @@ void EMTFPrimitiveConversion::process(
 
     for (; tp_it != tp_end; ++tp_it) {
       EMTFHitExtra conv_hit;
-      convert_rpc(pc_sector, pc_station, pc_chamber, pc_segment, *tp_it, conv_hit);  // RPC
+      convert_rpc(pc_sector, pc_station, pc_chamber, pc_segment, *tp_it, conv_hit, tp_geom);  // RPC
       conv_hits.push_back(conv_hit);
       pc_segment += 1;
     }
@@ -477,14 +480,131 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
 void EMTFPrimitiveConversion::convert_rpc(
     int pc_sector, int pc_station, int pc_chamber, int pc_segment,
     const TriggerPrimitive& muon_primitive,
-    EMTFHitExtra& conv_hit
+    EMTFHitExtra& conv_hit,
+    const std::unique_ptr<L1TMuonEndCap::GeometryTranslator>& tp_geom
 ) const {
-  //const RPCDetId tp_detId = muon_primitive.detId<RPCDetId>();
-  //const RPCData& tp_data  = muon_primitive.getRPCData();
 
-  convert_rpc_details(conv_hit);
+  const RPCDetId tp_detId = muon_primitive.detId<RPCDetId>();
+  const RPCData& tp_data  = muon_primitive.getRPCData();
+
+  if (tp_detId.region() == 0) return;  // 0 for barrel, +/-1 for +/- endcap
+  
+  int tp_endcap    = (tp_detId.region() == 1 ? 1 : 2);
+  // int tp_sector    = tp_detId.triggerSector();  // Same as in CSCs (? - AWB 10.27.16)
+  int tp_sector    = tp_detId.sector();         // Which of these is right? - AWB 10.27.16
+  int tp_subsector = tp_detId.subsector();      // Same as in CSCs (? - AWB 10.27.16)
+  int tp_station   = tp_detId.station();        // Same as in CSCs (? - AWB 10.27.16)
+  int tp_ring      = tp_detId.ring();           // Ring number in endcap (from 1 to 3, but only 2 and 3 exist currently)
+  int tp_roll      = tp_detId.roll();           // AKA eta "partition" or "segment": subdivision of ring into 3 parts, noted "C-B-A" in-to-out
+  // int tp_chamber   = tp_detId.chamber();        // Same as in CSCs (? - AWB 10.27.16)
+
+  int tp_bx        = tp_data.bx;
+  // int tp_csc_ID    = tp_data.cscID;             // Corrolary for RPCs? - AWB 10.27.16
+
+  // // station 1 --> subsector 1 or 2
+  // // station 2,3,4 --> subsector 0
+  // int tp_subsector = (tp_station != 1) ? 0 : ((tp_chamber % 6 > 2) ? 1 : 2);
+
+  
+  // Set properties
+  conv_hit.endcap      = tp_endcap;
+  conv_hit.station     = tp_station;
+  conv_hit.ring        = tp_ring;
+  conv_hit.roll        = tp_roll;
+  // conv_hit.chamber     = tp_chamber;
+  conv_hit.sector      = tp_sector;
+  conv_hit.subsector   = tp_subsector;
+  // conv_hit.csc_ID      = tp_csc_ID;
+  // conv_hit.cscn_ID     = cscn_ID;
+
+  conv_hit.bx          = tp_bx + bxShiftRPC_;
+  conv_hit.subsystem   = TriggerPrimitive::kRPC;
+
+  conv_hit.pc_sector   = pc_sector;
+  conv_hit.pc_station  = pc_station;
+  conv_hit.pc_chamber  = pc_chamber;
+  conv_hit.pc_segment  = pc_segment;
+
+  // conv_hit.valid       = tp_data.valid;
+  conv_hit.strip       = tp_data.strip;
+  // conv_hit.wire        = tp_data.keywire;
+  // conv_hit.quality     = tp_data.quality;
+  // conv_hit.pattern     = tp_data.pattern;
+  // conv_hit.bend        = tp_data.bend;
+
+  // conv_hit.bc0         = 0; // Not used anywhere, but part of EMTF DAQ output
+  // conv_hit.mpc_link    = tp_data.mpclink; // Used? Delete from class? - AWB 29.09.16
+  // conv_hit.sync_err    = tp_data.syncErr; // Used? Delete from class? - AWB 29.09.16
+  // conv_hit.track_num   = tp_data.trknmb; // Used? Delete from class? - AWB 29.09.16
+  // conv_hit.stub_num    = 0; // Should define in same way as firmware - AWB 29.09.16
+  // conv_hit.bx0         = tp_data.bx0; // Used? Delete from class? - AWB 29.09.16
+  // conv_hit.layer       = 0; // Used? Delete from class? - AWB 29.09.16
+
+  // std::cout << "\nendcap = " << tp_endcap << ", station = " << tp_station << ", ring = " << tp_ring << ", roll = " << tp_roll
+  // 	    << ", sector = " << tp_sector << ", subsector = " << tp_subsector << ", bx = " << conv_hit.bx << ", strip = " << conv_hit.strip << std::endl;
+
+  convert_rpc_details(conv_hit, muon_primitive, tp_geom);
 }
 
-void EMTFPrimitiveConversion::convert_rpc_details(EMTFHitExtra& conv_hit) const {
+void EMTFPrimitiveConversion::convert_rpc_details(EMTFHitExtra& conv_hit, 
+						  const TriggerPrimitive& muon_primitive,
+						  const std::unique_ptr<L1TMuonEndCap::GeometryTranslator>& tp_geom) const {
+  
+  // std::unique_ptr<const RPCRoll> roll(rpc_geom_->roll( tp_detId ));
+  // const LocalPoint  loc_pt = roll->centreOfStrip( conv_hit.strip );
+  // const GlobalPoint glb_pt = roll->toGlobal( loc_pt );
+  // roll.release();
+
+  // float glob_phi   = glb_pt.phi();
+  // float glob_theta = glb_pt.theta();
+
+  // float glob_phi   = muon_primitive.getCMSGlobalPhi();
+  // float glob_eta   = muon_primitive.getCMSGlobalEta();
+
+  // std::cout << "Before declaring geom" << std::endl;
+  // std::unique_ptr<L1TMuonEndCap::GeometryTranslator> geom;
+  // std::cout << "After declaring geom" << std::endl;
+  // geom.reset(new L1TMuonEndCap::GeometryTranslator());
+  // // geom->checkAndUpdateGeometry(es);
+  // std::cout << "After resetting geom" << std::endl;
+
+  float glob_phi   = tp_geom->calculateGlobalPhi(muon_primitive);
+  float glob_eta   = tp_geom->calculateGlobalEta(muon_primitive);
+
+  float glob_theta = 2*atan( exp(-1*glob_eta) );
+
+  // Convert to degrees
+  glob_phi   *= (180. / Geom::pi());
+  if (glob_phi < 0)  // Convert to [0, 360]
+    glob_phi += 360.;
+  glob_theta *= (180. / Geom::pi());
+  if (glob_theta > 90)
+    glob_theta = 180. - glob_theta;
+
+  float loc_phi = fmod( (glob_phi + 15.0), 60.0);  // Phi within sector
+  if (glob_phi > 180.)  // Convert back to [-180, 180]
+    glob_phi -= 360.;
+
+  int fph      = (loc_phi * 60.0);  // Rounds down - probably not the best
+  int th       = ((glob_theta - 8.5) / 0.285); 
+  int zone_hit = ((fph + 16) >> 5);
+
+  // std::cout << "glob_phi = " << glob_phi << ", loc_phi = " << loc_phi << ", fph = " << fph << ", zone_hit = " << zone_hit << std::endl;
+  // std::cout << "glob_eta = " << glob_eta << ", glob_theta = " << glob_theta << ", th = " << th << std::endl;
+  
+  conv_hit.phi_fp     = fph;        // Full-precision integer phi
+  conv_hit.theta_fp   = th;         // Full-precision integer theta
+  // conv_hit.phzvl      = phzvl;      // Local zone word: (1*low) + (2*mid) + (4*low) - used in FW debugging
+  // conv_hit.ph_hit     = ph_hit;     // Intermediate quantity in phi calculation - used in FW debugging
+  conv_hit.zone_hit   = zone_hit;   // Phi value for building patterns (0.53333 deg precision)
+  // conv_hit.zone_code  = zone_code;  // Full zone word: 1*(zone 0) + 2*(zone 1) + 4*(zone 2) + 8*(zone 3)
+  
+  // conv_hit.fs_segment   = fs_segment;    // How is this used? - AWB 18.10.16
+  // conv_hit.fs_zone_code = fs_zone_code;  // Zone word used in primitive matching (why not use zone_code in FW? - AWB 18.10.16)
+
+  conv_hit.phi_glob_deg = glob_phi;
+  conv_hit.phi_loc_deg  = loc_phi;
+  conv_hit.theta_deg    = glob_theta;
+  conv_hit.eta          = glob_eta;
 
 }

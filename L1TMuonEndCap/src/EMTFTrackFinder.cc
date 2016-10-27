@@ -21,6 +21,7 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
   auto maxBX       = iConfig.getParameter<int>("MaxBX");
   auto bxWindow    = iConfig.getParameter<int>("BXWindow");
   auto bxShiftCSC  = iConfig.getParameter<int>("CSCInputBXShift");
+  auto bxShiftRPC  = iConfig.getParameter<int>("RPCInputBXShift");
   // auto version     = iConfig.getParameter<int>("Version");        // not yet used
   // auto ptlut_ver   = iConfig.getParameter<int>("PtLUTVersion");   // not yet used
 
@@ -70,7 +71,7 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
             &sector_processor_lut_,
             &pt_assign_engine_,
             verbose_, endcap, sector,
-            minBX, maxBX, bxWindow, bxShiftCSC,
+            minBX, maxBX, bxWindow, bxShiftCSC, bxShiftRPC,
             zoneBoundaries, zoneOverlap, includeNeighbor, duplicateTheta, fixZonePhi, useNewZones,
             pattDefinitions, symPattDefinitions, thetaWindow, useSymPatterns,
             maxRoadsPerZone, maxTracks, useSecondEarliest,
@@ -97,6 +98,17 @@ void EMTFTrackFinder::process(
 
   out_hits.clear();
   out_tracks.clear();
+
+
+  // Get the geometry for TP conversions
+  std::unique_ptr<L1TMuonEndCap::GeometryTranslator> tp_geom;
+  tp_geom.reset(new L1TMuonEndCap::GeometryTranslator());
+  tp_geom->checkAndUpdateGeometry(iSetup);
+  // // Get the RPC geometry
+  // const MuonGeometryRecord& geom = es.get<MuonGeometryRecord>();
+  // unsigned long long geomid = geom.cacheIdentifier();
+  // if( geom_cache_id_ != geomid )
+  //   geom.get(geom_rpc_);
 
   // ___________________________________________________________________________
   // Extract all trigger primitives (class defined in ??? - AWB 27.09.16)
@@ -126,6 +138,7 @@ void EMTFTrackFinder::process(
 
       sector_processors_.at(es).process(
           iEvent.id().event(),
+	  tp_geom,
           muon_primitives,
           out_hits,
           out_tracks

@@ -25,6 +25,7 @@ simEmtfDigis = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
 
     # CSC LCT BX offset correction
     CSCInputBXShift = cms.int32(-6),
+    RPCInputBXShift = cms.int32(-6),
 
     # Versioning
     Version      = cms.int32(1),
