@@ -20,6 +20,9 @@ process.analyzer1 = cms.EDAnalyzer("MakeEMTFCoordLUT",
 
     # Output diectory
     outdir = cms.string("./"),
+
+    # Produce "validate.root" to validate the LUTs
+    please_validate = cms.bool(True),
 )
 
 process.path1 = cms.Path(process.analyzer1)
