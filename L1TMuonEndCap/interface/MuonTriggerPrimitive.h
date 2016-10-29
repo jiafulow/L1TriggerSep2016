@@ -1,5 +1,5 @@
-#ifndef __L1TMUON_TRIGGERPRIMITIVE_H__
-#define __L1TMUON_TRIGGERPRIMITIVE_H__
+#ifndef __L1TMuonEndCap_TriggerPrimitive_h__
+#define __L1TMuonEndCap_TriggerPrimitive_h__
 //
 // Class: L1TMuon::TriggerPrimitive
 //
@@ -207,4 +207,3 @@ namespace L1TMuonEndCap {
 }
 
 #endif
-

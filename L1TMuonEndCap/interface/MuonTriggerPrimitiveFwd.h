@@ -1,5 +1,5 @@
-#ifndef __L1TMUON_TRIGGERPRIMITIVEFWD_H__
-#define __L1TMUON_TRIGGERPRIMITIVEFWD_H__
+#ifndef __L1TMuonEndCap_TriggerPrimitiveFwd_h__
+#define __L1TMuonEndCap_TriggerPrimitiveFwd_h__
 
 #include <vector>
 #include <map>
