@@ -32,6 +32,8 @@
 //#include "L1Trigger/CSCCommonTrigger/interface/CSCPatternLUT.h"
 //#include "L1Trigger/CSCTrackFinder/interface/CSCSectorReceiverLUT.h"
 
+#include "helper.hh"
+
 
 class MakeEMTFCoordLUT : public edm::EDAnalyzer {
 public:
@@ -52,6 +54,7 @@ private:
   void generateLUTs_init();
   void generateLUTs_th_corr_lut();
   void generateLUTs_th_lut();  // and also ph_init, th_init, etc
+  void generateLUTs_final();
 
   // Validate LUTs
   void validateLUTs();
@@ -89,6 +92,7 @@ private:
   bool please_validate_;
 
   int  verbose_sector_;
+
   bool done_;
 
   /// Event setup
@@ -113,9 +117,9 @@ private:
   int th_lut            [12][5][16][112];
   int th_lut_size       [12][5][16];
 
-  // [sector_12][station_5][chamber_16][wire_strip_96]
-  int th_corr_lut       [12][5][16][96];  // only used for ME1/1 actually
-  int th_corr_lut_size  [12][5][16];
+  // [sector_12][station_2][chamber_16][wire_strip_96]
+  int th_corr_lut       [12][2][16][96];  // only ME1/1
+  int th_corr_lut_size  [12][2][16];      // only ME1/1
 };
 
 
@@ -127,16 +131,6 @@ private:
 
 #define LOWER_THETA 8.5
 #define UPPER_THETA 45.0
-
-template <typename T>
-inline T deltaPhiInDegrees(T phi1, T phi2) {
-  T result = phi1 - phi2;  // same convention as reco::deltaPhi()
-  constexpr T _twopi = 360.;
-  result /= _twopi;
-  result -= std::round(result);
-  result *= _twopi;  // result in [-180,180]
-  return result;
-}
 
 
 MakeEMTFCoordLUT::MakeEMTFCoordLUT(const edm::ParameterSet& iConfig) :
@@ -201,10 +195,10 @@ void MakeEMTFCoordLUT::generateLUTs() {
   generateLUTs_init();
   generateLUTs_th_corr_lut();
   generateLUTs_th_lut();  // and also ph_init, th_init, etc
+  generateLUTs_final();
 }
 
 void MakeEMTFCoordLUT::generateLUTs_init() {
-
   // Sanity checks
   {
     // Test ME2/2
@@ -224,11 +218,12 @@ void MakeEMTFCoordLUT::generateLUTs_init() {
     id = getCSCDetId(1, 2, 2, 1, 1, true);
     assert(id.endcap() == 1 && id.triggerSector() == 2 && id.station() == 1 && id.ring() == 4 && CSCTriggerNumbering::triggerCscIdFromLabels(id) == 1);
   }
+  return;
 }
 
 // generates theta correction LUTs for ME1/1 where the wires are tilted
 void MakeEMTFCoordLUT::generateLUTs_th_corr_lut() {
-  constexpr double k = 128./(UPPER_THETA - LOWER_THETA);  // = 1/0.28515625
+  constexpr double theta_scale = (UPPER_THETA - LOWER_THETA)/128;  // = 0.28515625 (7 bits encode 128 values)
 
   for (int endcap = MIN_ENDCAP; endcap <= MAX_ENDCAP; ++endcap) {
     for (int sector = MIN_TRIGSECTOR; sector <= MAX_TRIGSECTOR; ++sector) {
@@ -251,7 +246,8 @@ void MakeEMTFCoordLUT::generateLUTs_th_corr_lut() {
             rsubsector = 2;
           }
 
-          int maxWire = 48;  // ME1/1
+          const int maxWire = 48;  // ME1/1
+          const int maxStrip = 64; // ME1/1b
 
           const int es = (endcap-1) * 6 + (sector-1);
           const int st = (station == 1) ? (subsector-1) : station;
@@ -268,13 +264,14 @@ void MakeEMTFCoordLUT::generateLUTs_th_corr_lut() {
           for (int wire = maxWire/6; wire < maxWire; wire += maxWire/3) {
             double fth0 = getGlobalThetaFullstrip(endcap, rsector, rsubsector, station, rcscid, is_me11a, wire, 0);  // strip 0
 
-            for (int strip = 0; strip < 64; strip += 2) { // pattern search works in double-strip, so take every other strip (FIXME: take odd value?)
+            for (int strip = 0; strip < maxStrip; strip += 2) { // pattern search works in double-strip, so take every other strip (FIXME: take odd value?)
               double fth1 = getGlobalThetaFullstrip(endcap, rsector, rsubsector, station, rcscid, is_me11a, wire, strip);
               double fth_diff = fth1 - fth0;
-              if (endcap == 2)  fth_diff = -fth_diff;  // for chambers in negative endcap, the wire tilt is the opposite way
+              fth_diff = (endcap == 2) ? -fth_diff : fth_diff;  // for chambers in negative endcap, the wire tilt is the opposite way
               assert(fth_diff >= 0.);
 
-              int th_diff = static_cast<int>(std::round(k*fth_diff));
+              int th_diff = static_cast<int>(std::round(fth_diff/theta_scale));
+              assert(th_diff >= 0);
 
               if (index == 0)
                 th_corr_lut_size[es][st][ch] = 96;  // (3) [wire] x (64/2) [strip]
@@ -301,8 +298,7 @@ void MakeEMTFCoordLUT::generateLUTs_th_corr_lut() {
 
 // generate theta LUTs; then generate ph_init, ph_init_full, th_init, ph_disp, th_disp LUTs
 void MakeEMTFCoordLUT::generateLUTs_th_lut() {
-  constexpr double k = 128./(UPPER_THETA - LOWER_THETA);  // = 1/0.28515625
-  constexpr double m = -k*LOWER_THETA;
+  constexpr double theta_scale = (UPPER_THETA - LOWER_THETA)/128;  // = 0.28515625 (7 bits encode 128 values)
   constexpr double nominal_pitch = 10./75.;  // = 0.133333 (ME2/2 strip pitch. 10-degree chamber, 80 strips - 5 overlap strips)
 
   // values for ph and th init values hardcoded in verilog zones.v
@@ -310,6 +306,7 @@ void MakeEMTFCoordLUT::generateLUTs_th_lut() {
   // [station_5][chamber_16]
   // ME1 chambers 13,14,15,16 are neighbor sector chambers 3,6,9,12
   // ME2 chambers 10,11 are neighbor sector chambers 3,9
+  // NOTE: since Sep 2016, th_init_hard and ph_cover_hard are not being used anymore
   const int ph_init_hard[5][16] = {
     {39,  57,  76, 39,  58,  76, 41,  60,  79, 39,  57,  76, 21, 21, 23, 21},
     {95, 114, 132, 95, 114, 133, 98, 116, 135, 95, 114, 132,  0,  0,  0,  0},
@@ -431,17 +428,17 @@ void MakeEMTFCoordLUT::generateLUTs_th_lut() {
               maxStrip = 80;
             }
 
-            int top_str = maxStrip/4, bot_str = maxStrip/4;
+            int topStrip = 0, botStrip = 0;
             if (station == 1 && rcscid <= 3) {  // ME1/1
               // select top and bottom strip according to endcap
-              // basically, need to hit the corners of the chamber with truncated wires (relevant for ME1/1 only)
-              if (endcap == 1) {
-                top_str = 47;
-                bot_str = 0;
-              } else {
-                top_str = 0;
-                bot_str = 47;
-              }
+              // basically, need to hit the corners of the chamber with truncated tilted wires (relevant for ME1/1 only)
+              topStrip = (endcap == 2) ? 0 : 47;
+              botStrip = (endcap == 2) ? 47 : 0;
+
+            } else {
+              // take 1/4 of max strip to minimize displacement due to straight wires in polar coordinates (all chambers except ME1/1)
+              topStrip = maxStrip/4;
+              botStrip = maxStrip/4;
             }
 
             const int es = (endcap-1) * 6 + (sector-1);
@@ -457,27 +454,27 @@ void MakeEMTFCoordLUT::generateLUTs_th_lut() {
             double fphi_diff  = std::abs(deltaPhiInDegrees(fphi_last, fphi_first))/2.;  // in double-strip
 
             // find theta at top and bottom of chamber
-            double fth_init  = getGlobalThetaFullstrip(endcap, rsector, rsubsector, station, rcscid, is_me11a, 0, bot_str);  // wire 0
-            double fth_cover = getGlobalThetaFullstrip(endcap, rsector, rsubsector, station, rcscid, is_me11a, maxWire-1, top_str);
+            double fth_first  = getGlobalThetaFullstrip(endcap, rsector, rsubsector, station, rcscid, is_me11a, 0, botStrip);  // wire 0
+            double fth_last   = getGlobalThetaFullstrip(endcap, rsector, rsubsector, station, rcscid, is_me11a, maxWire-1, topStrip);
 
 
             // make LUT for wire -> theta
             for (int wire = 0; wire < maxWire; ++wire) {
-              // take 1/4 of max strip to minimize displacement due to straight wires in polar coordinates (all chambers except ME1/1)
-              int strip = maxStrip/4;
+              int strip = botStrip;
               if (station == 1 && rcscid <= 3) {  // ME1/1
-                strip = 0;  // FIXME: need to set to 47 depending on endcap?
+                strip = 0;
               }
 
               double fth_wire = getGlobalThetaFullstrip(endcap, rsector, rsubsector, station, rcscid, is_me11a, wire, strip);
-              double fth_diff = fth_wire - fth_init;
-              int th_diff = static_cast<int>(std::round(k*fth_diff));
+              double fth_diff = fth_wire - fth_first;
+              int th_diff = static_cast<int>(std::round(fth_diff/theta_scale));
 
               // th_diff can become negative for truncated tilted wires in ME1/1
               // convert negative values into a large number so firmware will cut it off (relevant for ME1/1 only)
               if (station == 1 && rcscid <= 3) {  // ME1/1
-                if (th_diff < 0)  th_diff &= 0x3f;  // 63 (6-bit)
+                if (th_diff < 0)  th_diff &= 0x3f;  // 63 (6-bit) (FIXME: why?)
               }
+              assert(th_diff >= 0);
 
               if (wire == 0)
                 th_lut_size[es][st][ch] = maxWire;
@@ -486,7 +483,7 @@ void MakeEMTFCoordLUT::generateLUTs_th_lut() {
               if (verbose_ > 0 && sector == verbose_sector_) {
                 std::cout << "::generateLUTs_th_lut()"
                     << " -- endcap " << endcap << " sec " << sector << " st " << st << " ch " << ch+1 << " wire " << wire << " strip " << strip
-                    << " -- fth_init: " << fth_init << " fth_wire: " << fth_wire << " fth_diff: " << fth_diff << " th_diff: " << th_diff
+                    << " -- fth_first: " << fth_first << " fth_wire: " << fth_wire << " fth_diff: " << fth_diff << " th_diff: " << th_diff
                     << std::endl;
               }
             }  // end loop over wire
@@ -496,8 +493,8 @@ void MakeEMTFCoordLUT::generateLUTs_th_lut() {
             int my_ph_init      = static_cast<int>(std::round(fphi_first/nominal_pitch));
             int my_ph_init_full = static_cast<int>(std::round(fphi_first/(nominal_pitch/8.)));  // 1/8-strip pitch
             int my_ph_cover     = static_cast<int>(std::round(fphi_diff/nominal_pitch));
-            int my_th_init      = static_cast<int>(std::round(k*fth_init + m));
-            int my_th_cover     = static_cast<int>(std::round(k*(fth_cover-fth_init)));
+            int my_th_init      = static_cast<int>(std::round((fth_first - LOWER_THETA)/theta_scale));
+            int my_th_cover     = static_cast<int>(std::round((fth_last - fth_first)/theta_scale));
 
             // widen ME1/1 coverage slightly, because of odd geometry of truncated wiregroups
             if (station == 1 && rcscid <= 3) {  // ME1/1
@@ -506,7 +503,7 @@ void MakeEMTFCoordLUT::generateLUTs_th_lut() {
 
             // calculate displacements from hardcoded init values
             int my_ph_disp      = (my_ph_init/2 - 2*ph_init_hard[st][ch]);  // in double-strip
-            if (fphi_first > fphi_last)
+            if (deltaPhiInDegrees(fphi_first, fphi_last) > 0.)
               my_ph_disp       -= ph_cover_hard[st][ch];
             int my_th_disp      = (my_th_init - th_init_hard[st][ch]);
 
@@ -519,9 +516,10 @@ void MakeEMTFCoordLUT::generateLUTs_th_lut() {
             th_disp     [es][st][ch] = my_th_disp;
 
             if (verbose_ > 0 && sector == verbose_sector_) {
+              double fphi_first_global = getGlobalPhi(endcap, rsector, rsubsector, station, rcscid, is_me11a, 0, 0);  // wire 0 halfstrip 0
               std::cout << "::generateLUTs_th_lut()"
                   << " -- endcap " << endcap << " sec " << sector << " st " << st << " ch " << ch+1 << " maxWire " << maxWire << " maxStrip " << maxStrip
-                  << " -- fphi_first: " << fphi_first << " fphi_last: " << fphi_last << " fth_init: " << fth_init << " fth_cover: " << fth_cover
+                  << " -- fphi_first_global: " << fphi_first_global << " fphi_first: " << fphi_first << " fphi_last: " << fphi_last << " fth_first: " << fth_first << " fth_last: " << fth_last
                   << " ph_init: " << my_ph_init << " ph_init_full: " << my_ph_init_full << " ph_cover: " << my_ph_cover << " ph_disp: " << my_ph_disp
                   << " th_init: " << my_th_init << " th_cover: " << my_th_cover << " th_disp: " << my_th_disp
                   << std::endl;
@@ -531,13 +529,15 @@ void MakeEMTFCoordLUT::generateLUTs_th_lut() {
       }  // end loop over station
     }  // end loop over sector
   }  // end loop over endcap
+  return;
+}
 
-
+void MakeEMTFCoordLUT::generateLUTs_final() {
   // update max coverages
   for (int es = 0; es < 12; ++es) {
     for (int st = 0; st < 5; ++st) {
       for (int ch = 0; ch < 16; ++ch) {
-        if (ch > 9-1)  continue;  // not including neighbors
+        if (ch > 9-1)  continue;  // exclude neighbors
 
         int ch_type = ch/3;
         if (st > 1 && ch_type > 1) {
@@ -551,6 +551,17 @@ void MakeEMTFCoordLUT::generateLUTs_th_lut() {
       }  // end loop over ch
     }  // end loop over st
   }  // end loop over es
+
+  for (int st = 0; st < 5; ++st) {
+    for (int ch_type = 0; ch_type < 3; ++ch_type) {
+      if (verbose_ > 0) {
+        std::cout << "::generateLUTs_final()"
+            << " -- st " << st << " ch_type " << ch_type+1
+            << " -- ph_cover_max: " << ph_cover_max[st][ch_type] << " th_cover_max: " << th_cover_max[st][ch_type]
+            << std::endl;
+      }
+    }  // end loop over ch_type
+  }  // end loop over st
   return;
 }
 
@@ -697,6 +708,8 @@ void MakeEMTFCoordLUT::validateLUTs() {
       }
 
 
+      assert(ph_reverse == isStripPhiCounterClockwise(getCSCDetId(endcap, rsector, rsubsector, station, rcscid, is_me11a)));
+
       for (wire = 0; wire < maxWire; ++wire) {
         for (strip = 0; strip < 2*maxStrip; ++strip) {
           const int fw_strip   = strip;  // it is half-strip, despite the name
@@ -750,7 +763,7 @@ void MakeEMTFCoordLUT::validateLUTs() {
 
           // For ME1/1 with tilted wires, add theta correction as a function of (wire,strip) index
           if (station == 1 && (ring == 1 || ring == 4)) {
-            int pc_wire_strip_id = (((fw_wire >> 4) & 0x3) << 5) | ((eighth_strip >> 4) & 0x1f);  // 2-bit from wire, 5-bit from 2-strip
+            int pc_wire_strip_id = (((fw_wire >> 4) & 0x3) << 5) | ((eighth_strip >> 4) & 0x1f);  // 2-bit from wire, 5-bit from 2-strip (FIXME: different for ME1/1a vs ME1/1b?)
             int th_corr = th_corr_lut[es][st][ch2][pc_wire_strip_id];
             int th_corr_sign = (ph_reverse == 0) ? 1 : -1;
 
@@ -759,8 +772,10 @@ void MakeEMTFCoordLUT::validateLUTs() {
             // Check that correction did not make invalid value outside chamber coverage
             const int th_negative = 50;
             const int th_coverage = 45;
+            //const int th_negative = 63;
+            //const int th_coverage = 46;
 
-            if (th_tmp > th_negative || fw_wire == 0)
+            if (th_tmp > th_negative || th_tmp < 0 || fw_wire == 0)
               th_tmp = 0;  // limit at the bottom
             if (th_tmp > th_coverage)
               th_tmp = th_coverage;  // limit at the top
@@ -779,8 +794,9 @@ void MakeEMTFCoordLUT::validateLUTs() {
           // emulated phi and theta coordinates from fixed-point operations
           fph_int = fph;
           fph_emu = static_cast<double>(fph_int);
-          fph_emu = (fph_emu / 60.) - 22.;
-          fph_emu = fph_emu + 15. + (60. * fw_sector);
+          fph_emu = fph_emu / 60.;
+          fph_emu = fph_emu - 22. + 15. + (60. * fw_sector);
+          fph_emu = (endcap == 2) ? fph_emu - 4.5*10./75 : fph_emu - 3.5*10./75;
           fph_emu = deltaPhiInDegrees(fph_emu, 0.);  // reduce to [-180,180]
 
           fth_int = th;
@@ -788,23 +804,16 @@ void MakeEMTFCoordLUT::validateLUTs() {
           fth_emu = (fth_emu*(45.0-8.5)/128. + 8.5);
 
           // simulated phi and theta coordinates from floating-point operations
-          fph_sim  = getGlobalPhiFullstrip(endcap, rsector, rsubsector, station, rcscid, is_me11a, wire, strip/2);
-          int oddhs = (strip%2);
-          double pitch = getStripPitch(getCSCDetId(endcap, rsector, rsubsector, station, rcscid, is_me11a)) / 4.0;
-          if (ph_reverse == 1)  pitch = -pitch;
-          if (oddhs == 0)       pitch = -pitch;  // subtract even half-strip or add odd half-strip
-          fph_sim += pitch;
-
-          assert(ph_reverse == isStripPhiCounterClockwise(getCSCDetId(endcap, rsector, rsubsector, station, rcscid, is_me11a)));
-
-          fth_sim  = getGlobalThetaFullstrip(endcap, rsector, rsubsector, station, rcscid, is_me11a, wire, strip/2);
+          fph_sim  = getGlobalPhi(endcap, rsector, rsubsector, station, rcscid, is_me11a, wire, strip);
+          fth_sim  = getGlobalTheta(endcap, rsector, rsubsector, station, rcscid, is_me11a, wire, strip);
 
           ttree->Fill();
 
           if (verbose_ > 1 && sector == verbose_sector_) {
             std::cout << "::validateLUTs()"
                 << " -- endcap " << endcap << " sec " << sector << " st " << st << " ch " << ch+1 << " wire " << wire << " strip " << strip
-                << " -- fph_emu: " << fph_emu << " fth_emu: " << fth_emu << " fph_sim: " << fph_sim << " fth_sim: " << fth_sim
+                << " -- fph_int: " << fph_int << " fph_emu: " << fph_emu << " fph_sim: " << fph_sim
+                << " -- fth_int: " << fth_int << " fth_emu: " << fth_emu << " fth_sim: " << fth_sim
                 << std::endl;
           }
         }  // end loop over strip
@@ -834,10 +843,10 @@ void MakeEMTFCoordLUT::writeFiles() {
           if (subsector != 1 && chamber > 3)  continue;
 
           const int station = 1;
-          const bool isNeighbor = (station == 1 && subsector == 1 && chamber == 4);
+          const bool is_neighbor = (station == 1 && subsector == 1 && chamber == 4);
 
           const int st = (station == 1) ? (subsector-1) : station;
-          const int ch = isNeighbor ? 13-1 : (chamber-1);
+          const int ch = is_neighbor ? 13-1 : (chamber-1);
           assert(es < 12 && st < 5 && ch < 16);
 
           std::ofstream th_corr_lut_fs;
@@ -957,7 +966,6 @@ void MakeEMTFCoordLUT::writeFiles() {
 
   // Expect 12 sectors x (7 th_corr_lut + 61 th_lut + 4 ph_init/th_init/ph_disp/th_disp + 5 ph_init_full)
   assert(num_of_files == 12*(7 + 61 + 4 + 5));
-
   return;
 }
 
@@ -975,8 +983,7 @@ bool MakeEMTFCoordLUT::isStripPhiCounterClockwise(const CSCDetId& cscDetId) cons
 
   const double phi1 = layer->centerOfStrip(1).phi();
   const double phi2 = layer->centerOfStrip(2).phi();
-  bool ccw = ( (std::abs(phi1 - phi2) < M_PI  && phi1 >= phi2) ||
-               (std::abs(phi1 - phi2) >= M_PI && phi1 < phi2)     );
+  bool ccw = (deltaPhiInRadians(phi1, phi2) > 0.);
   return ccw;
 }
 
@@ -997,8 +1004,8 @@ double MakeEMTFCoordLUT::getGlobalPhi(int endcap, int sector, int subsector, int
   // Add half-strip offset
   // strip width/4 gives the offset of the half-strip center w.r.t the strip center
   const CSCDetId cscDetId = getCSCDetId(endcap, sector, subsector, station, cscid, isME1A);
-  double pitch = getStripPitch(cscDetId) / 4.0;
-  bool ph_reverse = isStripPhiCounterClockwise(cscDetId);
+  double pitch            = getStripPitch(cscDetId) / 4.0;
+  bool ph_reverse         = isStripPhiCounterClockwise(cscDetId);
 
   pitch = (ph_reverse == 1) ? -pitch : pitch;  // subtract half-strip if phi decreases as strip number increases
   pitch = (oddhs == 0)      ? -pitch : pitch;  // subtract even half-strip or add odd half-strip
@@ -1021,7 +1028,7 @@ double MakeEMTFCoordLUT::getGlobalPhiFullstrip(int endcap, int sector, int subse
 
 double MakeEMTFCoordLUT::getGlobalTheta(int endcap, int sector, int subsector, int station, int cscid, bool isME1A, int wiregroup, int halfstrip) const {
   int fullstrip = (halfstrip/2);
-  return getGlobalTheta(endcap, sector, subsector, station, cscid, isME1A, wiregroup, fullstrip);
+  return getGlobalThetaFullstrip(endcap, sector, subsector, station, cscid, isME1A, wiregroup, fullstrip);
 }
 
 double MakeEMTFCoordLUT::getGlobalThetaFullstrip(int endcap, int sector, int subsector, int station, int cscid, bool isME1A, int wiregroup, int fullstrip) const {
@@ -1049,8 +1056,9 @@ double MakeEMTFCoordLUT::getSectorPhi(int endcap, int sector, int subsector, int
     sector_n = sector;  // same sector
   }
 
+  const int maxStrip = 80;  // ME2
   const int firstWire = 0;
-  const int firstStrip = (endcap == 1) ? 0 : 79;
+  const int firstStrip = (endcap == 1) ? 0 : maxStrip-1;
   double sectorStartPhi = getGlobalPhiFullstrip(endcap, sector_n, 0, 2, 3, false, firstWire, firstStrip) - 2.;
 
   double res = deltaPhiInDegrees(globalPhi, sectorStartPhi);
