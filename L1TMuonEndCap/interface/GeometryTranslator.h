@@ -1,13 +1,13 @@
 #ifndef __L1TMuonEndCap_GeometryTranslator_h__
 #define __L1TMuonEndCap_GeometryTranslator_h__
-// 
+//
 // Class: L1TMuon::GeometryTranslator
 //
 // Info: This class implements a the translations from packed bits or
 //       digi information into local or global CMS coordinates for all
 //       types of L1 trigger primitives that we want to consider for
 //       use in the integrated muon trigger.
-//       
+//
 // Note: This should be considered as a base class to some sort of global
 //       look-up table
 //
@@ -19,10 +19,9 @@
 #include "DataFormats/GeometryVector/interface/GlobalPoint.h"
 #include <memory>
 
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/MuonTriggerPrimitive.h"
 
 // forwards
-namespace edm {  
+namespace edm {
   class EventSetup;
 }
 
@@ -32,6 +31,7 @@ class CSCLayer;
 class DTGeometry;
 
 namespace L1TMuonEndCap {
+  class TriggerPrimitive;
 
   class GeometryTranslator {
   public:
@@ -40,17 +40,19 @@ namespace L1TMuonEndCap {
 
     double calculateGlobalEta(const TriggerPrimitive&) const;
     double calculateGlobalPhi(const TriggerPrimitive&) const;
-    double calculateBendAngle(const TriggerPrimitive&) const;    
+    double calculateBendAngle(const TriggerPrimitive&) const;
+
+    GlobalPoint getGlobalPoint(const TriggerPrimitive&) const;
 
     void checkAndUpdateGeometry(const edm::EventSetup&);
 
   private:
     // pointers to the current geometry records
     unsigned long long _geom_cache_id;
-    edm::ESHandle<RPCGeometry> _georpc;    
-    edm::ESHandle<CSCGeometry> _geocsc;    
-    edm::ESHandle<DTGeometry>  _geodt;    
-    
+    edm::ESHandle<RPCGeometry> _georpc;
+    edm::ESHandle<CSCGeometry> _geocsc;
+    edm::ESHandle<DTGeometry>  _geodt;
+
     GlobalPoint getRPCSpecificPoint(const TriggerPrimitive&) const;
     double calcRPCSpecificEta(const TriggerPrimitive&) const;
     double calcRPCSpecificPhi(const TriggerPrimitive&) const;
