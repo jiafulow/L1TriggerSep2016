@@ -156,7 +156,6 @@ void EMTFPrimitiveMatching::process(
         const EMTFHitExtraCollection& conv_hits = zs_conv_hits.at(zs);
         int       ph_diff      = zs_phi_differences.at(zs).at(iroad).first;
         hit_ptr_t conv_hit_ptr = zs_phi_differences.at(zs).at(iroad).second;
-
         if (ph_diff != invalid_ph_diff) {
           insert_hits(conv_hit_ptr, conv_hits, track);
         }
@@ -280,7 +279,10 @@ void EMTFPrimitiveMatching::sort_ph_diff(
     typedef hit_sort_pair_t value_type;
     bool operator()(const value_type& lhs, const value_type& rhs) const {
       //return lhs.first < rhs.first;
-      return std::make_pair(lhs.first, lhs.second->fs_segment) < std::make_pair(rhs.first, rhs.second->fs_segment);
+      if (lhs.second->subsystem == rhs.second->subsystem)
+	return std::make_pair(lhs.first, lhs.second->fs_segment) < std::make_pair(rhs.first, rhs.second->fs_segment);
+      else  // Prefer CSC hits over RPC hits
+	return (lhs.second->subsystem == TriggerPrimitive::kCSC ? true : false);
     }
   } less_ph_diff_cmp;
 
@@ -298,7 +300,7 @@ void EMTFPrimitiveMatching::insert_hits(
   for (; conv_hits_it != conv_hits_end; ++conv_hits_it) {
     const EMTFHitExtra& conv_hit_i = *conv_hits_it;
     const EMTFHitExtra& conv_hit_j = *conv_hit_ptr;
-
+    
     // All these must match: [bx_history][station][chamber][segment]
     if (
       (conv_hit_i.pc_station == conv_hit_j.pc_station) &&
@@ -307,7 +309,10 @@ void EMTFPrimitiveMatching::insert_hits(
       (conv_hit_i.strip      == conv_hit_j.strip) &&
       //(conv_hit_i.wire       == conv_hit_j.wire) &&
       (conv_hit_i.pattern    == conv_hit_j.pattern) &&
-      (conv_hit_i.bx         == conv_hit_j.bx)
+      (conv_hit_i.bx         == conv_hit_j.bx) &&
+      (conv_hit_i.subsystem  == conv_hit_j.subsystem) &&      
+      (conv_hit_i.strip_low  == conv_hit_j.strip_low) && // For RPC clusters
+      (conv_hit_i.strip_hi   == conv_hit_j.strip_hi)     // For RPC clusters
     ) {
       // Must have the same phi_fp
       assert(conv_hit_i.phi_fp == conv_hit_j.phi_fp);

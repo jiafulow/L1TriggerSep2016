@@ -5,7 +5,7 @@ import FWCore.ParameterSet.Config as cms
 #   * 'simCscTriggerPrimitiveDigis','MPCSORTED' : simulated trigger primitives (LCTs) from re-emulating CSC digis
 #   * 'csctfDigis' : real trigger primitives as received by CSCTF (legacy trigger)
 #   * 'emtfStage2Digis' : real trigger primitives as received by EMTF, unpacked in EventFilter/L1TRawToDigi/
-simEmtfDigis = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
+simEmtfDigisMC = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
     # Verbosity level
     verbosity = cms.untracked.int32(0),
 
@@ -86,13 +86,13 @@ simEmtfDigis = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
         ReadPtLUTFile   = cms.bool(False),
         FixMode15HighPt = cms.bool(True),
         Bug9BitDPhi     = cms.bool(False), ## True in FW through when? - AWB 19.10.16
-        BugMode7CLCT    = cms.bool(True),
-        BugNegPt        = cms.bool(True),
+        BugMode7CLCT    = cms.bool(False),
+        BugNegPt        = cms.bool(False),
     ),
 
 )
 
-simEmtfDigisData = simEmtfDigis.clone(
+simEmtfDigisData = simEmtfDigisMC.clone(
     CSCInput = cms.InputTag('emtfStage2Digis'),
     RPCInput = cms.InputTag('muonRPCDigis'),
 )

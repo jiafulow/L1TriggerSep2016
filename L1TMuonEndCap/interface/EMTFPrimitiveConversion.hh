@@ -41,11 +41,13 @@ public:
   // RPC functions
   void convert_rpc(
       int pc_sector, int pc_station, int pc_chamber, int pc_segment,
-      const TriggerPrimitive& muon_primitive,
+      const TriggerPrimitive& muon_primitive1,
+      const TriggerPrimitive& muon_primitive2,
       EMTFHitExtra& conv_hit,
       const std::unique_ptr<L1TMuonEndCap::GeometryTranslator>& tp_geom
   ) const;
-  void convert_rpc_details(EMTFHitExtra& conv_hit, const TriggerPrimitive& muon_primitive,
+  void convert_rpc_details(EMTFHitExtra& conv_hit, const TriggerPrimitive& muon_primitive1,
+			   const TriggerPrimitive& muon_primitive2,
 			   const std::unique_ptr<L1TMuonEndCap::GeometryTranslator>& tp_geom) const;
 
 private:

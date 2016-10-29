@@ -38,6 +38,7 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
   auto pattDefinitions    = spPRParams16.getParameter<std::vector<std::string> >("PatternDefinitions");
   auto symPattDefinitions = spPRParams16.getParameter<std::vector<std::string> >("SymPatternDefinitions");
   auto thetaWindow        = spPRParams16.getParameter<int>("ThetaWindow");
+  auto thetaWindowRPC     = spPRParams16.getParameter<int>("ThetaWindowRPC");
   auto useSymPatterns     = spPRParams16.getParameter<bool>("UseSymmetricalPatterns");
 
   const auto& spGCParams16 = config_.getParameter<edm::ParameterSet>("spGCParams16");
@@ -73,7 +74,7 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
             verbose_, endcap, sector,
             minBX, maxBX, bxWindow, bxShiftCSC, bxShiftRPC,
             zoneBoundaries, zoneOverlap, includeNeighbor, duplicateTheta, fixZonePhi, useNewZones,
-            pattDefinitions, symPattDefinitions, thetaWindow, useSymPatterns,
+            pattDefinitions, symPattDefinitions, thetaWindow, thetaWindowRPC, useSymPatterns,
             maxRoadsPerZone, maxTracks, useSecondEarliest,
             readPtLUTFile, fixMode15HighPt, bug9BitDPhi, bugMode7CLCT, bugNegPt
         );

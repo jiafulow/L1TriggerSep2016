@@ -15,7 +15,7 @@ void EMTFSectorProcessor::configure(
     int verbose, int endcap, int sector,
     int minBX, int maxBX, int bxWindow, int bxShiftCSC, int bxShiftRPC,
     const std::vector<int>& zoneBoundaries, int zoneOverlap, bool includeNeighbor, bool duplicateTheta, bool fixZonePhi, bool useNewZones,
-    const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions, int thetaWindow, bool useSymPatterns,
+    const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions, int thetaWindow, int thetaWindowRPC, bool useSymPatterns,
     int maxRoadsPerZone, int maxTracks, bool useSecondEarliest,
     bool readPtLUTFile, bool fixMode15HighPt, bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt
 ) {
@@ -49,6 +49,7 @@ void EMTFSectorProcessor::configure(
   pattDefinitions_    = pattDefinitions;
   symPattDefinitions_ = symPattDefinitions;
   thetaWindow_        = thetaWindow;
+  thetaWindowRPC_     = thetaWindowRPC;
   useSymPatterns_     = useSymPatterns;
 
   maxRoadsPerZone_    = maxRoadsPerZone;
@@ -127,6 +128,7 @@ void EMTFSectorProcessor::process_single_bx(
   EMTFPrimitiveSelection prim_sel;
   prim_sel.configure(
       verbose_, endcap_, sector_, bx,
+      bxShiftCSC_, bxShiftRPC_,
       includeNeighbor_, duplicateTheta_
   );
 
@@ -154,7 +156,7 @@ void EMTFSectorProcessor::process_single_bx(
   EMTFAngleCalculation angle_calc;
   angle_calc.configure(
       verbose_, endcap_, sector_, bx,
-      bxWindow_, thetaWindow_
+      bxWindow_, thetaWindow_, thetaWindowRPC_
   );
 
   EMTFBestTrackSelection btrack_sel;
@@ -196,6 +198,18 @@ void EMTFSectorProcessor::process_single_bx(
   // From src/EMTFPrimitiveConversion.cc
   prim_conv.process(CSCTag(), selected_csc_map, conv_hits, tp_geom);
   prim_conv.process(RPCTag(), selected_rpc_map, conv_hits, tp_geom);
+  // for (const auto& conv_hit : conv_hits) {
+  //   if (conv_hit.subsystem == 1)
+  //     std::cout << "CSC hit, sector " << conv_hit.pc_sector << ": BX " << conv_hit.bx << ", endcap " << conv_hit.endcap 
+  // 		<< ", sector " << conv_hit.sector << ", station " << conv_hit.station << ", ring " << conv_hit.ring 
+  // 		<< ", chamber " << conv_hit.chamber << ", phi_fp = " << conv_hit.phi_fp << ", theta_fp " << conv_hit.theta_fp << std::endl;
+  //   else if (conv_hit.subsystem == 2)
+  //     std::cout << "RPC hit, sector " << conv_hit.pc_sector << ": BX " << conv_hit.bx << ", endcap " << conv_hit.endcap 
+  // 		<< ", sector " << conv_hit.sector << ", station " << conv_hit.station << ", ring " << conv_hit.ring 
+  // 		<< ", subsect " << conv_hit.subsector << ", phi_fp = " << conv_hit.phi_fp << ", theta_fp " << conv_hit.theta_fp
+  // 		<< ", phi_glob_deg = " << conv_hit.phi_glob_deg << ", theta_deg " << conv_hit.theta_deg << std::endl;
+  // }
+
   extended_conv_hits.push_back(conv_hits);
 
   // Detect patterns in all zones, find 3 best roads in each zone

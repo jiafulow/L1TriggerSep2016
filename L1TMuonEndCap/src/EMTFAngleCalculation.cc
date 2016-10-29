@@ -13,7 +13,7 @@ namespace {
 void EMTFAngleCalculation::configure(
     int verbose, int endcap, int sector, int bx,
     int bxWindow,
-    int thetaWindow
+    int thetaWindow, int thetaWindowRPC
 ) {
   verbose_ = verbose;
   endcap_  = endcap;
@@ -22,6 +22,7 @@ void EMTFAngleCalculation::configure(
 
   bxWindow_           = bxWindow;
   thetaWindow_        = thetaWindow;
+  thetaWindowRPC_     = thetaWindowRPC;
 }
 
 void EMTFAngleCalculation::process(
@@ -97,6 +98,7 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
 
   // Keep track of which pair is valid
   std::array<bool, NUM_STATION_PAIRS> best_dtheta_valid_arr;
+  std::array<bool, NUM_STATION_PAIRS> best_has_rpc_arr;
 
   // Initialize
   best_dtheta_arr      .fill(invalid_dtheta);
@@ -106,6 +108,7 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
   best_phi_arr         .fill(0);
   best_theta_arr       .fill(0);
   best_dtheta_valid_arr.fill(false);
+  best_has_rpc_arr     .fill(false);
 
   auto abs_diff = [](int a, int b) { return std::abs(a-b); };
 
@@ -131,6 +134,11 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
             best_dtheta_arr.at(ipair) = dth;
             best_dtheta_sign_arr.at(ipair) = dth_sign;
             best_dtheta_valid_arr.at(ipair) = true;
+	    if (conv_hitA.subsystem == TriggerPrimitive::kRPC || 
+		conv_hitB.subsystem == TriggerPrimitive::kRPC)
+	      best_has_rpc_arr.at(ipair) = true;
+	    else
+	      best_has_rpc_arr.at(ipair) = false;
 
             // first 3 pairs, use station B
             // last 3 pairs, use station A
@@ -167,22 +175,28 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
   int vmask3 = 0;
 
   // vmask contains valid station mask = {ME4,ME3,ME2,ME1}. "0b" prefix for binary.
-  if (best_dtheta_arr.at(0) <= thetaWindow_ && best_dtheta_valid_arr.at(0)) {
+  if (best_dtheta_arr.at(0) <= ( best_has_rpc_arr.at(0) ? thetaWindowRPC_ : thetaWindow_ ) && 
+      best_dtheta_valid_arr.at(0)) {
     vmask1 |= 0b0011;  // 12
   }
-  if (best_dtheta_arr.at(1) <= thetaWindow_ && best_dtheta_valid_arr.at(1)) {
+  if (best_dtheta_arr.at(1) <= ( best_has_rpc_arr.at(1) ? thetaWindowRPC_ : thetaWindow_ ) && 
+      best_dtheta_valid_arr.at(1)) {
     vmask1 |= 0b0101;  // 13
   }
-  if (best_dtheta_arr.at(2) <= thetaWindow_ && best_dtheta_valid_arr.at(2)) {
+  if (best_dtheta_arr.at(2) <= ( best_has_rpc_arr.at(2) ? thetaWindowRPC_ : thetaWindow_ ) && 
+      best_dtheta_valid_arr.at(2)) {
     vmask1 |= 0b1001;  // 14
   }
-  if (best_dtheta_arr.at(3) <= thetaWindow_ && best_dtheta_valid_arr.at(3)) {
+  if (best_dtheta_arr.at(3) <= ( best_has_rpc_arr.at(3) ? thetaWindowRPC_ : thetaWindow_ ) && 
+      best_dtheta_valid_arr.at(3)) {
     vmask2 |= 0b0110;  // 23
   }
-  if (best_dtheta_arr.at(4) <= thetaWindow_ && best_dtheta_valid_arr.at(4)) {
+  if (best_dtheta_arr.at(4) <= ( best_has_rpc_arr.at(4) ? thetaWindowRPC_ : thetaWindow_ ) && 
+      best_dtheta_valid_arr.at(4)) {
     vmask2 |= 0b1010;  // 24
   }
-  if (best_dtheta_arr.at(5) <= thetaWindow_ && best_dtheta_valid_arr.at(5)) {
+  if (best_dtheta_arr.at(5) <= ( best_has_rpc_arr.at(5) ? thetaWindowRPC_ : thetaWindow_ ) && 
+      best_dtheta_valid_arr.at(5)) {
     vmask3 |= 0b1100;  // 34
   }
 

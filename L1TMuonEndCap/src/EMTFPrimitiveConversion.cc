@@ -6,6 +6,9 @@
 
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFSectorProcessorLUT.hh"
 
+#define NUM_CSC_CHAMBERS 6*9   // 18 in ME1, 9 in ME2/3/4, 9 from neighbor sector
+#define NUM_RPC_CHAMBERS 6*21  // 18+3 neighbor in stations 1/2, 36+6 neighbor in 3/4
+
 using CSCData = TriggerPrimitive::CSCData;
 using RPCData = TriggerPrimitive::RPCData;
 
@@ -77,26 +80,73 @@ void EMTFPrimitiveConversion::process(
     EMTFHitExtraCollection& conv_hits,
     const std::unique_ptr<L1TMuonEndCap::GeometryTranslator>& tp_geom
 ) const {
+
   std::map<int, TriggerPrimitiveCollection>::const_iterator map_tp_it  = selected_rpc_map.begin();
   std::map<int, TriggerPrimitiveCollection>::const_iterator map_tp_end = selected_rpc_map.end();
 
+  // Find all fired strips
+  bool strips_with_hits[NUM_RPC_CHAMBERS][32] = {{false}};
   for (; map_tp_it != map_tp_end; ++map_tp_it) {
     int selected   = map_tp_it->first;
-    int pc_sector  = sector_;
-    int pc_station = selected / 9;
-    int pc_chamber = selected % 9;
-    int pc_segment = 0;
     TriggerPrimitiveCollection::const_iterator tp_it  = map_tp_it->second.begin();
     TriggerPrimitiveCollection::const_iterator tp_end = map_tp_it->second.end();
 
     for (; tp_it != tp_end; ++tp_it) {
-      EMTFHitExtra conv_hit;
-      convert_rpc(pc_sector, pc_station, pc_chamber, pc_segment, *tp_it, conv_hit, tp_geom);  // RPC
-      conv_hits.push_back(conv_hit);
-      pc_segment += 1;
+      int iStrip = tp_it->getRPCData().strip - 1;
+      strips_with_hits[selected][iStrip] = true;
     }
   }
-}
+
+  // Find all contiguous clusters of strips in each station/ring/roll/subsector
+  std::map<int, std::vector<std::pair<uint, uint>>> cluster_map;
+  for (uint selected = 0; selected < NUM_RPC_CHAMBERS; selected ++) {
+    for (uint iStrip = 0; iStrip < 32; iStrip++) {
+      if (strips_with_hits[selected][iStrip]) {
+	if (iStrip > 0 && strips_with_hits[selected][iStrip - 1])
+	  cluster_map[selected].back().second = iStrip + 1;
+	else if (cluster_map[selected].size() < 2)
+	  cluster_map[selected].push_back(std::make_pair(iStrip + 1, iStrip + 1));
+	// else
+	//   std::cout << "Selected RPC " << selected << " already has 2 clusters.  Can't add more." << std::endl;
+      }
+    }
+  }
+
+  // Create converted hits from clusters
+  map_tp_it  = selected_rpc_map.begin();
+  map_tp_end = selected_rpc_map.end();
+  for (; map_tp_it != map_tp_end; ++map_tp_it) {
+    int selected   = map_tp_it->first;
+    int pc_sector  = sector_;
+    int pc_station = (selected > 17 || (selected % 6) > 2) + (selected > 17) + (selected > 35) + 
+                     (selected > 71) + (selected > 107);  // {0, 5} = {RPC1 left, RPC1 right, RPC2, RPC3, RPC4, neighbor}
+    int pc_chamber = (selected < 36 ? (selected % 18) : (selected % 36));  // Unique identifier per station
+    int pc_segment = 0;
+
+    for (uint iClust = 0; iClust < cluster_map[selected].size(); iClust++) {
+      
+      TriggerPrimitiveCollection::const_iterator tp1_it  = map_tp_it->second.begin();
+      TriggerPrimitiveCollection::const_iterator tp1_end = map_tp_it->second.end();
+      TriggerPrimitiveCollection::const_iterator tp2_it  = map_tp_it->second.begin();
+      TriggerPrimitiveCollection::const_iterator tp2_end = map_tp_it->second.end();
+      
+      for (; tp1_it != tp1_end; ++tp1_it) {
+	if (tp1_it->getRPCData().strip != cluster_map[selected].at(iClust).first)
+	  continue;
+	for (; tp2_it != tp2_end; ++tp2_it) {
+	  if (tp2_it->getRPCData().strip != cluster_map[selected].at(iClust).second)
+	    continue;
+	  
+	  EMTFHitExtra conv_hit;
+	  convert_rpc(pc_sector, pc_station, pc_chamber, pc_segment, *tp1_it, *tp2_it, conv_hit, tp_geom);  // RPC
+	  conv_hits.push_back(conv_hit);
+	  pc_segment += 1;
+	} // End loop over tp2_it
+      } // End loop over tp1_it
+    } // End loop over iClust
+  } // End loop over map_tp_it
+
+} // End EMTFPrimitiveConversion::process
 
 const EMTFSectorProcessorLUT& EMTFPrimitiveConversion::lut() const {
   return *lut_;
@@ -479,33 +529,28 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
 // RPC functions
 void EMTFPrimitiveConversion::convert_rpc(
     int pc_sector, int pc_station, int pc_chamber, int pc_segment,
-    const TriggerPrimitive& muon_primitive,
+    const TriggerPrimitive& muon_primitive1,
+    const TriggerPrimitive& muon_primitive2,
     EMTFHitExtra& conv_hit,
     const std::unique_ptr<L1TMuonEndCap::GeometryTranslator>& tp_geom
 ) const {
 
-  const RPCDetId tp_detId = muon_primitive.detId<RPCDetId>();
-  const RPCData& tp_data  = muon_primitive.getRPCData();
+  const RPCDetId tp_detId  = muon_primitive1.detId<RPCDetId>();
+  const RPCData& tp_data1  = muon_primitive1.getRPCData();
+  const RPCData& tp_data2  = muon_primitive2.getRPCData();
 
-  if (tp_detId.region() == 0) return;  // 0 for barrel, +/-1 for +/- endcap
+  assert(tp_detId.region() != 0);      // We shouldn't have barrel RPCs at this point
+  assert(tp_data1.bx == tp_data2.bx);  // We shouldn't have any clusters with multiple BX 
   
   int tp_endcap    = (tp_detId.region() == 1 ? 1 : 2);
-  // int tp_sector    = tp_detId.triggerSector();  // Same as in CSCs (? - AWB 10.27.16)
-  int tp_sector    = tp_detId.sector();         // Which of these is right? - AWB 10.27.16
-  int tp_subsector = tp_detId.subsector();      // Same as in CSCs (? - AWB 10.27.16)
-  int tp_station   = tp_detId.station();        // Same as in CSCs (? - AWB 10.27.16)
-  int tp_ring      = tp_detId.ring();           // Ring number in endcap (from 1 to 3, but only 2 and 3 exist currently)
-  int tp_roll      = tp_detId.roll();           // AKA eta "partition" or "segment": subdivision of ring into 3 parts, noted "C-B-A" in-to-out
-  // int tp_chamber   = tp_detId.chamber();        // Same as in CSCs (? - AWB 10.27.16)
+  int tp_sector    = tp_detId.sector();         // 1 - 6 (60 degrees in phi, sector 1 begins at -5 deg)
+  int tp_station   = tp_detId.station();        // 1 - 4 (Same as in CSC)
+  int tp_ring      = tp_detId.ring();           // 2 - 3 (increasing theta) 
+  int tp_roll      = tp_detId.roll();           // 1 - 3 (decreasing theta; aka A-B-C; space between rolls is 9 - 15 in theta_fp)
+  int tp_subsector = tp_detId.subsector();      // 1 - 6 (10 degrees in phi)  (Staggered in z? theta shifts by 1.0 deg in RPC1/2, 0.2 deg in RPC 1/3 - AWB 28.10.16)
 
-  int tp_bx        = tp_data.bx;
-  // int tp_csc_ID    = tp_data.cscID;             // Corrolary for RPCs? - AWB 10.27.16
+  int tp_bx        = tp_data1.bx;
 
-  // // station 1 --> subsector 1 or 2
-  // // station 2,3,4 --> subsector 0
-  // int tp_subsector = (tp_station != 1) ? 0 : ((tp_chamber % 6 > 2) ? 1 : 2);
-
-  
   // Set properties
   conv_hit.endcap      = tp_endcap;
   conv_hit.station     = tp_station;
@@ -521,12 +566,14 @@ void EMTFPrimitiveConversion::convert_rpc(
   conv_hit.subsystem   = TriggerPrimitive::kRPC;
 
   conv_hit.pc_sector   = pc_sector;
-  conv_hit.pc_station  = pc_station;
-  conv_hit.pc_chamber  = pc_chamber;
+  conv_hit.pc_station  = pc_station; // Not defined in FW yet
+  conv_hit.pc_chamber  = pc_chamber; // Not defined in FW yet
   conv_hit.pc_segment  = pc_segment;
 
-  // conv_hit.valid       = tp_data.valid;
-  conv_hit.strip       = tp_data.strip;
+  conv_hit.valid       = true;  // No "valid" bit from getRPCData()
+  conv_hit.strip       = int((tp_data1.strip + tp_data2.strip) / 2);
+  conv_hit.strip_low   = tp_data1.strip;
+  conv_hit.strip_hi    = tp_data2.strip;
   // conv_hit.wire        = tp_data.keywire;
   // conv_hit.quality     = tp_data.quality;
   // conv_hit.pattern     = tp_data.pattern;
@@ -540,15 +587,15 @@ void EMTFPrimitiveConversion::convert_rpc(
   // conv_hit.bx0         = tp_data.bx0; // Used? Delete from class? - AWB 29.09.16
   // conv_hit.layer       = 0; // Used? Delete from class? - AWB 29.09.16
 
-  // std::cout << "\nendcap = " << tp_endcap << ", station = " << tp_station << ", ring = " << tp_ring << ", roll = " << tp_roll
-  // 	    << ", sector = " << tp_sector << ", subsector = " << tp_subsector << ", bx = " << conv_hit.bx << ", strip = " << conv_hit.strip << std::endl;
-
-  convert_rpc_details(conv_hit, muon_primitive, tp_geom);
+  convert_rpc_details(conv_hit, muon_primitive1, muon_primitive2, tp_geom);
 }
 
 void EMTFPrimitiveConversion::convert_rpc_details(EMTFHitExtra& conv_hit, 
-						  const TriggerPrimitive& muon_primitive,
+						  const TriggerPrimitive& muon_primitive1,
+						  const TriggerPrimitive& muon_primitive2,
 						  const std::unique_ptr<L1TMuonEndCap::GeometryTranslator>& tp_geom) const {
+
+  bool is_neighbor = (conv_hit.subsector == 2) && (conv_hit.sector == conv_hit.pc_sector);
   
   // std::unique_ptr<const RPCRoll> roll(rpc_geom_->roll( tp_detId ));
   // const LocalPoint  loc_pt = roll->centreOfStrip( conv_hit.strip );
@@ -558,49 +605,74 @@ void EMTFPrimitiveConversion::convert_rpc_details(EMTFHitExtra& conv_hit,
   // float glob_phi   = glb_pt.phi();
   // float glob_theta = glb_pt.theta();
 
-  // float glob_phi   = muon_primitive.getCMSGlobalPhi();
-  // float glob_eta   = muon_primitive.getCMSGlobalEta();
+  float glob_phi1 = tp_geom->calculateGlobalPhi(muon_primitive1);
+  float glob_eta1 = tp_geom->calculateGlobalEta(muon_primitive1);
+  float glob_phi2 = tp_geom->calculateGlobalPhi(muon_primitive2);
+  float glob_eta2 = tp_geom->calculateGlobalEta(muon_primitive2);
 
-  // std::cout << "Before declaring geom" << std::endl;
-  // std::unique_ptr<L1TMuonEndCap::GeometryTranslator> geom;
-  // std::cout << "After declaring geom" << std::endl;
-  // geom.reset(new L1TMuonEndCap::GeometryTranslator());
-  // // geom->checkAndUpdateGeometry(es);
-  // std::cout << "After resetting geom" << std::endl;
+  float dPhi = glob_phi2 - glob_phi1;
+  if (fabs(dPhi) > Geom::pi())
+    dPhi += (Geom::pi() * (dPhi > 0 ? -2. : 2.));
+  float dEta = glob_eta2 - glob_eta1;
+  assert(fabs(dPhi) < (Geom::pi() / 15.)); // Shouldn't be > 12 degrees
+  assert(fabs(dEta) < 0.1);
 
-  float glob_phi   = tp_geom->calculateGlobalPhi(muon_primitive);
-  float glob_eta   = tp_geom->calculateGlobalEta(muon_primitive);
-
+  float glob_phi = glob_phi1 + (dPhi / 2.);
+  float glob_eta = glob_eta1 + (dEta / 2.);
   float glob_theta = 2*atan( exp(-1*glob_eta) );
 
   // Convert to degrees
   glob_phi   *= (180. / Geom::pi());
-  if (glob_phi < 0)  // Convert to [0, 360]
+  glob_phi   -= 15.;    // Shift so phi = 0 corresponds to the sector 1 boundary 
+  if ( glob_phi < (is_neighbor ? -22. : 0.) )  // Convert to [-22, 360]
     glob_phi += 360.;
   glob_theta *= (180. / Geom::pi());
   if (glob_theta > 90)
     glob_theta = 180. - glob_theta;
 
-  float loc_phi = fmod( (glob_phi + 15.0), 60.0);  // Phi within sector
+  float loc_phi = glob_phi - ((conv_hit.pc_sector - 1) * 60.);
+  int fph       = ((loc_phi + 22.) * 60.0);  // Rounds down - probably not the best
+  int th        = ((glob_theta - 8.5) / 0.285); 
+  int zone_hit  = ((fph + 16) >> 5);
+
+  glob_phi   +=  15.;   // Shift back to true value
   if (glob_phi > 180.)  // Convert back to [-180, 180]
     glob_phi -= 360.;
 
-  int fph      = (loc_phi * 60.0);  // Rounds down - probably not the best
-  int th       = ((glob_theta - 8.5) / 0.285); 
-  int zone_hit = ((fph + 16) >> 5);
+  assert(fph >= 0 && fph <= 4920);
 
-  // std::cout << "glob_phi = " << glob_phi << ", loc_phi = " << loc_phi << ", fph = " << fph << ", zone_hit = " << zone_hit << std::endl;
-  // std::cout << "glob_eta = " << glob_eta << ", glob_theta = " << glob_theta << ", th = " << th << std::endl;
-  
+  // Compute the zone code based only on theta, with overlap of 8 for RPCs
+  int zone_code = 0;
+  for (int izone = 1; izone < NUM_ZONES; ++izone) {
+    if ( (th >  (zoneBoundaries_.at(izone) - 8)) && 
+	 (th <= (zoneBoundaries_.at(izone + 1) + 8)) )
+      zone_code |= (1 << izone);
+  }
+  assert(zone_code > 0);
+
+  // Needed later for primitive matching ... define arbitrarily for RPCs
+  int fs_history = 0;                       // history id: not set here, to be set in primitive matching
+  int fs_chamber = -1;                      // chamber id
+  int fs_segment = conv_hit.pc_segment % 2; // segment id
+
+  // For ME1
+  //   j = 0 is neighbor sector subsector
+  //   j = 1,2,3,4,5,6 are native subsectors
+  fs_chamber = is_neighbor ? 0 : conv_hit.subsector;
+
+  assert(fs_history >= 0 && fs_chamber != -1 && fs_segment < 2);
+  fs_segment = ((fs_history & 0x3)<<4) | ((fs_chamber & 0x7)<<1) | (fs_segment & 0x1);
+
+
   conv_hit.phi_fp     = fph;        // Full-precision integer phi
   conv_hit.theta_fp   = th;         // Full-precision integer theta
   // conv_hit.phzvl      = phzvl;      // Local zone word: (1*low) + (2*mid) + (4*low) - used in FW debugging
   // conv_hit.ph_hit     = ph_hit;     // Intermediate quantity in phi calculation - used in FW debugging
   conv_hit.zone_hit   = zone_hit;   // Phi value for building patterns (0.53333 deg precision)
-  // conv_hit.zone_code  = zone_code;  // Full zone word: 1*(zone 0) + 2*(zone 1) + 4*(zone 2) + 8*(zone 3)
+  conv_hit.zone_code  = zone_code;  // Full zone word: 1*(zone 0) + 2*(zone 1) + 4*(zone 2) + 8*(zone 3)
   
-  // conv_hit.fs_segment   = fs_segment;    // How is this used? - AWB 18.10.16
-  // conv_hit.fs_zone_code = fs_zone_code;  // Zone word used in primitive matching (why not use zone_code in FW? - AWB 18.10.16)
+  conv_hit.fs_segment   = fs_segment;  // Need to define properly for RPCs? - AWB 29.10.16
+  conv_hit.fs_zone_code = zone_code;   // Same as zone_code for now - AWB 29.10.16
 
   conv_hit.phi_glob_deg = glob_phi;
   conv_hit.phi_loc_deg  = loc_phi;
