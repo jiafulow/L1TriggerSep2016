@@ -143,7 +143,7 @@ void EMTFPrimitiveConversion::convert_csc(
   int cscn_ID      = tp_csc_ID;  // modify csc_ID if coming from neighbor sector
   if (is_neighbor) {
     // station 1 has 3 neighbor chambers: 13,14,15 in rings 1,2,3
-    // (where are chambers 10,11,12 in station 1? they used to be for ME1/1a, but not anymore)
+    // (where are chambers 10,11,12 in station 1? they were used to label ME1/1a, but not anymore)
     // station 2,3,4 have 2 neighbor chambers: 10,11 in rings 1,2
     cscn_ID = (pc_chamber < 3) ? (pc_chamber + 12) : ( ((pc_chamber - 1) % 2) + 9);
     cscn_ID += 1;
@@ -203,8 +203,8 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
   const int fw_sector  = (sector_-1);
   const int fw_station = (conv_hit.station == 1) ? (is_neighbor ? 0 : (conv_hit.subsector-1)) : conv_hit.station;
   const int fw_cscid   = (conv_hit.cscn_ID-1);
-  const int fw_hstrip  = conv_hit.strip;  // it is half-strip, despite the name
-  const int fw_wg      = conv_hit.wire;   // it is wiregroup, despite the name
+  const int fw_strip   = conv_hit.strip;  // it is half-strip, despite the name
+  const int fw_wire    = conv_hit.wire;   // it is wiregroup, despite the name
 
   // Primitive converter unit
   // station: 0-5 for st1 sub1, st1 sub2, st2, st3, st4, neigh all st*
@@ -291,14 +291,14 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
   int clct_pat_corr_sign = (lut().get_ph_patt_corr_sign(conv_hit.pattern) == 0) ? 1 : -1;
 
   if (is_10degree) {
-    eighth_strip = fw_hstrip << 2;  // full precision, uses only 2 bits of pattern correction
+    eighth_strip = fw_strip << 2;  // full precision, uses only 2 bits of pattern correction
     eighth_strip += clct_pat_corr_sign * (clct_pat_corr >> 1);
   } else {
-    eighth_strip = fw_hstrip << 3;  // full precision, uses all 3 bits of pattern correction
+    eighth_strip = fw_strip << 3;  // multiply by 2, uses all 3 bits of pattern correction
     eighth_strip += clct_pat_corr_sign * (clct_pat_corr >> 0);
   }
 
-  // Multiplicative factor for strip
+  // Multiplicative factor for eighth_strip
   int factor = 1024;
   if (is_me11a)
     factor = 1707;  // ME1/1a
@@ -307,9 +307,9 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
   else if (is_me13)
     factor = 947;   // ME1/3
 
-  // full-precision phi, but local to chamber (counted from strp 1)
-  // zone phi precision: 0.53333 deg
-  // full phi precision: 0.01666 deg
+  // ph_tmp is full-precision phi, but local to chamber (counted from strip 0)
+  // full phi precision: 0.016666 deg (1/8-strip)
+  // zone phi precision: 0.533333 deg (4-strip, 32 times coarser than full phi precision)
   int ph_tmp = (eighth_strip * factor) >> 10;
   int ph_tmp_sign = (ph_reverse == 0) ? 1 : -1;
 
@@ -322,7 +322,7 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
   // Full phi +16 to put the rounded value into the middle of error range
   // Divide full phi by 32, subtract chamber start
   int ph_hit_fixed = -1 * lut().get_ph_init_hard(fw_station, fw_cscid);
-  ph_hit_fixed = ph_hit_fixed + ((fph + 16) >> 5);
+  ph_hit_fixed = ph_hit_fixed + ((fph + (1<<4)) >> 5);
 
   if (fixZonePhi_)
     ph_hit = ph_hit_fixed;
@@ -333,8 +333,8 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
 
   int zone_hit_fixed = lut().get_ph_init_hard(fw_station, fw_cscid);
   zone_hit_fixed += ph_hit_fixed;
-  // Since ph_hit_fixed = ((fph + 16) >> 5) - lut().get_ph_init_hard(), the following is equivalent:
-  //zone_hit_fixed = ((fph + 16) >> 5);
+  // Since ph_hit_fixed = ((fph + (1<<4)) >> 5) - lut().get_ph_init_hard(), the following is equivalent:
+  //zone_hit_fixed = ((fph + (1<<4)) >> 5);
 
   if (fixZonePhi_)
     zone_hit = zone_hit_fixed;
@@ -342,13 +342,13 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
   // ___________________________________________________________________________
   // theta conversion
 
-  int pc_wire_id = (fw_wg & 0x7f);
-  int th_orig = lut().get_th_lut(fw_endcap, fw_sector, pc_lut_id, pc_wire_id);
+  // th_tmp is theta local to chamber
+  int pc_wire_id = (fw_wire & 0x7f);  // 7-bit
+  int th_tmp = lut().get_th_lut(fw_endcap, fw_sector, pc_lut_id, pc_wire_id);
 
-  int th_tmp = th_orig;
-
+  // For ME1/1 with tilted wires, add theta correction as a function of (wire,strip) index
   if (is_me11a || is_me11b) {
-    int pc_wire_strip_id = (((fw_wg >> 4) & 0x3) << 5) | ((eighth_strip >> 4) & 0x1f);
+    int pc_wire_strip_id = (((fw_wire >> 4) & 0x3) << 5) | ((eighth_strip >> 4) & 0x1f);  // 2-bit from wire, 5-bit from 2-strip
     int th_corr = lut().get_th_corr_lut(fw_endcap, fw_sector, pc_lut_id, pc_wire_strip_id);
     int th_corr_sign = (ph_reverse == 0) ? 1 : -1;
 
@@ -358,19 +358,19 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
     const int th_negative = 50;
     const int th_coverage = 45;
 
-    if (th_tmp > th_negative || fw_wg == 0)
+    if (th_tmp > th_negative || th_tmp < 0 || fw_wire == 0)
       th_tmp = 0;  // limit at the bottom
     if (th_tmp > th_coverage)
       th_tmp = th_coverage;  // limit at the top
   }
 
-  // theta precision = 0.285 degrees, starts at 8.5 deg: {1, 127} <--> {8.785, 44.695}
+  // theta precision: 0.28515625 deg
+  // theta starts at 8.5 deg: {1, 127} <--> {8.785, 44.715}
   int th = lut().get_th_init(fw_endcap, fw_sector, pc_lut_id);
   th = th + th_tmp;
 
   // Protect against invalid value
-  if (th == 0)
-    th = 1;
+  th = (th == 0) ? 1 : th;
 
   // ___________________________________________________________________________
   // zones

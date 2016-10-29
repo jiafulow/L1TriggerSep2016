@@ -14,6 +14,7 @@
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPtLUTReader.hh"
 
 #include "helper.hh"
+#include "progress_bar.hh"
 
 
 class CompareEMTFPtLUT : public edm::EDAnalyzer {

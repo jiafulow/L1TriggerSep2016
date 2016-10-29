@@ -1,9 +1,27 @@
-#include "progress_bar.hh"
-
 #include <string>
 #include <sstream>
 
 namespace {
+
+  template <typename T>
+  inline T deltaPhiInRadians(T phi1, T phi2) {
+    T result = phi1 - phi2;  // same convention as reco::deltaPhi()
+    constexpr T _twopi = M_PI*2.;
+    result /= _twopi;
+    result -= std::round(result);
+    result *= _twopi;  // result in [-pi,pi]
+    return result;
+  }
+
+  template <typename T>
+  inline T deltaPhiInDegrees(T phi1, T phi2) {
+    T result = phi1 - phi2;  // same convention as reco::deltaPhi()
+    constexpr T _twopi = 360.;
+    result /= _twopi;
+    result -= std::round(result);
+    result *= _twopi;  // result in [-180,180]
+    return result;
+  }
 
   template<typename T>
   T get_subword(T word, unsigned int msb, unsigned int lsb) {
@@ -12,7 +30,8 @@ namespace {
     return (word >> (lsb)) & ((1u<<len)-1);
   }
 
-  std::string print_subaddresses(const uint64_t& address) {
+  template<typename T>
+  std::string print_subaddresses(T address) {
     int mode_inv = (address >> (30-4)) & ((1<<4)-1);
     std::stringstream ss;
 

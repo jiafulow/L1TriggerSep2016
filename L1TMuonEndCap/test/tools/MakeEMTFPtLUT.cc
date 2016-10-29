@@ -12,6 +12,7 @@
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPtLUTWriter.hh"
 
 #include "helper.hh"
+#include "progress_bar.hh"
 
 
 class MakeEMTFPtLUT : public edm::EDAnalyzer {
