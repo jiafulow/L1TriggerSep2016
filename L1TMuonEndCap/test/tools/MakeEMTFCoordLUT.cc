@@ -52,8 +52,7 @@ private:
   // Generate LUTs
   void generateLUTs();
   void generateLUTs_init();
-  void generateLUTs_th_corr_lut();
-  void generateLUTs_th_lut();  // and also ph_init, th_init, etc
+  void generateLUTs_run();
   void generateLUTs_final();
 
   // Validate LUTs
@@ -117,9 +116,9 @@ private:
   int th_lut            [12][5][16][112];
   int th_lut_size       [12][5][16];
 
-  // [sector_12][station_2][chamber_16][wire_strip_96]
-  int th_corr_lut       [12][2][16][96];  // only ME1/1
-  int th_corr_lut_size  [12][2][16];      // only ME1/1
+  // [sector_12][station_2][chamber_16][wire_strip_128]  (only ME1/1)
+  int th_corr_lut       [12][2][16][128];
+  int th_corr_lut_size  [12][2][16];
 };
 
 
@@ -131,6 +130,8 @@ private:
 
 #define LOWER_THETA 8.5
 #define UPPER_THETA 45.0
+
+//#define REPRODUCE_OLD_LUTS 1
 
 
 MakeEMTFCoordLUT::MakeEMTFCoordLUT(const edm::ParameterSet& iConfig) :
@@ -193,8 +194,7 @@ void MakeEMTFCoordLUT::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 // _____________________________________________________________________________
 void MakeEMTFCoordLUT::generateLUTs() {
   generateLUTs_init();
-  generateLUTs_th_corr_lut();
-  generateLUTs_th_lut();  // and also ph_init, th_init, etc
+  generateLUTs_run();
   generateLUTs_final();
 }
 
@@ -221,83 +221,7 @@ void MakeEMTFCoordLUT::generateLUTs_init() {
   return;
 }
 
-// generates theta correction LUTs for ME1/1 where the wires are tilted
-void MakeEMTFCoordLUT::generateLUTs_th_corr_lut() {
-  constexpr double theta_scale = (UPPER_THETA - LOWER_THETA)/128;  // = 0.28515625 (7 bits encode 128 values)
-
-  for (int endcap = MIN_ENDCAP; endcap <= MAX_ENDCAP; ++endcap) {
-    for (int sector = MIN_TRIGSECTOR; sector <= MAX_TRIGSECTOR; ++sector) {
-      for (int subsector = 1; subsector <= 2; ++subsector) {
-        for (int chamber = 1; chamber <= 4; ++chamber) {
-          // Only subsector 1 has neighbor sector chamber
-          if (subsector != 1 && chamber > 3)  continue;
-
-          const int station = 1;
-          const bool is_me11a = false;  // always assume ME1/1b
-          const bool is_neighbor = (station == 1 && subsector == 1 && chamber == 4);
-
-          // Set 'real' CSCID, sector, subsector
-          int rcscid = chamber;
-          int rsector = sector;
-          int rsubsector = subsector;
-          if (is_neighbor) {
-            rcscid = 1;
-            rsector = (sector == 1) ? 6 : sector - 1;
-            rsubsector = 2;
-          }
-
-          const int maxWire = 48;  // ME1/1
-          const int maxStrip = 64; // ME1/1b
-
-          const int es = (endcap-1) * 6 + (sector-1);
-          const int st = (station == 1) ? (subsector-1) : station;
-          const int ch = is_neighbor ? (13-1) : (chamber-1);
-          assert(es < 12 && st < 5 && ch < 16);
-
-
-          // make LUT for (wire,strip) index -> theta correction
-
-          // select correction points at 1/6, 3/6 and 5/6 of chamber wg range
-          // this makes construction of LUT address in firmware much easier
-          int index = 0;
-
-          for (int wire = maxWire/6; wire < maxWire; wire += maxWire/3) {
-            double fth0 = getGlobalThetaFullstrip(endcap, rsector, rsubsector, station, rcscid, is_me11a, wire, 0);  // strip 0
-
-            for (int strip = 0; strip < maxStrip; strip += 2) { // pattern search works in double-strip, so take every other strip (FIXME: take odd value?)
-              double fth1 = getGlobalThetaFullstrip(endcap, rsector, rsubsector, station, rcscid, is_me11a, wire, strip);
-              double fth_diff = fth1 - fth0;
-              fth_diff = (endcap == 2) ? -fth_diff : fth_diff;  // for chambers in negative endcap, the wire tilt is the opposite way
-              assert(fth_diff >= 0.);
-
-              int th_diff = static_cast<int>(std::round(fth_diff/theta_scale));
-              assert(th_diff >= 0);
-
-              if (index == 0)
-                th_corr_lut_size[es][st][ch] = 96;  // (3) [wire] x (64/2) [strip]
-              th_corr_lut[es][st][ch][index] = th_diff;
-
-              if (verbose_ > 0 && sector == verbose_sector_) {
-                std::cout << "::generateLUTs_th_corr_lut()"
-                    << " -- endcap " << endcap << " sec " << sector << " st " << st << " ch " << ch+1 << " wire " << wire << " strip " << strip
-                    << " -- fth0: " << fth0 << " fth1: " << fth1 << " fth_diff: " << fth_diff << " th_diff: " << th_diff
-                    << std::endl;
-              }
-
-              ++index;
-            }  // end loop over strip
-          }  // end loop over wire
-
-          assert(index <= 96);  // (3) [wire] x (64/2) [strip]
-        }  // end loop over ME1/1 chamber
-      }  // end loop over ME1/1 subsector
-    }  // end loop over sector
-  }  // end loop over endcap
-  return;
-}
-
-// generate theta LUTs; then generate ph_init, ph_init_full, th_init, ph_disp, th_disp LUTs
-void MakeEMTFCoordLUT::generateLUTs_th_lut() {
+void MakeEMTFCoordLUT::generateLUTs_run() {
   constexpr double theta_scale = (UPPER_THETA - LOWER_THETA)/128;  // = 0.28515625 (7 bits encode 128 values)
   constexpr double nominal_pitch = 10./75.;  // = 0.133333 (ME2/2 strip pitch. 10-degree chamber, 80 strips - 5 overlap strips)
 
@@ -428,17 +352,25 @@ void MakeEMTFCoordLUT::generateLUTs_th_lut() {
               maxStrip = 80;
             }
 
-            int topStrip = 0, botStrip = 0;
+            int topStrip = 0, botStrip = 0, refStrip = 0;
             if (station == 1 && rcscid <= 3) {  // ME1/1
               // select top and bottom strip according to endcap
               // basically, need to hit the corners of the chamber with truncated tilted wires (relevant for ME1/1 only)
+#ifdef REPRODUCE_OLD_LUTS
               topStrip = (endcap == 2) ? 0 : 47;
               botStrip = (endcap == 2) ? 47 : 0;
+              refStrip = 0;
+#else
+              topStrip = (endcap == 2) ? 0 : maxStrip-1;
+              botStrip = (endcap == 2) ? maxStrip-1 : 0;
+              refStrip = botStrip;
+#endif
 
             } else {
               // take 1/4 of max strip to minimize displacement due to straight wires in polar coordinates (all chambers except ME1/1)
               topStrip = maxStrip/4;
               botStrip = maxStrip/4;
+              refStrip = botStrip;
             }
 
             const int es = (endcap-1) * 6 + (sector-1);
@@ -449,45 +381,13 @@ void MakeEMTFCoordLUT::generateLUTs_th_lut() {
 
 
             // find phi at first and last strips
-            double fphi_first = getSectorPhi(endcap, rsector, rsubsector, station, rcscid, is_me11a, is_neighbor, 0, 0);  // wire 0 halfstrip 0
-            double fphi_last  = getSectorPhi(endcap, rsector, rsubsector, station, rcscid, is_me11a, is_neighbor, 0, 2*maxStrip-1);  // wire 0
-            double fphi_diff  = std::abs(deltaPhiInDegrees(fphi_last, fphi_first))/2.;  // in double-strip
+            double fphi_first = getSectorPhi(endcap, rsector, rsubsector, station, rcscid, is_me11a, is_neighbor, 0, 0);
+            double fphi_last  = getSectorPhi(endcap, rsector, rsubsector, station, rcscid, is_me11a, is_neighbor, 0, 2*maxStrip-1);
+            double fphi_diff  = std::abs(deltaPhiInDegrees(fphi_last, fphi_first))/2;  // in double-strip
 
             // find theta at top and bottom of chamber
-            double fth_first  = getGlobalThetaFullstrip(endcap, rsector, rsubsector, station, rcscid, is_me11a, 0, botStrip);  // wire 0
+            double fth_first  = getGlobalThetaFullstrip(endcap, rsector, rsubsector, station, rcscid, is_me11a, 0, botStrip);
             double fth_last   = getGlobalThetaFullstrip(endcap, rsector, rsubsector, station, rcscid, is_me11a, maxWire-1, topStrip);
-
-
-            // make LUT for wire -> theta
-            for (int wire = 0; wire < maxWire; ++wire) {
-              int strip = botStrip;
-              if (station == 1 && rcscid <= 3) {  // ME1/1
-                strip = 0;
-              }
-
-              double fth_wire = getGlobalThetaFullstrip(endcap, rsector, rsubsector, station, rcscid, is_me11a, wire, strip);
-              double fth_diff = fth_wire - fth_first;
-              int th_diff = static_cast<int>(std::round(fth_diff/theta_scale));
-
-              // th_diff can become negative for truncated tilted wires in ME1/1
-              // convert negative values into a large number so firmware will cut it off (relevant for ME1/1 only)
-              if (station == 1 && rcscid <= 3) {  // ME1/1
-                if (th_diff < 0)  th_diff &= 0x3f;  // 63 (6-bit) (FIXME: why?)
-              }
-              assert(th_diff >= 0);
-
-              if (wire == 0)
-                th_lut_size[es][st][ch] = maxWire;
-              th_lut[es][st][ch][wire] = th_diff;
-
-              if (verbose_ > 0 && sector == verbose_sector_) {
-                std::cout << "::generateLUTs_th_lut()"
-                    << " -- endcap " << endcap << " sec " << sector << " st " << st << " ch " << ch+1 << " wire " << wire << " strip " << strip
-                    << " -- fth_first: " << fth_first << " fth_wire: " << fth_wire << " fth_diff: " << fth_diff << " th_diff: " << th_diff
-                    << std::endl;
-              }
-            }  // end loop over wire
-
 
             // find ph_init, ph_init_full, th_init, ph_disp, th_disp constants
             int my_ph_init      = static_cast<int>(std::round(fphi_first/nominal_pitch));
@@ -496,16 +396,18 @@ void MakeEMTFCoordLUT::generateLUTs_th_lut() {
             int my_th_init      = static_cast<int>(std::round((fth_first - LOWER_THETA)/theta_scale));
             int my_th_cover     = static_cast<int>(std::round((fth_last - fth_first)/theta_scale));
 
-            // widen ME1/1 coverage slightly, because of odd geometry of truncated wiregroups
-            if (station == 1 && rcscid <= 3) {  // ME1/1
-              my_th_cover += 2;
-            }
-
             // calculate displacements from hardcoded init values
             int my_ph_disp      = (my_ph_init/2 - 2*ph_init_hard[st][ch]);  // in double-strip
             if (deltaPhiInDegrees(fphi_first, fphi_last) > 0.)
               my_ph_disp       -= ph_cover_hard[st][ch];
             int my_th_disp      = (my_th_init - th_init_hard[st][ch]);
+
+#ifdef REPRODUCE_OLD_LUTS
+            // widen ME1/1 coverage slightly, because of odd geometry of truncated wiregroups
+            if (station == 1 && rcscid <= 3) {  // ME1/1
+              my_th_cover += 2;
+            }
+#endif
 
             ph_init     [es][st][ch] = my_ph_init;
             ph_init_full[es][st][ch] = my_ph_init_full;
@@ -516,14 +418,104 @@ void MakeEMTFCoordLUT::generateLUTs_th_lut() {
             th_disp     [es][st][ch] = my_th_disp;
 
             if (verbose_ > 0 && sector == verbose_sector_) {
-              double fphi_first_global = getGlobalPhi(endcap, rsector, rsubsector, station, rcscid, is_me11a, 0, 0);  // wire 0 halfstrip 0
-              std::cout << "::generateLUTs_th_lut()"
+              double fphi_first_global = getGlobalPhi(endcap, rsector, rsubsector, station, rcscid, is_me11a, 0, 0);
+              std::cout << "::generateLUTs_run()"
                   << " -- endcap " << endcap << " sec " << sector << " st " << st << " ch " << ch+1 << " maxWire " << maxWire << " maxStrip " << maxStrip
                   << " -- fphi_first_global: " << fphi_first_global << " fphi_first: " << fphi_first << " fphi_last: " << fphi_last << " fth_first: " << fth_first << " fth_last: " << fth_last
                   << " ph_init: " << my_ph_init << " ph_init_full: " << my_ph_init_full << " ph_cover: " << my_ph_cover << " ph_disp: " << my_ph_disp
                   << " th_init: " << my_th_init << " th_cover: " << my_th_cover << " th_disp: " << my_th_disp
                   << std::endl;
             }
+
+
+            // make LUT for wire -> theta
+            for (int wire = 0; wire < maxWire; ++wire) {
+              double fth_wire = getGlobalThetaFullstrip(endcap, rsector, rsubsector, station, rcscid, is_me11a, wire, refStrip);
+              double fth_diff = fth_wire - fth_first;
+              int th_diff = static_cast<int>(std::round(fth_diff/theta_scale));
+              assert(th_diff >= 0);
+
+              if (wire == 0)
+                th_lut_size[es][st][ch] = maxWire;
+              th_lut[es][st][ch][wire] = th_diff;
+
+              if (verbose_ > 0 && sector == verbose_sector_) {
+                std::cout << "::generateLUTs_run()"
+                    << " -- endcap " << endcap << " sec " << sector << " st " << st << " ch " << ch+1 << " wire " << wire << " strip " << refStrip
+                    << " -- fth_first: " << fth_first << " fth_wire: " << fth_wire << " fth_diff: " << fth_diff << " th_diff: " << th_diff
+                    << std::endl;
+              }
+            }  // end loop over wire
+
+
+            // make LUT for (wire,strip) index -> theta correction for ME1/1 where the wires are tilted
+            if (station == 1 && rcscid <= 3 && !is_me11a) {  // ME1/1b
+              assert(maxWire == 48 && maxStrip == 64);  // ME1/1b
+
+              // select correction points at 1/6, 3/6 and 5/6 of chamber wg range
+              // this makes construction of LUT address in firmware much easier
+              int index = 0;
+
+#ifdef REPRODUCE_OLD_LUTS
+              for (int wire = maxWire/6; wire < maxWire; wire += maxWire/3) {
+                double fth0 = getGlobalThetaFullstrip(endcap, rsector, rsubsector, station, rcscid, is_me11a, wire, refStrip);
+
+                // pattern search works in double-strip, so take every other strip
+                for (int strip = 0; strip < maxStrip; strip += 2) {
+                  double fth1 = getGlobalThetaFullstrip(endcap, rsector, rsubsector, station, rcscid, is_me11a, wire, strip);
+                  double fth_diff = fth1 - fth0;
+
+                  // for chambers in negative endcap, the wire tilt is the opposite way
+                  fth_diff = (endcap == 2) ? -fth_diff : fth_diff;
+
+                  int th_diff = static_cast<int>(std::round(fth_diff/theta_scale));
+                  assert(th_diff >= 0);
+                  assert(index <= 96);  // (3) [wire] x (64/2) [strip]
+
+                  if (index == 0)
+                    th_corr_lut_size[es][st][ch] = 96;  // (3) [wire] x (64/2) [strip]
+                  th_corr_lut[es][st][ch][index] = th_diff;
+
+                  if (verbose_ > 0 && sector == verbose_sector_) {
+                    std::cout << "::generateLUTs_run()"
+                        << " -- endcap " << endcap << " sec " << sector << " st " << st << " ch " << ch+1 << " wire " << wire << " strip " << strip
+                        << " -- fth0: " << fth0 << " fth1: " << fth1 << " fth_diff: " << fth_diff << " th_diff: " << th_diff
+                        << std::endl;
+                  }
+
+                  ++index;
+                }  // end loop over strip
+              }  // end loop over wire
+#else
+              for (int wire = maxWire/8; wire < maxWire; wire += maxWire/4) {
+                double fth0 = getGlobalThetaFullstrip(endcap, rsector, rsubsector, station, rcscid, is_me11a, wire, refStrip);
+
+                // pattern search works in double-strip, so take every other strip
+                for (int strip = 0; strip < maxStrip; strip += 2) {
+                  double fth1 = getGlobalThetaFullstrip(endcap, rsector, rsubsector, station, rcscid, is_me11a, wire, strip);
+                  double fth_diff = fth1 - fth0;
+
+                  int th_diff = static_cast<int>(std::round(fth_diff/theta_scale));
+                  assert(th_diff >= 0);
+                  assert(index <= 128);  // (4) [wire] x (64/2) [strip]
+
+                  if (index == 0)
+                    th_corr_lut_size[es][st][ch] = 128;  // (4) [wire] x (64/2) [strip]
+                  th_corr_lut[es][st][ch][index] = th_diff;
+
+                  if (verbose_ > 0 && sector == verbose_sector_) {
+                    std::cout << "::generateLUTs_run()"
+                        << " -- endcap " << endcap << " sec " << sector << " st " << st << " ch " << ch+1 << " wire " << wire << " strip " << strip
+                        << " -- fth0: " << fth0 << " fth1: " << fth1 << " fth_diff: " << fth_diff << " th_diff: " << th_diff
+                        << std::endl;
+                  }
+
+                  ++index;
+                }  // end loop over strip
+              }  // end loop over wire
+#endif
+            }  // end if ME1/1b
+
           }  // end loop over chamber
         }  // end loop over subsector
       }  // end loop over station
@@ -537,12 +529,11 @@ void MakeEMTFCoordLUT::generateLUTs_final() {
   for (int es = 0; es < 12; ++es) {
     for (int st = 0; st < 5; ++st) {
       for (int ch = 0; ch < 16; ++ch) {
-        if (ch > 9-1)  continue;  // exclude neighbors
+        if (ch > 9-1)  continue;  // exclude neighbors, exclude ME1/1a
 
         int ch_type = ch/3;
-        if (st > 1 && ch_type > 1) {
+        if (st > 1 && ch_type > 1)
           ch_type = 1; // stations 2,3,4 have only 2 chamber types (a.k.a rings)
-        }
 
         if (ph_cover_max[st][ch_type] < ph_cover[es][st][ch])
           ph_cover_max[st][ch_type] = ph_cover[es][st][ch];
@@ -707,7 +698,6 @@ void MakeEMTFCoordLUT::validateLUTs() {
         is_10degree = true;
       }
 
-
       assert(ph_reverse == isStripPhiCounterClockwise(getCSCDetId(endcap, rsector, rsubsector, station, rcscid, is_me11a)));
 
       for (wire = 0; wire < maxWire; ++wire) {
@@ -759,11 +749,15 @@ void MakeEMTFCoordLUT::validateLUTs() {
 
           // th_tmp is theta local to chamber
           int pc_wire_id = (fw_wire & 0x7f);  // 7-bit
+          assert(pc_wire_id < th_lut_size[es][st][ch2]);
           int th_tmp = th_lut[es][st][ch2][pc_wire_id];
 
           // For ME1/1 with tilted wires, add theta correction as a function of (wire,strip) index
           if (station == 1 && (ring == 1 || ring == 4)) {
-            int pc_wire_strip_id = (((fw_wire >> 4) & 0x3) << 5) | ((eighth_strip >> 4) & 0x1f);  // 2-bit from wire, 5-bit from 2-strip (FIXME: different for ME1/1a vs ME1/1b?)
+
+#ifdef REPRODUCE_OLD_LUTS
+            int pc_wire_strip_id = (((fw_wire >> 4) & 0x3) << 5) | ((eighth_strip >> 4) & 0x1f);  // 2-bit from wire, 5-bit from 2-strip
+            assert(pc_wire_strip_id < th_corr_lut_size[es][st][ch2]);
             int th_corr = th_corr_lut[es][st][ch2][pc_wire_strip_id];
             int th_corr_sign = (ph_reverse == 0) ? 1 : -1;
 
@@ -772,13 +766,29 @@ void MakeEMTFCoordLUT::validateLUTs() {
             // Check that correction did not make invalid value outside chamber coverage
             const int th_negative = 50;
             const int th_coverage = 45;
-            //const int th_negative = 63;
-            //const int th_coverage = 46;
 
             if (th_tmp > th_negative || th_tmp < 0 || fw_wire == 0)
               th_tmp = 0;  // limit at the bottom
             if (th_tmp > th_coverage)
               th_tmp = th_coverage;  // limit at the top
+#else
+            int pc_wire_strip_id = ((((fw_wire*21) >> 8) & 0x3) << 5) | ((eighth_strip >> 4) & 0x1f);  // 2-bit from wire, 5-bit from 2-strip
+            if (is_me11a)
+              pc_wire_strip_id = ((((fw_wire*21) >> 8) & 0x3) << 5) | ((((eighth_strip*43)>>5) >> 4) & 0x1f);  // correct for ME1/1a strip number
+            assert(pc_wire_strip_id < th_corr_lut_size[es][st][ch2]);
+            int th_corr = th_corr_lut[es][st][ch2][pc_wire_strip_id];
+
+            th_tmp = th_tmp + th_corr;
+            assert(th_tmp >= 0);
+
+            // Check that correction did not make invalid value outside chamber coverage
+            const int th_coverage = 46;  // max coverage for front chamber is 47, max coverage for rear chamber is 45
+
+            if (fw_wire == 0)
+              th_tmp = 0;  // limit at the bottom
+            if (th_tmp > th_coverage)
+              th_tmp = th_coverage;  // limit at the top
+#endif
           }
 
           // theta precision: 0.28515625 deg
@@ -796,7 +806,11 @@ void MakeEMTFCoordLUT::validateLUTs() {
           fph_emu = static_cast<double>(fph_int);
           fph_emu = fph_emu / 60.;
           fph_emu = fph_emu - 22. + 15. + (60. * fw_sector);
-          fph_emu = (endcap == 2) ? fph_emu - 4.5*10./75 : fph_emu - 3.5*10./75;
+
+#ifndef REPRODUCE_OLD_LUTS
+          fph_emu = (endcap == 2) ? fph_emu - 36./60 : fph_emu - 28./60;
+#endif
+
           fph_emu = deltaPhiInDegrees(fph_emu, 0.);  // reduce to [-180,180]
 
           fth_int = th;
@@ -832,23 +846,97 @@ void MakeEMTFCoordLUT::writeFiles() {
 
   std::stringstream filename;
 
-  for (int endcap = MIN_ENDCAP; endcap <= MAX_ENDCAP; ++endcap) {
-    for (int sector = MIN_TRIGSECTOR; sector <= MAX_TRIGSECTOR; ++sector) {
-      const int es = (endcap-1) * 6 + (sector-1);
+  for (int es = 0; es < 12; ++es) {
+    int endcap      = (es/6) + 1;
+    int sector      = (es%6) + 1;
 
-      // write files: th_corr_lut
-      for (int subsector = 1; subsector <= 2; ++subsector) {
-        for (int chamber = 1; chamber <= 4; ++chamber) {
-          // Only subsector 1 has neighbor sector chamber
-          if (subsector != 1 && chamber > 3)  continue;
+    // write files: ph_init, ph_init_full, th_init, ph_disp, th_disp
+    std::ofstream ph_init_fs;
+    filename << outdir_ << "/" << "ph_init_endcap_" << endcap << "_sect_" << sector << ".lut";
+    ph_init_fs.open(filename.str().c_str());
+    filename.str("");
+    filename.clear();
 
-          const int station = 1;
-          const bool is_neighbor = (station == 1 && subsector == 1 && chamber == 4);
+    std::ofstream th_init_fs;
+    filename << outdir_ << "/" << "th_init_endcap_" << endcap << "_sect_" << sector << ".lut";
+    th_init_fs.open(filename.str().c_str());
+    filename.str("");
+    filename.clear();
 
-          const int st = (station == 1) ? (subsector-1) : station;
-          const int ch = is_neighbor ? 13-1 : (chamber-1);
-          assert(es < 12 && st < 5 && ch < 16);
+    std::ofstream ph_disp_fs;
+    filename << outdir_ << "/" << "ph_disp_endcap_" << endcap << "_sect_" << sector << ".lut";
+    ph_disp_fs.open(filename.str().c_str());
+    filename.str("");
+    filename.clear();
 
+    std::ofstream th_disp_fs;
+    filename << outdir_ << "/" << "th_disp_endcap_" << endcap << "_sect_" << sector << ".lut";
+    th_disp_fs.open(filename.str().c_str());
+    filename.str("");
+    filename.clear();
+
+    for (int st = 0; st < 5; ++st) {
+      const int max_ch = (st == 0) ? 16 : (st == 1) ? 12 : 11;
+
+      std::ofstream ph_init_full_fs;
+      filename << outdir_ << "/" << "ph_init_full_endcap_" << endcap << "_sect_" << sector << "_st_" << st << ".lut";
+      ph_init_full_fs.open(filename.str().c_str());
+      filename.str("");
+      filename.clear();
+
+      for (int ch = 0; ch < max_ch; ++ch) {
+        assert(es < 12 && st < 5 && ch < 16);
+
+        ph_init_fs      << std::hex << ph_init     [es][st][ch] << std::endl;
+        ph_init_full_fs << std::hex << ph_init_full[es][st][ch] << std::endl;
+        th_init_fs      << std::hex << th_init     [es][st][ch] << std::endl;
+        ph_disp_fs      << std::hex << ph_disp     [es][st][ch] << std::endl;
+        th_disp_fs      << std::hex << th_disp     [es][st][ch] << std::endl;
+      }  // end loop over ch
+
+      ph_init_full_fs.close();
+      ++num_of_files;
+    }  // end loop over st
+
+    ph_init_fs.close();
+    ++num_of_files;
+    th_init_fs.close();
+    ++num_of_files;
+    ph_disp_fs.close();
+    ++num_of_files;
+    th_disp_fs.close();
+    ++num_of_files;
+
+
+    // write files: th_lut, th_corr_lut
+    for (int st = 0; st < 5; ++st) {
+      const int max_ch = (st == 0) ? 16 : (st == 1) ? 12 : 11;
+
+      for (int ch = 0; ch < max_ch; ++ch) {
+        assert(es < 12 && st < 5 && ch < 16);
+
+        int subsector   = (st <= 1) ? st + 1 : 0;
+        int station     = (st <= 1) ? 1 : st;
+        int chamber     = ch + 1;
+
+        std::ofstream th_lut_fs;
+        if (station == 1) {
+          filename << outdir_ << "/" << "vl_th_lut_endcap_" << endcap << "_sec_" <<  sector << "_sub_" << subsector << "_st_" << station << "_ch_" << chamber << ".lut";
+        } else {
+          filename << outdir_ << "/" << "vl_th_lut_endcap_" << endcap << "_sec_" <<  sector << "_st_" << station << "_ch_" << chamber << ".lut";
+        }
+        th_lut_fs.open(filename.str().c_str());
+        filename.str("");
+        filename.clear();
+
+        const int maxWire = th_lut_size[es][st][ch];
+        for (int wire = 0; wire < maxWire; ++wire) {
+          th_lut_fs << std::hex << th_lut[es][st][ch][wire] << std::endl;
+        }
+        th_lut_fs.close();
+        ++num_of_files;
+
+        if (station == 1 && (ch == 0 || ch == 1 || ch == 2 || ch == 12)) {  // ME1/1 chambers
           std::ofstream th_corr_lut_fs;
           filename << outdir_ << "/" << "vl_th_corr_lut_endcap_" << endcap << "_sec_" << sector << "_sub_" << subsector << "_st_" << station << "_ch_" << ch+1 << ".lut";
           th_corr_lut_fs.open(filename.str().c_str());
@@ -859,108 +947,13 @@ void MakeEMTFCoordLUT::writeFiles() {
           for (int index = 0; index < n; ++index) {
             th_corr_lut_fs << std::hex << th_corr_lut[es][st][ch][index] << std::endl;
           }
-
           th_corr_lut_fs.close();
           ++num_of_files;
-        }  // end loop over ME1/1 chamber
-      }  // end loop over ME1/1 subsector
+        }
+      }  // end loop over ch
+    }  // end loop over st
 
-
-      // write files: th_lut
-      for (int station = 1; station <= 4; ++station) {
-        for (int subsector = 0; subsector <= 2; ++subsector) {
-          for (int chamber = 1; chamber <= 16; ++chamber) {
-            // ME1 has subsectors 1&2, ME2,3,4 has no subsector (=0)
-            if ((station == 1 && subsector == 0) || (station != 1 && subsector != 0))  continue;
-            // Only ME1 subsector 1 has 16 chambers
-            if (station == 1 && subsector == 2 && chamber > 12)  continue;
-            // Only ME1 has 12 chambers or more
-            if (station != 1 && chamber > 11)  continue;
-
-            const int st = (station == 1) ? (subsector-1) : station;
-            const int ch = (chamber-1);
-            assert(es < 12 && st < 5 && ch < 16);
-
-            std::ofstream th_lut_fs;
-            if (subsector != 0) {
-              filename << outdir_ << "/" << "vl_th_lut_endcap_" << endcap << "_sec_" <<  sector << "_sub_" << subsector << "_st_" << station << "_ch_" << chamber << ".lut";
-            } else {
-              filename << outdir_ << "/" << "vl_th_lut_endcap_" << endcap << "_sec_" <<  sector << "_st_" << station << "_ch_" << chamber << ".lut";
-            }
-            th_lut_fs.open(filename.str().c_str());
-            filename.str("");
-            filename.clear();
-
-            const int maxWire = th_lut_size[es][st][ch];
-            for (int wire = 0; wire < maxWire; ++wire) {
-              th_lut_fs << std::hex << th_lut[es][st][ch][wire] << std::endl;
-            }
-
-            th_lut_fs.close();
-            ++num_of_files;
-          }  // end loop over chamber
-        }  // end loop over subsector
-      }  // end loop over station
-
-
-      // write files: ph_init, ph_init_full, th_init, ph_disp, th_disp
-      std::ofstream ph_init_fs;
-      filename << outdir_ << "/" << "ph_init_endcap_" << endcap << "_sect_" << sector << ".lut";
-      ph_init_fs.open(filename.str().c_str());
-      filename.str("");
-      filename.clear();
-
-      std::ofstream th_init_fs;
-      filename << outdir_ << "/" << "th_init_endcap_" << endcap << "_sect_" << sector << ".lut";
-      th_init_fs.open(filename.str().c_str());
-      filename.str("");
-      filename.clear();
-
-      std::ofstream ph_disp_fs;
-      filename << outdir_ << "/" << "ph_disp_endcap_" << endcap << "_sect_" << sector << ".lut";
-      ph_disp_fs.open(filename.str().c_str());
-      filename.str("");
-      filename.clear();
-
-      std::ofstream th_disp_fs;
-      filename << outdir_ << "/" << "th_disp_endcap_" << endcap << "_sect_" << sector << ".lut";
-      th_disp_fs.open(filename.str().c_str());
-      filename.str("");
-      filename.clear();
-
-      for (int st = 0; st < 5; ++st) {
-        const int max_ch = (st == 0) ? 16 : (st == 1) ? 12 : 11;
-
-        std::ofstream ph_init_full_fs;
-        filename << outdir_ << "/" << "ph_init_full_endcap_" << endcap << "_sect_" << sector << "_st_" << st << ".lut";
-        ph_init_full_fs.open(filename.str().c_str());
-        filename.str("");
-        filename.clear();
-
-        for (int ch = 0; ch < max_ch; ++ch) {
-          assert(es < 12 && st < 5 && ch < 16);
-
-          ph_init_fs      << std::hex << ph_init     [es][st][ch] << std::endl;
-          ph_init_full_fs << std::hex << ph_init_full[es][st][ch] << std::endl;
-          th_init_fs      << std::hex << th_init     [es][st][ch] << std::endl;
-          ph_disp_fs      << std::hex << ph_disp     [es][st][ch] << std::endl;
-          th_disp_fs      << std::hex << th_disp     [es][st][ch] << std::endl;
-        }  // end loop over ch
-
-        ph_init_full_fs.close();
-        ++num_of_files;
-      }  // end loop over st
-
-      ph_init_fs.close();
-      ++num_of_files;
-      th_init_fs.close();
-      ++num_of_files;
-      ph_disp_fs.close();
-      ++num_of_files;
-      th_disp_fs.close();
-      ++num_of_files;
-    }  // end loop over sector
-  }  // end loop over endcap
+  }  // end loop over es
 
   std::cout << "[INFO] Generated " << num_of_files << " LUT files." << std::endl;
 
