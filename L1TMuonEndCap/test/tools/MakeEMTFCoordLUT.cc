@@ -456,7 +456,6 @@ void MakeEMTFCoordLUT::generateLUTs_run() {
               // this makes construction of LUT address in firmware much easier
               int index = 0;
 
-#ifdef REPRODUCE_OLD_LUTS
               for (int wire = maxWire/6; wire < maxWire; wire += maxWire/3) {
                 double fth0 = getGlobalThetaFullstrip(endcap, rsector, rsubsector, station, rcscid, is_me11a, wire, refStrip);
 
@@ -465,8 +464,10 @@ void MakeEMTFCoordLUT::generateLUTs_run() {
                   double fth1 = getGlobalThetaFullstrip(endcap, rsector, rsubsector, station, rcscid, is_me11a, wire, strip);
                   double fth_diff = fth1 - fth0;
 
+#ifdef REPRODUCE_OLD_LUTS
                   // for chambers in negative endcap, the wire tilt is the opposite way
                   fth_diff = (endcap == 2) ? -fth_diff : fth_diff;
+#endif
 
                   int th_diff = static_cast<int>(std::round(fth_diff/theta_scale));
                   assert(th_diff >= 0);
@@ -486,36 +487,7 @@ void MakeEMTFCoordLUT::generateLUTs_run() {
                   ++index;
                 }  // end loop over strip
               }  // end loop over wire
-#else
-              for (int wire = maxWire/8; wire < maxWire; wire += maxWire/4) {
-                double fth0 = getGlobalThetaFullstrip(endcap, rsector, rsubsector, station, rcscid, is_me11a, wire, refStrip);
-
-                // pattern search works in double-strip, so take every other strip
-                for (int strip = 0; strip < maxStrip; strip += 2) {
-                  double fth1 = getGlobalThetaFullstrip(endcap, rsector, rsubsector, station, rcscid, is_me11a, wire, strip);
-                  double fth_diff = fth1 - fth0;
-
-                  int th_diff = static_cast<int>(std::round(fth_diff/theta_scale));
-                  assert(th_diff >= 0);
-                  assert(index <= 128);  // (4) [wire] x (64/2) [strip]
-
-                  if (index == 0)
-                    th_corr_lut_size[es][st][ch] = 128;  // (4) [wire] x (64/2) [strip]
-                  th_corr_lut[es][st][ch][index] = th_diff;
-
-                  if (verbose_ > 0 && sector == verbose_sector_) {
-                    std::cout << "::generateLUTs_run()"
-                        << " -- endcap " << endcap << " sec " << sector << " st " << st << " ch " << ch+1 << " wire " << wire << " strip " << strip
-                        << " -- fth0: " << fth0 << " fth1: " << fth1 << " fth_diff: " << fth_diff << " th_diff: " << th_diff
-                        << std::endl;
-                  }
-
-                  ++index;
-                }  // end loop over strip
-              }  // end loop over wire
-#endif
             }  // end if ME1/1b
-
           }  // end loop over chamber
         }  // end loop over subsector
       }  // end loop over station
@@ -772,9 +744,9 @@ void MakeEMTFCoordLUT::validateLUTs() {
             if (th_tmp > th_coverage)
               th_tmp = th_coverage;  // limit at the top
 #else
-            int pc_wire_strip_id = ((((fw_wire*21) >> 8) & 0x3) << 5) | ((eighth_strip >> 4) & 0x1f);  // 2-bit from wire, 5-bit from 2-strip
+            int pc_wire_strip_id = (((fw_wire >> 4) & 0x3) << 5) | ((eighth_strip >> 4) & 0x1f);  // 2-bit from wire, 5-bit from 2-strip
             if (is_me11a)
-              pc_wire_strip_id = ((((fw_wire*21) >> 8) & 0x3) << 5) | ((((eighth_strip*43)>>5) >> 4) & 0x1f);  // correct for ME1/1a strip number
+              pc_wire_strip_id = (((fw_wire >> 4) & 0x3) << 5) | ((((eighth_strip*341)>>8) >> 4) & 0x1f);  // correct for ME1/1a strip number (341/256 =~ 1.333)
             assert(pc_wire_strip_id < th_corr_lut_size[es][st][ch2]);
             int th_corr = th_corr_lut[es][st][ch2][pc_wire_strip_id];
 
