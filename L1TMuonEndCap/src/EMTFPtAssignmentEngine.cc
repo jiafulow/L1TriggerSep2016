@@ -695,7 +695,7 @@ float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
   // Get pT from XML (forest)
   const int (*mode_variables)[6] = aux().getModeVariables();
 
-  const int variables[24] = {
+  std::vector<int> variables = {
     dPhi12, dPhi13, dPhi14, dPhi23, dPhi24, dPhi34, dTheta12, dTheta13, dTheta14, dTheta23, dTheta24, dTheta34,
     CLCT1, CLCT2, CLCT3, CLCT4, CSCID1, CSCID2, CSCID3, CSCID4, FR1, FR2, FR3, FR4
   };
@@ -707,7 +707,7 @@ float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
   for (int i=0; i<6; i++) {  // loop over 6 variables (or less)
     int mv = mode_variables[mode_inv-3][i];
     if (mv != -999) {
-      int v = variables[mv];
+      int v = variables.at(mv);
       if (!(mode_inv == 13 && i == 3)) {  // somehow this uses CSCID1
         assert(v != -999);
       }

@@ -348,7 +348,8 @@ float EMTFPtAssignmentEngineAux::getEtaFromThetaInt(int thetaInt, int bits) cons
   thetaInt = (thetaInt > 127) ? 127 : thetaInt;  // 7-bit
   thetaInt = (thetaInt < 0) ? 0 : thetaInt;
   float theta = thetaInt;
-  theta = (theta*0.2874016 + 8.5)*(3.14159265359/180);  //FIXME: check this
+  //theta = (theta*0.2874016 + 8.5)*(3.14159265359/180);
+  theta = (theta*(45.0-8.5)/128. + 8.5) * M_PI/180.;
   float eta = -std::log(std::tan(theta/2));
   return eta;
 }

@@ -1,5 +1,5 @@
-#ifndef L1TMuonEndCap_L1TMuonEndCapTrackProducer_h
-#define L1TMuonEndCap_L1TMuonEndCapTrackProducer_h
+#ifndef L1TMuonEndCap_L1TMuonEndCapTrackProducerSep2016_h
+#define L1TMuonEndCap_L1TMuonEndCapTrackProducerSep2016_h
 
 // system include files
 #include <memory>
@@ -18,10 +18,10 @@
 
 
 // Class declaration
-class L1TMuonEndCapTrackProducer : public edm::EDProducer {
+class L1TMuonEndCapTrackProducerSep2016 : public edm::EDProducer {
 public:
-  explicit L1TMuonEndCapTrackProducer(const edm::ParameterSet&);
-  virtual ~L1TMuonEndCapTrackProducer();
+  explicit L1TMuonEndCapTrackProducerSep2016(const edm::ParameterSet&);
+  virtual ~L1TMuonEndCapTrackProducerSep2016();
 
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 

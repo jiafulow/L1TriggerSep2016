@@ -1,7 +1,7 @@
 #include "L1TMuonEndCapTrackProducer.h"
 
 
-L1TMuonEndCapTrackProducer::L1TMuonEndCapTrackProducer(const edm::ParameterSet& iConfig) :
+L1TMuonEndCapTrackProducerSep2016::L1TMuonEndCapTrackProducerSep2016(const edm::ParameterSet& iConfig) :
     track_finder_(new EMTFTrackFinder(iConfig, consumesCollector())),
     track_adaptor_(new EMTFTrackAdaptor()),
     uGMT_converter_(new EMTFMicroGMTConverter()),
@@ -17,11 +17,11 @@ L1TMuonEndCapTrackProducer::L1TMuonEndCapTrackProducer(const edm::ParameterSet& 
   produces<EMTFTrackCollection>              ("");      // All output EMTF tracks, in same format as unpacked data
 }
 
-L1TMuonEndCapTrackProducer::~L1TMuonEndCapTrackProducer() {
+L1TMuonEndCapTrackProducerSep2016::~L1TMuonEndCapTrackProducerSep2016() {
 
 }
 
-void L1TMuonEndCapTrackProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
+void L1TMuonEndCapTrackProducerSep2016::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   // Create pointers to output products
   auto out_xhits   = std::make_unique<EMTFHitExtraCollection>();
   auto out_xtracks = std::make_unique<EMTFTrackExtraCollection>();
@@ -48,16 +48,16 @@ void L1TMuonEndCapTrackProducer::produce(edm::Event& iEvent, const edm::EventSet
   iEvent.put(std::move(out_tracks) , "");
 }
 
-void L1TMuonEndCapTrackProducer::beginJob() {
+void L1TMuonEndCapTrackProducerSep2016::beginJob() {
 
 }
 
-void L1TMuonEndCapTrackProducer::endJob() {
+void L1TMuonEndCapTrackProducerSep2016::endJob() {
 
 }
 
 // Fill 'descriptions' with the allowed parameters
-void L1TMuonEndCapTrackProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+void L1TMuonEndCapTrackProducerSep2016::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   // The following says we do not know what parameters are allowed so do no validation
   // Please change this to state exactly what you do use, even if it is no parameters
   edm::ParameterSetDescription desc;
@@ -66,5 +66,4 @@ void L1TMuonEndCapTrackProducer::fillDescriptions(edm::ConfigurationDescriptions
 }
 
 // Define this as a plug-in
-typedef L1TMuonEndCapTrackProducer L1TMuonEndCapTrackProducerSep2016;
 DEFINE_FWK_MODULE(L1TMuonEndCapTrackProducerSep2016);

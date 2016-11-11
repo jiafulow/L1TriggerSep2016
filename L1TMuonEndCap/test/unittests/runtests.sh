@@ -4,7 +4,7 @@
 function die { echo $1: status $2 ;  exit $2; }
 
 cd ${LOCAL_TEST_DIR}
-rm Event*_out.root
+rm -f Event*_out.root
 
 # Run 278018
 events="1687278667 1541093157 1686648178 1540061587 1686541662 1539957230 1540745931 1687229747"

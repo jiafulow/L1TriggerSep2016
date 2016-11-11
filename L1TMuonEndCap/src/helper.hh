@@ -25,7 +25,7 @@ namespace {
   }
 
   template<typename T, size_t N>
-  size_t array_size(T(&)[N]) { return N; }
+  constexpr size_t array_size(T(&)[N]) { return N; }
 
   template<typename T, size_t N>
   std::string array_as_string(const T(&arr)[N]) {

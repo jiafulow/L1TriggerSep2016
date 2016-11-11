@@ -125,6 +125,7 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
           int thB = conv_hitB.theta_fp;
           int dth = abs_diff(thA, thB);
           int dth_sign = (thA > thB);  // sign
+          assert(thA != 0 && thB != 0);
           assert(dth < invalid_dtheta);
 
           if (best_dtheta_arr.at(ipair) >= dth) {
@@ -194,7 +195,7 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
   //           Only {12, 34} pass, only {14, 23} pass.
   // Station 4 hits pass if any dTheta4X values pass, *EXCEPT* the following cases:
   //           Only {12, 34} pass, only {13, 24} pass.
-  int vstat = vmask1;
+  int vstat = vmask1;  // valid stations based on th coordinates
   if ((vstat & vmask2) != 0 || vstat == 0)
     vstat |= vmask2;
   if ((vstat & vmask3) != 0 || vstat == 0)

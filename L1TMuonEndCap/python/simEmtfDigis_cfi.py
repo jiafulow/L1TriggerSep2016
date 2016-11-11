@@ -6,7 +6,7 @@ import FWCore.ParameterSet.Config as cms
 #   * 'csctfDigis' : real trigger primitives as received by CSCTF (legacy trigger)
 #   * 'emtfStage2Digis' : real trigger primitives as received by EMTF, unpacked in EventFilter/L1TRawToDigi/
 
-simEmtfDigis = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
+simEmtfDigisMC = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
     # Verbosity level
     verbosity = cms.untracked.int32(0),
 
@@ -36,7 +36,7 @@ simEmtfDigis = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
         ZoneBoundaries  = cms.vint32(0,41,49,87,127),  # 5 boundaries for 4 zones
         #ZoneBoundaries  = cms.vint32(0,36,54,96,127), # new proposed zone boundaries
         ZoneOverlap     = cms.int32(2),
-        PhThLUT         = cms.string('ph_lut_v1'),
+        CoordLUTDir     = cms.string('ph_lut_v1'),
         IncludeNeighbor = cms.bool(True),
         DuplicateTheta  = cms.bool(True),
         FixZonePhi      = cms.bool(True),
@@ -90,7 +90,9 @@ simEmtfDigis = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
 
 )
 
-simEmtfDigisData = simEmtfDigis.clone(
+simEmtfDigisData = simEmtfDigisMC.clone(
     CSCInput = cms.InputTag('emtfStage2Digis'),
     RPCInput = cms.InputTag('muonRPCDigis'),
 )
+
+simEmtfDigis = simEmtfDigisMC.clone()

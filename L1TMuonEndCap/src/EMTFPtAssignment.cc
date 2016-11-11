@@ -72,7 +72,7 @@ void EMTFPtAssignment::process(
     // _________________________________________________________________________
     // Output
     track.ptlut_address    = address;
-    track.pt_xml           = xmlpt;
+    track.xmlpt            = xmlpt;
     track.pt               = pt;
 
     track.gmt_pt           = gmt_pt;

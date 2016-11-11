@@ -179,7 +179,7 @@ class TestEvent300921221(unittest.TestCase):
     self.assertEqual(track.mode         , 15)
     self.assertEqual(track.gmt_charge   , 0)
     self.assertEqual(track.gmt_quality  , 15)
-    #self.assertEqual(track.gmt_eta      , 207)  # fail
+    self.assertEqual(track.gmt_eta      , 201)
     self.assertEqual(track.gmt_phi      , 30)
 
     track = tracks[1]
