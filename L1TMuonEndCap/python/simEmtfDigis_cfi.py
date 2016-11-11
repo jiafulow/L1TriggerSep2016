@@ -5,6 +5,7 @@ import FWCore.ParameterSet.Config as cms
 #   * 'simCscTriggerPrimitiveDigis','MPCSORTED' : simulated trigger primitives (LCTs) from re-emulating CSC digis
 #   * 'csctfDigis' : real trigger primitives as received by CSCTF (legacy trigger)
 #   * 'emtfStage2Digis' : real trigger primitives as received by EMTF, unpacked in EventFilter/L1TRawToDigi/
+
 simEmtfDigis = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
     # Verbosity level
     verbosity = cms.untracked.int32(0),
@@ -48,12 +49,11 @@ simEmtfDigis = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
             # straightness, hits in ME1, hits in ME2, hits in ME3, hits in ME4
             # ME1 vaues centered at 15, range from 0 - 30
             # ME2,3,4 values centered at 7, range from 0 - 14
-            # Is the "center" assumed somewhere, or do we need to make it configurable? - AWB 29.09.16
             "4,15:15,7:7,7:7,7:7",
             "3,16:16,7:7,7:6,7:6",
             "3,14:14,7:7,8:7,8:7",
-            "2,18:17,7:7,7:5,7:5",
-            "2,13:12,7:7,10:7,10:7",  # should be 9:7 in ME3,4 (bug in FW and emulator)
+            "2,18:17,7:7,7:5,7:5",    # should be 7:4 in ME3,4 (FW bug)
+            "2,13:12,7:7,10:7,10:7",
             "1,22:19,7:7,7:0,7:0",
             "1,11:8,7:7,14:7,14:7",
             "0,30:23,7:7,7:0,7:0",
@@ -83,9 +83,9 @@ simEmtfDigis = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
         BDTXMLDir       = cms.string('v_16_02_21'),
         ReadPtLUTFile   = cms.bool(False),
         FixMode15HighPt = cms.bool(True),
-        Bug9BitDPhi     = cms.bool(False), ## True in FW through when? - AWB 19.10.16
-        BugMode7CLCT    = cms.bool(True),
-        BugNegPt        = cms.bool(True),
+        Bug9BitDPhi     = cms.bool(False),
+        BugMode7CLCT    = cms.bool(False),
+        BugNegPt        = cms.bool(False),
     ),
 
 )

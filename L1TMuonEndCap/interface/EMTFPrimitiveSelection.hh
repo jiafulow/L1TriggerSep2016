@@ -8,6 +8,7 @@ class EMTFPrimitiveSelection {
 public:
   void configure(
       int verbose, int endcap, int sector, int bx,
+      int bxShiftCSC,
       bool includeNeighbor, bool duplicateTheta
   );
 
@@ -50,6 +51,8 @@ public:
 
 private:
   int verbose_, endcap_, sector_, bx_;
+
+  int bxShiftCSC_;
 
   bool includeNeighbor_, duplicateTheta_;
 };

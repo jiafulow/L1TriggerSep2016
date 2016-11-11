@@ -13,12 +13,15 @@ using RPCData = TriggerPrimitive::RPCData;
 
 void EMTFPrimitiveSelection::configure(
       int verbose, int endcap, int sector, int bx,
+      int bxShiftCSC,
       bool includeNeighbor, bool duplicateTheta
 ) {
   verbose_ = verbose;
   endcap_  = endcap;
   sector_  = sector;
   bx_      = bx;
+
+  bxShiftCSC_      = bxShiftCSC;
 
   includeNeighbor_ = includeNeighbor;
   duplicateTheta_  = duplicateTheta;
@@ -35,7 +38,7 @@ void EMTFPrimitiveSelection::process(
   TriggerPrimitiveCollection::const_iterator tp_end = muon_primitives.end();
 
   for (; tp_it != tp_end; ++tp_it) {
-    int selected_csc = select_csc(*tp_it); // Returns CSC "link" index (0 - 53) 
+    int selected_csc = select_csc(*tp_it); // Returns CSC "link" index (0 - 53)
 
     if (selected_csc >= 0) {
       assert(selected_csc < NUM_CSC_CHAMBERS);
@@ -43,7 +46,7 @@ void EMTFPrimitiveSelection::process(
     }
   }
 
-  // Duplicate CSC muon primitives - is this supposed to be done before pattern matching / zone assignment? - AWB 29.09.16
+  // Duplicate CSC muon primitives
   // If there are 2 LCTs in the same chamber with (strip, wire) = (s1, w1) and (s2, w2)
   // make all combinations with (s1, w1), (s2, w1), (s1, w2), (s2, w2)
   if (duplicateTheta_) {
@@ -167,25 +170,25 @@ bool EMTFPrimitiveSelection::is_in_neighbor_sector_csc(
 }
 
 bool EMTFPrimitiveSelection::is_in_bx_csc(int tp_bx) const {
-  tp_bx -= 6; // Need to verify (or impose) central BX = 6 condition, or make this offset configurable - AWB 28.09.16
+  tp_bx += bxShiftCSC_;
   return (bx_ == tp_bx);
 }
 
-// Returns "roughly" the "input link".  Index used by FW for unique chamber identification.
+// Returns the CSC "link" index
 int EMTFPrimitiveSelection::get_index_csc(int tp_subsector, int tp_station, int tp_csc_ID, bool is_neighbor) const {
   int selected = -1;
 
   if (!is_neighbor) {
     if (tp_station == 1) {  // ME1: 0 - 8, 9 - 17
       selected = (tp_subsector-1) * 9 + (tp_csc_ID-1);
-    } else {            // ME2,3,4: 18 - 26, 27 - 35, 36 - 44
+    } else {                // ME2,3,4: 18 - 26, 27 - 35, 36 - 44
       selected = (tp_station) * 9 + (tp_csc_ID-1);
     }
 
   } else {
     if (tp_station == 1) {  // ME1: 45 - 47
       selected = (5) * 9 + (tp_csc_ID-1)/3;
-    } else {            // ME2,3,4: 48 - 53
+    } else {                // ME2,3,4: 48 - 53
       selected = (5) * 9 + (tp_station) * 2 - 1 + (tp_csc_ID-1 < 3 ? 0 : 1);
     }
   }

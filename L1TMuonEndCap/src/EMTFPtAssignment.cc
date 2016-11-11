@@ -6,7 +6,7 @@
 void EMTFPtAssignment::configure(
     const EMTFPtAssignmentEngine* pt_assign_engine,
     int verbose, int endcap, int sector, int bx,
-    bool readPtLUTFile, bool fixMode15HighPt, 
+    bool readPtLUTFile, bool fixMode15HighPt,
     bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt
 ) {
   assert(pt_assign_engine != nullptr);
@@ -21,7 +21,7 @@ void EMTFPtAssignment::configure(
 
   pt_assign_engine_->configure(
       verbose_,
-      readPtLUTFile, fixMode15HighPt, 
+      readPtLUTFile, fixMode15HighPt,
       bug9BitDPhi, bugMode7CLCT, bugNegPt
   );
 }
@@ -41,15 +41,22 @@ void EMTFPtAssignment::process(
     float     xmlpt   = pt_assign_engine_->calculate_pt(address);
     float     pt      = (xmlpt < 0.) ? 1. : xmlpt;  // Matt used fabs(-1) when mode is invalid
     pt *= 1.4;  // multiply by 1.4 to keep efficiency above 90% when the L1 trigger pT cut is applied
-    
-    int gmt_pt = aux().getGMTPt(pt);            // How is the rounding done here? Is it correct? - AWB 11.10.16
-    pt = (gmt_pt <= 0) ?  0 : (gmt_pt-1) * 0.5; // Round to 0.5 GeV
-    
+
+    int gmt_pt = aux().getGMTPt(pt);            // Encode integer pT in GMT format
+    pt = (gmt_pt <= 0) ?  0 : (gmt_pt-1) * 0.5; // Decode integer pT (result is in 0.5 GeV step)
+
     int gmt_phi = aux().getGMTPhi(track.phi_int);
-    
-    int gmt_eta = aux().getGMTEta(track.theta_int, endcap_);  // From EMTFPtAssignmentHelper.hh. Does this bit-wise match the FW? - AWB 03.10.16
+
+    int gmt_eta = aux().getGMTEta(track.theta_int, endcap_);  // Convert to integer eta using FW LUT
+
+    // Explanation from Alex:
+    // When using two's complement, you get two eta bins with zero coordinate.
+    // This peculiarity is created because positive and negative endcaps are
+    // processed by separate processors, so each of them gets its own zero bin.
+    // With simple inversion, the eta scale becomes uniform, one bin for one
+    // eta value.
     bool use_ones_complem_gmt_eta = true;
-    if (use_ones_complem_gmt_eta) { // Is this the proper thing to do? - AWB 04.10.16
+    if (use_ones_complem_gmt_eta) {
       gmt_eta = (gmt_eta < 0) ? ~(-gmt_eta) : gmt_eta;
     }
 

@@ -36,7 +36,7 @@ void EMTFPtAssignmentEngine::read(const std::string& xml_dir) {
 
 void EMTFPtAssignmentEngine::configure(
     int verbose,
-    bool readPtLUTFile, bool fixMode15HighPt, 
+    bool readPtLUTFile, bool fixMode15HighPt,
     bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt
 ) {
   verbose_ = verbose;
@@ -130,7 +130,7 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
   dTheta24 = aux().getdTheta(get_signed_int(dTheta24, 1-dTheta24Sign));
   dTheta34 = aux().getdTheta(get_signed_int(dTheta34, 1-dTheta34Sign));
 
-  bool use_FRLUT = true; // Why don't we use the FR bit assigned in ptlut_data? - AWB 03.10.16
+  bool use_FRLUT = true;
   if (use_FRLUT) {
     int sector = track.sector;
     FR1 = aux().getFRLUT(sector, CSCID1/12, CSCID1%12);
@@ -139,10 +139,10 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     FR4 = aux().getFRLUT(sector, CSCID4/12, CSCID4%12);
   }
 
-  // Can we automate the assigning of addresses?  Would decrease typos, speed future development. - AWB 03.10.16
+  // Compose address
   switch (mode_inv) {
   case 3:   // 1-2
-    if (not bug9BitDPhi_)  dPhi12 = std::min(511, dPhi12);
+    if (!bug9BitDPhi_)  dPhi12 = std::min(511, dPhi12);
 
     address |= (dPhi12      & ((1<<9)-1)) << (0);
     address |= (sign12      & ((1<<1)-1)) << (0+9);
@@ -158,7 +158,7 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     break;
 
   case 5:   // 1-3
-    if (not bug9BitDPhi_)  dPhi13 = std::min(511, dPhi13);
+    if (!bug9BitDPhi_)  dPhi13 = std::min(511, dPhi13);
 
     address |= (dPhi13      & ((1<<9)-1)) << (0);
     address |= (sign13      & ((1<<1)-1)) << (0+9);
@@ -174,7 +174,7 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     break;
 
   case 9:   // 1-4
-    if (not bug9BitDPhi_)  dPhi14 = std::min(511, dPhi14);
+    if (!bug9BitDPhi_)  dPhi14 = std::min(511, dPhi14);
 
     address |= (dPhi14      & ((1<<9)-1)) << (0);
     address |= (sign14      & ((1<<1)-1)) << (0+9);
@@ -190,7 +190,7 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     break;
 
   case 6:   // 2-3
-    if (not bug9BitDPhi_)  dPhi23 = std::min(511, dPhi23);
+    if (!bug9BitDPhi_)  dPhi23 = std::min(511, dPhi23);
 
     address |= (dPhi23      & ((1<<9)-1)) << (0);
     address |= (sign23      & ((1<<1)-1)) << (0+9);
@@ -206,7 +206,7 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     break;
 
   case 10:  // 2-4
-    if (not bug9BitDPhi_)  dPhi24 = std::min(511, dPhi24);
+    if (!bug9BitDPhi_)  dPhi24 = std::min(511, dPhi24);
 
     address |= (dPhi24      & ((1<<9)-1)) << (0);
     address |= (sign24      & ((1<<1)-1)) << (0+9);
@@ -222,7 +222,7 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     break;
 
   case 12:  // 3-4
-    if (not bug9BitDPhi_)  dPhi34 = std::min(511, dPhi34);
+    if (!bug9BitDPhi_)  dPhi34 = std::min(511, dPhi34);
 
     address |= (dPhi34      & ((1<<9)-1)) << (0);
     address |= (sign34      & ((1<<1)-1)) << (0+9);
@@ -732,15 +732,15 @@ float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
 
   float tmp_pt = tree_event->predictedValue;  // is actually 1/pT
 
-  if (verbose_ > 0) {
-    std::cout << "\nTrack with mode_inv = " << mode_inv << " has 1/pT = " << tmp_pt << std::endl;
-    std::cout << "dPhi12 = " << dPhi12 << ", dPhi13 = " << dPhi13 << ", dPhi14 = " << dPhi14 
-	      << ", dPhi23 = " << dPhi23 << ", dPhi24 = " << dPhi24 << ", dPhi34 = " << dPhi34 << std::endl;
-    std::cout << "dTheta12 = " << dTheta12 << ", dTheta13 = " << dTheta13 << ", dTheta14 = " << dTheta14 
-	      << ", dTheta23 = " << dTheta23 << ", dTheta24 = " << dTheta24 << ", dTheta34 = " << dTheta34 << std::endl;
-    std::cout << "CLCT1 = " << CLCT1 << ", CLCT2 = " << CLCT2 << ", CLCT3 = " << CLCT3 << ", CLCT4 = " << CLCT4 << std::endl;
-    std::cout << "CSCID1 = " << CSCID1 << ", CSCID2 = " << CSCID2 << ", CSCID3 = " << CSCID3 << ", CSCID4 = " << CSCID4 << std::endl;
-    std::cout << "FR1 = " << FR1 << ", FR2 = " << FR2 << ", FR3 = " << FR3 << ", FR4 = " << FR4 << std::endl;
+  if (verbose_ > 1) {
+    std::cout << "mode_inv: " << mode_inv << " 1/pT: " << tmp_pt << std::endl;
+    std::cout << "dPhi12: " << dPhi12 << " dPhi13: " << dPhi13 << " dPhi14: " << dPhi14
+        << " dPhi23: " << dPhi23 << " dPhi24: " << dPhi24 << " dPhi34: " << dPhi34 << std::endl;
+    std::cout << "dTheta12: " << dTheta12 << " dTheta13: " << dTheta13 << " dTheta14: " << dTheta14
+        << " dTheta23: " << dTheta23 << " dTheta24: " << dTheta24 << " dTheta34: " << dTheta34 << std::endl;
+    std::cout << "CLCT1: " << CLCT1 << " CLCT2: " << CLCT2 << " CLCT3: " << CLCT3 << " CLCT4: " << CLCT4 << std::endl;
+    std::cout << "CSCID1: " << CSCID1 << " CSCID2: " << CSCID2 << " CSCID3: " << CSCID3 << " CSCID4: " << CSCID4 << std::endl;
+    std::cout << "FR1: " << FR1 << " FR2: " << FR2 << " FR3: " << FR3 << " FR4: " << FR4 << std::endl;
   }
 
   if (bugNegPt_) {

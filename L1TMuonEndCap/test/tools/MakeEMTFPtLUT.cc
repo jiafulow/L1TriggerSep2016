@@ -76,7 +76,7 @@ MakeEMTFPtLUT::MakeEMTFPtLUT(const edm::ParameterSet& iConfig) :
   pt_assign_engine_->read(bdtXMLDir);
   pt_assign_engine_->configure(
     verbose_,
-    readPtLUTFile, fixMode15HighPt, 
+    readPtLUTFile, fixMode15HighPt,
     bug9BitDPhi, bugMode7CLCT, bugNegPt
   );
 }

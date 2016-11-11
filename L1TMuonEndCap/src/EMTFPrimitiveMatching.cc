@@ -49,7 +49,7 @@ void EMTFPrimitiveMatching::process(
   // Organize converted hits by (zone, station)
   std::array<EMTFHitExtraCollection, NUM_ZONES*NUM_STATIONS> zs_conv_hits;
 
-  bool use_fs_zone_code = true;  // use zone code as in firmware find_segment module (Why? - AWB 07.10.16)
+  bool use_fs_zone_code = true;  // use zone code as in firmware find_segment module
 
   std::deque<EMTFHitExtraCollection>::const_iterator ext_conv_hits_it  = extended_conv_hits.begin();
   std::deque<EMTFHitExtraCollection>::const_iterator ext_conv_hits_end = extended_conv_hits.end();
@@ -105,7 +105,8 @@ void EMTFPrimitiveMatching::process(
     for (int istation = 0; istation < NUM_STATIONS; ++istation) {
       const int zs = (izone*NUM_STATIONS) + istation;
 
-      process_single_zone_station( // No requirement that hit be in the pattern that fired
+      // No requirement that hit be in the pattern that fired
+      process_single_zone_station(
           istation + 1,
           zone_roads.at(izone),
           zs_conv_hits.at(zs),
@@ -198,7 +199,7 @@ void EMTFPrimitiveMatching::process_single_zone_station(
     std::vector<hit_sort_pair_t>& phi_differences
 ) const {
   // max phi difference between pattern and segment
-  // This doesn't depend on the pattern straightness - any hit within the largest pattern may match
+  // This doesn't depend on the pattern straightness - any hit within the max phi difference may match
   int max_ph_diff = (station == 1) ? 15 : 7;
   //int bw_ph_diff = (station == 1) ? 5 : 4; // ph difference bit width
   //int invalid_ph_diff = (station == 1) ? 31 : 15;  // invalid difference
@@ -209,8 +210,8 @@ void EMTFPrimitiveMatching::process_single_zone_station(
       //bw_ph_diff = 9;
       //invalid_ph_diff = 0x1ff;
     } else if (station == 2) {
-      // max_ph_diff = 16;   // just rounding error for ME2 (pattern must match ME2 hit phi if there was one)
-      // max_ph_diff = 32;   // allow neighbor phi bit
+      //max_ph_diff = 16;   // just rounding error for ME2 (pattern must match ME2 hit phi if there was one)
+      //max_ph_diff = 32;   // allow neighbor phi bit
       max_ph_diff = 240;  // same as ME3,4
       //bw_ph_diff = 5;
       //invalid_ph_diff = 0x1f;
@@ -232,7 +233,7 @@ void EMTFPrimitiveMatching::process_single_zone_station(
     assert(ph_pat >= 0 && ph_q > 0);
 
     if (fixZonePhi_) {
-      ph_pat <<= 5;  // add missing 5 lower bits to pattern phi (just adds 0's to the end)
+      ph_pat <<= 5;  // add missing 5 lower bits to pattern phi
     }
 
     std::vector<hit_sort_pair_t> tmp_phi_differences;

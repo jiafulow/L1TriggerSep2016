@@ -15,12 +15,12 @@ process.analyzer1 = cms.EDAnalyzer("MakeEMTFPtLUT",
 
     # Sector processor pt-assignment parameters
     spPAParams16 = cms.PSet(
-        BDTXMLDir = cms.string('v_16_02_21'),
-        ReadPtLUTFile = cms.bool(False),
+        BDTXMLDir       = cms.string('v_16_02_21'),
+        ReadPtLUTFile   = cms.bool(False),
         FixMode15HighPt = cms.bool(True),
-        Bug9BitDPhi = cms.bool(False),
-        BugMode7CLCT = cms.bool(False),
-        BugNegPt = cms.bool(False),
+        Bug9BitDPhi     = cms.bool(False),
+        BugMode7CLCT    = cms.bool(False),
+        BugNegPt        = cms.bool(False),
     ),
 
     # Output file

@@ -46,9 +46,9 @@ void EMTFPrimitiveConversion::process(
   std::map<int, TriggerPrimitiveCollection>::const_iterator map_tp_end = selected_csc_map.end();
 
   for (; map_tp_it != map_tp_end; ++map_tp_it) {
-    // Unique chamber ID in FW, {0, 53} as defined in get_index_csc in src/EMTFPrimitiveSelection.cc
-    int selected   = map_tp_it->first; 
-    // "Primitive Conversion" sector/station/chamber ID scheme used in FW
+    // Unique ID for primitive conversion units in FW, {0, 53}
+    int selected   = map_tp_it->first;
+    // sector/station/chamber ID scheme as used in FW primitive conversion
     int pc_sector  = sector_;
     int pc_station = selected / 9;  // {0, 5} = {ME1 sub 1, ME1 sub 2, ME2, ME3, ME4, neighbor}
     int pc_chamber = selected % 9;  // Equals CSC ID - 1 for all except neighbor chambers
@@ -88,7 +88,7 @@ void EMTFPrimitiveConversion::process(
 
     for (; tp_it != tp_end; ++tp_it) {
       EMTFHitExtra conv_hit;
-      convert_rpc(pc_sector, pc_station, pc_chamber, pc_segment, *tp_it, conv_hit);  // RPC
+      convert_rpc(pc_sector, pc_station, pc_chamber, pc_segment, *tp_it, conv_hit);
       conv_hits.push_back(conv_hit);
       pc_segment += 1;
     }
@@ -179,12 +179,12 @@ void EMTFPrimitiveConversion::convert_csc(
   conv_hit.bend        = tp_data.bend;
 
   conv_hit.bc0         = 0; // Not used anywhere, but part of EMTF DAQ output
-  conv_hit.mpc_link    = tp_data.mpclink; // Used? Delete from class? - AWB 29.09.16
-  conv_hit.sync_err    = tp_data.syncErr; // Used? Delete from class? - AWB 29.09.16
-  conv_hit.track_num   = tp_data.trknmb; // Used? Delete from class? - AWB 29.09.16
-  conv_hit.stub_num    = 0; // Should define in same way as firmware - AWB 29.09.16
-  conv_hit.bx0         = tp_data.bx0; // Used? Delete from class? - AWB 29.09.16
-  conv_hit.layer       = 0; // Used? Delete from class? - AWB 29.09.16
+  conv_hit.mpc_link    = tp_data.mpclink; // Not used anywhere
+  conv_hit.sync_err    = tp_data.syncErr; // Not used anywhere
+  conv_hit.track_num   = tp_data.trknmb; // Not used anywhere
+  conv_hit.stub_num    = 0; // Not used anywhere
+  conv_hit.bx0         = tp_data.bx0; // Not used anywhere
+  conv_hit.layer       = 0; // Not used anywhere
 
   convert_csc_details(conv_hit);
 }
@@ -214,13 +214,14 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
   const bool is_me11b = (conv_hit.station == 1 && conv_hit.ring == 1);
   const bool is_me13  = (conv_hit.station == 1 && conv_hit.ring == 3);
 
-  // Is this chamber mounted in reverse direction?  (i.e., phi vs. strip number is reversed)
+  // Is this chamber mounted in reverse direction?
+  // (i.e., phi vs. strip number is reversed)
   bool ph_reverse = false;
   if ((fw_endcap == 0 && fw_station >= 3) || (fw_endcap == 1 && fw_station < 3))
     ph_reverse = true;
 
   // Chamber coverage if phi_reverse = true
-  int ph_coverage = 0; // Offset for coordinate conversion
+  int ph_coverage = 0;
   if (ph_reverse) {
     if (fw_station <= 1 && ((fw_cscid >= 6 && fw_cscid <= 8) || fw_cscid == 14))  // ME1/3
       ph_coverage = 15;
@@ -283,7 +284,7 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
   // Convert half-strip into 1/8-strip
   int eighth_strip = 0;
 
-  // Apply phi correction from CLCT pattern number (from src/EMTFSectorProcessorLUT.cc)
+  // Apply phi correction from CLCT pattern number
   int clct_pat_corr = lut().get_ph_patt_corr(conv_hit.pattern);
   int clct_pat_corr_sign = (lut().get_ph_patt_corr_sign(conv_hit.pattern) == 0) ? 1 : -1;
 
@@ -331,7 +332,7 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
   int zone_hit_fixed = lut().get_ph_init_hard(fw_station, fw_cscid);
   zone_hit_fixed += ph_hit_fixed;
   // Since ph_hit_fixed = ((fph + 16) >> 5) - lut().get_ph_init_hard(), the following is equivalent:
-  // zone_hit_fixed = ((fph + 16) >> 5);
+  //zone_hit_fixed = ((fph + 16) >> 5);
 
   if (fixZonePhi_)
     zone_hit = zone_hit_fixed;
@@ -462,15 +463,15 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
   // ___________________________________________________________________________
   // Output
 
-    conv_hit.phi_fp     = fph;        // Full-precision integer phi
-    conv_hit.theta_fp   = th;         // Full-precision integer theta
-    conv_hit.phzvl      = phzvl;      // Local zone word: (1*low) + (2*mid) + (4*low) - used in FW debugging
-    conv_hit.ph_hit     = ph_hit;     // Intermediate quantity in phi calculation - used in FW debugging
-    conv_hit.zone_hit   = zone_hit;   // Phi value for building patterns (0.53333 deg precision)
-    conv_hit.zone_code  = zone_code;  // Full zone word: 1*(zone 0) + 2*(zone 1) + 4*(zone 2) + 8*(zone 3)
+  conv_hit.phi_fp     = fph;        // Full-precision integer phi
+  conv_hit.theta_fp   = th;         // Full-precision integer theta
+  conv_hit.phzvl      = phzvl;      // Local zone word: (1*low) + (2*mid) + (4*low) - used in FW debugging
+  conv_hit.ph_hit     = ph_hit;     // Intermediate quantity in phi calculation - used in FW debugging
+  conv_hit.zone_hit   = zone_hit;   // Phi value for building patterns (0.53333 deg precision)
+  conv_hit.zone_code  = zone_code;  // Full zone word: 1*(zone 0) + 2*(zone 1) + 4*(zone 2) + 8*(zone 3)
 
-    conv_hit.fs_segment   = fs_segment;    // How is this used? - AWB 18.10.16
-    conv_hit.fs_zone_code = fs_zone_code;  // Zone word used in primitive matching (why not use zone_code in FW? - AWB 18.10.16)
+  conv_hit.fs_segment   = fs_segment;    // Segment number used in primitive matching
+  conv_hit.fs_zone_code = fs_zone_code;  // Zone word used in primitive matching
 }
 
 // RPC functions
