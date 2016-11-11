@@ -27,7 +27,7 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
   const auto& spPCParams16 = config_.getParameter<edm::ParameterSet>("spPCParams16");
   auto zoneBoundaries     = spPCParams16.getParameter<std::vector<int> >("ZoneBoundaries");
   auto zoneOverlap        = spPCParams16.getParameter<int>("ZoneOverlap");
-  auto phThLUT            = spPCParams16.getParameter<std::string>("PhThLUT");
+  auto coordLUTDir        = spPCParams16.getParameter<std::string>("CoordLUTDir");
   auto includeNeighbor    = spPCParams16.getParameter<bool>("IncludeNeighbor");
   auto duplicateTheta     = spPCParams16.getParameter<bool>("DuplicateTheta");
   auto fixZonePhi         = spPCParams16.getParameter<bool>("FixZonePhi");
@@ -55,7 +55,7 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
 
   try {
     // Configure sector processor LUT
-    sector_processor_lut_.read(phThLUT);
+    sector_processor_lut_.read(coordLUTDir);
 
     // Configure pT assignment engine
     pt_assign_engine_.read(bdtXMLDir);

@@ -18,18 +18,18 @@ EMTFSectorProcessorLUT::~EMTFSectorProcessorLUT() {
 
 }
 
-void EMTFSectorProcessorLUT::read(const std::string& ph_th_lut) {
+void EMTFSectorProcessorLUT::read(const std::string& coord_lut_dir) {
   if (ok_)  return;
 
-  //std::string ph_th_lut_dir = "L1Trigger/L1TMuon/data/emtf_luts/" + ph_th_lut + "/";
-  std::string ph_th_lut_dir = "L1TriggerSep2016/L1TMuonEndCap/data/emtf_luts/" + ph_th_lut + "/";
+  //std::string coord_lut_path = "L1Trigger/L1TMuon/data/emtf_luts/" + coord_lut_dir + "/";
+  std::string coord_lut_path = "L1TriggerSep2016/L1TMuonEndCap/data/emtf_luts/" + coord_lut_dir + "/";
 
-  read_file(ph_th_lut_dir+"ph_init_neighbor.txt",     ph_init_neighbor_);
-  read_file(ph_th_lut_dir+"ph_disp_neighbor.txt",     ph_disp_neighbor_);
-  read_file(ph_th_lut_dir+"th_init_neighbor.txt",     th_init_neighbor_);
-  read_file(ph_th_lut_dir+"th_disp_neighbor.txt",     th_disp_neighbor_);
-  read_file(ph_th_lut_dir+"th_lut_neighbor.txt",      th_lut_neighbor_);
-  read_file(ph_th_lut_dir+"th_corr_lut_neighbor.txt", th_corr_lut_neighbor_);
+  read_file(coord_lut_path+"ph_init_neighbor.txt",     ph_init_neighbor_);
+  read_file(coord_lut_path+"ph_disp_neighbor.txt",     ph_disp_neighbor_);
+  read_file(coord_lut_path+"th_init_neighbor.txt",     th_init_neighbor_);
+  read_file(coord_lut_path+"th_disp_neighbor.txt",     th_disp_neighbor_);
+  read_file(coord_lut_path+"th_lut_neighbor.txt",      th_lut_neighbor_);
+  read_file(coord_lut_path+"th_corr_lut_neighbor.txt", th_corr_lut_neighbor_);
 
   if (ph_init_neighbor_.size() != 2*6*61) {  // [endcap_2][sector_6][chamber_61]
     throw cms::Exception("EMTFSectorProcessorLUT")

@@ -297,6 +297,7 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
     eighth_strip = fw_strip << 3;  // multiply by 2, uses all 3 bits of pattern correction
     eighth_strip += clct_pat_corr_sign * (clct_pat_corr >> 0);
   }
+  assert(eighth_strip >= 0);
 
   // Multiplicative factor for eighth_strip
   int factor = 1024;
