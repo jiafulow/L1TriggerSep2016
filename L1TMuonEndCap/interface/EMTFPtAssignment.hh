@@ -12,7 +12,7 @@ public:
   void configure(
       const EMTFPtAssignmentEngine* pt_assign_engine,
       int verbose, int endcap, int sector, int bx,
-      bool readPtLUTFile, bool fixMode15HighPt, 
+      bool readPtLUTFile, bool fixMode15HighPt,
       bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt
   );
 

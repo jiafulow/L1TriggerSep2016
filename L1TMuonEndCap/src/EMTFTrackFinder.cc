@@ -21,8 +21,8 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
   auto maxBX       = iConfig.getParameter<int>("MaxBX");
   auto bxWindow    = iConfig.getParameter<int>("BXWindow");
   auto bxShiftCSC  = iConfig.getParameter<int>("CSCInputBXShift");
-  // auto version     = iConfig.getParameter<int>("Version");        // not yet used
-  // auto ptlut_ver   = iConfig.getParameter<int>("PtLUTVersion");   // not yet used
+  //auto version     = iConfig.getParameter<int>("Version");        // not yet used
+  //auto ptlut_ver   = iConfig.getParameter<int>("PtLUTVersion");   // not yet used
 
   const auto& spPCParams16 = config_.getParameter<edm::ParameterSet>("spPCParams16");
   auto zoneBoundaries     = spPCParams16.getParameter<std::vector<int> >("ZoneBoundaries");
@@ -99,7 +99,7 @@ void EMTFTrackFinder::process(
   out_tracks.clear();
 
   // ___________________________________________________________________________
-  // Extract all trigger primitives (class defined in ??? - AWB 27.09.16)
+  // Extract all trigger primitives
   TriggerPrimitiveCollection muon_primitives;
 
   EMTFSubsystemCollector collector;
@@ -119,9 +119,9 @@ void EMTFTrackFinder::process(
   // ___________________________________________________________________________
   // Run each sector processor
 
-  // MIN/MAX ENDCAP and TRIGSECTOR set in interface/EMTFCommon.hh
-  for (int endcap = MIN_ENDCAP; endcap <= MAX_ENDCAP; ++endcap) { 
+  for (int endcap = MIN_ENDCAP; endcap <= MAX_ENDCAP; ++endcap) {
     for (int sector = MIN_TRIGSECTOR; sector <= MAX_TRIGSECTOR; ++sector) {
+      //const int es = (endcap-1) * 6 + (sector-1);
       const int es = (endcap - MIN_ENDCAP) * (MAX_TRIGSECTOR - MIN_TRIGSECTOR + 1) + (sector - MIN_TRIGSECTOR);
 
       sector_processors_.at(es).process(

@@ -25,7 +25,7 @@ public:
 
   void configure(
       int verbose,
-      bool readPtLUTFile, bool fixMode15HighPt, 
+      bool readPtLUTFile, bool fixMode15HighPt,
       bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt
   );
 

@@ -117,8 +117,8 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
       const EMTFHitExtraCollection& conv_hitsA = st_conv_hits.at(ist1);
       const EMTFHitExtraCollection& conv_hitsB = st_conv_hits.at(ist2);
 
-      // More than 1 hit per station when hit has ambigous theta, or appears in multiple BX
-      for (const auto& conv_hitA : conv_hitsA) { 
+      // More than 1 hit per station when hit has ambigous theta
+      for (const auto& conv_hitA : conv_hitsA) {
         for (const auto& conv_hitB : conv_hitsB) {
           // Calculate theta deltas
           int thA = conv_hitA.theta_fp;
@@ -127,7 +127,7 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
           int dth_sign = (thA > thB);  // sign
           assert(dth < invalid_dtheta);
 
-          if (best_dtheta_arr.at(ipair) >= dth) {  // If dTheta is equal, new pair replaces old pair?  Ordered how? - AWB 18.10.16
+          if (best_dtheta_arr.at(ipair) >= dth) {
             best_dtheta_arr.at(ipair) = dth;
             best_dtheta_sign_arr.at(ipair) = dth_sign;
             best_dtheta_valid_arr.at(ipair) = true;
@@ -142,10 +142,9 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
           int phB = conv_hitB.phi_fp;
 
           int dph = abs_diff(phA, phB);
-          int dph_sign = (phA <= phB);  // sign reversed according to Matt's oral request 2016-04-27 (affects only pT/charge assignment)
+          int dph_sign = (phA <= phB);  // sign reversed according to Matt's oral request 2016-04-27
 
-	  // "Best" dTheta and "best" dPhi values can come from different pairs of hits? - AWB 18.10.16
-          if (best_dphi_arr.at(ipair) >= dph) {  // If dPhi is equal, new pair replaces old pair?  Ordered how? - AWB 18.10.16
+          if (best_dphi_arr.at(ipair) >= dph) {
             best_dphi_arr.at(ipair) = dph;
             best_dphi_sign_arr.at(ipair) = dph_sign;
 
@@ -201,7 +200,7 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
   if ((vstat & vmask3) != 0 || vstat == 0)
     vstat |= vmask3;
 
-  // remove valid flag for station if hit does not pass the dTheta mask
+  // remove some valid flags if th did not line up
   for (int istation = 0; istation < NUM_STATIONS; ++istation) {
     if ((vstat & (1 << istation)) == 0) {  // station bit not set
       st_conv_hits.at(istation).clear();
@@ -237,7 +236,7 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
     theta_int = best_theta_arr.at(best_pair);
     assert(theta_int != 0);
 
-    // in addition, pick min dtheta (this does not happen in firmware) - Then why do it here? Is it used? - AWB 06.10.16
+    // in addition, pick min dtheta (this does not happen in firmware)  #FIXME
     struct {
       typedef EMTFHitExtra value_type;
       constexpr bool operator()(const value_type& lhs, const value_type& rhs) {
@@ -302,12 +301,11 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
     ptlut_data.sign_th[i]  = best_dtheta_sign_arr.at(i);
   }
   for (int i = 0; i < NUM_STATIONS; ++i) {
-    const auto& v = st_conv_hits.at(i);
-    // Does "front()" indicate we're using the first hit in the vector? Sorted by min dTheta? Done in FW? - AWB 18.10.16
+    const auto& v = st_conv_hits.at(i);  // pick the min dtheta for now  #FIXME
     ptlut_data.cpattern[i]   = v.empty() ? 0 : v.front().pattern;
     ptlut_data.fr[i]         = v.empty() ? 0 : isFront(v.front().station, v.front().ring, v.front().chamber);
 
-    ptlut_data.ph[i]         = v.empty() ? 0 : v.front().phi_fp;          // Is "0" ambiguous for phi? - AWB 03.10.16
+    ptlut_data.ph[i]         = v.empty() ? 0 : v.front().phi_fp;
     ptlut_data.th[i]         = v.empty() ? 0 : v.front().theta_fp;
     ptlut_data.bt_chamber[i] = v.empty() ? 0 : get_bt_chamber(v.front()); // Only used to check against FW simulator
   }
@@ -324,7 +322,6 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
 }
 
 void EMTFAngleCalculation::calculate_bx(EMTFTrackExtra& track) const {
-
   const int delayBX = bxWindow_ - 1;
   assert(delayBX >= 0);
   std::vector<int> counter(delayBX+1, 0);

@@ -7,7 +7,7 @@
 // Specialized for CSC
 template<>
 void EMTFSubsystemCollector::extractPrimitives(
-    CSCTag tag, // Defined in interface//EMTFSubsystemTag.hh, maps to CSCCorrelatedLCTDigi
+    CSCTag tag,
     const edm::Event& iEvent,
     const edm::EDGetToken& token,
     TriggerPrimitiveCollection& out
@@ -22,7 +22,6 @@ void EMTFSubsystemCollector::extractPrimitives(
     auto digi = (*chamber).second.first;
     auto dend = (*chamber).second.second;
     for( ; digi != dend; ++digi ) {
-      // emplace_back does the same thing as push_back: appends to the end of the vector
       out.emplace_back((*chamber).first,*digi);
     }
   }
@@ -32,7 +31,7 @@ void EMTFSubsystemCollector::extractPrimitives(
 // Specialized for RPC
 template<>
 void EMTFSubsystemCollector::extractPrimitives(
-    RPCTag tag, // Defined in interface//EMTFSubsystemTag.hh, maps to RPCDigi
+    RPCTag tag,
     const edm::Event& iEvent,
     const edm::EDGetToken& token,
     TriggerPrimitiveCollection& out

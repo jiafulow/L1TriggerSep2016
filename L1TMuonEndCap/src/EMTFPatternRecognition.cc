@@ -120,6 +120,7 @@ void EMTFPatternRecognition::configure_details() {
       assert(st2_max1 == padding_w_st3 && st2_min1 == padding_w_st3);
       assert(st2_max2 == padding_w_st3 && st2_min2 == padding_w_st3);
 
+      // There is extra "padding" in st1 w.r.t st2,3,4
       // Add the extra padding to st2,3,4
       st2_max1 += padding_extra_w_st1;
       st2_min1 += padding_extra_w_st1;

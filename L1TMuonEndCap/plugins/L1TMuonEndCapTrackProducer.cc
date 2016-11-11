@@ -31,7 +31,6 @@ void L1TMuonEndCapTrackProducer::produce(edm::Event& iEvent, const edm::EventSet
   auto out_tracks  = std::make_unique<EMTFTrackCollection>();
 
   // Main EMTF emulator process, produces tracks from hits in each sector in each event
-  // Defined in src/EMTFTrackFinder.cc
   track_finder_->process(iEvent, iSetup, *out_xhits, *out_xtracks);
 
   // Convert into unpacker EMTFHit, EMTFTrack formats
