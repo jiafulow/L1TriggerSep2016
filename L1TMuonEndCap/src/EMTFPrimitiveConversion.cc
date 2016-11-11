@@ -184,7 +184,7 @@ void EMTFPrimitiveConversion::convert_csc(
   conv_hit.mpc_link    = tp_data.mpclink; // Not used anywhere
   conv_hit.sync_err    = tp_data.syncErr; // Not used anywhere
   conv_hit.track_num   = tp_data.trknmb; // Not used anywhere
-  conv_hit.stub_num    = 0; // Not used anywhere
+  conv_hit.stub_num    = pc_segment % 2; // Not used anywhere
   conv_hit.bx0         = tp_data.bx0; // Not used anywhere
   conv_hit.layer       = 0; // Not used anywhere
 
@@ -290,6 +290,10 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
   int clct_pat_corr = lut().get_ph_patt_corr(conv_hit.pattern);
   int clct_pat_corr_sign = (lut().get_ph_patt_corr_sign(conv_hit.pattern) == 0) ? 1 : -1;
 
+  // At strip number 0, protect against negative correction
+  if (fw_strip == 0 && clct_pat_corr_sign == -1)
+    clct_pat_corr = 0;
+
   if (is_10degree) {
     eighth_strip = fw_strip << 2;  // full precision, uses only 2 bits of pattern correction
     eighth_strip += clct_pat_corr_sign * (clct_pat_corr >> 1);
@@ -316,6 +320,7 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
 
   int fph = lut().get_ph_init(fw_endcap, fw_sector, pc_lut_id);
   fph = fph + ph_tmp_sign * ph_tmp;
+  assert(fph >= 0);
 
   int ph_hit = lut().get_ph_disp(fw_endcap, fw_sector, pc_lut_id);
   ph_hit = (ph_hit >> 1) + ph_tmp_sign * (ph_tmp >> 5) + ph_coverage;
@@ -372,6 +377,7 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
 
   // Protect against invalid value
   th = (th == 0) ? 1 : th;
+  assert(th > 0);
 
   // ___________________________________________________________________________
   // zones
