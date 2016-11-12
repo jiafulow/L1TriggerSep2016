@@ -114,10 +114,10 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
   int CLCT3Sign = (aux().getCLCT(ptlut_data.cpattern[2]) > 0);
   int CLCT4Sign = (aux().getCLCT(ptlut_data.cpattern[3]) > 0);
 
-  int CSCID1    = ptlut_data.bt_chamber[0];
-  int CSCID2    = ptlut_data.bt_chamber[1];
-  int CSCID3    = ptlut_data.bt_chamber[2];
-  int CSCID4    = ptlut_data.bt_chamber[3];
+  int CSCID1    = (ptlut_data.bt_vi[0] == 0 && ptlut_data.bt_vi[1] != 0) ?  ptlut_data.bt_ci[1]+16 : ptlut_data.bt_ci[0];
+  int CSCID2    = ptlut_data.bt_ci[2];
+  int CSCID3    = ptlut_data.bt_ci[3];
+  int CSCID4    = ptlut_data.bt_ci[4];
 
   auto get_signed_int = [](int var, int sign) {
     return (sign == 1) ? (var * 1) : (var * -1);
@@ -132,11 +132,13 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
 
   bool use_FRLUT = true;
   if (use_FRLUT) {
-    int sector = track.sector;
-    FR1 = aux().getFRLUT(sector, CSCID1/12, CSCID1%12);
-    FR2 = aux().getFRLUT(sector, CSCID2/12, CSCID2%12);
-    FR3 = aux().getFRLUT(sector, CSCID3/12, CSCID3%12);
-    FR4 = aux().getFRLUT(sector, CSCID4/12, CSCID4%12);
+    if (CSCID1 >= 16)
+      FR1 = aux().getFRLUT(track.sector, 1, CSCID1-16);
+    else
+      FR1 = aux().getFRLUT(track.sector, 0, CSCID1);
+    FR2 = aux().getFRLUT(track.sector, 2, CSCID2);
+    FR3 = aux().getFRLUT(track.sector, 3, CSCID3);
+    FR4 = aux().getFRLUT(track.sector, 4, CSCID4);
   }
 
   // Compose address

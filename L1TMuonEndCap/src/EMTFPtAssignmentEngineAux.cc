@@ -380,7 +380,7 @@ static const int FRLUT[2][5] = {
 
 int EMTFPtAssignmentEngineAux::getFRLUT(int sector, int station, int chamber) const {
   int bits = FRLUT[(sector-1)%2][station];
-  bool isFront = bits & (1<<(chamber+1));
+  bool isFront = bits & (1<<chamber);
   return isFront;
 }
 
@@ -404,7 +404,7 @@ int EMTFPtAssignmentEngineAux::getGMTPt(float pt) const {
 }
 
 float EMTFPtAssignmentEngineAux::getPtFromGMTPt(int gmt_pt) const {
-  float pt = (gmt_pt <= 0) ?  0 : (gmt_pt-1) * 0.5;
+  float pt = (gmt_pt <= 0) ?  0 : 0.5 * (gmt_pt-1);
   return pt;
 }
 

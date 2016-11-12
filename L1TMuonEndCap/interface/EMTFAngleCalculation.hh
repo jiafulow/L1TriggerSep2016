@@ -22,8 +22,6 @@ public:
 
   void erase_tracks(EMTFTrackExtraCollection& tracks) const;
 
-  int get_bt_chamber(const EMTFHitExtra& conv_hit) const;
-
 private:
   int verbose_, endcap_, sector_, bx_;
 

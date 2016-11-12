@@ -62,4 +62,12 @@ namespace {
     return result;
   }
 
+  template <class T1, class T2>
+  void flatten_container(const T1& input, T2& output) {
+    typename T1::const_iterator it;
+    for (it = input.begin(); it != input.end(); ++it) {
+      output.insert(output.end(), it->begin(), it->end());
+    }
+  }
+
 }  // namespace
