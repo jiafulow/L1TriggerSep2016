@@ -22,10 +22,62 @@ void EMTFMicroGMTConverter::convert(
   out_cand.setHwSign(in_track.gmt_charge);
   out_cand.setHwSignValid(in_track.gmt_charge_valid);
   out_cand.setHwQual(in_track.gmt_quality);
-  // jl: FIXME this has to be adapted to the new schema of saving in_track addresses
-  //out_cand.setTrackSubAddress(l1t::RegionalMuonCand::kME12, in_trackaddress&0xf);
-  //out_cand.setTrackSubAddress(l1t::RegionalMuonCand::kME22, in_trackaddress>>4);
+  out_cand.setHwHF(0);  // EMTF: halo -> 1
   out_cand.setTFIdentifiers(sector, tftype);
+
+  const EMTFPtLUTData& ptlut_data = in_track.ptlut_data;
+
+  // Form track sub addresses
+  int me1_ch_id = (ptlut_data.bt_vi[0] == 0 && ptlut_data.bt_vi[1] != 0) ? ptlut_data.bt_ci[1]+16 : ptlut_data.bt_ci[0];
+  int me2_ch_id = ptlut_data.bt_ci[2];
+  int me3_ch_id = ptlut_data.bt_ci[3];
+  int me4_ch_id = ptlut_data.bt_ci[4];
+
+  int me1_seg_id = (ptlut_data.bt_vi[0] == 0 && ptlut_data.bt_vi[1] != 0) ? ptlut_data.bt_si[1] : ptlut_data.bt_si[0];
+  int me2_seg_id = ptlut_data.bt_si[2];
+  int me3_seg_id = ptlut_data.bt_si[3];
+  int me4_seg_id = ptlut_data.bt_si[4];
+
+  auto get_gmt_chamber_me1 = [](int ch) {
+    int gmt_ch = 0;
+    if (ch == 10)
+      gmt_ch = 1;
+    else if (ch == 11)
+      gmt_ch = 2;
+    else if (ch == 12)
+      gmt_ch = 3;
+    else if (ch == 3+16)
+      gmt_ch = 4;
+    else if (ch == 6+16)
+      gmt_ch = 5;
+    else if (ch == 9+16)
+      gmt_ch = 6;
+    return gmt_ch;
+  };
+
+  auto get_gmt_chamber = [](int ch) {
+    int gmt_ch = 0;
+    if (ch == 10)
+      gmt_ch = 1;
+    else if (ch == 11)
+      gmt_ch = 2;
+    else if (ch == 3)
+      gmt_ch = 3;
+    else if (ch == 9)
+      gmt_ch = 4;
+    return gmt_ch;
+  };
+
+  out_cand.setTrackSubAddress(l1t::RegionalMuonCand::kME1Seg, me1_seg_id);
+  out_cand.setTrackSubAddress(l1t::RegionalMuonCand::kME1Ch , get_gmt_chamber_me1(me1_ch_id));
+  out_cand.setTrackSubAddress(l1t::RegionalMuonCand::kME2Seg, me2_seg_id);
+  out_cand.setTrackSubAddress(l1t::RegionalMuonCand::kME2Ch , get_gmt_chamber(me2_ch_id));
+  out_cand.setTrackSubAddress(l1t::RegionalMuonCand::kME3Seg, me3_seg_id);
+  out_cand.setTrackSubAddress(l1t::RegionalMuonCand::kME3Ch , get_gmt_chamber(me3_ch_id));
+  out_cand.setTrackSubAddress(l1t::RegionalMuonCand::kME4Seg, me4_seg_id);
+  out_cand.setTrackSubAddress(l1t::RegionalMuonCand::kME4Ch , get_gmt_chamber(me4_ch_id));
+  out_cand.setTrackSubAddress(l1t::RegionalMuonCand::kTrkNum, in_track.track_num);
+  out_cand.setTrackSubAddress(l1t::RegionalMuonCand::kBX    , in_track.bx);
 }
 
 void EMTFMicroGMTConverter::convert_all(

@@ -230,6 +230,7 @@ void EMTFBestTrackSelection::cancel_one_bx(
         best_tracks.push_back(track);
 
         // Update winner, BX
+        best_tracks.back().track_num = best_tracks.size() - 1;
         best_tracks.back().winner = o;
         best_tracks.back().bx = best_tracks.back().first_bx;
       }
@@ -423,6 +424,7 @@ void EMTFBestTrackSelection::cancel_multi_bx(
         best_tracks.push_back(track);
 
         // Update winner, BX
+        best_tracks.back().track_num = best_tracks.size() - 1;
         best_tracks.back().winner = o;
         best_tracks.back().bx = best_tracks.back().second_bx;
       }
