@@ -52,11 +52,14 @@ void EMTFBestTrackSelection::process(
           << " cpat: " << array_as_string(track.ptlut_data.cpattern)
           << " bx: " << track.bx
           << std::endl;
-      for (const auto& conv_hit : track.xhits) {
-        std::cout << ".. track segments: st: " << conv_hit.pc_station << " ch: " << conv_hit.pc_chamber
-            << " ph: " << conv_hit.phi_fp << " th: " << conv_hit.theta_fp
-            << " cscid: " << (conv_hit.cscn_ID-1) << " bx: " << conv_hit.bx
-            << std::endl;
+      for (int i = 0; i < NUM_STATIONS+1; ++i) {  // stations 0-4
+        if (track.ptlut_data.bt_vi[i] != 0)
+          std::cout << ".. track segments: st: " << i
+              << " v: " << track.ptlut_data.bt_vi[i]
+              << " h: " << track.ptlut_data.bt_hi[i]
+              << " c: " << track.ptlut_data.bt_ci[i]
+              << " s: " << track.ptlut_data.bt_si[i]
+              << std::endl;
       }
     }
   }
@@ -227,6 +230,7 @@ void EMTFBestTrackSelection::cancel_one_bx(
         best_tracks.push_back(track);
 
         // Update winner, BX
+        best_tracks.back().track_num = best_tracks.size() - 1;
         best_tracks.back().winner = o;
         best_tracks.back().bx = best_tracks.back().first_bx;
       }
@@ -420,6 +424,7 @@ void EMTFBestTrackSelection::cancel_multi_bx(
         best_tracks.push_back(track);
 
         // Update winner, BX
+        best_tracks.back().track_num = best_tracks.size() - 1;
         best_tracks.back().winner = o;
         best_tracks.back().bx = best_tracks.back().second_bx;
       }

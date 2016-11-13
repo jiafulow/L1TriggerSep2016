@@ -21,7 +21,7 @@ for event in ${events}; do
 done
 
 # Run 281707
-events="135692983 134854523 134963582 300921221 1713517148"
+events="135692983 134854523 134963582 300921221 1713517148 135509344 1289966989"
 for event in ${events}; do
   (cmsRun pippo_cfg.py inputFiles=file:Event${event}.root outputFile=Event${event}_out.root >/dev/null 2>&1) || die "Failure processing Event ${event}" $?
   (python test_Event${event}.py) || die "Failure testing Event ${event}" $?

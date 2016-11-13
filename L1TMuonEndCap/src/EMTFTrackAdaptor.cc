@@ -1,7 +1,6 @@
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFTrackAdaptor.hh"
 
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFHitTools.h"
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFTrackTools.h"
+#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFTrackTools.hh"
 
 
 EMTFTrackAdaptor::EMTFTrackAdaptor() {
@@ -53,20 +52,23 @@ void EMTFTrackAdaptor::convert_track(const EMTFTrackExtra& in_track, EMTFTrack& 
     if ( out_hit.Neighbor() == 1 && out_track.All_neighbor() == -999 ) out_track.set_all_neighbor(0);
   }
 
+  const int endcap = in_track.endcap;
+  const int sector = in_track.sector;
+
+  const EMTFPtLUTData& ptlut_data = in_track.ptlut_data;
+
   int theta_int = in_track.theta_int;
   float theta_angle = l1t::calc_theta_rad_from_int( theta_int );
   float eta = l1t::calc_eta_from_theta_rad( theta_angle );
   eta = (in_track.endcap == 2) ? -eta : eta;
 
   int phi_loc_int = in_track.phi_int;
-  float phi_loc_deg = l1t::calc_phi_loc_deg( phi_loc_int );
-  float phi_loc_rad = l1t::calc_phi_loc_rad( phi_loc_int );
-
-  int sector = in_track.sector;
+  //float phi_loc_deg = l1t::calc_phi_loc_deg( phi_loc_int );
+  //float phi_loc_rad = l1t::calc_phi_loc_rad( phi_loc_int );
+  float phi_loc_deg = l1t::calc_phi_loc_deg_corr( phi_loc_int, endcap );
+  float phi_loc_rad = l1t::calc_phi_loc_rad_corr( phi_loc_int, endcap );
   float phi_glob_deg = l1t::calc_phi_glob_deg( phi_loc_deg, sector );
   float phi_glob_rad = l1t::calc_phi_glob_rad( phi_loc_rad, sector );
-
-  const EMTFPtLUTData& ptlut_data = in_track.ptlut_data;
 
   auto get_signed_int = [](int var, int sign) {
     return (sign == 1) ? (var * 1) : (var * -1);
@@ -123,7 +125,7 @@ void EMTFTrackAdaptor::convert_track(const EMTFTrackExtra& in_track, EMTFTrack& 
   out_track.set_fr_2          ( ptlut_data.fr[1]        );
   out_track.set_fr_3          ( ptlut_data.fr[2]        );
   out_track.set_fr_4          ( ptlut_data.fr[3]        );
-  out_track.set_track_num     ( 0                       );  // what is this?
+  out_track.set_track_num     ( in_track.track_num      );
   //out_track.set_has_neighbor  ( 0                       );
   //out_track.set_all_neighbor  ( 0                       );
 }

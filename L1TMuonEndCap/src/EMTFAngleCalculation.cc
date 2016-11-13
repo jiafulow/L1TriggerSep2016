@@ -39,7 +39,7 @@ void EMTFAngleCalculation::process(
       calculate_angles(*tracks_it);
     }
 
-    // Erase tracks with rank = 0, and hits that fail dTheta window (or are not "best" dTheta)
+    // Erase tracks with rank == 0
     erase_tracks(tracks);
 
     tracks_it  = tracks.begin();
@@ -50,7 +50,7 @@ void EMTFAngleCalculation::process(
     for (; tracks_it != tracks_end; ++tracks_it) {
       calculate_bx(*tracks_it);
     }
-  }
+  }  // end loop over zones
 
   if (verbose_ > 0) {  // debug
     for (const auto& tracks : zone_tracks) {
@@ -60,9 +60,13 @@ void EMTFAngleCalculation::process(
             << " delta_th: " << array_as_string(track.ptlut_data.delta_th)
             << " sign_ph: " << array_as_string(track.ptlut_data.sign_ph)
             << " sign_th: " << array_as_string(track.ptlut_data.sign_th)
+            << " phi: " << track.phi_int
+            << " theta: " << track.theta_int
             << " cpat: " << array_as_string(track.ptlut_data.cpattern)
-            << " ph: " << array_as_string(track.ptlut_data.ph)
-            << " th: " << array_as_string(track.ptlut_data.th)
+            << " v: " << array_as_string(track.ptlut_data.bt_vi)
+            << " h: " << array_as_string(track.ptlut_data.bt_hi)
+            << " c: " << array_as_string(track.ptlut_data.bt_ci)
+            << " s: " << array_as_string(track.ptlut_data.bt_si)
             << std::endl;
       }
     }
@@ -79,8 +83,8 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
       if ((conv_hit.station - 1) == istation)
         st_conv_hits.at(istation).push_back(conv_hit);
     }
+    assert(st_conv_hits.at(istation).size() <= 2);  // ambiguity in theta is max 2
   }
-  assert(st_conv_hits.size() == NUM_STATIONS);
 
   // Best theta deltas and phi deltas
   // from 0 to 5: dtheta12, dtheta13, dtheta14, dtheta23, dtheta24, dtheta34
@@ -112,7 +116,7 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
   // Calculate angles
   int ipair = 0;
 
-  for (int ist1 = 0; ist1 < NUM_STATIONS-1; ++ist1) {  // station A
+  for (int ist1 = 0; ist1+1 < NUM_STATIONS; ++ist1) {  // station A
     for (int ist2 = ist1+1; ist2 < NUM_STATIONS; ++ist2) {  // station B
       const EMTFHitExtraCollection& conv_hitsA = st_conv_hits.at(ist1);
       const EMTFHitExtraCollection& conv_hitsB = st_conv_hits.at(ist2);
@@ -141,7 +145,6 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
           // Calculate phi deltas
           int phA = conv_hitA.phi_fp;
           int phB = conv_hitB.phi_fp;
-
           int dph = abs_diff(phA, phB);
           int dph_sign = (phA <= phB);  // sign reversed according to Matt's oral request 2016-04-27
 
@@ -159,30 +162,34 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
       ++ipair;
     }  // end loop over station B
   }  // end loop over station A
+  assert(ipair == NUM_STATION_PAIRS);
 
+
+  // Apply cuts on dtheta
+  for (int ipair = 0; ipair < NUM_STATION_PAIRS; ++ipair) {
+    best_dtheta_valid_arr.at(ipair) &= (best_dtheta_arr.at(ipair) <= thetaWindow_);
+  }
 
   // Find valid segments
-  int vmask1 = 0;
-  int vmask2 = 0;
-  int vmask3 = 0;
-
   // vmask contains valid station mask = {ME4,ME3,ME2,ME1}. "0b" prefix for binary.
-  if (best_dtheta_arr.at(0) <= thetaWindow_ && best_dtheta_valid_arr.at(0)) {
+  int vmask1 = 0, vmask2 = 0, vmask3 = 0;
+
+  if (best_dtheta_valid_arr.at(0)) {
     vmask1 |= 0b0011;  // 12
   }
-  if (best_dtheta_arr.at(1) <= thetaWindow_ && best_dtheta_valid_arr.at(1)) {
+  if (best_dtheta_valid_arr.at(1)) {
     vmask1 |= 0b0101;  // 13
   }
-  if (best_dtheta_arr.at(2) <= thetaWindow_ && best_dtheta_valid_arr.at(2)) {
+  if (best_dtheta_valid_arr.at(2)) {
     vmask1 |= 0b1001;  // 14
   }
-  if (best_dtheta_arr.at(3) <= thetaWindow_ && best_dtheta_valid_arr.at(3)) {
+  if (best_dtheta_valid_arr.at(3)) {
     vmask2 |= 0b0110;  // 23
   }
-  if (best_dtheta_arr.at(4) <= thetaWindow_ && best_dtheta_valid_arr.at(4)) {
+  if (best_dtheta_valid_arr.at(4)) {
     vmask2 |= 0b1010;  // 24
   }
-  if (best_dtheta_arr.at(5) <= thetaWindow_ && best_dtheta_valid_arr.at(5)) {
+  if (best_dtheta_valid_arr.at(5)) {
     vmask3 |= 0b1100;  // 34
   }
 
@@ -220,13 +227,11 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
       best_pair = 3;
     else if (best_dtheta_valid_arr.at(4)) // 24
       best_pair = 4;
-
   } else if ((vstat & (1<<2)) != 0) {     // ME3 present
     if (best_dtheta_valid_arr.at(1))      // 13
       best_pair = 1;
     else if (best_dtheta_valid_arr.at(5)) // 34
       best_pair = 5;
-
   } else if ((vstat & (1<<3)) != 0) {     // ME4 present
     if (best_dtheta_valid_arr.at(2))      // 14
       best_pair = 2;
@@ -237,7 +242,9 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
     theta_int = best_theta_arr.at(best_pair);
     assert(theta_int != 0);
 
-    // in addition, pick min dtheta (this does not happen in firmware)  #FIXME
+    // In firmware, the track is associated to LCTs by the segment number, which
+    // identifies the best strip, but does not resolve the ambiguity in theta.
+    // In emulator, this additional logic also resolves the ambiguity in theta.
     struct {
       typedef EMTFHitExtra value_type;
       constexpr bool operator()(const value_type& lhs, const value_type& rhs) {
@@ -249,16 +256,18 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
 
     for (int istation = 0; istation < NUM_STATIONS; ++istation) {
       std::stable_sort(st_conv_hits.at(istation).begin(), st_conv_hits.at(istation).end(), less_dtheta_cmp);
+      if (st_conv_hits.at(istation).size() > 1)
+        st_conv_hits.at(istation).resize(1);  // just the minimum in dtheta
     }
   }
 
   // update rank taking into account available stations after theta deltas
-  // keep straightness as it was (perhaps it should be recalculated?)
-  int rank = (track.xroad.quality_code << 1);  // output rank is one bit longer than input, to accomodate ME4 separately
-  int rank2 = (
-      (((rank >> 6)  & 1) << 6) |  // straightness
-      (((rank >> 4)  & 1) << 4) |  // straightness
-      (((rank >> 2)  & 1) << 2) |  // straightness
+  // keep straightness as it was
+  int old_rank = (track.xroad.quality_code << 1);  // output rank is one bit longer than input rank, to accomodate ME4 separately
+  int rank = (
+      (((old_rank >> 6) & 1) << 6) |  // straightness
+      (((old_rank >> 4) & 1) << 4) |  // straightness
+      (((old_rank >> 2) & 1) << 2) |  // straightness
       (((vstat >> 0) & 1) << 5) |  // ME1
       (((vstat >> 1) & 1) << 3) |  // ME2
       (((vstat >> 2) & 1) << 1) |  // ME3
@@ -276,7 +285,7 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
 
   // if less than 2 segments, kill rank
   if (vstat == 0b0001 || vstat == 0b0010 || vstat == 0b0100 || vstat == 0b1000 || vstat == 0)
-    rank2 = 0;
+    rank = 0;
 
   // from RecoMuon/DetLayers/src/MuonCSCDetLayerGeometryBuilder.cc
   auto isFront = [](int station, int ring, int chamber) {
@@ -293,6 +302,30 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
     return result;
   };
 
+  auto get_bt_station = [](const EMTFHitExtra& conv_hit) {
+    const bool is_neighbor = (conv_hit.pc_station == 5);
+    const int fw_station = (conv_hit.station == 1) ? (is_neighbor ? 0 : (conv_hit.subsector-1)) : conv_hit.station;
+    return fw_station;
+  };
+
+  auto get_bt_history = [](const EMTFHitExtra& conv_hit) {
+    int bt_history = ((conv_hit.fs_segment>>4) & 0x3);
+    return bt_history;
+  };
+
+  auto get_bt_chamber = [](const EMTFHitExtra& conv_hit) {
+    //int bt_chamber = ((conv_hit.fs_segment>>1) & 0x7);
+    int bt_chamber = conv_hit.cscn_ID;
+    if (conv_hit.station == 1 && bt_chamber >= 13)  // ME1 neighbor chambers 13,14,15 -> 10,11,12
+      bt_chamber -= 3;
+    return bt_chamber;
+  };
+
+  auto get_bt_segment = [](const EMTFHitExtra& conv_hit) {
+    int bt_segment = ((conv_hit.fs_segment>>0) & 0x1);
+    return bt_segment;
+  };
+
   // Fill ptlut_data
   EMTFPtLUTData ptlut_data;
   for (int i = 0; i < NUM_STATION_PAIRS; ++i) {
@@ -301,25 +334,47 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
     ptlut_data.sign_ph[i]  = best_dphi_sign_arr.at(i);
     ptlut_data.sign_th[i]  = best_dtheta_sign_arr.at(i);
   }
-  for (int i = 0; i < NUM_STATIONS; ++i) {
-    const auto& v = st_conv_hits.at(i);  // pick the min dtheta for now  #FIXME
-    ptlut_data.cpattern[i]   = v.empty() ? 0 : v.front().pattern;
-    ptlut_data.fr[i]         = v.empty() ? 0 : isFront(v.front().station, v.front().ring, v.front().chamber);
 
-    ptlut_data.ph[i]         = v.empty() ? 0 : v.front().phi_fp;
-    ptlut_data.th[i]         = v.empty() ? 0 : v.front().theta_fp;
-    ptlut_data.bt_chamber[i] = v.empty() ? 0 : get_bt_chamber(v.front()); // Only used to check against FW simulator
+  for (int i = 0; i < NUM_STATIONS; ++i) {
+    const auto& v = st_conv_hits.at(i);
+    ptlut_data.cpattern[i] = v.empty() ? 0 : v.front().pattern;
+    ptlut_data.fr[i]       = v.empty() ? 0 : isFront(v.front().station, v.front().ring, v.front().chamber);
+  }
+
+  for (int i = 0; i < NUM_STATIONS; ++i) {
+    const auto& v = st_conv_hits.at(i);
+    int bt_station = (i == 0) ? 0 : i+1;
+    bt_station = v.empty() ? bt_station : get_bt_station(v.front());
+    assert(0 <= bt_station && bt_station <= 4);
+
+    if (i == 0) {
+      for (int j = 0; j < 2; ++j) {
+        ptlut_data.bt_vi[j] = 0;
+        ptlut_data.bt_hi[j] = 0;
+        ptlut_data.bt_ci[j] = 0;
+        ptlut_data.bt_si[j] = 0;
+      }
+    }
+
+    ptlut_data.bt_vi[bt_station] = v.empty() ? 0 : 1;
+    ptlut_data.bt_hi[bt_station] = v.empty() ? 0 : get_bt_history(v.front());
+    ptlut_data.bt_ci[bt_station] = v.empty() ? 0 : get_bt_chamber(v.front());
+    ptlut_data.bt_si[bt_station] = v.empty() ? 0 : get_bt_segment(v.front());
   }
 
   // ___________________________________________________________________________
   // Output
 
-  track.rank       = rank2;
+  track.rank       = rank;
   track.mode       = mode;
   track.mode_inv   = mode_inv;
   track.phi_int    = phi_int;
   track.theta_int  = theta_int;
   track.ptlut_data = ptlut_data;
+
+  // Only keep the best segments
+  track.xhits.clear();
+  flatten_container(st_conv_hits, track.xhits);
 }
 
 void EMTFAngleCalculation::calculate_bx(EMTFTrackExtra& track) const {
@@ -363,43 +418,8 @@ void EMTFAngleCalculation::erase_tracks(EMTFTrackExtraCollection& tracks) const 
 
   tracks.erase(std::remove_if(tracks.begin(), tracks.end(), rank_zero_pred), tracks.end());
 
-  // Erase hits that are not selected as the best phi and theta in each station
-  // using erase-remove idiom
-  struct {
-    typedef EMTFHitExtra value_type;
-    bool operator()(const value_type& x) {
-      int istation = (x.station-1);
-      if (!stations.at(istation))  // not empty
-        return true;  // remove
-      bool selected = (
-        (x.pattern  == ptlut_data.cpattern[istation]) &&
-        (x.phi_fp   == ptlut_data.ph[istation]) &&
-        (x.theta_fp == ptlut_data.th[istation])
-      );
-      if (!selected)
-        return true;  // remove
-      stations.at(istation) = false;
-      return false;   // do not remove
-    }
-    EMTFPtLUTData ptlut_data;
-    std::array<bool, NUM_STATIONS> stations;  // keep track of which station is empty
-  } not_selected_hit_pred;
-
-  for (auto&& track: tracks) {  // pass by reference
-    not_selected_hit_pred.ptlut_data = track.ptlut_data;  // capture
-    not_selected_hit_pred.stations.fill(true);
-
-    // Assume track.xhits are already ordered by station
-    track.xhits.erase(std::remove_if(track.xhits.begin(), track.xhits.end(), not_selected_hit_pred), track.xhits.end());
+  for (const auto& track : tracks) {
     assert(track.xhits.size() > 0);
     assert(track.xhits.size() <= NUM_STATIONS);
-  }  // end loop over tracks
-}
-
-int EMTFAngleCalculation::get_bt_chamber(const EMTFHitExtra& conv_hit) const {
-  int bt_station = (conv_hit.station == 1) ? (conv_hit.subsector-1) : conv_hit.station;
-  int bt_chamber = (conv_hit.cscn_ID-1);
-  if (bt_chamber >= 12)
-    bt_chamber -= 3;
-  return (bt_station * 12) + bt_chamber;
+  }
 }
