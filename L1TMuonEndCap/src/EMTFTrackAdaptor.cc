@@ -52,7 +52,7 @@ void EMTFTrackAdaptor::convert_track(const EMTFTrackExtra& in_track, EMTFTrack& 
     if ( out_hit.Neighbor() == 1 && out_track.All_neighbor() == -999 ) out_track.set_all_neighbor(0);
   }
 
-  const int endcap = in_track.endcap;
+  //const int endcap = in_track.endcap;
   const int sector = in_track.sector;
 
   const EMTFPtLUTData& ptlut_data = in_track.ptlut_data;
@@ -63,10 +63,10 @@ void EMTFTrackAdaptor::convert_track(const EMTFTrackExtra& in_track, EMTFTrack& 
   eta = (in_track.endcap == 2) ? -eta : eta;
 
   int phi_loc_int = in_track.phi_int;
-  //float phi_loc_deg = l1t::calc_phi_loc_deg( phi_loc_int );
-  //float phi_loc_rad = l1t::calc_phi_loc_rad( phi_loc_int );
-  float phi_loc_deg = l1t::calc_phi_loc_deg_corr( phi_loc_int, endcap );
-  float phi_loc_rad = l1t::calc_phi_loc_rad_corr( phi_loc_int, endcap );
+  float phi_loc_deg = l1t::calc_phi_loc_deg( phi_loc_int );
+  float phi_loc_rad = l1t::calc_phi_loc_rad( phi_loc_int );
+  //float phi_loc_deg = l1t::calc_phi_loc_deg_corr( phi_loc_int, endcap );
+  //float phi_loc_rad = l1t::calc_phi_loc_rad_corr( phi_loc_int, endcap );
   float phi_glob_deg = l1t::calc_phi_glob_deg( phi_loc_deg, sector );
   float phi_glob_rad = l1t::calc_phi_glob_rad( phi_loc_rad, sector );
 

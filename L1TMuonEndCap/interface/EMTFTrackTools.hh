@@ -28,7 +28,7 @@ namespace L1TMuonEndCap {
 
   inline double calc_theta_deg_from_int(int theta_int) {
     double theta = static_cast<double>(theta_int);
-    theta *= (45.0-8.5)/128. + 8.5;
+    theta = theta * (45.0-8.5)/128. + 8.5;
     return theta;
   }
 
@@ -65,6 +65,13 @@ namespace L1TMuonEndCap {
     return eta;
   }
 
+  //inline double calc_eta_corr(int bits, int endcap) {  // endcap [1-2]
+  //  bits = (endcap == 2) ? bits+1 : bits;
+  //  double eta = static_cast<double>(bits);
+  //  eta *= 0.010875;
+  //  return eta;
+  //}
+
   inline int    calc_eta_GMT(double val) {
     val /= 0.010875;
     int eta = static_cast<int>(val);
@@ -95,16 +102,16 @@ namespace L1TMuonEndCap {
     return deg_to_rad(calc_phi_loc_deg(bits));
   }
 
-  inline double calc_phi_loc_deg_corr(int bits, int endcap) {  // endcap [1-2]
-    double loc = static_cast<double>(bits);
-    loc = (loc/60.) - 22.;
-    loc = (endcap == 2) ? loc - (36./60.) : loc - (28./60.);
-    return loc;
-  }
+  //inline double calc_phi_loc_deg_corr(int bits, int endcap) {  // endcap [1-2]
+  //  double loc = static_cast<double>(bits);
+  //  loc = (loc/60.) - 22.;
+  //  loc = (endcap == 2) ? loc - (36./60.) : loc - (28./60.);
+  //  return loc;
+  //}
 
-  inline double calc_phi_loc_rad_corr(int bits, int endcap) {  // endcap [1-2]
-    return deg_to_rad(calc_phi_loc_deg_corr(bits, endcap));
-  }
+  //inline double calc_phi_loc_rad_corr(int bits, int endcap) {  // endcap [1-2]
+  //  return deg_to_rad(calc_phi_loc_deg_corr(bits, endcap));
+  //}
 
   inline int    calc_phi_loc_int(double val) {
     val = (val + 22.) * 60.;
@@ -114,7 +121,7 @@ namespace L1TMuonEndCap {
 
   inline double calc_phi_GMT_deg(int bits) {
     double phi = static_cast<double>(bits);
-    phi = (phi * 0.625) + 0.3125;
+    phi = (phi * 360./576.) + (180./576.);
     return phi;
   }
 
@@ -127,7 +134,7 @@ namespace L1TMuonEndCap {
   }
 
   inline int    calc_phi_GMT_int(double val) {
-    val = (val - 0.3125) / 0.625;
+    val = (val - 180./576.) / (360./576.);
     int phi_int = static_cast<int>(val);
     return phi_int;
   }
