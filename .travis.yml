@@ -1,0 +1,41 @@
+sudo: required
+
+language: cpp
+
+services:
+  - docker
+
+env:
+  global:
+    - DOCKER_IMAGE=hepsw/cvmfs-cms:dev
+    - DOCKER_CACHE_DIR=${HOME}/docker
+    - DOCKER_CACHE_FILE=${DOCKER_CACHE_DIR}/cache-image.tar.gz
+    - CACHE_TIMEOUT=2000
+  matrix:
+    - SCRAM_ARCH=slc6_amd64_gcc530 CMSSW_VERSION=CMSSW_8_0_19
+    - SCRAM_ARCH=slc6_amd64_gcc530 CMSSW_VERSION=CMSSW_8_0_22
+
+before_install:
+#  - docker pull hepsw/cvmfs-cms
+#  - docker build -t hepsw/cvmfs-cms:dev .
+
+  - if [ -e ${DOCKER_CACHE_FILE} ]; then
+      docker load -i ${DOCKER_CACHE_FILE};
+    else
+      mkdir -p ${DOCKER_CACHE_DIR}; 
+      docker build -t ${DOCKER_IMAGE} .;
+      docker save ${DOCKER_IMAGE} | gzip > ${DOCKER_CACHE_FILE};
+    fi
+
+script:
+  - docker run --privileged -e SCRAM_ARCH=${SCRAM_ARCH}
+                            -e CMSSW_VERSION=${CMSSW_VERSION}
+                            -v ${TRAVIS_BUILD_DIR}:/home/travis 
+                            ${DOCKER_IMAGE}
+                            /bin/bash -c "source /root/.bashrc && cd /home/travis && ./docker_run.sh"
+
+cache:
+  directories:
+    - ${DOCKER_CACHE_DIR}
+  timeout: ${CACHE_TIMEOUT}
+
