@@ -49,7 +49,7 @@ void EMTFPrimitiveMatching::process(
   // Organize converted hits by (zone, station)
   std::array<EMTFHitExtraCollection, NUM_ZONES*NUM_STATIONS> zs_conv_hits;
 
-  bool use_fs_zone_code = true;  // use zone code as in firmware find_segment module
+  bool use_fs_zone_code = true;  // use zone code as in firmware find_segment module (Why? - AWB 07.10.16)
 
   std::deque<EMTFHitExtraCollection>::const_iterator ext_conv_hits_it  = extended_conv_hits.begin();
   std::deque<EMTFHitExtraCollection>::const_iterator ext_conv_hits_end = extended_conv_hits.end();
@@ -59,6 +59,13 @@ void EMTFPrimitiveMatching::process(
     EMTFHitExtraCollection::const_iterator conv_hits_end = ext_conv_hits_it->end();
 
     for (; conv_hits_it != conv_hits_end; ++conv_hits_it) {
+
+      if (conv_hits_it->vetoed)
+	continue;  // Only receive 2 RPC clusters per station/subsector/ring
+      // if (conv_hits_it->subsystem == TriggerPrimitive::kRPC && bx_ != conv_hits_it->bx)
+      // 	continue;  // Only use RPC clusters in the same BX as the track
+      // // Can we do this at some later stage? Check RPC vs. track timing ... - AWB 18.11.16
+
       int istation = conv_hits_it->station-1;
       int zone_code = conv_hits_it->zone_code;  // decide based on original zone code
       if (use_fs_zone_code)
@@ -73,8 +80,9 @@ void EMTFPrimitiveMatching::process(
             zs_conv_hits.at(zs).push_back(*conv_hits_it);
 
             // Update fs_history encoded in fs_segment
-            int fs_history = bx_ - (conv_hits_it->bx);
+            int fs_history = bx_ - (conv_hits_it->bx);  // 0 for current BX, 1 for previous BX, 2 for BX before that 
             zs_conv_hits.at(zs).back().fs_segment |= ((fs_history & 0x3)<<4);
+	    // Does this update the history in the output collection of converted hits? - AWB 05.11.16
           }
         }
       }
@@ -105,7 +113,9 @@ void EMTFPrimitiveMatching::process(
     for (int istation = 0; istation < NUM_STATIONS; ++istation) {
       const int zs = (izone*NUM_STATIONS) + istation;
 
-      // No requirement that hit be in the pattern that fired
+      // This leaves zone_roads.at(izone) and zs_conv_hits.at(zs) unchanged
+      // zs_phi_differences.at(zs) gets filled with a pair of <phi_diff, conv_hit> for the
+      // conv_hit with the lowest phi_diff from the pattern in this station and zone
       process_single_zone_station(
           istation + 1,
           zone_roads.at(izone),
@@ -159,6 +169,8 @@ void EMTFPrimitiveMatching::process(
         hit_ptr_t conv_hit_ptr = zs_phi_differences.at(zs).at(iroad).second;
 
         if (ph_diff != invalid_ph_diff) {
+	  // Inserts the conv_hit with the lowest phi_diff, as well as its duplicate
+	  //  (same strip and phi, different wire and theta), if a duplicate exists
           insert_hits(conv_hit_ptr, conv_hits, track);
         }
       }
@@ -280,8 +292,14 @@ void EMTFPrimitiveMatching::sort_ph_diff(
   struct {
     typedef hit_sort_pair_t value_type;
     bool operator()(const value_type& lhs, const value_type& rhs) const {
-      //return lhs.first < rhs.first;
-      return std::make_pair(lhs.first, lhs.second->fs_segment) < std::make_pair(rhs.first, rhs.second->fs_segment);
+      // Prefer hit inside the dPhi window (even RPC) over hit outside
+      if ( (lhs.first == invalid_ph_diff) != (rhs.first == invalid_ph_diff) )
+	return (lhs.first != invalid_ph_diff);
+      // If both are CSC or both are RPC, prefer the closer hit in dPhi
+      else if (lhs.second->subsystem == rhs.second->subsystem)
+	return std::make_pair(lhs.first, lhs.second->fs_segment) < std::make_pair(rhs.first, rhs.second->fs_segment);
+      else  // Prefer CSC hits over RPC hits
+	return ( (lhs.second->subsystem == TriggerPrimitive::kCSC) ? true : false);
     }
   } less_ph_diff_cmp;
 
@@ -304,14 +322,18 @@ void EMTFPrimitiveMatching::insert_hits(
     if (
       (conv_hit_i.pc_station == conv_hit_j.pc_station) &&
       (conv_hit_i.pc_chamber == conv_hit_j.pc_chamber) &&
-      (conv_hit_i.ring       == conv_hit_j.ring) &&  // because of ME1/1
+      (conv_hit_i.ring       == conv_hit_j.ring) &&  // because of ME1/1 
+      // But ME1/1a and ME1/1b are not distinct in the primitive selection / theta duplication.  Why distinguish here? - AWB 05.11.16
       (conv_hit_i.strip      == conv_hit_j.strip) &&
-      //(conv_hit_i.wire       == conv_hit_j.wire) &&
       (conv_hit_i.pattern    == conv_hit_j.pattern) &&
-      (conv_hit_i.bx         == conv_hit_j.bx)
+      (conv_hit_i.bx         == conv_hit_j.bx) &&
+      (conv_hit_i.subsystem  == conv_hit_j.subsystem) &&      
+      (conv_hit_i.strip_low  == conv_hit_j.strip_low) && // For RPC clusters
+      (conv_hit_i.strip_hi   == conv_hit_j.strip_hi)     // For RPC clusters
     ) {
-      // Must have the same phi_fp
+      // All duplicates with the same strip but different wire must have same phi_fp
       assert(conv_hit_i.phi_fp == conv_hit_j.phi_fp);
+      assert(!conv_hit_i.vetoed && !conv_hit_j.vetoed);
 
       insert_hit(conv_hits_it, track);
     }

@@ -141,7 +141,7 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
     FR4 = aux().getFRLUT(track.sector, 4, CSCID4);
   }
 
-  // Compose address
+  // Can we automate the assigning of addresses?  Would decrease typos, speed future development. - AWB 03.10.16
   switch (mode_inv) {
   case 3:   // 1-2
     if (!bug9BitDPhi_)  dPhi12 = std::min(511, dPhi12);

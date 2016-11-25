@@ -4,8 +4,8 @@
 #include "DataFormats/MuonDetId/interface/CSCDetId.h"
 #include "DataFormats/MuonDetId/interface/RPCDetId.h"
 
-#define NUM_CSC_CHAMBERS 6*9  // 18 in ME1, 9 in ME2/3/4, 9 from neighbor sector
-#define NUM_RPC_CHAMBERS 6*9  // not yet implemented
+#define NUM_CSC_CHAMBERS 6*9   // 18 in ME1, 9 in ME2/3/4, 9 from neighbor sector
+#define NUM_RPC_CHAMBERS 6*7   // 6+1 neighbor in stations 1/2, 12+2 neighbor in 3/4
 
 using CSCData = TriggerPrimitive::CSCData;
 using RPCData = TriggerPrimitive::RPCData;
@@ -13,7 +13,7 @@ using RPCData = TriggerPrimitive::RPCData;
 
 void EMTFPrimitiveSelection::configure(
       int verbose, int endcap, int sector, int bx,
-      int bxShiftCSC,
+      int bxShiftCSC, int bxShiftRPC,
       bool includeNeighbor, bool duplicateTheta
 ) {
   verbose_ = verbose;
@@ -22,6 +22,7 @@ void EMTFPrimitiveSelection::configure(
   bx_      = bx;
 
   bxShiftCSC_      = bxShiftCSC;
+  bxShiftRPC_      = bxShiftRPC;
 
   includeNeighbor_ = includeNeighbor;
   duplicateTheta_  = duplicateTheta;
@@ -94,7 +95,7 @@ void EMTFPrimitiveSelection::process(
   TriggerPrimitiveCollection::const_iterator tp_end = muon_primitives.end();
 
   for (; tp_it != tp_end; ++tp_it) {
-    int selected_rpc = select_rpc(*tp_it);  // RPC
+    int selected_rpc = select_rpc(*tp_it);  // Returns RPC "link" index (0 - 41) 
 
     if (selected_rpc >= 0) {
       assert(selected_rpc < NUM_RPC_CHAMBERS);
@@ -174,7 +175,7 @@ bool EMTFPrimitiveSelection::is_in_bx_csc(int tp_bx) const {
   return (bx_ == tp_bx);
 }
 
-// Returns the CSC "link" index
+// Returns CSC input "link".  Index used by FW for unique chamber identification.
 int EMTFPrimitiveSelection::get_index_csc(int tp_subsector, int tp_station, int tp_csc_ID, bool is_neighbor) const {
   int selected = -1;
 
@@ -204,22 +205,22 @@ int EMTFPrimitiveSelection::select_rpc(const TriggerPrimitive& muon_primitive) c
     const RPCDetId tp_detId = muon_primitive.detId<RPCDetId>();
     const RPCData& tp_data  = muon_primitive.getRPCData();
 
-    int tp_region    = tp_detId.region();  // 0 for Barrel, +/-1 for +/- Endcap
+    int tp_region    = tp_detId.region();     // 0 for Barrel, +/-1 for +/- Endcap
     int tp_endcap    = (tp_region == -1) ? 2 : tp_region;
-    int tp_sector    = tp_detId.sector();
-    int tp_subsector = tp_detId.subsector();
-    int tp_station   = tp_detId.station();
-    int tp_ring      = tp_detId.ring();
-    int tp_roll      = tp_detId.roll();
+    int tp_sector    = tp_detId.sector();     // 1 - 6 (60 degrees in phi, sector 1 begins at -5 deg)
+    int tp_station   = tp_detId.station();    // 1 - 4
+    int tp_ring      = tp_detId.ring();       // 2 - 3 (increasing theta)
+    // int tp_roll      = tp_detId.roll();       // 1 - 3 (decreasing theta; aka A - C; space between rolls is 9 - 15 in theta_fp)
+    int tp_subsector = tp_detId.subsector();  // 1 - 6 (10 degrees in phi; staggered in z)
 
     int tp_bx        = tp_data.bx;
+    
+    if ( is_in_bx_rpc(tp_bx) && tp_region != 0 && (tp_ring == 2 || tp_station > 2) ) {  // Stations 1 and 2 only receive RPCs from ring 2
+      if (is_in_sector_rpc(tp_endcap, tp_sector, tp_subsector)) {
+        selected = get_index_rpc(tp_station, tp_ring, tp_subsector, false);
 
-    if (is_in_bx_rpc(tp_bx)) {
-      if (is_in_sector_rpc(tp_endcap, tp_sector)) {
-        selected = get_index_rpc(tp_subsector, tp_station, tp_ring, tp_roll, false);
-
-      } else if (is_in_neighbor_sector_rpc(tp_endcap, tp_sector, tp_subsector, tp_station, tp_ring, tp_roll)) {
-        selected = get_index_rpc(tp_subsector, tp_station, tp_ring, tp_roll, true);
+      } else if (is_in_neighbor_sector_rpc(tp_endcap, tp_sector, tp_subsector)) {
+        selected = get_index_rpc(tp_station, tp_ring, tp_subsector, true);
       }
     }
   }
@@ -227,24 +228,38 @@ int EMTFPrimitiveSelection::select_rpc(const TriggerPrimitive& muon_primitive) c
   return selected;
 }
 
-bool EMTFPrimitiveSelection::is_in_sector_rpc(int tp_endcap, int tp_sector) const {
-  return ((endcap_ == tp_endcap) && (sector_ == tp_sector));
+bool EMTFPrimitiveSelection::is_in_sector_rpc(int tp_endcap, int tp_sector, int tp_subsector) const {
+  if (endcap_ == tp_endcap)
+    // CSC sector X overlaps with RPC sector X, subsectors 3 - 6, and RPC sector X+1, subsectors 1 - 2 
+    return ( ((sector_ == tp_sector)     && (tp_subsector > 2)) || 
+	     ((sector_ == tp_sector - 1) && (tp_subsector < 3)) );
+  else
+    return false;
 }
 
-bool EMTFPrimitiveSelection::is_in_neighbor_sector_rpc(
-    int tp_endcap, int tp_sector, int tp_subsector, int tp_station, int tp_ring, int tp_roll
-) const {
-  return false;
+bool EMTFPrimitiveSelection::is_in_neighbor_sector_rpc(int tp_endcap, int tp_sector, int tp_subsector) const {
+  return ( (endcap_ == tp_endcap) && (sector_ == tp_sector) && (tp_subsector == 2) );
 }
 
 bool EMTFPrimitiveSelection::is_in_bx_rpc(int tp_bx) const {
+  tp_bx += bxShiftRPC_; 
   return (bx_ == tp_bx);
 }
 
-int EMTFPrimitiveSelection::get_index_rpc(int tp_subsector, int tp_station, int tp_ring, int tp_roll, bool is_neighbor) const {
+int EMTFPrimitiveSelection::get_index_rpc(int tp_station, int tp_ring, int tp_subsector, bool is_neighbor) const {
   int selected = -1;
 
-  selected = 0;  //TODO: implement this
+  if (not is_neighbor) {
+    if (tp_station < 3) // RE1:  0 -  5, RE2:  6 - 11
+      selected = ((tp_station - 1)*6) + ((tp_subsector + 3) % 6);
+    else                // RE3: 12 - 23, RE4: 24 - 35
+      selected = 12 + ((tp_station - 3)*12) + ((tp_ring - 2)*6) + ((tp_subsector + 3) % 6);
+  } else {
+    if (tp_station < 3) // RE1: 36       RE2: 37
+      selected = 36 + (tp_station - 1);
+    else                // RE3: 38 - 39, RE4: 40 - 41
+      selected = 38 + ((tp_station - 3)*2) + (tp_ring - 2);
+  }
 
   return selected;
 }

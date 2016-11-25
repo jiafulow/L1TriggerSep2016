@@ -21,12 +21,14 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
   auto maxBX       = iConfig.getParameter<int>("MaxBX");
   auto bxWindow    = iConfig.getParameter<int>("BXWindow");
   auto bxShiftCSC  = iConfig.getParameter<int>("CSCInputBXShift");
-  //auto version     = iConfig.getParameter<int>("Version");        // not yet used
-  //auto ptlut_ver   = iConfig.getParameter<int>("PtLUTVersion");   // not yet used
+  auto bxShiftRPC  = iConfig.getParameter<int>("RPCInputBXShift");
+  // auto version     = iConfig.getParameter<int>("Version");        // not yet used
+  // auto ptlut_ver   = iConfig.getParameter<int>("PtLUTVersion");   // not yet used
 
   const auto& spPCParams16 = config_.getParameter<edm::ParameterSet>("spPCParams16");
   auto zoneBoundaries     = spPCParams16.getParameter<std::vector<int> >("ZoneBoundaries");
   auto zoneOverlap        = spPCParams16.getParameter<int>("ZoneOverlap");
+  auto zoneOverlapRPC     = spPCParams16.getParameter<int>("ZoneOverlapRPC");
   auto coordLUTDir        = spPCParams16.getParameter<std::string>("CoordLUTDir");
   auto includeNeighbor    = spPCParams16.getParameter<bool>("IncludeNeighbor");
   auto duplicateTheta     = spPCParams16.getParameter<bool>("DuplicateTheta");
@@ -37,6 +39,7 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
   auto pattDefinitions    = spPRParams16.getParameter<std::vector<std::string> >("PatternDefinitions");
   auto symPattDefinitions = spPRParams16.getParameter<std::vector<std::string> >("SymPatternDefinitions");
   auto thetaWindow        = spPRParams16.getParameter<int>("ThetaWindow");
+  auto thetaWindowRPC     = spPRParams16.getParameter<int>("ThetaWindowRPC");
   auto useSymPatterns     = spPRParams16.getParameter<bool>("UseSymmetricalPatterns");
 
   const auto& spGCParams16 = config_.getParameter<edm::ParameterSet>("spGCParams16");
@@ -70,9 +73,10 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
             &sector_processor_lut_,
             &pt_assign_engine_,
             verbose_, endcap, sector,
-            minBX, maxBX, bxWindow, bxShiftCSC,
-            zoneBoundaries, zoneOverlap, includeNeighbor, duplicateTheta, fixZonePhi, useNewZones,
-            pattDefinitions, symPattDefinitions, thetaWindow, useSymPatterns,
+            minBX, maxBX, bxWindow, bxShiftCSC, bxShiftRPC,
+            zoneBoundaries, zoneOverlap, zoneOverlapRPC, 
+	    includeNeighbor, duplicateTheta, fixZonePhi, useNewZones,
+            pattDefinitions, symPattDefinitions, thetaWindow, thetaWindowRPC, useSymPatterns,
             maxRoadsPerZone, maxTracks, useSecondEarliest,
             readPtLUTFile, fixMode15HighPt, bug9BitDPhi, bugMode7CLCT, bugNegPt
         );
@@ -98,8 +102,19 @@ void EMTFTrackFinder::process(
   out_hits.clear();
   out_tracks.clear();
 
+
+  // Get the geometry for TP conversions
+  std::unique_ptr<L1TMuonEndCap::GeometryTranslator> tp_geom;
+  tp_geom.reset(new L1TMuonEndCap::GeometryTranslator());
+  tp_geom->checkAndUpdateGeometry(iSetup);
+  // // Get the RPC geometry
+  // const MuonGeometryRecord& geom = es.get<MuonGeometryRecord>();
+  // unsigned long long geomid = geom.cacheIdentifier();
+  // if( geom_cache_id_ != geomid )
+  //   geom.get(geom_rpc_);
+
   // ___________________________________________________________________________
-  // Extract all trigger primitives
+  // Extract all trigger primitives (class defined in ??? - AWB 27.09.16)
   TriggerPrimitiveCollection muon_primitives;
 
   EMTFSubsystemCollector collector;
@@ -119,13 +134,14 @@ void EMTFTrackFinder::process(
   // ___________________________________________________________________________
   // Run each sector processor
 
-  for (int endcap = MIN_ENDCAP; endcap <= MAX_ENDCAP; ++endcap) {
+  // MIN/MAX ENDCAP and TRIGSECTOR set in interface/EMTFCommon.hh
+  for (int endcap = MIN_ENDCAP; endcap <= MAX_ENDCAP; ++endcap) { 
     for (int sector = MIN_TRIGSECTOR; sector <= MAX_TRIGSECTOR; ++sector) {
-      //const int es = (endcap-1) * 6 + (sector-1);
       const int es = (endcap - MIN_ENDCAP) * (MAX_TRIGSECTOR - MIN_TRIGSECTOR + 1) + (sector - MIN_TRIGSECTOR);
 
       sector_processors_.at(es).process(
           iEvent.id().event(),
+	  tp_geom,
           muon_primitives,
           out_hits,
           out_tracks

@@ -9,7 +9,7 @@ public:
   void configure(
       int verbose, int endcap, int sector, int bx,
       int bxWindow,
-      int thetaWindow
+      int thetaWindow, int thetaWindowRPC
   );
 
   void process(
@@ -26,7 +26,7 @@ private:
   int verbose_, endcap_, sector_, bx_;
 
   int bxWindow_;
-  int thetaWindow_;
+  int thetaWindow_, thetaWindowRPC_;
 };
 
 #endif

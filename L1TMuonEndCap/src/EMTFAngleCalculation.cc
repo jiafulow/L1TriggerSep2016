@@ -13,7 +13,7 @@ namespace {
 void EMTFAngleCalculation::configure(
     int verbose, int endcap, int sector, int bx,
     int bxWindow,
-    int thetaWindow
+    int thetaWindow, int thetaWindowRPC
 ) {
   verbose_ = verbose;
   endcap_  = endcap;
@@ -22,6 +22,7 @@ void EMTFAngleCalculation::configure(
 
   bxWindow_           = bxWindow;
   thetaWindow_        = thetaWindow;
+  thetaWindowRPC_     = thetaWindowRPC;
 }
 
 void EMTFAngleCalculation::process(
@@ -39,7 +40,8 @@ void EMTFAngleCalculation::process(
       calculate_angles(*tracks_it);
     }
 
-    // Erase tracks with rank == 0
+    // Erase tracks with rank = 0
+    // Erase hits that are not selected as the best phi and theta in each station
     erase_tracks(tracks);
 
     tracks_it  = tracks.begin();
@@ -85,12 +87,13 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
     }
     assert(st_conv_hits.at(istation).size() <= 2);  // ambiguity in theta is max 2
   }
+  assert(st_conv_hits.size() == NUM_STATIONS);
 
   // Best theta deltas and phi deltas
   // from 0 to 5: dtheta12, dtheta13, dtheta14, dtheta23, dtheta24, dtheta34
-  std::array<int,  NUM_STATION_PAIRS> best_dtheta_arr;
+  std::array<int,  NUM_STATION_PAIRS> best_dtheta_arr;  // Best of up to 4 dTheta values per pair of stations (with duplicate thetas)
   std::array<int,  NUM_STATION_PAIRS> best_dtheta_sign_arr;
-  std::array<int,  NUM_STATION_PAIRS> best_dphi_arr;
+  std::array<int,  NUM_STATION_PAIRS> best_dphi_arr;   // Not really "best" - there is only one dPhi value per pair of stations
   std::array<int,  NUM_STATION_PAIRS> best_dphi_sign_arr;
 
   // Best angles
@@ -101,6 +104,7 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
 
   // Keep track of which pair is valid
   std::array<bool, NUM_STATION_PAIRS> best_dtheta_valid_arr;
+  std::array<bool, NUM_STATION_PAIRS> best_has_rpc_arr;
 
   // Initialize
   best_dtheta_arr      .fill(invalid_dtheta);
@@ -110,6 +114,7 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
   best_phi_arr         .fill(0);
   best_theta_arr       .fill(0);
   best_dtheta_valid_arr.fill(false);
+  best_has_rpc_arr     .fill(false);
 
   auto abs_diff = [](int a, int b) { return std::abs(a-b); };
 
@@ -131,11 +136,17 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
           int dth_sign = (thA > thB);  // sign
           assert(thA != 0 && thB != 0);
           assert(dth < invalid_dtheta);
+	  assert(!conv_hitA.vetoed && !conv_hitB.vetoed);  // Sanity check for RPCs
 
-          if (best_dtheta_arr.at(ipair) >= dth) {
+          if (best_dtheta_arr.at(ipair) >= dth) {  // If dTheta is equal, new pair replaces old pair?  Ordered how? - AWB 18.10.16
             best_dtheta_arr.at(ipair) = dth;
             best_dtheta_sign_arr.at(ipair) = dth_sign;
             best_dtheta_valid_arr.at(ipair) = true;
+	    if (conv_hitA.subsystem == TriggerPrimitive::kRPC || 
+		conv_hitB.subsystem == TriggerPrimitive::kRPC)
+	      best_has_rpc_arr.at(ipair) = true;
+	    else
+	      best_has_rpc_arr.at(ipair) = false;
 
             // first 3 pairs, use station B
             // last 3 pairs, use station A
@@ -146,8 +157,9 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
           int phA = conv_hitA.phi_fp;
           int phB = conv_hitB.phi_fp;
           int dph = abs_diff(phA, phB);
-          int dph_sign = (phA <= phB);  // sign reversed according to Matt's oral request 2016-04-27
+          int dph_sign = (phA <= phB);  // sign reversed according to Matt's oral request 2016-04-27 (affects only pT/charge assignment)
 
+	  // Not really "best" dPhi: only one dPhi value possible between any two stations
           if (best_dphi_arr.at(ipair) >= dph) {
             best_dphi_arr.at(ipair) = dph;
             best_dphi_sign_arr.at(ipair) = dph_sign;
@@ -167,7 +179,10 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
 
   // Apply cuts on dtheta
   for (int ipair = 0; ipair < NUM_STATION_PAIRS; ++ipair) {
-    best_dtheta_valid_arr.at(ipair) &= (best_dtheta_arr.at(ipair) <= thetaWindow_);
+    if ( best_has_rpc_arr.at(ipair) )
+      best_dtheta_valid_arr.at(ipair) &= (best_dtheta_arr.at(ipair) <= thetaWindowRPC_);
+    else
+      best_dtheta_valid_arr.at(ipair) &= (best_dtheta_arr.at(ipair) <= thetaWindow_);
   }
 
   // Find valid segments
@@ -208,7 +223,7 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
   if ((vstat & vmask3) != 0 || vstat == 0)
     vstat |= vmask3;
 
-  // remove some valid flags if th did not line up
+  // remove valid flag for station if hit does not pass the dTheta mask
   for (int istation = 0; istation < NUM_STATIONS; ++istation) {
     if ((vstat & (1 << istation)) == 0) {  // station bit not set
       st_conv_hits.at(istation).clear();
@@ -218,23 +233,54 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
   // assign precise phi and theta for the track
   int phi_int   = 0;
   int theta_int = 0;
+  int best_pair_with_rpc = -1;
   int best_pair = -1;
-
+  
+  // "Best pair" including both CSC and RPC hits
   if ((vstat & (1<<1)) != 0) {            // ME2 present
     if (best_dtheta_valid_arr.at(0))      // 12
-      best_pair = 0;
+      best_pair_with_rpc = 0;
     else if (best_dtheta_valid_arr.at(3)) // 23
-      best_pair = 3;
+      best_pair_with_rpc = 3;
     else if (best_dtheta_valid_arr.at(4)) // 24
-      best_pair = 4;
+      best_pair_with_rpc = 4;
   } else if ((vstat & (1<<2)) != 0) {     // ME3 present
     if (best_dtheta_valid_arr.at(1))      // 13
-      best_pair = 1;
+      best_pair_with_rpc = 1;
     else if (best_dtheta_valid_arr.at(5)) // 34
-      best_pair = 5;
+      best_pair_with_rpc = 5;
   } else if ((vstat & (1<<3)) != 0) {     // ME4 present
     if (best_dtheta_valid_arr.at(2))      // 14
+      best_pair_with_rpc = 2;
+  }
+
+  // "Best pair" using only CSC hits
+  if ((vstat & (1<<1)) != 0) {                     // ME2 present
+    if      (best_dtheta_valid_arr.at(0) && !best_has_rpc_arr.at(0)) // 12
+      best_pair = 0;
+    else if (best_dtheta_valid_arr.at(3) && !best_has_rpc_arr.at(3)) // 23
+      best_pair = 3;
+    else if (best_dtheta_valid_arr.at(4) && !best_has_rpc_arr.at(4)) // 24
+      best_pair = 4;
+  }
+  if ((vstat & (1<<2)) != 0 && best_pair == -1) {  // ME3 present
+    if      (best_dtheta_valid_arr.at(1) && !best_has_rpc_arr.at(1)) // 13
+      best_pair = 1;
+    else if (best_dtheta_valid_arr.at(5) && !best_has_rpc_arr.at(5)) // 34
+      best_pair = 5;
+  } 
+  if ((vstat & (1<<3)) != 0 && best_pair == -1) {  // ME4 present
+    if      (best_dtheta_valid_arr.at(2) && !best_has_rpc_arr.at(2)) // 14
       best_pair = 2;
+  }
+
+  // Figure out some way to check this properly - AWB 18.11.16
+  // assert( (best_pair_with_rpc == -1) == (best_pair == -1) );  // Sanity check for RPCs
+  if ( (best_pair_with_rpc == -1) != (best_pair == -1) ) {
+    std::cout << "\nFound track with < 2 good CSC hits" << std::endl;
+    for (int ipair = 0; ipair < NUM_STATION_PAIRS; ++ipair)
+      std::cout << "Pair " << ipair << ": has RPC = " <<  best_has_rpc_arr.at(ipair) 
+		<< ", valid dTheta = " << best_dtheta_valid_arr.at(ipair) << std::endl;
   }
 
   if (best_pair != -1) {
@@ -248,6 +294,7 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
     struct {
       typedef EMTFHitExtra value_type;
       constexpr bool operator()(const value_type& lhs, const value_type& rhs) {
+	assert( lhs.subsystem == rhs.subsystem );  // Sanity check for RPCs
         return std::abs(lhs.theta_fp-theta) < std::abs(rhs.theta_fp-theta);
       }
       int theta;
@@ -288,7 +335,12 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
     rank = 0;
 
   // from RecoMuon/DetLayers/src/MuonCSCDetLayerGeometryBuilder.cc
-  auto isFront = [](int station, int ring, int chamber) {
+  auto isFront = [](int station, int ring, int chamber, bool isRPC) {
+    // RPCs are behind the CSCs in stations 1, 3, and 4; in front in 2
+    // But what is the front/rear convention? - AWB 18.11.16
+    if (isRPC)
+      return (station == 2);
+
     bool result = false;
     bool isOverlapping = !(station == 1 && ring == 3);
     // not overlapping means back
@@ -302,27 +354,36 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
     return result;
   };
 
+  // Defined properly for RPCs? - AWB 18.11.16
   auto get_bt_station = [](const EMTFHitExtra& conv_hit) {
+    if (conv_hit.subsystem == TriggerPrimitive::kRPC) {
+      const int fw_station_rpc = conv_hit.station;
+      return fw_station_rpc; // 1 - 4, neighbor not treated differently
+    }
     const bool is_neighbor = (conv_hit.pc_station == 5);
-    const int fw_station = (conv_hit.station == 1) ? (is_neighbor ? 0 : (conv_hit.subsector-1)) : conv_hit.station;
+    const int fw_station   = (conv_hit.station == 1) ? (is_neighbor ? 0 : (conv_hit.subsector-1)) : conv_hit.station;
     return fw_station;
   };
 
+  // Already defined properly for RPCs? - AWB 18.11.16
   auto get_bt_history = [](const EMTFHitExtra& conv_hit) {
-    int bt_history = ((conv_hit.fs_segment>>4) & 0x3);
+    int bt_history = ((conv_hit.fs_segment >> 4) & 0x3);
     return bt_history;
   };
 
+  // Defined properly for RPCs? - AWB 18.11.16
   auto get_bt_chamber = [](const EMTFHitExtra& conv_hit) {
-    //int bt_chamber = ((conv_hit.fs_segment>>1) & 0x7);
+    if (conv_hit.subsystem == TriggerPrimitive::kRPC)
+      return ( (conv_hit.ring - 2)*6 + (conv_hit.subsector) );  // 1 - 6 for ring 2, 7 - 12 for ring 3
     int bt_chamber = conv_hit.cscn_ID;
     if (conv_hit.station == 1 && bt_chamber >= 13)  // ME1 neighbor chambers 13,14,15 -> 10,11,12
       bt_chamber -= 3;
     return bt_chamber;
   };
 
+  // Already defined properly for RPCs? - AWB 18.11.16
   auto get_bt_segment = [](const EMTFHitExtra& conv_hit) {
-    int bt_segment = ((conv_hit.fs_segment>>0) & 0x1);
+    int bt_segment = ((conv_hit.fs_segment >> 0) & 0x1);
     return bt_segment;
   };
 
@@ -330,15 +391,21 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
   EMTFPtLUTData ptlut_data;
   for (int i = 0; i < NUM_STATION_PAIRS; ++i) {
     ptlut_data.delta_ph[i] = best_dphi_arr.at(i);
-    ptlut_data.delta_th[i] = best_dtheta_arr.at(i);
     ptlut_data.sign_ph[i]  = best_dphi_sign_arr.at(i);
-    ptlut_data.sign_th[i]  = best_dtheta_sign_arr.at(i);
+    if (best_has_rpc_arr.at(i) && best_dtheta_arr.at(i) != invalid_dtheta) {  // Automatically set to 0 for RPCs
+      ptlut_data.delta_th[i] = 0;
+      ptlut_data.sign_th[i]  = 0;
+    } else {
+      ptlut_data.delta_th[i] = best_dtheta_arr.at(i);
+      ptlut_data.sign_th[i]  = best_dtheta_sign_arr.at(i);
+    }
   }
 
   for (int i = 0; i < NUM_STATIONS; ++i) {
     const auto& v = st_conv_hits.at(i);
-    ptlut_data.cpattern[i] = v.empty() ? 0 : v.front().pattern;
-    ptlut_data.fr[i]       = v.empty() ? 0 : isFront(v.front().station, v.front().ring, v.front().chamber);
+    ptlut_data.cpattern[i] = v.empty() ? 0 : v.front().pattern;  // Automatically 10 for RPCs
+    ptlut_data.fr[i]       = v.empty() ? 0 : isFront( v.front().station, v.front().ring, v.front().chamber, 
+						      (v.front().subsystem == TriggerPrimitive::kRPC) );
   }
 
   for (int i = 0; i < NUM_STATIONS; ++i) {
@@ -356,6 +423,7 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
       }
     }
 
+    // Invalid for RPCs ... used anywhere? - AWB 19.11.16
     ptlut_data.bt_vi[bt_station] = v.empty() ? 0 : 1;
     ptlut_data.bt_hi[bt_station] = v.empty() ? 0 : get_bt_history(v.front());
     ptlut_data.bt_ci[bt_station] = v.empty() ? 0 : get_bt_chamber(v.front());
@@ -397,7 +465,23 @@ void EMTFAngleCalculation::calculate_bx(EMTFTrackExtra& track) const {
       break;
     }
   }
-  assert(second_bx != 99);
+  // assert(second_bx != 99);  // Fails because of RPC bug - AWB 19.11.16
+  if (second_bx == 99) {
+    std::cout << "\n################################" << std::endl;
+    std::cout << "#######   MAJOR BUG!!!   #######" << std::endl;
+    std::cout << "################################" << std::endl;
+    std::cout << "first_bx = " << first_bx << ", second_bx = " << second_bx << std::endl;
+    int hit_index = 0;
+    for (const auto& conv_hit : track.xhits) {
+      hit_index++;
+      std::cout << "  Hit " << hit_index << " BX = " << conv_hit.bx << ", subsystem = " << conv_hit.subsystem << ", station = " << conv_hit.station
+		<< ", sector = " << conv_hit.sector << ", subsector = " << conv_hit.subsector << ", ring = " << conv_hit.ring
+		<< ", roll = " << conv_hit.roll << ", CSC ID = " << conv_hit.csc_ID << ", chamber = " << conv_hit.chamber
+		<< ", strip = " << conv_hit.strip << ", strip_hi = " << conv_hit.strip_hi << ", strip_low = " << conv_hit.strip_low
+		<< ", wire = " << conv_hit.wire << ", phi_fp = " << conv_hit.phi_fp << ", theta_fp = " << conv_hit.theta_fp << std::endl;
+    }
+    second_bx = first_bx;
+  }
 
   // ___________________________________________________________________________
   // Output
@@ -420,6 +504,22 @@ void EMTFAngleCalculation::erase_tracks(EMTFTrackExtraCollection& tracks) const 
 
   for (const auto& track : tracks) {
     assert(track.xhits.size() > 0);
-    assert(track.xhits.size() <= NUM_STATIONS);
+    // assert(track.xhits.size() <= NUM_STATIONS);  // Fails because of RPC bug - AWB 19.11.16
+    if (track.xhits.size() > NUM_STATIONS) {
+      std::cout << "\n################################" << std::endl;
+      std::cout << "#######   MAJOR BUG!!!   #######" << std::endl;
+      std::cout << "################################" << std::endl;
+      std::cout << "track.xhits.size() = " << track.xhits.size() << std::endl;
+      int hit_index = 0;
+      for (const auto& conv_hit : track.xhits) {
+	hit_index++;
+	std::cout << "  Hit " << hit_index << " BX = " << conv_hit.bx << ", subsystem = " << conv_hit.subsystem << ", station = " << conv_hit.station
+		  << ", sector = " << conv_hit.sector << ", subsector = " << conv_hit.subsector << ", ring = " << conv_hit.ring
+		  << ", roll = " << conv_hit.roll << ", CSC ID = " << conv_hit.csc_ID << ", chamber = " << conv_hit.chamber
+		  << ", strip = " << conv_hit.strip << ", strip_hi = " << conv_hit.strip_hi << ", strip_low = " << conv_hit.strip_low
+		  << ", wire = " << conv_hit.wire << ", phi_fp = " << conv_hit.phi_fp << ", theta_fp = " << conv_hit.theta_fp << std::endl;
+      }
+    }
   }
+
 }
