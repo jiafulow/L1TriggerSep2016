@@ -52,9 +52,11 @@ namespace L1TMuonEndCap {
     // within a subsystem
     // for RPCs you have to unroll the digi-link and raw det-id
     struct RPCData {
-      RPCData() : strip(0), layer(0), bx(0) {}
-      unsigned strip;
-      unsigned layer;
+      RPCData() : strip(0), strip_low(0), strip_hi(0), layer(0), bx(0) {}
+      uint16_t strip;
+      uint16_t strip_low;
+      uint16_t strip_hi;
+      uint16_t layer;
       int16_t bx;
     };
 
@@ -124,7 +126,7 @@ namespace L1TMuonEndCap {
     TriggerPrimitive(const RPCDetId& detid,
                      const unsigned strip,
                      const unsigned layer,
-                     const int16_t bx);
+                     const int bx);
 
     //copy
     TriggerPrimitive(const TriggerPrimitive&);
@@ -163,6 +165,10 @@ namespace L1TMuonEndCap {
     const DTData  getDTData()  const { return _dt;  }
     const CSCData getCSCData() const { return _csc; }
     const RPCData getRPCData() const { return _rpc; }
+
+    DTData&  accessDTData()  { return _dt; }
+    CSCData& accessCSCData() { return _csc; }
+    RPCData& accessRPCData() { return _rpc; }
 
     // consistent accessors to common information
     const int getBX() const;

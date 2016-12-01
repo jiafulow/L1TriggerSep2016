@@ -29,6 +29,7 @@ public:
   typedef EMTFPatternRecognition::pattern_ref_t pattern_ref_t;
 
   void configure(
+      const GeometryTranslator* tp_geom,
       const EMTFSectorProcessorLUT* lut,
       const EMTFPtAssignmentEngine* pt_assign_engine,
       int verbose, int endcap, int sector,
@@ -43,7 +44,6 @@ public:
   void process(
       // Input
       EventNumber_t ievent,
-      const std::unique_ptr<L1TMuonEndCap::GeometryTranslator>& tp_geom,
       const TriggerPrimitiveCollection& muon_primitives,
       // Output
       EMTFHitExtraCollection& out_hits,
@@ -53,7 +53,6 @@ public:
   void process_single_bx(
       // Input
       int bx,
-      const std::unique_ptr<L1TMuonEndCap::GeometryTranslator>& tp_geom,
       const TriggerPrimitiveCollection& muon_primitives,
       // Output
       EMTFHitExtraCollection& out_hits,
@@ -65,6 +64,8 @@ public:
   ) const;
 
 private:
+  const GeometryTranslator* tp_geom_;
+
   const EMTFSectorProcessorLUT* lut_;
 
   const EMTFPtAssignmentEngine* pt_assign_engine_;

@@ -112,7 +112,9 @@ GlobalPoint
 GeometryTranslator::getRPCSpecificPoint(const TriggerPrimitive& tp) const {
   const RPCDetId id(tp.detId<RPCDetId>());
   const RPCRoll * roll = _georpc->roll(id);
-  const uint16_t strip = tp.getRPCData().strip;
+  //const int strip = static_cast<int>(tp.getRPCData().strip);
+  // Use half-strip precision, - 0.5 at the end to get the center of the strip
+  const float strip = (0.5 * static_cast<float>(tp.getRPCData().strip_low + tp.getRPCData().strip_hi)) - 0.5;
   const LocalPoint lp = roll->centreOfStrip(strip);
   const GlobalPoint gp = roll->toGlobal(lp);
 
