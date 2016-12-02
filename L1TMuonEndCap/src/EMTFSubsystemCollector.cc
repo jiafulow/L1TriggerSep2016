@@ -48,7 +48,9 @@ void EMTFSubsystemCollector::extractPrimitives(
     auto dend = (*chamber).second.second;
     for( ; digi != dend; ++digi ) {
       if ((*chamber).first.region() != 0) {  // 0 is barrel
-        out.emplace_back((*chamber).first,digi->strip(),(*chamber).first.layer(),digi->bx());
+        if (!((*chamber).first.station() <= 2 && (*chamber).first.ring() == 3)) {  // do not include RE1/3, RE2/3
+          out.emplace_back((*chamber).first,digi->strip(),(*chamber).first.layer(),digi->bx());
+        }
       }
     }
   }

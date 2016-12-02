@@ -28,9 +28,7 @@ public:
 
   bool is_in_sector_csc(int tp_endcap, int tp_sector) const;
 
-  bool is_in_neighbor_sector_csc(
-      int tp_endcap, int tp_sector, int tp_subsector, int tp_station, int tp_csc_ID
-  ) const;
+  bool is_in_neighbor_sector_csc(int tp_endcap, int tp_sector, int tp_subsector, int tp_station, int tp_csc_ID) const;
 
   bool is_in_bx_csc(int tp_bx) const;
 
@@ -49,7 +47,7 @@ public:
 
 private:
   int verbose_, endcap_, sector_, bx_;
-  
+
   int bxShiftCSC_, bxShiftRPC_;
 
   bool includeNeighbor_, duplicateTheta_;
