@@ -49,7 +49,7 @@ void EMTFPrimitiveMatching::process(
   // Organize converted hits by (zone, station)
   std::array<EMTFHitExtraCollection, NUM_ZONES*NUM_STATIONS> zs_conv_hits;
 
-  bool use_fs_zone_code = true;  // use zone code as in firmware find_segment module (Why? - AWB 07.10.16)
+  bool use_fs_zone_code = true;  // use zone code as in firmware find_segment module
 
   std::deque<EMTFHitExtraCollection>::const_iterator ext_conv_hits_it  = extended_conv_hits.begin();
   std::deque<EMTFHitExtraCollection>::const_iterator ext_conv_hits_end = extended_conv_hits.end();
@@ -60,11 +60,9 @@ void EMTFPrimitiveMatching::process(
 
     for (; conv_hits_it != conv_hits_end; ++conv_hits_it) {
 
-      if (conv_hits_it->vetoed)
-	continue;  // Only receive 2 RPC clusters per station/subsector/ring
-      // if (conv_hits_it->subsystem == TriggerPrimitive::kRPC && bx_ != conv_hits_it->bx)
-      // 	continue;  // Only use RPC clusters in the same BX as the track
-      // // Can we do this at some later stage? Check RPC vs. track timing ... - AWB 18.11.16
+      // Can we do this at some later stage? Check RPC vs. track timing ... - AWB 18.11.16
+      //if (conv_hits_it->subsystem == TriggerPrimitive::kRPC && bx_ != conv_hits_it->bx)
+      //  continue;  // Only use RPC clusters in the same BX as the track
 
       int istation = conv_hits_it->station-1;
       int zone_code = conv_hits_it->zone_code;  // decide based on original zone code
@@ -80,9 +78,14 @@ void EMTFPrimitiveMatching::process(
             zs_conv_hits.at(zs).push_back(*conv_hits_it);
 
             // Update fs_history encoded in fs_segment
-            int fs_history = bx_ - (conv_hits_it->bx);  // 0 for current BX, 1 for previous BX, 2 for BX before that 
+            // This update only goes into the hits associated to a track, it does not affect the original hit collection
+            int fs_history = bx_ - (conv_hits_it->bx);  // 0 for current BX, 1 for previous BX, 2 for BX before that
             zs_conv_hits.at(zs).back().fs_segment |= ((fs_history & 0x3)<<4);
-	    // Does this update the history in the output collection of converted hits? - AWB 05.11.16
+
+            // Update bt_history encoded in bt_segment
+            // This update only goes into the hits associated to a track, it does not affect the original hit collection
+            int bt_history = fs_history;
+            zs_conv_hits.at(zs).back().bt_segment |= ((bt_history & 0x3)<<5);
           }
         }
       }
@@ -169,8 +172,8 @@ void EMTFPrimitiveMatching::process(
         hit_ptr_t conv_hit_ptr = zs_phi_differences.at(zs).at(iroad).second;
 
         if (ph_diff != invalid_ph_diff) {
-	  // Inserts the conv_hit with the lowest phi_diff, as well as its duplicate
-	  //  (same strip and phi, different wire and theta), if a duplicate exists
+          // Inserts the conv_hit with the lowest phi_diff, as well as its duplicate
+          // (same strip and phi, different wire and theta), if a duplicate exists
           insert_hits(conv_hit_ptr, conv_hits, track);
         }
       }
@@ -262,12 +265,13 @@ void EMTFPrimitiveMatching::process_single_zone_station(
         ph_seg_red = ph_seg;  // use full-precision phi
       }
 
-      // Get abs difference
+      // Get abs phi difference
       int ph_diff = abs_diff(ph_pat, ph_seg_red);
       if (ph_diff > max_ph_diff)
         ph_diff = invalid_ph_diff;  // difference is too high, cannot be the same pattern
 
-      tmp_phi_differences.push_back(std::make_pair(ph_diff, conv_hits_it));  // make a key-value pair
+      if (ph_diff != invalid_ph_diff)
+        tmp_phi_differences.push_back(std::make_pair(ph_diff, conv_hits_it));  // make a key-value pair
     }
 
     if (!tmp_phi_differences.empty()) {
@@ -292,14 +296,11 @@ void EMTFPrimitiveMatching::sort_ph_diff(
   struct {
     typedef hit_sort_pair_t value_type;
     bool operator()(const value_type& lhs, const value_type& rhs) const {
-      // Prefer hit inside the dPhi window (even RPC) over hit outside
-      if ( (lhs.first == invalid_ph_diff) != (rhs.first == invalid_ph_diff) )
-	return (lhs.first != invalid_ph_diff);
-      // If both are CSC or both are RPC, prefer the closer hit in dPhi
-      else if (lhs.second->subsystem == rhs.second->subsystem)
-	return std::make_pair(lhs.first, lhs.second->fs_segment) < std::make_pair(rhs.first, rhs.second->fs_segment);
-      else  // Prefer CSC hits over RPC hits
-	return ( (lhs.second->subsystem == TriggerPrimitive::kCSC) ? true : false);
+      // If different types, prefer CSC over RPC; else prefer the closer hit in dPhi
+      if (lhs.second->subsystem != rhs.second->subsystem)
+        return (lhs.second->subsystem == TriggerPrimitive::kCSC);
+      else
+        return std::make_pair(lhs.first, lhs.second->fs_segment) < std::make_pair(rhs.first, rhs.second->fs_segment);
     }
   } less_ph_diff_cmp;
 
@@ -320,30 +321,26 @@ void EMTFPrimitiveMatching::insert_hits(
 
     // All these must match: [bx_history][station][chamber][segment]
     if (
+      (conv_hit_i.subsystem  == conv_hit_j.subsystem) &&
       (conv_hit_i.pc_station == conv_hit_j.pc_station) &&
       (conv_hit_i.pc_chamber == conv_hit_j.pc_chamber) &&
-      (conv_hit_i.ring       == conv_hit_j.ring) &&  // because of ME1/1 
-      // But ME1/1a and ME1/1b are not distinct in the primitive selection / theta duplication.  Why distinguish here? - AWB 05.11.16
+      (conv_hit_i.ring       == conv_hit_j.ring) &&  // because of ME1/1
       (conv_hit_i.strip      == conv_hit_j.strip) &&
+      //(conv_hit_i.wire       == conv_hit_j.wire) &&
       (conv_hit_i.pattern    == conv_hit_j.pattern) &&
       (conv_hit_i.bx         == conv_hit_j.bx) &&
-      (conv_hit_i.subsystem  == conv_hit_j.subsystem) &&      
       (conv_hit_i.strip_low  == conv_hit_j.strip_low) && // For RPC clusters
-      (conv_hit_i.strip_hi   == conv_hit_j.strip_hi)     // For RPC clusters
+      (conv_hit_i.strip_hi   == conv_hit_j.strip_hi) &&  // For RPC clusters
+      //(conv_hit_i.roll       == conv_hit_j.roll) &&
+      true
     ) {
       // All duplicates with the same strip but different wire must have same phi_fp
       assert(conv_hit_i.phi_fp == conv_hit_j.phi_fp);
-      assert(!conv_hit_i.vetoed && !conv_hit_j.vetoed);
 
-      insert_hit(conv_hits_it, track);
+      track.xhits.push_back(conv_hit_i);
     }
   }
-}
 
-void EMTFPrimitiveMatching::insert_hit(
-    hit_ptr_t conv_hit_ptr,
-    EMTFTrackExtra& track
-) const {
   // Sort by station
   struct {
     typedef EMTFHitExtra value_type;
@@ -352,6 +349,5 @@ void EMTFPrimitiveMatching::insert_hit(
     }
   } less_station_cmp;
 
-  track.xhits.push_back(*conv_hit_ptr);
   std::stable_sort(track.xhits.begin(), track.xhits.end(), less_station_cmp);
 }

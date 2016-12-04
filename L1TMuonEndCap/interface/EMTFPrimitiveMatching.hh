@@ -36,11 +36,6 @@ public:
       EMTFTrackExtra& track
   ) const;
 
-  void insert_hit(
-      hit_ptr_t conv_hit_ptr,
-      EMTFTrackExtra& track
-  ) const;
-
 private:
   int verbose_, endcap_, sector_, bx_;
 
