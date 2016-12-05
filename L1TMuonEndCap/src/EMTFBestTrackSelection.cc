@@ -2,8 +2,6 @@
 
 #include "helper.hh"  // to_hex, to_binary
 
-#define NUM_CSC_CHAMBERS 6*9   // 18 in ME1, 9 in ME2/3/4, 9 from neighbor sector                                                                   
-#define NUM_RPC_CHAMBERS 6*7   // 6+1 neighbor in stations 1/2, 12+2 neighbor in 3/4                                                                
 
 void EMTFBestTrackSelection::configure(
     int verbose, int endcap, int sector, int bx,
@@ -17,7 +15,7 @@ void EMTFBestTrackSelection::configure(
 
   bxWindow_           = bxWindow;
   maxRoadsPerZone_    = maxRoadsPerZone;
-  maxTracks_          = maxTracks;  // Set this to 1 to emulate cancel-out bug! or set pT to 0 for winner != 0.  - AWB 05.11.16
+  maxTracks_          = maxTracks;
   useSecondEarliest_  = useSecondEarliest;
 }
 
@@ -103,18 +101,13 @@ void EMTFBestTrackSelection::cancel_one_bx(
 
       for (const auto& conv_hit : track.xhits) {
         assert(conv_hit.valid);
-	assert(!conv_hit.vetoed);  // Sanity check for RPCs
 
         // A segment identifier (chamber, strip, bx)
-	int chamber_index = conv_hit.pc_station*9 + conv_hit.pc_chamber;
-	int strip_index   = conv_hit.strip;
-	// Offset RPCs so they don't cancel with CSCs
-	if (conv_hit.subsystem == TriggerPrimitive::kRPC) {
-	  chamber_index  = NUM_CSC_CHAMBERS + (conv_hit.pc_station - 1)*36 + conv_hit.pc_chamber*3 + (conv_hit.roll - 1);
-	  assert(chamber_index <= NUM_CSC_CHAMBERS);  // Sanity check for RPCs 
-	  strip_index    = conv_hit.strip_hi;
-	}
-        const segment_ref_t segment = {{chamber_index, strip_index, 0}};  // due to GCC bug, use {{}} instead of {}
+        //const segment_ref_t segment = {{conv_hit.pc_station*9 + conv_hit.pc_chamber, conv_hit.strip, 0}};
+        int chamber_index  = int(conv_hit.subsystem == TriggerPrimitive::kRPC)*9*5;
+        chamber_index     += conv_hit.pc_station*9;
+        chamber_index     += conv_hit.pc_chamber;
+        const segment_ref_t segment = {{chamber_index, conv_hit.strip, 0}};
         segments.at(zn).push_back(segment);
       }
     }  // end loop over n
@@ -261,7 +254,7 @@ void EMTFBestTrackSelection::cancel_multi_bx(
   assert(maxTracks_ <= max_hzn);
 
   const int delayBX = bxWindow_ - 1;
-  const int num_h = extended_best_track_cands.size() / max_z;  // num of bx history so far (??? - AWB 05.11.16)
+  const int num_h = extended_best_track_cands.size() / max_z;  // num of bx history so far
 
   // Emulate the arrays used in firmware
   typedef std::array<int, 3> segment_ref_t;
@@ -300,8 +293,11 @@ void EMTFBestTrackSelection::cancel_multi_bx(
           assert(conv_hit.valid);
 
           // A segment identifier (chamber, strip, bx)
-	  // Need to redefine to avoid cancelling CSC hits with RPC hits - AWB 05.11.16
-          const segment_ref_t segment = {{conv_hit.pc_station*9 + conv_hit.pc_chamber, conv_hit.strip, conv_hit.bx}};  // due to GCC bug, use {{}} instead of {}
+          //const segment_ref_t segment = {{conv_hit.pc_station*9 + conv_hit.pc_chamber, conv_hit.strip, conv_hit.bx}};
+          int chamber_index  = int(conv_hit.subsystem == TriggerPrimitive::kRPC)*9*5;
+          chamber_index     += conv_hit.pc_station*9;
+          chamber_index     += conv_hit.pc_chamber;
+          const segment_ref_t segment = {{chamber_index, conv_hit.strip, conv_hit.bx}};
           segments.at(hzn).push_back(segment);
         }
       }  // end loop over n
@@ -312,11 +308,16 @@ void EMTFBestTrackSelection::cancel_multi_bx(
   int i=0, j=0, ri=0, rj=0, sum=0;
 
   for (i = 0; i < max_hzn; ++i) {
+    //for (j = 0; j < max_hzn; ++j) {
+    //  larger[i][j] = 0;
+    //}
     larger[i][i] = 1; // result of comparison with itself
+    //ri = rank[i%4][i/4]; // first index loops zone, second loops candidate. Zone loops faster, so we give equal priority to zones
     ri = rank[i];
 
     for (j = i+1; j < max_hzn; ++j) {
-      // i and j bits show which rank is larger
+      // i&j bits show which rank is larger
+      //rj = rank[j%4][j/4];
       rj = rank[j];
       if (ri >= rj)
         larger[i][j] = 1;
@@ -372,9 +373,10 @@ void EMTFBestTrackSelection::cancel_multi_bx(
   // update "larger" array
   for (i = 0; i < max_hzn; ++i) {
     for (j = 0; j < max_hzn; ++j) {
+      //if  (exists[i]) larger[i] = larger[i] | (~exists); // if this track exists make it larger than all non-existing tracks
+      //else  larger[i] = 0; // else make it smaller than anything
       if (exists[i])
-        larger[i][j] = larger[i][j] | (!exists[j]);  // Any existing track is "larger" than any non-existing track
-        // Undoes the cancellation with other BX? - AWB 05.11.16
+        larger[i][j] = larger[i][j] | (!exists[j]);
       else
         larger[i][j] = 0;
     }
@@ -422,8 +424,6 @@ void EMTFBestTrackSelection::cancel_multi_bx(
     for (i = 0; i < max_hzn; ++i) { // winner bit loop
       if (winner[o][i]) {
         h = (i / max_z / max_n);
-	if ( h != ((i / max_z) / max_n) )
-	  std::cout << "I DON'T UNDERSTAAAAAND!!! - AWB" << std::endl;
         n = (i / max_z) % max_n;
         z = i % max_z;
 
