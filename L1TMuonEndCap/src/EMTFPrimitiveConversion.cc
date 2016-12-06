@@ -180,14 +180,6 @@ void EMTFPrimitiveConversion::convert_csc(
   conv_hit.pattern     = tp_data.pattern;
   conv_hit.bend        = tp_data.bend;
 
-  conv_hit.bc0         = 0; // Not used anywhere, but part of EMTF DAQ output
-  conv_hit.mpc_link    = tp_data.mpclink; // Not used anywhere
-  conv_hit.sync_err    = tp_data.syncErr; // Not used anywhere
-  conv_hit.track_num   = tp_data.trknmb; // Not used anywhere
-  conv_hit.stub_num    = pc_segment % 2; // Not used anywhere
-  conv_hit.bx0         = tp_data.bx0; // Not used anywhere
-  conv_hit.layer       = 0; // Not used anywhere
-
   convert_csc_details(conv_hit);
 }
 
@@ -576,14 +568,6 @@ void EMTFPrimitiveConversion::convert_rpc(
   //conv_hit.quality     = tp_data.quality;
   conv_hit.pattern     = 10;  // Arbitrarily set to the straightest pattern for RPC hits
   //conv_hit.bend        = tp_data.bend;
-
-  //conv_hit.bc0         = 0; // Not used anywhere, but part of EMTF DAQ output
-  //conv_hit.mpc_link    = tp_data.mpclink; // Not used anywhere
-  //conv_hit.sync_err    = tp_data.syncErr; // Not used anywhere
-  //conv_hit.track_num   = tp_data.trknmb; // Not used anywhere
-  conv_hit.stub_num    = pc_segment % 2; // Not used anywhere
-  //conv_hit.bx0         = tp_data.bx0; // Not used anywhere
-  //conv_hit.layer       = 0; // Not used anywhere
 
   // Get coordinates from fullsim since LUTs do not exist yet
   bool use_fullsim_coords = true;

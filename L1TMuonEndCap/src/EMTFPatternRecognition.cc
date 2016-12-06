@@ -410,9 +410,6 @@ void EMTFPatternRecognition::process_single_zone(
         road.layer_code   = layer_code;
         road.quality_code = quality_code;
 
-        road.ph_q     = road.quality_code;
-        road.ph_num   = road.key_zhit;
-
         // Find max quality code in a given key_zhit
         if (max_quality_code < road.quality_code) {
           max_quality_code = road.quality_code;

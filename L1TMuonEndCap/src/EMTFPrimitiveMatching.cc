@@ -39,7 +39,7 @@ void EMTFPrimitiveMatching::process(
     for (const auto& roads : zone_roads) {
       for (const auto& road : roads) {
         std::cout << "pattern on match input: z: " << road.zone << " r: " << road.winner
-            << " ph_num: " << road.ph_num << " ph_q: " << to_hex(road.quality_code)
+            << " ph_num: " << road.key_zhit << " ph_q: " << to_hex(road.quality_code)
             << " ly: " << to_binary(road.layer_code, 3) << " str: " << to_binary(road.straightness, 3)
             << std::endl;
       }
@@ -160,6 +160,8 @@ void EMTFPrimitiveMatching::process(
       track.sector   = road.sector;
       track.bx       = road.bx;
       track.zone     = road.zone;
+      track.rank     = road.quality_code;
+      track.winner   = road.winner;
 
       track.xhits.clear();
 
@@ -182,9 +184,6 @@ void EMTFPrimitiveMatching::process(
         assert(track.xhits.size() > 0);
       }
 
-      //track.road = static_cast<EMTFRoad>(road);
-      track.xroad = road;
-
       // Output track
       zone_tracks.at(izone).push_back(track);
 
@@ -195,7 +194,7 @@ void EMTFPrimitiveMatching::process(
     for (const auto& tracks : zone_tracks) {
       for (const auto& track : tracks) {
         for (const auto& xhit : track.xhits) {
-          std::cout << "match seg: z: " << track.xroad.zone << " pat: " << track.xroad.winner <<  " st: " << xhit.station
+          std::cout << "match seg: z: " << track.zone << " pat: " << track.winner <<  " st: " << xhit.station
               << " vi: " << to_binary(0b1, 2) << " hi: " << ((xhit.fs_segment>>4) & 0x3)
               << " ci: " << ((xhit.fs_segment>>1) & 0x7) << " si: " << (xhit.fs_segment & 0x1)
               << " ph: " << xhit.phi_fp << " th: " << xhit.theta_fp
@@ -243,8 +242,8 @@ void EMTFPrimitiveMatching::process_single_zone_station(
   EMTFRoadExtraCollection::const_iterator roads_end = roads.end();
 
   for (; roads_it != roads_end; ++roads_it) {
-    int ph_pat = roads_it->ph_num;  // pattern key phi value
-    int ph_q   = roads_it->ph_q;    // pattern quality code
+    int ph_pat = roads_it->key_zhit;     // pattern key phi value
+    int ph_q   = roads_it->quality_code; // pattern quality code
     assert(ph_pat >= 0 && ph_q > 0);
 
     if (fixZonePhi_) {
