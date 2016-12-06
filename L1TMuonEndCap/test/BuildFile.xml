@@ -8,6 +8,11 @@
     <use name="L1TriggerSep2016/L1TMuonEndCap"/>
     <use name="cppunit"/>
   </bin>
+
+  <bin name="TestEMTFTrackTools" file="unittests/TestEMTFTrackTools.cpp">
+    <use name="L1TriggerSep2016/L1TMuonEndCap"/>
+    <use name="cppunit"/>
+  </bin>
 </environment>
 
 
