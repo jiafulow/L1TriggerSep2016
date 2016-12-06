@@ -363,8 +363,24 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
     // Check that correction did not make invalid value outside chamber coverage
     const int th_negative = 50;
     const int th_coverage = 45;
-
     if (th_tmp > th_negative || th_tmp < 0 || fw_wire == 0)
+      th_tmp = 0;  // limit at the bottom
+    if (th_tmp > th_coverage)
+      th_tmp = th_coverage;  // limit at the top
+  }
+
+  bool fixME11Edges = false;
+  if (fixME11Edges && (is_me11a || is_me11b)) {
+    int pc_wire_strip_id = (((fw_wire >> 4) & 0x3) << 5) | ((eighth_strip >> 4) & 0x1f);  // 2-bit from wire, 5-bit from 2-strip
+    if (is_me11a)
+      pc_wire_strip_id = (((fw_wire >> 4) & 0x3) << 5) | ((((eighth_strip*341)>>8) >> 4) & 0x1f);  // correct for ME1/1a strip number (341/256 =~ 1.333)
+    int th_corr = lut().get_th_corr_lut(fw_endcap, fw_sector, pc_lut_id, pc_wire_strip_id);
+
+    th_tmp = th_tmp + th_corr;
+
+    // Check that correction did not make invalid value outside chamber coverage
+    const int th_coverage = 46;  // max coverage for front chamber is 47, max coverage for rear chamber is 45
+    if (fw_wire == 0)
       th_tmp = 0;  // limit at the bottom
     if (th_tmp > th_coverage)
       th_tmp = th_coverage;  // limit at the top

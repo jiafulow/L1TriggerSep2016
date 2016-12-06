@@ -47,6 +47,10 @@ void EMTFPtAssignment::process(
 
     int gmt_phi = aux().getGMTPhi(track.phi_int);
 
+    bool bugGMTPhi = true;
+    if (!bugGMTPhi)
+      gmt_phi = aux().getGMTPhiV2(track.phi_int);
+
     int gmt_eta = aux().getGMTEta(track.theta_int, endcap_);  // Convert to integer eta using FW LUT
 
     // Explanation from Alex:

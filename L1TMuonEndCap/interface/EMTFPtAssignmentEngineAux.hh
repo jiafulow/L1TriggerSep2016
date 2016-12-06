@@ -40,6 +40,7 @@ public:
   float getPtFromGMTPt(int gmt_pt) const;
 
   int getGMTPhi(int phi) const;
+  int getGMTPhiV2(int phi) const;
 
   int getGMTEta(int theta, int endcap) const;
 
