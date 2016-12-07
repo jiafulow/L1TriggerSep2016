@@ -420,6 +420,14 @@ int EMTFPtAssignmentEngineAux::getGMTPhi(int phi) const {
   return phi;
 }
 
+int EMTFPtAssignmentEngineAux::getGMTPhiV2(int phi) const {
+  // convert phi into gmt scale according to DN15-017
+  phi *= 6991;
+  phi >>= 18; // divide by 0x40000
+  phi -= 35;  // offset of -22 deg
+  return phi;
+}
+
 int EMTFPtAssignmentEngineAux::getGMTEta(int theta, int endcap) const {
   if (theta < 0)
     return 0;
