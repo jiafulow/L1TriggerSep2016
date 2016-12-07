@@ -35,6 +35,7 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
   auto duplicateTheta     = spPCParams16.getParameter<bool>("DuplicateTheta");
   auto fixZonePhi         = spPCParams16.getParameter<bool>("FixZonePhi");
   auto useNewZones        = spPCParams16.getParameter<bool>("UseNewZones");
+  auto fixME11Edges       = spPCParams16.getParameter<bool>("FixME11Edges");
 
   const auto& spPRParams16 = config_.getParameter<edm::ParameterSet>("spPRParams16");
   auto pattDefinitions    = spPRParams16.getParameter<std::vector<std::string> >("PatternDefinitions");
@@ -55,6 +56,7 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
   auto bug9BitDPhi        = spPAParams16.getParameter<bool>("Bug9BitDPhi");
   auto bugMode7CLCT       = spPAParams16.getParameter<bool>("BugMode7CLCT");
   auto bugNegPt           = spPAParams16.getParameter<bool>("BugNegPt");
+  auto bugGMTPhi          = spPAParams16.getParameter<bool>("BugGMTPhi");
 
 
   try {
@@ -76,10 +78,10 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
             verbose_, endcap, sector,
             minBX, maxBX, bxWindow, bxShiftCSC, bxShiftRPC,
             zoneBoundaries, zoneOverlap, zoneOverlapRPC,
-            includeNeighbor, duplicateTheta, fixZonePhi, useNewZones,
+            includeNeighbor, duplicateTheta, fixZonePhi, useNewZones, fixME11Edges,
             pattDefinitions, symPattDefinitions, thetaWindow, thetaWindowRPC, useSymPatterns,
             maxRoadsPerZone, maxTracks, useSecondEarliest,
-            readPtLUTFile, fixMode15HighPt, bug9BitDPhi, bugMode7CLCT, bugNegPt
+            readPtLUTFile, fixMode15HighPt, bug9BitDPhi, bugMode7CLCT, bugNegPt, bugGMTPhi
         );
       }
     }

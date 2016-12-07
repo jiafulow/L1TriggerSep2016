@@ -17,7 +17,7 @@ void EMTFPrimitiveConversion::configure(
     int verbose, int endcap, int sector, int bx,
     int bxShiftCSC, int bxShiftRPC,
     const std::vector<int>& zoneBoundaries, int zoneOverlap, int zoneOverlapRPC,
-    bool duplicateTheta, bool fixZonePhi, bool useNewZones
+    bool duplicateTheta, bool fixZonePhi, bool useNewZones, bool fixME11Edges
 ) {
   assert(tp_geom != nullptr);
   assert(lut != nullptr);
@@ -39,6 +39,7 @@ void EMTFPrimitiveConversion::configure(
   duplicateTheta_  = duplicateTheta;
   fixZonePhi_      = fixZonePhi;
   useNewZones_     = useNewZones;
+  fixME11Edges_    = fixME11Edges;
 }
 
 
@@ -313,17 +314,6 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
   int fph = lut().get_ph_init(fw_endcap, fw_sector, pc_lut_id);
   fph = fph + ph_tmp_sign * ph_tmp;
 
-  // FIXME: remove this once switched to new LUTs
-  // Correct for endcap-dependence (needed to line up with global geometry / RPC hits) - AWB 20.11.16
-  if      (fw_endcap == 0)
-    fph -= 28;
-  else if (fw_endcap == 1)
-    fph -= 36;
-  else
-    std::cout << "Bizzarre error: fw_endcap = " << fw_endcap << ", endcap_ = " << endcap_ << std::endl;
-
-  assert(0 <= fph && fph < 5000);  // FIXME: check this
-
   int ph_hit = lut().get_ph_disp(fw_endcap, fw_sector, pc_lut_id);
   ph_hit = (ph_hit >> 1) + ph_tmp_sign * (ph_tmp >> 5) + ph_coverage;
 
@@ -346,6 +336,9 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
 
   if (fixZonePhi_)
     zone_hit = zone_hit_fixed;
+
+  assert(0 <= fph && fph < 5000);
+  assert(0 <= zone_hit && zone_hit < 192);
 
   // ___________________________________________________________________________
   // theta conversion
@@ -371,8 +364,7 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
       th_tmp = th_coverage;  // limit at the top
   }
 
-  bool fixME11Edges = false;
-  if (fixME11Edges && (is_me11a || is_me11b)) {
+  if (fixME11Edges_ && (is_me11a || is_me11b)) {
     int pc_wire_strip_id = (((fw_wire >> 4) & 0x3) << 5) | ((eighth_strip >> 4) & 0x1f);  // 2-bit from wire, 5-bit from 2-strip
     if (is_me11a)
       pc_wire_strip_id = (((fw_wire >> 4) & 0x3) << 5) | ((((eighth_strip*341)>>8) >> 4) & 0x1f);  // correct for ME1/1a strip number (341/256 =~ 1.333)

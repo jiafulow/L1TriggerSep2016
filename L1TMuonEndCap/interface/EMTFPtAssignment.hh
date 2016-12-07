@@ -13,7 +13,8 @@ public:
       const EMTFPtAssignmentEngine* pt_assign_engine,
       int verbose, int endcap, int sector, int bx,
       bool readPtLUTFile, bool fixMode15HighPt,
-      bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt
+      bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt,
+      bool bugGMTPhi
   );
 
   void process(
@@ -26,6 +27,8 @@ private:
   EMTFPtAssignmentEngine* pt_assign_engine_;
 
   int verbose_, endcap_, sector_, bx_;
+
+  bool bugGMTPhi_;
 };
 
 #endif

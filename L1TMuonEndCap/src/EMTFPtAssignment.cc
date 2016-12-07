@@ -7,7 +7,8 @@ void EMTFPtAssignment::configure(
     const EMTFPtAssignmentEngine* pt_assign_engine,
     int verbose, int endcap, int sector, int bx,
     bool readPtLUTFile, bool fixMode15HighPt,
-    bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt
+    bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt,
+    bool bugGMTPhi
 ) {
   assert(pt_assign_engine != nullptr);
 
@@ -24,6 +25,8 @@ void EMTFPtAssignment::configure(
       readPtLUTFile, fixMode15HighPt,
       bug9BitDPhi, bugMode7CLCT, bugNegPt
   );
+
+  bugGMTPhi_ = bugGMTPhi;
 }
 
 void EMTFPtAssignment::process(
@@ -47,8 +50,7 @@ void EMTFPtAssignment::process(
 
     int gmt_phi = aux().getGMTPhi(track.phi_int);
 
-    bool bugGMTPhi = true;
-    if (!bugGMTPhi)
+    if (!bugGMTPhi_)
       gmt_phi = aux().getGMTPhiV2(track.phi_int);
 
     int gmt_eta = aux().getGMTEta(track.theta_int, endcap_);  // Convert to integer eta using FW LUT

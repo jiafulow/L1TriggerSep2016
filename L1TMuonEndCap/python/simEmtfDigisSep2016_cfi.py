@@ -43,6 +43,7 @@ simEmtfDigisSep2016MC = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
         DuplicateTheta  = cms.bool(True),
         FixZonePhi      = cms.bool(True),
         UseNewZones     = cms.bool(False),
+        FixME11Edges    = cms.bool(False),
     ),
 
     # Sector processor pattern-recognition parameters
@@ -89,6 +90,7 @@ simEmtfDigisSep2016MC = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
         Bug9BitDPhi     = cms.bool(False),
         BugMode7CLCT    = cms.bool(False),
         BugNegPt        = cms.bool(False),
+        BugGMTPhi       = cms.bool(True),
     ),
 
 )

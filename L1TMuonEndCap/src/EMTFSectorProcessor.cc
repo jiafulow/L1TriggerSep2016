@@ -16,10 +16,10 @@ void EMTFSectorProcessor::configure(
     int verbose, int endcap, int sector,
     int minBX, int maxBX, int bxWindow, int bxShiftCSC, int bxShiftRPC,
     const std::vector<int>& zoneBoundaries, int zoneOverlap, int zoneOverlapRPC,
-    bool includeNeighbor, bool duplicateTheta, bool fixZonePhi, bool useNewZones,
+    bool includeNeighbor, bool duplicateTheta, bool fixZonePhi, bool useNewZones, bool fixME11Edges,
     const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions, int thetaWindow, int thetaWindowRPC, bool useSymPatterns,
     int maxRoadsPerZone, int maxTracks, bool useSecondEarliest,
-    bool readPtLUTFile, bool fixMode15HighPt, bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt
+    bool readPtLUTFile, bool fixMode15HighPt, bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt, bool bugGMTPhi
 ) {
   assert(MIN_ENDCAP <= endcap && endcap <= MAX_ENDCAP);
   assert(MIN_TRIGSECTOR <= sector && sector <= MAX_TRIGSECTOR);
@@ -49,6 +49,7 @@ void EMTFSectorProcessor::configure(
   duplicateTheta_     = duplicateTheta;
   fixZonePhi_         = fixZonePhi;
   useNewZones_        = useNewZones;
+  fixME11Edges_       = fixME11Edges;
 
   pattDefinitions_    = pattDefinitions;
   symPattDefinitions_ = symPattDefinitions;
@@ -65,6 +66,7 @@ void EMTFSectorProcessor::configure(
   bug9BitDPhi_        = bug9BitDPhi;
   bugMode7CLCT_       = bugMode7CLCT;
   bugNegPt_           = bugNegPt;
+  bugGMTPhi_          = bugGMTPhi;
 }
 
 void EMTFSectorProcessor::process(
@@ -139,7 +141,7 @@ void EMTFSectorProcessor::process_single_bx(
       verbose_, endcap_, sector_, bx,
       bxShiftCSC_, bxShiftRPC_,
       zoneBoundaries_, zoneOverlap_, zoneOverlapRPC_,
-      duplicateTheta_, fixZonePhi_, useNewZones_
+      duplicateTheta_, fixZonePhi_, useNewZones_, fixME11Edges_
   );
 
   EMTFPatternRecognition patt_recog;
@@ -175,7 +177,8 @@ void EMTFSectorProcessor::process_single_bx(
       pt_assign_engine_,
       verbose_, endcap_, sector_, bx,
       readPtLUTFile_, fixMode15HighPt_,
-      bug9BitDPhi_, bugMode7CLCT_, bugNegPt_
+      bug9BitDPhi_, bugMode7CLCT_, bugNegPt_,
+      bugGMTPhi_
   );
 
   std::map<int, TriggerPrimitiveCollection> selected_csc_map;
