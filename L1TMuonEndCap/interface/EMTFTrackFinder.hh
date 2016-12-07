@@ -30,6 +30,9 @@ public:
   ) const;
 
 private:
+  // 'mutable' because GeometryTranslator has to 'update' inside the const function
+  mutable GeometryTranslator geometry_translator_;
+
   EMTFSectorProcessorLUT sector_processor_lut_;
 
   EMTFPtAssignmentEngine pt_assign_engine_;

@@ -10,24 +10,26 @@ EMTFSectorProcessor::~EMTFSectorProcessor() {
 }
 
 void EMTFSectorProcessor::configure(
+    const GeometryTranslator* tp_geom,
     const EMTFSectorProcessorLUT* lut,
     const EMTFPtAssignmentEngine* pt_assign_engine,
     int verbose, int endcap, int sector,
     int minBX, int maxBX, int bxWindow, int bxShiftCSC, int bxShiftRPC,
-    const std::vector<int>& zoneBoundaries, int zoneOverlap, int zoneOverlapRPC, 
-    bool includeNeighbor, bool duplicateTheta, bool fixZonePhi, bool useNewZones,
+    const std::vector<int>& zoneBoundaries, int zoneOverlap, int zoneOverlapRPC,
+    bool includeNeighbor, bool duplicateTheta, bool fixZonePhi, bool useNewZones, bool fixME11Edges,
     const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions, int thetaWindow, int thetaWindowRPC, bool useSymPatterns,
     int maxRoadsPerZone, int maxTracks, bool useSecondEarliest,
-    bool readPtLUTFile, bool fixMode15HighPt, bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt
+    bool readPtLUTFile, bool fixMode15HighPt, bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt, bool bugGMTPhi
 ) {
   assert(MIN_ENDCAP <= endcap && endcap <= MAX_ENDCAP);
   assert(MIN_TRIGSECTOR <= sector && sector <= MAX_TRIGSECTOR);
 
+  assert(tp_geom != nullptr);
   assert(lut != nullptr);
   assert(pt_assign_engine != nullptr);
 
-  lut_ = lut;
-
+  tp_geom_          = tp_geom;
+  lut_              = lut;
   pt_assign_engine_ = pt_assign_engine;
 
   verbose_  = verbose;
@@ -47,6 +49,7 @@ void EMTFSectorProcessor::configure(
   duplicateTheta_     = duplicateTheta;
   fixZonePhi_         = fixZonePhi;
   useNewZones_        = useNewZones;
+  fixME11Edges_       = fixME11Edges;
 
   pattDefinitions_    = pattDefinitions;
   symPattDefinitions_ = symPattDefinitions;
@@ -63,11 +66,11 @@ void EMTFSectorProcessor::configure(
   bug9BitDPhi_        = bug9BitDPhi;
   bugMode7CLCT_       = bugMode7CLCT;
   bugNegPt_           = bugNegPt;
+  bugGMTPhi_          = bugGMTPhi;
 }
 
 void EMTFSectorProcessor::process(
     EventNumber_t ievent,
-    const std::unique_ptr<L1TMuonEndCap::GeometryTranslator>& tp_geom,
     const TriggerPrimitiveCollection& muon_primitives,
     EMTFHitExtraCollection& out_hits,
     EMTFTrackExtraCollection& out_tracks
@@ -92,7 +95,6 @@ void EMTFSectorProcessor::process(
 
     process_single_bx(
         bx,
-	tp_geom,
         muon_primitives,
         out_hits,
         out_tracks,
@@ -115,7 +117,6 @@ void EMTFSectorProcessor::process(
 
 void EMTFSectorProcessor::process_single_bx(
     int bx,
-    const std::unique_ptr<L1TMuonEndCap::GeometryTranslator>& tp_geom,
     const TriggerPrimitiveCollection& muon_primitives,
     EMTFHitExtraCollection& out_hits,
     EMTFTrackExtraCollection& out_tracks,
@@ -136,11 +137,11 @@ void EMTFSectorProcessor::process_single_bx(
 
   EMTFPrimitiveConversion prim_conv;
   prim_conv.configure(
-      lut_,
+      tp_geom_, lut_,
       verbose_, endcap_, sector_, bx,
       bxShiftCSC_, bxShiftRPC_,
-      zoneBoundaries_, zoneOverlap_, zoneOverlapRPC_, 
-      duplicateTheta_, fixZonePhi_, useNewZones_
+      zoneBoundaries_, zoneOverlap_, zoneOverlapRPC_,
+      duplicateTheta_, fixZonePhi_, useNewZones_, fixME11Edges_
   );
 
   EMTFPatternRecognition patt_recog;
@@ -160,7 +161,7 @@ void EMTFSectorProcessor::process_single_bx(
   EMTFAngleCalculation angle_calc;
   angle_calc.configure(
       verbose_, endcap_, sector_, bx,
-      bxWindow_, 
+      bxWindow_,
       thetaWindow_, thetaWindowRPC_
   );
 
@@ -176,7 +177,8 @@ void EMTFSectorProcessor::process_single_bx(
       pt_assign_engine_,
       verbose_, endcap_, sector_, bx,
       readPtLUTFile_, fixMode15HighPt_,
-      bug9BitDPhi_, bugMode7CLCT_, bugNegPt_
+      bug9BitDPhi_, bugMode7CLCT_, bugNegPt_,
+      bugGMTPhi_
   );
 
   std::map<int, TriggerPrimitiveCollection> selected_csc_map;
@@ -202,23 +204,8 @@ void EMTFSectorProcessor::process_single_bx(
   // Convert trigger primitives into "converted hits"
   // A converted hit consists of integer representations of phi, theta, and zones
   // From src/EMTFPrimitiveConversion.cc
-  prim_conv.process(CSCTag(), selected_csc_map, conv_hits, tp_geom);
-  prim_conv.process(RPCTag(), selected_rpc_map, conv_hits, tp_geom);
-
-  for (const auto& conv_hit : conv_hits) {
-    if (conv_hit.subsystem == 1)
-      if (conv_hit.endcap == 2 && conv_hit.station == 1 && (conv_hit.ring % 3) == 4 && conv_hit.chamber == 36)
-	std::cout << "CSC hit, sector " << conv_hit.pc_sector << ": BX " << conv_hit.bx << ", endcap " << conv_hit.endcap 
-		  << ", sector " << conv_hit.sector << ", station " << conv_hit.station << ", ring " << conv_hit.ring 
-		  << ", chamber " << conv_hit.chamber << ", phi_fp = " << conv_hit.phi_fp << ", theta_fp " << conv_hit.theta_fp 
-		  << ", strip " << conv_hit.strip << ", wire " << conv_hit.wire << std::endl;
-    // else if (conv_hit.subsystem == 2)
-    //   std::cout << "RPC hit, sector " << conv_hit.pc_sector << ": BX " << conv_hit.bx << ", endcap " << conv_hit.endcap 
-    // 		<< ", sector " << conv_hit.sector << ", station " << conv_hit.station << ", ring " << conv_hit.ring 
-    // 		<< ", subsect " << conv_hit.subsector << ", phi_fp = " << conv_hit.phi_fp << ", theta_fp " << conv_hit.theta_fp
-    // 		<< ", phi_glob_deg = " << conv_hit.phi_glob_deg << ", theta_deg " << conv_hit.theta_deg << std::endl;
-  }
-
+  prim_conv.process(CSCTag(), selected_csc_map, conv_hits);
+  prim_conv.process(RPCTag(), selected_rpc_map, conv_hits);
   extended_conv_hits.push_back(conv_hits);
 
   // Detect patterns in all zones, find 3 best roads in each zone

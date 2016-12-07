@@ -40,6 +40,11 @@ process.out = cms.OutputModule("PoolOutputModule",
 
 process.options = cms.untracked.PSet()
 
+# GlobalTag
+process.load('Configuration.StandardSequences.GeometryRecoDB_cff')
+process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
+from Configuration.AlCa.GlobalTag import GlobalTag
+process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:run2_data', '')
 
 # Plugin: simEmtfDigis
 process.load("L1TriggerSep2016.L1TMuonEndCap.simEmtfDigis_cfi")

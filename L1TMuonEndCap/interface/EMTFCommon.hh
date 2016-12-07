@@ -9,6 +9,7 @@
 #include "DataFormatsSep2016/L1TMuon/interface/EMTFRoadExtra.h"
 #include "DataFormatsSep2016/L1TMuon/interface/EMTFTrackExtra.h"
 
+#include "L1TriggerSep2016/L1TMuonEndCap/interface/GeometryTranslator.h"
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/MuonTriggerPrimitive.h"
 #include "L1TriggerSep2016/L1TMuonEndCap/interface/MuonTriggerPrimitiveFwd.h"
 
@@ -31,6 +32,7 @@ typedef L1TMuonEndCap::EMTFTrackExtraCollection EMTFTrackExtraCollection;
 
 typedef L1TMuonEndCap::EMTFPtLUTData EMTFPtLUTData;
 
+typedef L1TMuonEndCap::GeometryTranslator         GeometryTranslator;
 typedef L1TMuonEndCap::TriggerPrimitive           TriggerPrimitive;
 typedef L1TMuonEndCap::TriggerPrimitiveCollection TriggerPrimitiveCollection;
 

@@ -29,21 +29,21 @@ public:
   typedef EMTFPatternRecognition::pattern_ref_t pattern_ref_t;
 
   void configure(
+      const GeometryTranslator* tp_geom,
       const EMTFSectorProcessorLUT* lut,
       const EMTFPtAssignmentEngine* pt_assign_engine,
       int verbose, int endcap, int sector,
       int minBX, int maxBX, int bxWindow, int bxShiftCSC, int bxShiftRPC,
       const std::vector<int>& zoneBoundaries, int zoneOverlap, int zoneOverlapRPC,
-      bool includeNeighbor, bool duplicateTheta, bool fixZonePhi, bool useNewZones,
+      bool includeNeighbor, bool duplicateTheta, bool fixZonePhi, bool useNewZones, bool fixME11Edges,
       const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions, int thetaWindow, int thetaWindowRPC, bool useSymPatterns,
       int maxRoadsPerZone, int maxTracks, bool useSecondEarliest,
-      bool readPtLUTFile, bool fixMode15HighPt, bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt
+      bool readPtLUTFile, bool fixMode15HighPt, bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt, bool bugGMTPhi
   );
 
   void process(
       // Input
       EventNumber_t ievent,
-      const std::unique_ptr<L1TMuonEndCap::GeometryTranslator>& tp_geom,
       const TriggerPrimitiveCollection& muon_primitives,
       // Output
       EMTFHitExtraCollection& out_hits,
@@ -53,7 +53,6 @@ public:
   void process_single_bx(
       // Input
       int bx,
-      const std::unique_ptr<L1TMuonEndCap::GeometryTranslator>& tp_geom,
       const TriggerPrimitiveCollection& muon_primitives,
       // Output
       EMTFHitExtraCollection& out_hits,
@@ -65,6 +64,8 @@ public:
   ) const;
 
 private:
+  const GeometryTranslator* tp_geom_;
+
   const EMTFSectorProcessorLUT* lut_;
 
   const EMTFPtAssignmentEngine* pt_assign_engine_;
@@ -76,7 +77,7 @@ private:
   // For primitive conversion
   std::vector<int> zoneBoundaries_;
   int zoneOverlap_, zoneOverlapRPC_;
-  bool includeNeighbor_, duplicateTheta_, fixZonePhi_, useNewZones_;
+  bool includeNeighbor_, duplicateTheta_, fixZonePhi_, useNewZones_, fixME11Edges_;
 
   // For pattern recognition
   std::vector<std::string> pattDefinitions_, symPattDefinitions_;
@@ -89,7 +90,7 @@ private:
 
   // For pt assignment
   bool readPtLUTFile_, fixMode15HighPt_;
-  bool bug9BitDPhi_, bugMode7CLCT_, bugNegPt_;
+  bool bug9BitDPhi_, bugMode7CLCT_, bugNegPt_, bugGMTPhi_;
 };
 
 #endif

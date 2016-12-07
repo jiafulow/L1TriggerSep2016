@@ -118,11 +118,13 @@ TriggerPrimitive::TriggerPrimitive(const CSCDetId& detid,
 TriggerPrimitive::TriggerPrimitive(const RPCDetId& detid,
                                    const unsigned strip,
                                    const unsigned layer,
-                                   const int16_t bx):
+                                   const int bx):
   _id(detid),
   _subsystem(TriggerPrimitive::kRPC) {
   calculateRPCGlobalSector(detid,_globalsector,_subsector);
   _rpc.strip = strip;
+  _rpc.strip_low = strip;
+  _rpc.strip_hi = strip;
   _rpc.layer = layer;
   _rpc.bx = bx;
 }
@@ -183,6 +185,8 @@ bool TriggerPrimitive::operator==(const TriggerPrimitive& tp) const {
            this->_csc.syncErr == tp._csc.syncErr &&
            this->_csc.cscID == tp._csc.cscID &&
            this->_rpc.strip == tp._rpc.strip &&
+           this->_rpc.strip_low == tp._rpc.strip_low &&
+           this->_rpc.strip_hi == tp._rpc.strip_hi &&
            this->_rpc.layer == tp._rpc.layer &&
            this->_rpc.bx == tp._rpc.bx &&
            this->_id == tp._id &&
@@ -273,16 +277,22 @@ const int TriggerPrimitive::Id() const {
 void TriggerPrimitive::calculateDTGlobalSector(const DTChamberId& chid,
                                                unsigned& global_sector,
                                                unsigned& subsector ) {
+  global_sector = 0;
+  subsector = 0;
 }
 
 void TriggerPrimitive::calculateCSCGlobalSector(const CSCDetId& chid,
                                                 unsigned& global_sector,
                                                 unsigned& subsector ) {
+  global_sector = 0;
+  subsector = 0;
 }
 
 void TriggerPrimitive::calculateRPCGlobalSector(const RPCDetId& chid,
                                                 unsigned& global_sector,
                                                 unsigned& subsector ) {
+  global_sector = 0;
+  subsector = 0;
 }
 
 void TriggerPrimitive::print(std::ostream& out) const {
@@ -323,6 +333,8 @@ void TriggerPrimitive::print(std::ostream& out) const {
     out << detId<RPCDetId>() << std::endl;
     out << "Local BX      : " << _rpc.bx << std::endl;
     out << "Strip         : " << _rpc.strip << std::endl;
+    out << "Strip Low     : " << _rpc.strip_low << std::endl;
+    out << "Strip High    : " << _rpc.strip_hi << std::endl;
     out << "Layer         : " << _rpc.layer << std::endl;
     break;
   default:

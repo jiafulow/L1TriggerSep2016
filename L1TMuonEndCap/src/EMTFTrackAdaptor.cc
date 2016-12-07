@@ -21,18 +21,18 @@ void EMTFTrackAdaptor::convert_hit(const EMTFHitExtra& in_hit, EMTFHit& out_hit)
   out_hit.set_chamber      ( in_hit.chamber       );
   out_hit.set_csc_ID       ( in_hit.csc_ID        );
   out_hit.set_neighbor     ( (in_hit.pc_station == 5) ? 1 : 0 );
-  out_hit.set_mpc_link     ( in_hit.mpc_link      );
+  //out_hit.set_mpc_link     ( in_hit.mpc_link      );
   out_hit.set_wire         ( in_hit.wire          );
   out_hit.set_strip        ( in_hit.strip         );
-  out_hit.set_track_num    ( in_hit.track_num     );
+  //out_hit.set_track_num    ( in_hit.track_num     );
   out_hit.set_quality      ( in_hit.quality       );
   out_hit.set_pattern      ( in_hit.pattern       );
   out_hit.set_bend         ( in_hit.bend          );
   out_hit.set_valid        ( in_hit.valid         );
-  out_hit.set_sync_err     ( in_hit.sync_err      );
-  out_hit.set_bc0          ( in_hit.bc0           );
+  //out_hit.set_sync_err     ( in_hit.sync_err      );
+  //out_hit.set_bc0          ( in_hit.bc0           );
   out_hit.set_bx           ( in_hit.bx            );
-  out_hit.set_stub_num     ( in_hit.stub_num      );
+  //out_hit.set_stub_num     ( in_hit.stub_num      );
   out_hit.set_is_CSC_hit   ( (in_hit.subsystem == TriggerPrimitive::kCSC) ? 1 : 0 );
   out_hit.set_is_RPC_hit   ( (in_hit.subsystem == TriggerPrimitive::kRPC) ? 1 : 0 );
 }

@@ -260,7 +260,7 @@ bool EMTFPatternRecognition::is_zone_empty(
 
     for (; conv_hits_it != conv_hits_end; ++conv_hits_it) {
       if (conv_hits_it->subsystem == TriggerPrimitive::kRPC)
-	continue;  // Don't use RPCs for pattern formation
+        continue;  // Don't use RPCs for pattern formation
 
       if (conv_hits_it->zone_code & (1<<zone)) {  // hit belongs to this zone
         num_conv_hits += 1;
@@ -294,8 +294,8 @@ void EMTFPatternRecognition::make_zone_image(
 
     for (; conv_hits_it != conv_hits_end; ++conv_hits_it) {
       if (conv_hits_it->subsystem == TriggerPrimitive::kRPC)
-	continue;  // Don't use RPCs for pattern formation
-      
+        continue;  // Don't use RPCs for pattern formation
+
       if (conv_hits_it->zone_code & (1 << zone)) {  // hit belongs to this zone
         unsigned int layer = conv_hits_it->station - 1;
         unsigned int bit   = conv_hits_it->zone_hit;
@@ -409,9 +409,6 @@ void EMTFPatternRecognition::process_single_zone(
         road.straightness = straightness;
         road.layer_code   = layer_code;
         road.quality_code = quality_code;
-
-        road.ph_q     = road.quality_code;
-        road.ph_num   = road.key_zhit;
 
         // Find max quality code in a given key_zhit
         if (max_quality_code < road.quality_code) {

@@ -70,4 +70,19 @@ namespace {
     }
   }
 
+  template <class ForwardIt, class BinaryPredicate, class BinaryOp>
+  ForwardIt adjacent_cluster(ForwardIt first, ForwardIt last, BinaryPredicate adjacent, BinaryOp cluster) {
+    if (first == last) return last;
+
+    ForwardIt result = first;
+    while (++first != last) {
+      if (!adjacent(*result, *first)) {
+        *++result = std::move(*first);
+      } else {
+        cluster(*result, *first);
+      }
+    }
+    return ++result;
+  }
+
 }  // namespace
