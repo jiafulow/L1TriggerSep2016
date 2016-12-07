@@ -8,7 +8,7 @@ class EMTFPrimitiveSelection {
 public:
   void configure(
       int verbose, int endcap, int sector, int bx,
-      int bxShiftCSC,
+      int bxShiftCSC, int bxShiftRPC,
       bool includeNeighbor, bool duplicateTheta
   );
 
@@ -39,20 +39,18 @@ public:
   // RPC functions
   int select_rpc(const TriggerPrimitive& muon_primitive) const;
 
-  bool is_in_sector_rpc(int tp_endcap, int tp_sector) const;
+  bool is_in_sector_rpc(int tp_endcap, int tp_sector, int tp_subsector) const;
 
-  bool is_in_neighbor_sector_rpc(
-      int tp_endcap, int tp_sector, int tp_subsector, int tp_station, int tp_ring, int tp_roll
-  ) const;
+  bool is_in_neighbor_sector_rpc(int tp_endcap, int tp_sector, int tp_subsector) const;
 
   bool is_in_bx_rpc(int tp_bx) const;
 
-  int get_index_rpc(int tp_subsector, int tp_station, int tp_ring, int tp_roll, bool is_neighbor) const;
+  int get_index_rpc(int tp_station, int tp_ring, int tp_subsector, bool is_neighbor) const;
 
 private:
   int verbose_, endcap_, sector_, bx_;
-
-  int bxShiftCSC_;
+  
+  int bxShiftCSC_, bxShiftRPC_;
 
   bool includeNeighbor_, duplicateTheta_;
 };

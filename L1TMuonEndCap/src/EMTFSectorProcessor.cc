@@ -13,9 +13,10 @@ void EMTFSectorProcessor::configure(
     const EMTFSectorProcessorLUT* lut,
     const EMTFPtAssignmentEngine* pt_assign_engine,
     int verbose, int endcap, int sector,
-    int minBX, int maxBX, int bxWindow, int bxShiftCSC,
-    const std::vector<int>& zoneBoundaries, int zoneOverlap, bool includeNeighbor, bool duplicateTheta, bool fixZonePhi, bool useNewZones,
-    const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions, int thetaWindow, bool useSymPatterns,
+    int minBX, int maxBX, int bxWindow, int bxShiftCSC, int bxShiftRPC,
+    const std::vector<int>& zoneBoundaries, int zoneOverlap, int zoneOverlapRPC, 
+    bool includeNeighbor, bool duplicateTheta, bool fixZonePhi, bool useNewZones,
+    const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions, int thetaWindow, int thetaWindowRPC, bool useSymPatterns,
     int maxRoadsPerZone, int maxTracks, bool useSecondEarliest,
     bool readPtLUTFile, bool fixMode15HighPt, bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt
 ) {
@@ -37,9 +38,11 @@ void EMTFSectorProcessor::configure(
   maxBX_       = maxBX;
   bxWindow_    = bxWindow;
   bxShiftCSC_  = bxShiftCSC;
+  bxShiftRPC_  = bxShiftRPC;
 
   zoneBoundaries_     = zoneBoundaries;
   zoneOverlap_        = zoneOverlap;
+  zoneOverlapRPC_     = zoneOverlapRPC;
   includeNeighbor_    = includeNeighbor;
   duplicateTheta_     = duplicateTheta;
   fixZonePhi_         = fixZonePhi;
@@ -48,6 +51,7 @@ void EMTFSectorProcessor::configure(
   pattDefinitions_    = pattDefinitions;
   symPattDefinitions_ = symPattDefinitions;
   thetaWindow_        = thetaWindow;
+  thetaWindowRPC_     = thetaWindowRPC;
   useSymPatterns_     = useSymPatterns;
 
   maxRoadsPerZone_    = maxRoadsPerZone;
@@ -63,6 +67,7 @@ void EMTFSectorProcessor::configure(
 
 void EMTFSectorProcessor::process(
     EventNumber_t ievent,
+    const std::unique_ptr<L1TMuonEndCap::GeometryTranslator>& tp_geom,
     const TriggerPrimitiveCollection& muon_primitives,
     EMTFHitExtraCollection& out_hits,
     EMTFTrackExtraCollection& out_tracks
@@ -87,6 +92,7 @@ void EMTFSectorProcessor::process(
 
     process_single_bx(
         bx,
+	tp_geom,
         muon_primitives,
         out_hits,
         out_tracks,
@@ -109,6 +115,7 @@ void EMTFSectorProcessor::process(
 
 void EMTFSectorProcessor::process_single_bx(
     int bx,
+    const std::unique_ptr<L1TMuonEndCap::GeometryTranslator>& tp_geom,
     const TriggerPrimitiveCollection& muon_primitives,
     EMTFHitExtraCollection& out_hits,
     EMTFTrackExtraCollection& out_tracks,
@@ -123,7 +130,7 @@ void EMTFSectorProcessor::process_single_bx(
   EMTFPrimitiveSelection prim_sel;
   prim_sel.configure(
       verbose_, endcap_, sector_, bx,
-      bxShiftCSC_,
+      bxShiftCSC_, bxShiftRPC_,
       includeNeighbor_, duplicateTheta_
   );
 
@@ -131,8 +138,9 @@ void EMTFSectorProcessor::process_single_bx(
   prim_conv.configure(
       lut_,
       verbose_, endcap_, sector_, bx,
-      bxShiftCSC_,
-      zoneBoundaries_, zoneOverlap_, duplicateTheta_, fixZonePhi_, useNewZones_
+      bxShiftCSC_, bxShiftRPC_,
+      zoneBoundaries_, zoneOverlap_, zoneOverlapRPC_, 
+      duplicateTheta_, fixZonePhi_, useNewZones_
   );
 
   EMTFPatternRecognition patt_recog;
@@ -152,8 +160,8 @@ void EMTFSectorProcessor::process_single_bx(
   EMTFAngleCalculation angle_calc;
   angle_calc.configure(
       verbose_, endcap_, sector_, bx,
-      bxWindow_,
-      thetaWindow_
+      bxWindow_, 
+      thetaWindow_, thetaWindowRPC_
   );
 
   EMTFBestTrackSelection btrack_sel;
@@ -187,30 +195,51 @@ void EMTFSectorProcessor::process_single_bx(
 
   // Select muon primitives that belong to this sector and this BX.
   // Put them into maps with an index that roughly corresponds to
-  // each input link
+  // each input link. From src/EMTFPrimitiveSelection.cc.
   prim_sel.process(CSCTag(), muon_primitives, selected_csc_map);
   prim_sel.process(RPCTag(), muon_primitives, selected_rpc_map);
 
   // Convert trigger primitives into "converted hits"
   // A converted hit consists of integer representations of phi, theta, and zones
-  prim_conv.process(CSCTag(), selected_csc_map, conv_hits);
-  prim_conv.process(RPCTag(), selected_rpc_map, conv_hits);
+  // From src/EMTFPrimitiveConversion.cc
+  prim_conv.process(CSCTag(), selected_csc_map, conv_hits, tp_geom);
+  prim_conv.process(RPCTag(), selected_rpc_map, conv_hits, tp_geom);
+
+  for (const auto& conv_hit : conv_hits) {
+    if (conv_hit.subsystem == 1)
+      if (conv_hit.endcap == 2 && conv_hit.station == 1 && (conv_hit.ring % 3) == 4 && conv_hit.chamber == 36)
+	std::cout << "CSC hit, sector " << conv_hit.pc_sector << ": BX " << conv_hit.bx << ", endcap " << conv_hit.endcap 
+		  << ", sector " << conv_hit.sector << ", station " << conv_hit.station << ", ring " << conv_hit.ring 
+		  << ", chamber " << conv_hit.chamber << ", phi_fp = " << conv_hit.phi_fp << ", theta_fp " << conv_hit.theta_fp 
+		  << ", strip " << conv_hit.strip << ", wire " << conv_hit.wire << std::endl;
+    // else if (conv_hit.subsystem == 2)
+    //   std::cout << "RPC hit, sector " << conv_hit.pc_sector << ": BX " << conv_hit.bx << ", endcap " << conv_hit.endcap 
+    // 		<< ", sector " << conv_hit.sector << ", station " << conv_hit.station << ", ring " << conv_hit.ring 
+    // 		<< ", subsect " << conv_hit.subsector << ", phi_fp = " << conv_hit.phi_fp << ", theta_fp " << conv_hit.theta_fp
+    // 		<< ", phi_glob_deg = " << conv_hit.phi_glob_deg << ", theta_deg " << conv_hit.theta_deg << std::endl;
+  }
+
   extended_conv_hits.push_back(conv_hits);
 
   // Detect patterns in all zones, find 3 best roads in each zone
+  // From src/EMTFPatternRecognition.cc
   patt_recog.process(extended_conv_hits, patt_lifetime_map, zone_roads);
 
   // Match the trigger primitives to the roads, create tracks
+  // From src/EMTFPrimitiveMatching.cc
   prim_match.process(extended_conv_hits, zone_roads, zone_tracks);
 
   // Calculate deflection angles for each track and fill track variables
+  // From src/EMTFAngleCalculation.cc
   angle_calc.process(zone_tracks);
   extended_best_track_cands.insert(extended_best_track_cands.begin(), zone_tracks.begin(), zone_tracks.end());  // push_front
 
   // Identify 3 best tracks
+  // From src/EMTFBestTrackSelection.cc
   btrack_sel.process(extended_best_track_cands, best_tracks);
 
   // Construct pT address, assign pT
+  // From src/EMTFPtAssignment.cc
   pt_assign.process(best_tracks);
 
   // ___________________________________________________________________________
