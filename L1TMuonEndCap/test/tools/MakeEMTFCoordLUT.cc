@@ -778,11 +778,6 @@ void MakeEMTFCoordLUT::validateLUTs() {
           fph_emu = static_cast<double>(fph_int);
           fph_emu = fph_emu / 60.;
           fph_emu = fph_emu - 22. + 15. + (60. * fw_sector);
-
-#ifndef REPRODUCE_OLD_LUTS
-          fph_emu = (endcap == 2) ? fph_emu - 36./60 : fph_emu - 28./60;
-#endif
-
           fph_emu = deltaPhiInDegrees(fph_emu, 0.);  // reduce to [-180,180]
 
           fth_int = th;
@@ -1026,7 +1021,14 @@ double MakeEMTFCoordLUT::getSectorPhi(int endcap, int sector, int subsector, int
   const int firstStrip = (endcap == 1) ? 0 : maxStrip-1;
   double sectorStartPhi = getGlobalPhiFullstrip(endcap, sector_n, 0, 2, 3, false, firstWire, firstStrip) - 2.;
 
+#ifndef REPRODUCE_OLD_LUTS
+  // but sector boundary does depend on endcap. apply additional correction to make integer phi 0
+  // lines up at -22 deg (Jia Fu, 2016-11-12)
+  sectorStartPhi = (endcap == 2) ? sectorStartPhi + 36./60 : sectorStartPhi + 28./60;
+#endif
+
   double res = deltaPhiInDegrees(globalPhi, sectorStartPhi);
+  assert(res >= 0.);
   return res;
 }
 
