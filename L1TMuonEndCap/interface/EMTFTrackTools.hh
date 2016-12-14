@@ -130,12 +130,16 @@ namespace L1TMuonEndCap {
   //  return deg_to_rad(calc_phi_loc_deg_corr(bits, endcap));
   //}
 
-  inline int    calc_phi_loc_int(double glob, int sector) {  // glob in deg, sector [1-6]
+  inline double calc_phi_loc_deg_from_glob(double glob, int sector) {  // glob in deg, sector [1-6]
     // Put phi in [-180,180] range
     while (glob <  -180.)  glob += 360.;
     while (glob >= +180.)  glob -= 360.;
-
     double loc = glob - 15. - (60. * (sector-1));
+    return loc;
+  }
+
+  inline int    calc_phi_loc_int(double glob, int sector) {  // glob in deg, sector [1-6]
+    double loc = calc_phi_loc_deg_from_glob(glob, sector);
     loc = ((loc + 22.) < 0.) ? loc + 360. : loc;
     loc = (loc + 22.) * 60.;
     int phi_int = static_cast<int>(std::round(loc));

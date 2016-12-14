@@ -182,6 +182,22 @@ void EMTFPrimitiveConversion::convert_csc(
   conv_hit.bend        = tp_data.bend;
 
   convert_csc_details(conv_hit);
+
+  // Add coordinates from fullsim
+  {
+    namespace l1t = L1TMuonEndCap;
+
+    const GlobalPoint& gp = tp_geom_->getGlobalPoint(muon_primitive);
+    double glob_phi   = l1t::rad_to_deg(gp.phi().value());
+    double glob_theta = l1t::rad_to_deg(gp.theta());
+    double glob_eta   = gp.eta();
+    double loc_phi    = l1t::calc_phi_loc_deg_from_glob(glob_phi, sector_);
+
+    conv_hit.phi_glob_deg = glob_phi;
+    conv_hit.phi_loc_deg  = loc_phi;
+    conv_hit.theta_deg    = glob_theta;
+    conv_hit.eta          = glob_eta;
+  }
 }
 
 void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const {
@@ -566,15 +582,10 @@ void EMTFPrimitiveConversion::convert_rpc(
     namespace l1t = L1TMuonEndCap;
 
     const GlobalPoint& gp = tp_geom_->getGlobalPoint(muon_primitive);
-    double glob_phi   = gp.phi().value();
-    double glob_theta = gp.theta();
+    double glob_phi   = l1t::rad_to_deg(gp.phi().value());
+    double glob_theta = l1t::rad_to_deg(gp.theta());
     double glob_eta   = gp.eta();
-    glob_phi          = l1t::rad_to_deg(glob_phi);
-    glob_theta        = l1t::rad_to_deg(glob_theta);
-
-    double loc_phi = glob_phi - 15. - (60. * (sector_-1));  // assume glob_phi in [-180,180] range
-    loc_phi = ((loc_phi + 22.) < 0.) ? loc_phi + 360. : loc_phi;
-    loc_phi = (loc_phi + 22.) * 60.;
+    double loc_phi    = l1t::calc_phi_loc_deg_from_glob(glob_phi, sector_);
 
     int phi_loc_int   = l1t::calc_phi_loc_int(glob_phi, sector_);
     int theta_int     = l1t::calc_theta_int(glob_theta, endcap_);
