@@ -29,6 +29,7 @@ class RPCGeometry;
 class CSCGeometry;
 class CSCLayer;
 class DTGeometry;
+class MagneticField;
 
 namespace L1TMuonEndCap {
   class TriggerPrimitive;
@@ -46,12 +47,21 @@ namespace L1TMuonEndCap {
 
     void checkAndUpdateGeometry(const edm::EventSetup&);
 
+    const RPCGeometry& getRPCGeometry() const { return *_georpc; }
+    const CSCGeometry& getCSCGeometry() const { return *_geocsc; }
+    const DTGeometry&  getDTGeometry()  const { return *_geodt;  }
+
+    const MagneticField& getMagneticField() const { return *_magfield; }
+
   private:
     // pointers to the current geometry records
     unsigned long long _geom_cache_id;
     edm::ESHandle<RPCGeometry> _georpc;
     edm::ESHandle<CSCGeometry> _geocsc;
     edm::ESHandle<DTGeometry>  _geodt;
+
+    unsigned long long _magfield_cache_id;
+    edm::ESHandle<MagneticField> _magfield;
 
     GlobalPoint getRPCSpecificPoint(const TriggerPrimitive&) const;
     double calcRPCSpecificEta(const TriggerPrimitive&) const;
