@@ -348,7 +348,7 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
   int th_tmp = lut().get_th_lut(fw_endcap, fw_sector, pc_lut_id, pc_wire_id);
 
   // For ME1/1 with tilted wires, add theta correction as a function of (wire,strip) index
-  if (is_me11a || is_me11b) {
+  if (!fixME11Edges_ && (is_me11a || is_me11b)) {
     int pc_wire_strip_id = (((fw_wire >> 4) & 0x3) << 5) | ((eighth_strip >> 4) & 0x1f);  // 2-bit from wire, 5-bit from 2-strip
     int th_corr = lut().get_th_corr_lut(fw_endcap, fw_sector, pc_lut_id, pc_wire_strip_id);
     int th_corr_sign = (ph_reverse == 0) ? 1 : -1;
@@ -362,9 +362,8 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
       th_tmp = 0;  // limit at the bottom
     if (th_tmp > th_coverage)
       th_tmp = th_coverage;  // limit at the top
-  }
 
-  if (fixME11Edges_ && (is_me11a || is_me11b)) {
+  } else if (fixME11Edges_ && (is_me11a || is_me11b)) {
     int pc_wire_strip_id = (((fw_wire >> 4) & 0x3) << 5) | ((eighth_strip >> 4) & 0x1f);  // 2-bit from wire, 5-bit from 2-strip
     if (is_me11a)
       pc_wire_strip_id = (((fw_wire >> 4) & 0x3) << 5) | ((((eighth_strip*341)>>8) >> 4) & 0x1f);  // correct for ME1/1a strip number (341/256 =~ 1.333)
