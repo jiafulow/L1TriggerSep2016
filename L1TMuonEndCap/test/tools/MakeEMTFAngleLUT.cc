@@ -132,8 +132,8 @@ void MakeEMTFAngleLUT::generateLUTs() {
   };
   if (isFront) {}  // get around GCC unused-but-set-variable error
 
-  // Save z positions for ME1/1, ME1/2, ME1/3, ME2/2, ME3/2, ME4/2, RE1/2, RE2/2, RE3/2, RE4/2
-  std::vector<double> z_positions(20, 0.);
+  // Save z positions for ME1/1, ME1/2, ME1/3, ME2/2, ME3/2, ME4/2, RE1/2, RE1/3, RE2/2, RE3/2, RE4/2
+  std::vector<double> z_positions(22, 0.);
 
   // CSC
   for (CSCGeometry::DetUnitContainer::const_iterator it = geocsc.detUnits().begin(); it != geocsc.detUnits().end(); ++it) {
@@ -195,8 +195,10 @@ void MakeEMTFAngleLUT::generateLUTs() {
     //const RPCChamber* chamber = roll->chamber();  // like GeomDet
     //assert(chamber != nullptr);
     const RPCDetId& rpcDetId = roll->id();
-    if (rpcDetId.region() == 0 || (rpcDetId.station() <= 2 && rpcDetId.ring() == 3))  // skip barrel, RE1/3, RE2/3
+    if (rpcDetId.region() == 0)  // skip barrel
       continue;
+    //if (rpcDetId.region() == 0 || (rpcDetId.station() <= 2 && rpcDetId.ring() == 3))  // skip barrel, RE1/3, RE2/3
+    //  continue;
     double zpos = roll->surface().position().z();  // [cm]
     //std::cout << "RPC: " << rpcDetId.region() << " " << rpcDetId.ring() << " " << rpcDetId.station() << " " << rpcDetId.sector() << " " << rpcDetId.layer() << " " << rpcDetId.subsector() << " " << rpcDetId.roll() << " " << zpos << std::endl;
 
@@ -208,23 +210,29 @@ void MakeEMTFAngleLUT::generateLUTs() {
         } else if (rpcDetId.subsector() == 1) {  // rear
           z_positions[13] = zpos;
         }
-      } else if (rpcDetId.station() == 2 && rpcDetId.ring() == 2) {
+      } else if (rpcDetId.station() == 1 && rpcDetId.ring() == 3) {
         if        (rpcDetId.subsector() == 2) {  // front
           z_positions[14] = zpos;
         } else if (rpcDetId.subsector() == 1) {  // rear
           z_positions[15] = zpos;
         }
-      } else if (rpcDetId.station() == 3 && rpcDetId.ring() == 2) {
+      } else if (rpcDetId.station() == 2 && rpcDetId.ring() == 2) {
         if        (rpcDetId.subsector() == 2) {  // front
           z_positions[16] = zpos;
         } else if (rpcDetId.subsector() == 1) {  // rear
           z_positions[17] = zpos;
         }
-      } else if (rpcDetId.station() == 4 && rpcDetId.ring() == 2) {
+      } else if (rpcDetId.station() == 3 && rpcDetId.ring() == 2) {
         if        (rpcDetId.subsector() == 2) {  // front
           z_positions[18] = zpos;
         } else if (rpcDetId.subsector() == 1) {  // rear
           z_positions[19] = zpos;
+        }
+      } else if (rpcDetId.station() == 4 && rpcDetId.ring() == 2) {
+        if        (rpcDetId.subsector() == 2) {  // front
+          z_positions[20] = zpos;
+        } else if (rpcDetId.subsector() == 1) {  // rear
+          z_positions[21] = zpos;
         }
       }
     }
@@ -275,13 +283,13 @@ void MakeEMTFAngleLUT::generateLUTs() {
       common_zpos = average(z_positions[8], z_positions[9]);
     } else if (iz == 10 || iz == 11) {  // ME4/2
       common_zpos = average(z_positions[10], z_positions[11]);
-    } else if (iz == 12 || iz == 13) {  // RE1/2
+    } else if (iz == 12 || iz == 13 || iz == 14 || iz == 15) {  // RE1/2, RE1/3
       common_zpos = average(z_positions[2], z_positions[3]);
-    } else if (iz == 14 || iz == 15) {  // RE2/2
+    } else if (iz == 16 || iz == 17) {  // RE2/2
       common_zpos = average(z_positions[6], z_positions[7]);
-    } else if (iz == 16 || iz == 17) {  // RE3/2
+    } else if (iz == 18 || iz == 19) {  // RE3/2
       common_zpos = average(z_positions[8], z_positions[9]);
-    } else if (iz == 18 || iz == 19) {  // RE4/2
+    } else if (iz == 20 || iz == 21) {  // RE4/2
       common_zpos = average(z_positions[10], z_positions[11]);
     }
 
