@@ -1,3 +1,8 @@
+//!
+//! This piece of code is obsolete and completely unused. It is kept as an 
+//! example to show how to access certain geometry information.
+//! 
+
 #include <cassert>
 #include <cmath>
 #include <memory>

@@ -1,3 +1,7 @@
+#
+# This cfg calls MakeEMTFAngleLUT which is obsolete and completely unused.
+#
+
 import FWCore.ParameterSet.Config as cms
 
 process = cms.Process("Whatever")
