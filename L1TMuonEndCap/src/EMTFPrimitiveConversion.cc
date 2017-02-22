@@ -499,6 +499,7 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
 
   // ___________________________________________________________________________
   // For later use in angle calculation and best track selection
+  // (in the firmware, this happens in the best_tracks module)
 
   int bt_station = fw_station;
   int bt_history = 0;

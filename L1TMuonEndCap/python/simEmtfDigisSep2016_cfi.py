@@ -70,9 +70,14 @@ simEmtfDigisSep2016MC = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
             "1,22:19:11:8,7:7:7:7,14:7:7:0,14:7:7:0",
             "0,30:23:7:0,7:7:7:7,14:7:7:0,14:7:7:0",
         ),
-        ThetaWindow            = cms.int32(4),
-        ThetaWindowRPC         = cms.int32(8),
         UseSymmetricalPatterns = cms.bool(True),
+    ),
+
+    # Sector processor track-building parameters
+    spTBParams16 = cms.PSet(
+        ThetaWindow    = cms.int32(4),
+        ThetaWindowRPC = cms.int32(8),
+        BugME11Dupes   = cms.bool(False),
     ),
 
     # Sector processor ghost-cancellation parameters
@@ -80,6 +85,7 @@ simEmtfDigisSep2016MC = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
         MaxRoadsPerZone   = cms.int32(3),
         MaxTracks         = cms.int32(3),
         UseSecondEarliest = cms.bool(True),
+        BugSameSectorPt0  = cms.bool(False),
     ),
 
     # Sector processor pt-assignment parameters
