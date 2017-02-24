@@ -205,14 +205,14 @@ void EMTFPatternRecognition::process(
 
   for (int izone = 0; izone < NUM_ZONES; ++izone) {
     // Skip the zone if no hits and no patterns
-    if (is_zone_empty(izone, extended_conv_hits, patt_lifetime_map))
+    if (is_zone_empty(izone+1, extended_conv_hits, patt_lifetime_map))
       continue;
 
     // Make zone images
-    make_zone_image(izone, extended_conv_hits, zone_images.at(izone));
+    make_zone_image(izone+1, extended_conv_hits, zone_images.at(izone));
 
     // Detect patterns
-    process_single_zone(izone, zone_images.at(izone), patt_lifetime_map, zone_roads.at(izone));
+    process_single_zone(izone+1, zone_images.at(izone), patt_lifetime_map, zone_roads.at(izone));
   }
 
   if (verbose_ > 1) {  // debug
@@ -228,7 +228,7 @@ void EMTFPatternRecognition::process(
   if (verbose_ > 0) {  // debug
     for (const auto& roads : zone_roads) {
       for (const auto& road : reversed(roads)) {
-        std::cout << "pattern: z: " << road.zone << " ph: " << road.key_zhit
+        std::cout << "pattern: z: " << road.zone-1 << " ph: " << road.key_zhit
             << " q: " << to_hex(road.quality_code) << " ly: " << to_binary(road.layer_code, 3)
             << " str: " << to_binary(road.straightness, 3) << " bx: " << road.bx
             << std::endl;
@@ -248,6 +248,7 @@ bool EMTFPatternRecognition::is_zone_empty(
     const std::deque<EMTFHitExtraCollection>& extended_conv_hits,
     const std::map<pattern_ref_t, int>& patt_lifetime_map
 ) const {
+  int izone = zone-1;
   int num_conv_hits = 0;
   int num_patts = 0;
 
@@ -262,7 +263,7 @@ bool EMTFPatternRecognition::is_zone_empty(
       if (conv_hits_it->subsystem == TriggerPrimitive::kRPC)
         continue;  // Don't use RPCs for pattern formation
 
-      if (conv_hits_it->zone_code & (1<<zone)) {  // hit belongs to this zone
+      if (conv_hits_it->zone_code & (1 << izone)) {  // hit belongs to this zone
         num_conv_hits += 1;
       }
     }  // end loop over conv_hits
@@ -285,6 +286,8 @@ void EMTFPatternRecognition::make_zone_image(
     const std::deque<EMTFHitExtraCollection>& extended_conv_hits,
     EMTFPhiMemoryImage& image
 ) const {
+  int izone = zone-1;
+
   std::deque<EMTFHitExtraCollection>::const_iterator ext_conv_hits_it  = extended_conv_hits.begin();
   std::deque<EMTFHitExtraCollection>::const_iterator ext_conv_hits_end = extended_conv_hits.end();
 
@@ -296,7 +299,7 @@ void EMTFPatternRecognition::make_zone_image(
       if (conv_hits_it->subsystem == TriggerPrimitive::kRPC)
         continue;  // Don't use RPCs for pattern formation
 
-      if (conv_hits_it->zone_code & (1 << zone)) {  // hit belongs to this zone
+      if (conv_hits_it->zone_code & (1 << izone)) {  // hit belongs to this zone
         unsigned int layer = conv_hits_it->station - 1;
         unsigned int bit   = conv_hits_it->zone_hit;
         image.set_bit(layer, bit);

@@ -21,7 +21,7 @@ public:
   ) const;
 
   void process_single_zone_station(
-      int station,
+      int zone, int station,
       const EMTFRoadExtraCollection& roads,
       const EMTFHitExtraCollection& conv_hits,
       std::vector<hit_sort_pair_t>& phi_differences

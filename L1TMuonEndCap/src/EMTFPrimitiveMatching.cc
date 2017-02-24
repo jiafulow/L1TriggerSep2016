@@ -38,7 +38,7 @@ void EMTFPrimitiveMatching::process(
   if (verbose_ > 0) {  // debug
     for (const auto& roads : zone_roads) {
       for (const auto& road : roads) {
-        std::cout << "pattern on match input: z: " << road.zone << " r: " << road.winner
+        std::cout << "pattern on match input: z: " << road.zone-1 << " r: " << road.winner
             << " ph_num: " << road.key_zhit << " ph_q: " << to_hex(road.quality_code)
             << " ly: " << to_binary(road.layer_code, 3) << " str: " << to_binary(road.straightness, 3)
             << std::endl;
@@ -120,7 +120,7 @@ void EMTFPrimitiveMatching::process(
       // zs_phi_differences.at(zs) gets filled with a pair of <phi_diff, conv_hit> for the
       // conv_hit with the lowest phi_diff from the pattern in this station and zone
       process_single_zone_station(
-          istation + 1,
+          izone+1, istation+1,
           zone_roads.at(izone),
           zs_conv_hits.at(zs),
           zs_phi_differences.at(zs)
@@ -138,7 +138,7 @@ void EMTFPrimitiveMatching::process(
         for (int istation = 0; istation < NUM_STATIONS; ++istation) {
           const int zs = (izone*NUM_STATIONS) + istation;
           int ph_diff = zs_phi_differences.at(zs).at(iroad).first;
-          std::cout << "find seg: z: " << road.zone << " r: " << road.winner
+          std::cout << "find seg: z: " << road.zone-1 << " r: " << road.winner
               << " st: " << istation << " ph_diff: " << ph_diff
               << std::endl;
         }
@@ -194,7 +194,7 @@ void EMTFPrimitiveMatching::process(
     for (const auto& tracks : zone_tracks) {
       for (const auto& track : tracks) {
         for (const auto& xhit : track.xhits) {
-          std::cout << "match seg: z: " << track.zone << " pat: " << track.winner <<  " st: " << xhit.station
+          std::cout << "match seg: z: " << track.zone-1 << " pat: " << track.winner <<  " st: " << xhit.station
               << " vi: " << to_binary(0b1, 2) << " hi: " << ((xhit.fs_segment>>4) & 0x3)
               << " ci: " << ((xhit.fs_segment>>1) & 0x7) << " si: " << (xhit.fs_segment & 0x1)
               << " ph: " << xhit.phi_fp << " th: " << xhit.theta_fp
@@ -207,7 +207,7 @@ void EMTFPrimitiveMatching::process(
 }
 
 void EMTFPrimitiveMatching::process_single_zone_station(
-    int station,
+    int zone, int station,
     const EMTFRoadExtraCollection& roads,
     const EMTFHitExtraCollection& conv_hits,
     std::vector<hit_sort_pair_t>& phi_differences

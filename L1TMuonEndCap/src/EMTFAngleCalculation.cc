@@ -57,7 +57,7 @@ void EMTFAngleCalculation::process(
   if (verbose_ > 0) {  // debug
     for (const auto& tracks : zone_tracks) {
       for (const auto& track : tracks) {
-        std::cout << "deltas: z: " << track.zone << " pat: " << track.winner << " rank: " << to_hex(track.rank)
+        std::cout << "deltas: z: " << track.zone-1 << " pat: " << track.winner << " rank: " << to_hex(track.rank)
             << " delta_ph: " << array_as_string(track.ptlut_data.delta_ph)
             << " delta_th: " << array_as_string(track.ptlut_data.delta_th)
             << " sign_ph: " << array_as_string(track.ptlut_data.sign_ph)
