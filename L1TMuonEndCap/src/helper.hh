@@ -227,4 +227,19 @@ namespace {
     }
   }
 
+  // See above. 'Hint' is provided to force the very first division. This is needed to match FW.
+  template<typename RandomAccessIterator, typename Compare, typename Compare3>
+  void merge_sort3_with_hint(RandomAccessIterator first, RandomAccessIterator last, Compare cmp, Compare3 cmp3, std::ptrdiff_t d)
+  {
+    const std::ptrdiff_t len = std::distance(first, last);
+    if (len > 1) {
+      RandomAccessIterator one_third = std::next(first, d);
+      RandomAccessIterator two_third = std::next(first, d * 2);
+      merge_sort3(first, one_third, cmp, cmp3);
+      merge_sort3(one_third, two_third, cmp, cmp3);
+      merge_sort3(two_third, last, cmp, cmp3);
+      merge_sort_merge3(first, one_third, two_third, last, cmp, cmp3);
+    }
+  }
+
 }  // namespace

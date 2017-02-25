@@ -27,10 +27,6 @@ public:
       std::vector<hit_sort_pair_t>& phi_differences
   ) const;
 
-  void sort_ph_diff(
-      std::vector<hit_sort_pair_t>& phi_differences
-  ) const;
-
   void insert_hits(
       hit_ptr_t conv_hit_ptr, const EMTFHitExtraCollection& conv_hits,
       EMTFTrackExtra& track
