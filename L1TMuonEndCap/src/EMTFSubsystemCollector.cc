@@ -13,8 +13,7 @@ void EMTFSubsystemCollector::extractPrimitives(
     TriggerPrimitiveCollection& out
 ) {
   edm::Handle<CSCTag::digi_collection> cscDigis;
-  if (!token.isUninitialized())
-      iEvent.getByToken(token, cscDigis);
+  iEvent.getByToken(token, cscDigis);
 
   auto chamber = cscDigis->begin();
   auto chend   = cscDigis->end();
@@ -38,8 +37,7 @@ void EMTFSubsystemCollector::extractPrimitives(
     TriggerPrimitiveCollection& out
 ) {
   edm::Handle<RPCTag::digi_collection> rpcDigis;
-  if (!token.isUninitialized())
-      iEvent.getByToken(token, rpcDigis);
+  iEvent.getByToken(token, rpcDigis);
 
   auto chamber = rpcDigis->begin();
   auto chend   = rpcDigis->end();
