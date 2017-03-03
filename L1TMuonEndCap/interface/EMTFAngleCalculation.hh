@@ -9,7 +9,8 @@ public:
   void configure(
       int verbose, int endcap, int sector, int bx,
       int bxWindow,
-      int thetaWindow, int thetaWindowRPC
+      int thetaWindow, int thetaWindowRPC,
+      bool bugME11Dupes
   );
 
   void process(
@@ -27,6 +28,7 @@ private:
 
   int bxWindow_;
   int thetaWindow_, thetaWindowRPC_;
+  bool bugME11Dupes_;
 };
 
 #endif

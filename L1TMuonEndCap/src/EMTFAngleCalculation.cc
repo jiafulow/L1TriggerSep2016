@@ -13,16 +13,18 @@ namespace {
 void EMTFAngleCalculation::configure(
     int verbose, int endcap, int sector, int bx,
     int bxWindow,
-    int thetaWindow, int thetaWindowRPC
+    int thetaWindow, int thetaWindowRPC,
+    bool bugME11Dupes
 ) {
   verbose_ = verbose;
   endcap_  = endcap;
   sector_  = sector;
   bx_      = bx;
 
-  bxWindow_           = bxWindow;
-  thetaWindow_        = thetaWindow;
-  thetaWindowRPC_     = thetaWindowRPC;
+  bxWindow_        = bxWindow;
+  thetaWindow_     = thetaWindow;
+  thetaWindowRPC_  = thetaWindowRPC;
+  bugME11Dupes_    = bugME11Dupes;
 }
 
 void EMTFAngleCalculation::process(
@@ -82,10 +84,15 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
 
   for (int istation = 0; istation < NUM_STATIONS; ++istation) {
     for (const auto& conv_hit : track.xhits) {
-      if ((conv_hit.station - 1) == istation)
+      if ((conv_hit.station - 1) == istation) {
         st_conv_hits.at(istation).push_back(conv_hit);
+      }
     }
-    assert(st_conv_hits.at(istation).size() <= 2);  // ambiguity in theta is max 2
+
+    if (bugME11Dupes_)
+      assert(st_conv_hits.at(istation).size() <= 4);  // ambiguity in theta is max 4
+    else
+      assert(st_conv_hits.at(istation).size() <= 2);  // ambiguity in theta is max 2
   }
   assert(st_conv_hits.size() == NUM_STATIONS);
 

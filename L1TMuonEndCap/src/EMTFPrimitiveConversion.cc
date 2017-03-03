@@ -17,7 +17,8 @@ void EMTFPrimitiveConversion::configure(
     int verbose, int endcap, int sector, int bx,
     int bxShiftCSC, int bxShiftRPC,
     const std::vector<int>& zoneBoundaries, int zoneOverlap, int zoneOverlapRPC,
-    bool duplicateTheta, bool fixZonePhi, bool useNewZones, bool fixME11Edges
+    bool duplicateTheta, bool fixZonePhi, bool useNewZones, bool fixME11Edges,
+    bool bugME11Dupes
 ) {
   assert(tp_geom != nullptr);
   assert(lut != nullptr);
@@ -40,6 +41,7 @@ void EMTFPrimitiveConversion::configure(
   fixZonePhi_      = fixZonePhi;
   useNewZones_     = useNewZones;
   fixME11Edges_    = fixME11Edges;
+  bugME11Dupes_    = bugME11Dupes;
 }
 
 
@@ -366,6 +368,18 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
   // For ME1/1 with tilted wires, add theta correction as a function of (wire,strip) index
   if (!fixME11Edges_ && (is_me11a || is_me11b)) {
     int pc_wire_strip_id = (((fw_wire >> 4) & 0x3) << 5) | ((eighth_strip >> 4) & 0x1f);  // 2-bit from wire, 5-bit from 2-strip
+
+    // Only affect runs before FW changeset 47114 is applied
+    // e.g. Run 281707 and earlier
+    if (bugME11Dupes_) {
+      bool bugME11DupesBeforeFW47114 = true;
+      if (bugME11DupesBeforeFW47114) {
+        if (conv_hit.pc_segment == 1) {
+          pc_wire_strip_id = (((fw_wire >> 4) & 0x3) << 5) | (0);  // 2-bit from wire, 5-bit from 2-strip
+        }
+      }
+    }
+
     int th_corr = lut().get_th_corr_lut(fw_endcap, fw_sector, pc_lut_id, pc_wire_strip_id);
     int th_corr_sign = (ph_reverse == 0) ? 1 : -1;
 

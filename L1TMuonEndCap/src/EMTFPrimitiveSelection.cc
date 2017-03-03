@@ -18,7 +18,8 @@ using RPCData = TriggerPrimitive::RPCData;
 void EMTFPrimitiveSelection::configure(
       int verbose, int endcap, int sector, int bx,
       int bxShiftCSC, int bxShiftRPC,
-      bool includeNeighbor, bool duplicateTheta
+      bool includeNeighbor, bool duplicateTheta,
+      bool bugME11Dupes
 ) {
   verbose_ = verbose;
   endcap_  = endcap;
@@ -30,6 +31,7 @@ void EMTFPrimitiveSelection::configure(
 
   includeNeighbor_ = includeNeighbor;
   duplicateTheta_  = duplicateTheta;
+  bugME11Dupes_    = bugME11Dupes;
 }
 
 // Specialized for CSC
@@ -59,7 +61,7 @@ void EMTFPrimitiveSelection::process(
     std::map<int, TriggerPrimitiveCollection>::iterator map_tp_end = selected_csc_map.end();
 
     for (; map_tp_it != map_tp_end; ++map_tp_it) {
-      //int selected = map_tp_it->first;
+      int selected = map_tp_it->first;
       TriggerPrimitiveCollection& tmp_primitives = map_tp_it->second;  // pass by reference
       assert(tmp_primitives.size() <= 2);  // at most 2
 
@@ -78,6 +80,25 @@ void EMTFPrimitiveSelection::process(
           tmp_primitives.insert(tmp_primitives.begin()+1, tp1);  // (s2,w1) at 2nd pos
           tmp_primitives.insert(tmp_primitives.begin()+2, tp0);  // (s1,w2) at 3rd pos
         }
+
+        const bool is_csc_me11 = (0 <= selected && selected <= 2) || (9 <= selected && selected <= 11) || (selected == 45);  // ME1/1 sub 1 or ME1/1 sub 2 or ME1/1 from neighbor
+
+        if (bugME11Dupes_ && is_csc_me11) {
+          // For ME1/1, always make 4 LCTs without checking strip & wire combination
+          if (tmp_primitives.size() == 2) {
+            // Swap wire numbers
+            TriggerPrimitive tp0 = tmp_primitives.at(0);  // (s1,w1)
+            TriggerPrimitive tp1 = tmp_primitives.at(1);  // (s2,w2)
+            uint16_t tmp_keywire        = tp0.accessCSCData().keywire;
+            tp0.accessCSCData().keywire = tp1.accessCSCData().keywire;  // (s1,w2)
+            tp1.accessCSCData().keywire = tmp_keywire;                  // (s2,w1)
+
+            tmp_primitives.insert(tmp_primitives.begin()+1, tp1);  // (s2,w1) at 2nd pos
+            tmp_primitives.insert(tmp_primitives.begin()+2, tp0);  // (s1,w2) at 3rd pos
+          }
+          assert(tmp_primitives.size() == 1 || tmp_primitives.size() == 4);
+        }
+
       }  // end if tmp_primitives.size() == 2
     }  // end loop over selected_csc_map
   }  // end if duplicate theta

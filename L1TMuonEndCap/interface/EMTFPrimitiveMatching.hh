@@ -11,7 +11,8 @@ public:
 
   void configure(
       int verbose, int endcap, int sector, int bx,
-      bool fixZonePhi
+      bool fixZonePhi,
+      bool bugME11Dupes
   );
 
   void process(
@@ -36,6 +37,7 @@ private:
   int verbose_, endcap_, sector_, bx_;
 
   bool fixZonePhi_;
+  bool bugME11Dupes_;
 };
 
 #endif

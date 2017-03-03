@@ -11,7 +11,8 @@ namespace {
 
 void EMTFPrimitiveMatching::configure(
     int verbose, int endcap, int sector, int bx,
-    bool fixZonePhi
+    bool fixZonePhi,
+    bool bugME11Dupes
 ) {
   verbose_ = verbose;
   endcap_  = endcap;
@@ -19,6 +20,7 @@ void EMTFPrimitiveMatching::configure(
   bx_      = bx;
 
   fixZonePhi_      = fixZonePhi;
+  bugME11Dupes_    = bugME11Dupes;
 }
 
 void EMTFPrimitiveMatching::process(
@@ -407,6 +409,8 @@ void EMTFPrimitiveMatching::insert_hits(
   EMTFHitExtraCollection::const_iterator conv_hits_it  = conv_hits.begin();
   EMTFHitExtraCollection::const_iterator conv_hits_end = conv_hits.end();
 
+  const bool is_csc_me11 = (conv_hit_ptr->subsystem == TriggerPrimitive::kCSC) && (conv_hit_ptr->station == 1) && (conv_hit_ptr->ring == 1 || conv_hit_ptr->ring == 4);
+
   // Find all possible duplicated hits, insert them
   for (; conv_hits_it != conv_hits_end; ++conv_hits_it) {
     const EMTFHitExtra& conv_hit_i = *conv_hits_it;
@@ -431,6 +435,30 @@ void EMTFPrimitiveMatching::insert_hits(
       assert(conv_hit_i.phi_fp == conv_hit_j.phi_fp);
 
       track.xhits.push_back(conv_hit_i);
+
+    } else if (
+      (bugME11Dupes_ && is_csc_me11) &&  // if reproduce ME1/1 theta duplication bug, do not check 'ring', 'strip' and 'pattern'
+      (conv_hit_i.subsystem  == conv_hit_j.subsystem) &&
+      (conv_hit_i.pc_station == conv_hit_j.pc_station) &&
+      (conv_hit_i.pc_chamber == conv_hit_j.pc_chamber) &&
+      //(conv_hit_i.ring       == conv_hit_j.ring) &&  // because of ME1/1
+      //(conv_hit_i.strip      == conv_hit_j.strip) &&
+      //(conv_hit_i.wire       == conv_hit_j.wire) &&
+      //(conv_hit_i.pattern    == conv_hit_j.pattern) &&
+      (conv_hit_i.bx         == conv_hit_j.bx) &&
+      //(conv_hit_i.strip_low  == conv_hit_j.strip_low) && // For RPC clusters
+      //(conv_hit_i.strip_hi   == conv_hit_j.strip_hi) &&  // For RPC clusters
+      //(conv_hit_i.roll       == conv_hit_j.roll) &&
+      true
+    ) {
+      // All duplicates with the same strip but different wire must have same phi_fp
+      //assert(conv_hit_i.phi_fp == conv_hit_j.phi_fp);
+
+      //track.xhits.push_back(conv_hit_i);
+
+      // Dirty hack
+      track.xhits.push_back(conv_hit_j);
+      track.xhits.back().theta_fp = conv_hit_i.theta_fp;
     }
   }
 
