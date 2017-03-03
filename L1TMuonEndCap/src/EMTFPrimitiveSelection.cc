@@ -45,11 +45,31 @@ void EMTFPrimitiveSelection::process(
   TriggerPrimitiveCollection::const_iterator tp_end = muon_primitives.end();
 
   for (; tp_it != tp_end; ++tp_it) {
-    int selected_csc = select_csc(*tp_it); // Returns CSC "link" index (0 - 53)
+    TriggerPrimitive new_tp = *tp_it;  // make a copy and apply patches to this copy
+
+    // Patch the CLCT pattern number
+    // It should be 0-10, see: L1Trigger/CSCTriggerPrimitives/src/CSCMotherboard.cc
+    bool patchPattern = true;
+    if (patchPattern) {
+      if (new_tp.getCSCData().pattern == 11 || new_tp.getCSCData().pattern == 12) {  // 11, 12 -> 10
+        new_tp.accessCSCData().pattern = 10;
+      }
+    }
+
+    // Patch the LCT quality number
+    // It should be 1-15, see: L1Trigger/CSCTriggerPrimitives/src/CSCMotherboard.cc
+    bool patchQuality = true;
+    if (patchQuality) {
+      if (new_tp.getCSCData().quality == 0) {  // 0 -> 1
+        new_tp.accessCSCData().quality = 1;
+      }
+    }
+
+    int selected_csc = select_csc(new_tp); // Returns CSC "link" index (0 - 53)
 
     if (selected_csc >= 0) {
       assert(selected_csc < NUM_CSC_CHAMBERS);
-      selected_csc_map[selected_csc].push_back(*tp_it);
+      selected_csc_map[selected_csc].push_back(new_tp);
     }
   }
 
@@ -247,7 +267,8 @@ int EMTFPrimitiveSelection::select_csc(const TriggerPrimitive& muon_primitive) c
     assert(1 <= tp_station && tp_station <= 4);
     assert(1 <= tp_csc_ID && tp_csc_ID <= 9);
     assert(tp_data.strip < 160);
-    assert(tp_data.keywire < 112);
+    //assert(tp_data.keywire < 112);
+    assert(tp_data.keywire < 128);
     assert(tp_data.valid == true);
     assert(tp_data.pattern <= 10);
     assert(tp_data.quality > 0);
