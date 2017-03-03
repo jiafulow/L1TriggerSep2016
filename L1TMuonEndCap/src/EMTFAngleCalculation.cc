@@ -182,33 +182,39 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
 
 
   // Apply cuts on dtheta
+
+  // There is a possible bug in FW. After a dtheta pair fails the theta window
+  // cut, the valid flag of the pair is not updated. Later on, theta from
+  // this pair is used to assign the precise theta of the track.
+  std::array<bool, NUM_STATION_PAIRS> best_dtheta_valid_arr_1;
+
   for (int ipair = 0; ipair < NUM_STATION_PAIRS; ++ipair) {
     if (best_has_rpc_arr.at(ipair))
-      best_dtheta_valid_arr.at(ipair) &= (best_dtheta_arr.at(ipair) <= thetaWindowRPC_);
+      best_dtheta_valid_arr_1.at(ipair) = best_dtheta_valid_arr.at(ipair) && (best_dtheta_arr.at(ipair) <= thetaWindowRPC_);
     else
-      best_dtheta_valid_arr.at(ipair) &= (best_dtheta_arr.at(ipair) <= thetaWindow_);
+      best_dtheta_valid_arr_1.at(ipair) = best_dtheta_valid_arr.at(ipair) && (best_dtheta_arr.at(ipair) <= thetaWindow_);
   }
 
   // Find valid segments
   // vmask contains valid station mask = {ME4,ME3,ME2,ME1}. "0b" prefix for binary.
   int vmask1 = 0, vmask2 = 0, vmask3 = 0;
 
-  if (best_dtheta_valid_arr.at(0)) {
+  if (best_dtheta_valid_arr_1.at(0)) {
     vmask1 |= 0b0011;  // 12
   }
-  if (best_dtheta_valid_arr.at(1)) {
+  if (best_dtheta_valid_arr_1.at(1)) {
     vmask1 |= 0b0101;  // 13
   }
-  if (best_dtheta_valid_arr.at(2)) {
+  if (best_dtheta_valid_arr_1.at(2)) {
     vmask1 |= 0b1001;  // 14
   }
-  if (best_dtheta_valid_arr.at(3)) {
+  if (best_dtheta_valid_arr_1.at(3)) {
     vmask2 |= 0b0110;  // 23
   }
-  if (best_dtheta_valid_arr.at(4)) {
+  if (best_dtheta_valid_arr_1.at(4)) {
     vmask2 |= 0b1010;  // 24
   }
-  if (best_dtheta_valid_arr.at(5)) {
+  if (best_dtheta_valid_arr_1.at(5)) {
     vmask3 |= 0b1100;  // 34
   }
 
