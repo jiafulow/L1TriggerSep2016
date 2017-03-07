@@ -302,7 +302,8 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
   int clct_pat_corr_sign = (lut().get_ph_patt_corr_sign(conv_hit.pattern) == 0) ? 1 : -1;
 
   // At strip number 0, protect against negative correction
-  if (fw_strip == 0 && clct_pat_corr_sign == -1)
+  bool bugStrip0BeforeFW48200 = false;
+  if (bugStrip0BeforeFW48200 == false && fw_strip == 0 && clct_pat_corr_sign == -1)
     clct_pat_corr = 0;
 
   if (is_10degree) {
@@ -312,7 +313,7 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
     eighth_strip = fw_strip << 3;  // multiply by 2, uses all 3 bits of pattern correction
     eighth_strip += clct_pat_corr_sign * (clct_pat_corr >> 0);
   }
-  assert(eighth_strip >= 0);
+  assert(bugStrip0BeforeFW48200 == true || eighth_strip >= 0);
 
   // Multiplicative factor for eighth_strip
   int factor = 1024;
@@ -372,7 +373,7 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
     // Only affect runs before FW changeset 47114 is applied
     // e.g. Run 281707 and earlier
     if (bugME11Dupes_) {
-      bool bugME11DupesBeforeFW47114 = true;
+      bool bugME11DupesBeforeFW47114 = false;
       if (bugME11DupesBeforeFW47114) {
         if (conv_hit.pc_segment == 1) {
           pc_wire_strip_id = (((fw_wire >> 4) & 0x3) << 5) | (0);  // 2-bit from wire, 5-bit from 2-strip
