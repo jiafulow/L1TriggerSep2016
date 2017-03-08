@@ -11,7 +11,7 @@ namespace {
 
 void EMTFPrimitiveMatching::configure(
     int verbose, int endcap, int sector, int bx,
-    bool fixZonePhi,
+    bool fixZonePhi, bool useNewZones,
     bool bugME11Dupes
 ) {
   verbose_ = verbose;
@@ -20,6 +20,7 @@ void EMTFPrimitiveMatching::configure(
   bx_      = bx;
 
   fixZonePhi_      = fixZonePhi;
+  useNewZones_     = useNewZones;
   bugME11Dupes_    = bugME11Dupes;
 }
 
@@ -337,6 +338,8 @@ void EMTFPrimitiveMatching::process_single_zone_station(
       // This implementation still differs from FW because I prefer to use a
       // sorting function that is as generic as possible.
       bool use_fw_sorting = true;
+
+      if (useNewZones_)  use_fw_sorting = false;
 
       if (use_fw_sorting && (tmp_phi_differences.front().second->subsystem == TriggerPrimitive::kCSC)) {  // only when the min phi diff is from CSC
         // zone_cham = 4 for [fs_01, fs_02, fs_03, fs_11], or 7 otherwise

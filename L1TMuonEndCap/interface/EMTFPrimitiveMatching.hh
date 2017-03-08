@@ -11,7 +11,7 @@ public:
 
   void configure(
       int verbose, int endcap, int sector, int bx,
-      bool fixZonePhi,
+      bool fixZonePhi, bool useNewZones,
       bool bugME11Dupes
   );
 
@@ -36,7 +36,7 @@ public:
 private:
   int verbose_, endcap_, sector_, bx_;
 
-  bool fixZonePhi_;
+  bool fixZonePhi_, useNewZones_;
   bool bugME11Dupes_;
 };
 

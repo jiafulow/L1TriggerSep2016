@@ -161,7 +161,7 @@ void EMTFSectorProcessor::process_single_bx(
   EMTFPrimitiveMatching prim_match;
   prim_match.configure(
       verbose_, endcap_, sector_, bx,
-      fixZonePhi_,
+      fixZonePhi_, useNewZones_,
       bugME11Dupes_
   );
 
