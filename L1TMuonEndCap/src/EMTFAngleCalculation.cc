@@ -246,14 +246,24 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
   int best_pair = -1;
 
   if ((vstat & (1<<1)) != 0) {            // ME2 present
-    if (best_dtheta_valid_arr.at(0))      // 12
+    if (!best_has_rpc_arr.at(0) && best_dtheta_valid_arr.at(0))      // 12
+      best_pair = 0;
+    else if (!best_has_rpc_arr.at(3) && best_dtheta_valid_arr.at(3)) // 23
+      best_pair = 3;
+    else if (!best_has_rpc_arr.at(4) && best_dtheta_valid_arr.at(4)) // 24
+      best_pair = 4;
+    else if (best_dtheta_valid_arr.at(0)) // 12
       best_pair = 0;
     else if (best_dtheta_valid_arr.at(3)) // 23
       best_pair = 3;
     else if (best_dtheta_valid_arr.at(4)) // 24
       best_pair = 4;
   } else if ((vstat & (1<<2)) != 0) {     // ME3 present
-    if (best_dtheta_valid_arr.at(1))      // 13
+    if (!best_has_rpc_arr.at(1) && best_dtheta_valid_arr.at(1))      // 13
+      best_pair = 1;
+    else if (!best_has_rpc_arr.at(5) && best_dtheta_valid_arr.at(5)) // 34
+      best_pair = 5;
+    else if (best_dtheta_valid_arr.at(1)) // 13
       best_pair = 1;
     else if (best_dtheta_valid_arr.at(5)) // 34
       best_pair = 5;
