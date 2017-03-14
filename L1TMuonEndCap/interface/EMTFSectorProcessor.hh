@@ -36,8 +36,9 @@ public:
       int minBX, int maxBX, int bxWindow, int bxShiftCSC, int bxShiftRPC,
       const std::vector<int>& zoneBoundaries, int zoneOverlap, int zoneOverlapRPC,
       bool includeNeighbor, bool duplicateTheta, bool fixZonePhi, bool useNewZones, bool fixME11Edges,
-      const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions, int thetaWindow, int thetaWindowRPC, bool useSymPatterns,
-      int maxRoadsPerZone, int maxTracks, bool useSecondEarliest,
+      const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions, bool useSymPatterns,
+      int thetaWindow, int thetaWindowRPC, bool bugME11Dupes,
+      int maxRoadsPerZone, int maxTracks, bool useSecondEarliest, bool bugSameSectorPt0,
       bool readPtLUTFile, bool fixMode15HighPt, bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt, bool bugGMTPhi
   );
 
@@ -81,12 +82,16 @@ private:
 
   // For pattern recognition
   std::vector<std::string> pattDefinitions_, symPattDefinitions_;
-  int thetaWindow_, thetaWindowRPC_;
   bool useSymPatterns_;
+
+  // For track building
+  int thetaWindow_, thetaWindowRPC_;
+  bool bugME11Dupes_;
 
   // For ghost cancellation
   int maxRoadsPerZone_, maxTracks_;
   bool useSecondEarliest_;
+  bool bugSameSectorPt0_;
 
   // For pt assignment
   bool readPtLUTFile_, fixMode15HighPt_;

@@ -14,7 +14,8 @@ public:
       int verbose, int endcap, int sector, int bx,
       int bxShiftCSC, int bxShiftRPC,
       const std::vector<int>& zoneBoundaries, int zoneOverlap, int zoneOverlapRPC,
-      bool duplicateTheta, bool fixZonePhi, bool useNewZones, bool fixME11Edges
+      bool duplicateTheta, bool fixZonePhi, bool useNewZones, bool fixME11Edges,
+      bool bugME11Dupes
   );
 
   template<typename T>
@@ -54,6 +55,7 @@ private:
   std::vector<int> zoneBoundaries_;
   int zoneOverlap_, zoneOverlapRPC_;
   bool duplicateTheta_, fixZonePhi_, useNewZones_, fixME11Edges_;
+  bool bugME11Dupes_;
 };
 
 #endif

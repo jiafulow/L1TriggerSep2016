@@ -11,7 +11,8 @@ public:
 
   void configure(
       int verbose, int endcap, int sector, int bx,
-      bool fixZonePhi
+      bool fixZonePhi, bool useNewZones,
+      bool bugME11Dupes
   );
 
   void process(
@@ -21,13 +22,9 @@ public:
   ) const;
 
   void process_single_zone_station(
-      int station,
+      int zone, int station,
       const EMTFRoadExtraCollection& roads,
       const EMTFHitExtraCollection& conv_hits,
-      std::vector<hit_sort_pair_t>& phi_differences
-  ) const;
-
-  void sort_ph_diff(
       std::vector<hit_sort_pair_t>& phi_differences
   ) const;
 
@@ -39,7 +36,8 @@ public:
 private:
   int verbose_, endcap_, sector_, bx_;
 
-  bool fixZonePhi_;
+  bool fixZonePhi_, useNewZones_;
+  bool bugME11Dupes_;
 };
 
 #endif

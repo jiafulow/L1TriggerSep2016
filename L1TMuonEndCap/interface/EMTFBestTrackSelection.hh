@@ -9,7 +9,8 @@ public:
   void configure(
       int verbose, int endcap, int sector, int bx,
       int bxWindow,
-      int maxRoadsPerZone, int maxTracks, bool useSecondEarliest
+      int maxRoadsPerZone, int maxTracks, bool useSecondEarliest,
+      bool bugSameSectorPt0
   );
 
   void process(
@@ -33,6 +34,7 @@ private:
   int bxWindow_;
   int maxRoadsPerZone_, maxTracks_;
   bool useSecondEarliest_;
+  bool bugSameSectorPt0_;
 };
 
 #endif

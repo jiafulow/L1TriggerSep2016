@@ -6,7 +6,8 @@
 void EMTFBestTrackSelection::configure(
     int verbose, int endcap, int sector, int bx,
     int bxWindow,
-    int maxRoadsPerZone, int maxTracks, bool useSecondEarliest
+    int maxRoadsPerZone, int maxTracks, bool useSecondEarliest,
+    bool bugSameSectorPt0
 ) {
   verbose_ = verbose;
   endcap_  = endcap;
@@ -17,6 +18,7 @@ void EMTFBestTrackSelection::configure(
   maxRoadsPerZone_    = maxRoadsPerZone;
   maxTracks_          = maxTracks;
   useSecondEarliest_  = useSecondEarliest;
+  bugSameSectorPt0_   = bugSameSectorPt0;
 }
 
 void EMTFBestTrackSelection::process(
@@ -215,8 +217,15 @@ void EMTFBestTrackSelection::cancel_one_bx(
       if (larger[i][j] == 0)
         sum += 1;
     }
-    if (sum < maxTracks_)
-      winner[sum][i] = 1; // assign positional winner codes
+
+    if (sum < maxTracks_) {
+      winner[sum][i] = true; // assign positional winner codes
+    }
+
+    if (bugSameSectorPt0_ && sum > 0) {
+      // just keep the best track and kill the rest of them
+      winner[sum][i] = false;
+    }
   }
 
   // Output best tracks according to winner signals
@@ -412,8 +421,15 @@ void EMTFBestTrackSelection::cancel_multi_bx(
       if (larger[i][j] == 0)
         sum += 1;
     }
-    if (sum < maxTracks_)
-      winner[sum][i] = 1; // assign positional winner codes
+
+    if (sum < maxTracks_) {
+      winner[sum][i] = true; // assign positional winner codes
+    }
+
+    if (bugSameSectorPt0_ && sum > 0) {
+      // just keep the best track and kill the rest of them
+      winner[sum][i] = false;
+    }
   }
 
   // Output best tracks according to winner signals

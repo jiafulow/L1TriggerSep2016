@@ -40,14 +40,18 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
   const auto& spPRParams16 = config_.getParameter<edm::ParameterSet>("spPRParams16");
   auto pattDefinitions    = spPRParams16.getParameter<std::vector<std::string> >("PatternDefinitions");
   auto symPattDefinitions = spPRParams16.getParameter<std::vector<std::string> >("SymPatternDefinitions");
-  auto thetaWindow        = spPRParams16.getParameter<int>("ThetaWindow");
-  auto thetaWindowRPC     = spPRParams16.getParameter<int>("ThetaWindowRPC");
   auto useSymPatterns     = spPRParams16.getParameter<bool>("UseSymmetricalPatterns");
+
+  const auto& spTBParams16 = config_.getParameter<edm::ParameterSet>("spTBParams16");
+  auto thetaWindow        = spTBParams16.getParameter<int>("ThetaWindow");
+  auto thetaWindowRPC     = spTBParams16.getParameter<int>("ThetaWindowRPC");
+  auto bugME11Dupes       = spTBParams16.getParameter<bool>("BugME11Dupes");
 
   const auto& spGCParams16 = config_.getParameter<edm::ParameterSet>("spGCParams16");
   auto maxRoadsPerZone    = spGCParams16.getParameter<int>("MaxRoadsPerZone");
   auto maxTracks          = spGCParams16.getParameter<int>("MaxTracks");
   auto useSecondEarliest  = spGCParams16.getParameter<bool>("UseSecondEarliest");
+  auto bugSameSectorPt0   = spGCParams16.getParameter<bool>("BugSameSectorPt0");
 
   const auto& spPAParams16 = config_.getParameter<edm::ParameterSet>("spPAParams16");
   auto bdtXMLDir          = spPAParams16.getParameter<std::string>("BDTXMLDir");
@@ -79,8 +83,9 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
             minBX, maxBX, bxWindow, bxShiftCSC, bxShiftRPC,
             zoneBoundaries, zoneOverlap, zoneOverlapRPC,
             includeNeighbor, duplicateTheta, fixZonePhi, useNewZones, fixME11Edges,
-            pattDefinitions, symPattDefinitions, thetaWindow, thetaWindowRPC, useSymPatterns,
-            maxRoadsPerZone, maxTracks, useSecondEarliest,
+            pattDefinitions, symPattDefinitions, useSymPatterns,
+            thetaWindow, thetaWindowRPC, bugME11Dupes,
+            maxRoadsPerZone, maxTracks, useSecondEarliest, bugSameSectorPt0,
             readPtLUTFile, fixMode15HighPt, bug9BitDPhi, bugMode7CLCT, bugNegPt, bugGMTPhi
         );
       }

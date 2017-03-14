@@ -17,8 +17,9 @@ void EMTFSectorProcessor::configure(
     int minBX, int maxBX, int bxWindow, int bxShiftCSC, int bxShiftRPC,
     const std::vector<int>& zoneBoundaries, int zoneOverlap, int zoneOverlapRPC,
     bool includeNeighbor, bool duplicateTheta, bool fixZonePhi, bool useNewZones, bool fixME11Edges,
-    const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions, int thetaWindow, int thetaWindowRPC, bool useSymPatterns,
-    int maxRoadsPerZone, int maxTracks, bool useSecondEarliest,
+    const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions, bool useSymPatterns,
+    int thetaWindow, int thetaWindowRPC, bool bugME11Dupes,
+    int maxRoadsPerZone, int maxTracks, bool useSecondEarliest, bool bugSameSectorPt0,
     bool readPtLUTFile, bool fixMode15HighPt, bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt, bool bugGMTPhi
 ) {
   assert(MIN_ENDCAP <= endcap && endcap <= MAX_ENDCAP);
@@ -53,13 +54,16 @@ void EMTFSectorProcessor::configure(
 
   pattDefinitions_    = pattDefinitions;
   symPattDefinitions_ = symPattDefinitions;
+  useSymPatterns_     = useSymPatterns;
+
   thetaWindow_        = thetaWindow;
   thetaWindowRPC_     = thetaWindowRPC;
-  useSymPatterns_     = useSymPatterns;
+  bugME11Dupes_       = bugME11Dupes;
 
   maxRoadsPerZone_    = maxRoadsPerZone;
   maxTracks_          = maxTracks;
   useSecondEarliest_  = useSecondEarliest;
+  bugSameSectorPt0_   = bugSameSectorPt0;
 
   readPtLUTFile_      = readPtLUTFile;
   fixMode15HighPt_    = fixMode15HighPt;
@@ -132,7 +136,8 @@ void EMTFSectorProcessor::process_single_bx(
   prim_sel.configure(
       verbose_, endcap_, sector_, bx,
       bxShiftCSC_, bxShiftRPC_,
-      includeNeighbor_, duplicateTheta_
+      includeNeighbor_, duplicateTheta_,
+      bugME11Dupes_
   );
 
   EMTFPrimitiveConversion prim_conv;
@@ -141,7 +146,8 @@ void EMTFSectorProcessor::process_single_bx(
       verbose_, endcap_, sector_, bx,
       bxShiftCSC_, bxShiftRPC_,
       zoneBoundaries_, zoneOverlap_, zoneOverlapRPC_,
-      duplicateTheta_, fixZonePhi_, useNewZones_, fixME11Edges_
+      duplicateTheta_, fixZonePhi_, useNewZones_, fixME11Edges_,
+      bugME11Dupes_
   );
 
   EMTFPatternRecognition patt_recog;
@@ -155,21 +161,24 @@ void EMTFSectorProcessor::process_single_bx(
   EMTFPrimitiveMatching prim_match;
   prim_match.configure(
       verbose_, endcap_, sector_, bx,
-      fixZonePhi_
+      fixZonePhi_, useNewZones_,
+      bugME11Dupes_
   );
 
   EMTFAngleCalculation angle_calc;
   angle_calc.configure(
       verbose_, endcap_, sector_, bx,
       bxWindow_,
-      thetaWindow_, thetaWindowRPC_
+      thetaWindow_, thetaWindowRPC_,
+      bugME11Dupes_
   );
 
   EMTFBestTrackSelection btrack_sel;
   btrack_sel.configure(
       verbose_, endcap_, sector_, bx,
       bxWindow_,
-      maxRoadsPerZone_, maxTracks_, useSecondEarliest_
+      maxRoadsPerZone_, maxTracks_, useSecondEarliest_,
+      bugSameSectorPt0_
   );
 
   EMTFPtAssignment pt_assign;

@@ -17,7 +17,8 @@ void EMTFPrimitiveConversion::configure(
     int verbose, int endcap, int sector, int bx,
     int bxShiftCSC, int bxShiftRPC,
     const std::vector<int>& zoneBoundaries, int zoneOverlap, int zoneOverlapRPC,
-    bool duplicateTheta, bool fixZonePhi, bool useNewZones, bool fixME11Edges
+    bool duplicateTheta, bool fixZonePhi, bool useNewZones, bool fixME11Edges,
+    bool bugME11Dupes
 ) {
   assert(tp_geom != nullptr);
   assert(lut != nullptr);
@@ -40,6 +41,7 @@ void EMTFPrimitiveConversion::configure(
   fixZonePhi_      = fixZonePhi;
   useNewZones_     = useNewZones;
   fixME11Edges_    = fixME11Edges;
+  bugME11Dupes_    = bugME11Dupes;
 }
 
 
@@ -300,7 +302,8 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
   int clct_pat_corr_sign = (lut().get_ph_patt_corr_sign(conv_hit.pattern) == 0) ? 1 : -1;
 
   // At strip number 0, protect against negative correction
-  if (fw_strip == 0 && clct_pat_corr_sign == -1)
+  bool bugStrip0BeforeFW48200 = false;
+  if (bugStrip0BeforeFW48200 == false && fw_strip == 0 && clct_pat_corr_sign == -1)
     clct_pat_corr = 0;
 
   if (is_10degree) {
@@ -310,7 +313,7 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
     eighth_strip = fw_strip << 3;  // multiply by 2, uses all 3 bits of pattern correction
     eighth_strip += clct_pat_corr_sign * (clct_pat_corr >> 0);
   }
-  assert(eighth_strip >= 0);
+  assert(bugStrip0BeforeFW48200 == true || eighth_strip >= 0);
 
   // Multiplicative factor for eighth_strip
   int factor = 1024;
@@ -366,6 +369,18 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
   // For ME1/1 with tilted wires, add theta correction as a function of (wire,strip) index
   if (!fixME11Edges_ && (is_me11a || is_me11b)) {
     int pc_wire_strip_id = (((fw_wire >> 4) & 0x3) << 5) | ((eighth_strip >> 4) & 0x1f);  // 2-bit from wire, 5-bit from 2-strip
+
+    // Only affect runs before FW changeset 47114 is applied
+    // e.g. Run 281707 and earlier
+    if (bugME11Dupes_) {
+      bool bugME11DupesBeforeFW47114 = false;
+      if (bugME11DupesBeforeFW47114) {
+        if (conv_hit.pc_segment == 1) {
+          pc_wire_strip_id = (((fw_wire >> 4) & 0x3) << 5) | (0);  // 2-bit from wire, 5-bit from 2-strip
+        }
+      }
+    }
+
     int th_corr = lut().get_th_corr_lut(fw_endcap, fw_sector, pc_lut_id, pc_wire_strip_id);
     int th_corr_sign = (ph_reverse == 0) ? 1 : -1;
 
@@ -499,6 +514,7 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
 
   // ___________________________________________________________________________
   // For later use in angle calculation and best track selection
+  // (in the firmware, this happens in the best_tracks module)
 
   int bt_station = fw_station;
   int bt_history = 0;

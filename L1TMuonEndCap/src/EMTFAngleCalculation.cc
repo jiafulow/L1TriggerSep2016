@@ -13,16 +13,18 @@ namespace {
 void EMTFAngleCalculation::configure(
     int verbose, int endcap, int sector, int bx,
     int bxWindow,
-    int thetaWindow, int thetaWindowRPC
+    int thetaWindow, int thetaWindowRPC,
+    bool bugME11Dupes
 ) {
   verbose_ = verbose;
   endcap_  = endcap;
   sector_  = sector;
   bx_      = bx;
 
-  bxWindow_           = bxWindow;
-  thetaWindow_        = thetaWindow;
-  thetaWindowRPC_     = thetaWindowRPC;
+  bxWindow_        = bxWindow;
+  thetaWindow_     = thetaWindow;
+  thetaWindowRPC_  = thetaWindowRPC;
+  bugME11Dupes_    = bugME11Dupes;
 }
 
 void EMTFAngleCalculation::process(
@@ -57,7 +59,7 @@ void EMTFAngleCalculation::process(
   if (verbose_ > 0) {  // debug
     for (const auto& tracks : zone_tracks) {
       for (const auto& track : tracks) {
-        std::cout << "deltas: z: " << track.zone << " pat: " << track.winner << " rank: " << to_hex(track.rank)
+        std::cout << "deltas: z: " << track.zone-1 << " pat: " << track.winner << " rank: " << to_hex(track.rank)
             << " delta_ph: " << array_as_string(track.ptlut_data.delta_ph)
             << " delta_th: " << array_as_string(track.ptlut_data.delta_th)
             << " sign_ph: " << array_as_string(track.ptlut_data.sign_ph)
@@ -82,10 +84,15 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
 
   for (int istation = 0; istation < NUM_STATIONS; ++istation) {
     for (const auto& conv_hit : track.xhits) {
-      if ((conv_hit.station - 1) == istation)
+      if ((conv_hit.station - 1) == istation) {
         st_conv_hits.at(istation).push_back(conv_hit);
+      }
     }
-    assert(st_conv_hits.at(istation).size() <= 2);  // ambiguity in theta is max 2
+
+    if (bugME11Dupes_)
+      assert(st_conv_hits.at(istation).size() <= 4);  // ambiguity in theta is max 4
+    else
+      assert(st_conv_hits.at(istation).size() <= 2);  // ambiguity in theta is max 2
   }
   assert(st_conv_hits.size() == NUM_STATIONS);
 
@@ -175,33 +182,39 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
 
 
   // Apply cuts on dtheta
+
+  // There is a possible bug in FW. After a dtheta pair fails the theta window
+  // cut, the valid flag of the pair is not updated. Later on, theta from
+  // this pair is used to assign the precise theta of the track.
+  std::array<bool, NUM_STATION_PAIRS> best_dtheta_valid_arr_1;
+
   for (int ipair = 0; ipair < NUM_STATION_PAIRS; ++ipair) {
     if (best_has_rpc_arr.at(ipair))
-      best_dtheta_valid_arr.at(ipair) &= (best_dtheta_arr.at(ipair) <= thetaWindowRPC_);
+      best_dtheta_valid_arr_1.at(ipair) = best_dtheta_valid_arr.at(ipair) && (best_dtheta_arr.at(ipair) <= thetaWindowRPC_);
     else
-      best_dtheta_valid_arr.at(ipair) &= (best_dtheta_arr.at(ipair) <= thetaWindow_);
+      best_dtheta_valid_arr_1.at(ipair) = best_dtheta_valid_arr.at(ipair) && (best_dtheta_arr.at(ipair) <= thetaWindow_);
   }
 
   // Find valid segments
   // vmask contains valid station mask = {ME4,ME3,ME2,ME1}. "0b" prefix for binary.
   int vmask1 = 0, vmask2 = 0, vmask3 = 0;
 
-  if (best_dtheta_valid_arr.at(0)) {
+  if (best_dtheta_valid_arr_1.at(0)) {
     vmask1 |= 0b0011;  // 12
   }
-  if (best_dtheta_valid_arr.at(1)) {
+  if (best_dtheta_valid_arr_1.at(1)) {
     vmask1 |= 0b0101;  // 13
   }
-  if (best_dtheta_valid_arr.at(2)) {
+  if (best_dtheta_valid_arr_1.at(2)) {
     vmask1 |= 0b1001;  // 14
   }
-  if (best_dtheta_valid_arr.at(3)) {
+  if (best_dtheta_valid_arr_1.at(3)) {
     vmask2 |= 0b0110;  // 23
   }
-  if (best_dtheta_valid_arr.at(4)) {
+  if (best_dtheta_valid_arr_1.at(4)) {
     vmask2 |= 0b1010;  // 24
   }
-  if (best_dtheta_valid_arr.at(5)) {
+  if (best_dtheta_valid_arr_1.at(5)) {
     vmask3 |= 0b1100;  // 34
   }
 
@@ -233,14 +246,24 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
   int best_pair = -1;
 
   if ((vstat & (1<<1)) != 0) {            // ME2 present
-    if (best_dtheta_valid_arr.at(0))      // 12
+    if (!best_has_rpc_arr.at(0) && best_dtheta_valid_arr.at(0))      // 12
+      best_pair = 0;
+    else if (!best_has_rpc_arr.at(3) && best_dtheta_valid_arr.at(3)) // 23
+      best_pair = 3;
+    else if (!best_has_rpc_arr.at(4) && best_dtheta_valid_arr.at(4)) // 24
+      best_pair = 4;
+    else if (best_dtheta_valid_arr.at(0)) // 12
       best_pair = 0;
     else if (best_dtheta_valid_arr.at(3)) // 23
       best_pair = 3;
     else if (best_dtheta_valid_arr.at(4)) // 24
       best_pair = 4;
   } else if ((vstat & (1<<2)) != 0) {     // ME3 present
-    if (best_dtheta_valid_arr.at(1))      // 13
+    if (!best_has_rpc_arr.at(1) && best_dtheta_valid_arr.at(1))      // 13
+      best_pair = 1;
+    else if (!best_has_rpc_arr.at(5) && best_dtheta_valid_arr.at(5)) // 34
+      best_pair = 5;
+    else if (best_dtheta_valid_arr.at(1)) // 13
       best_pair = 1;
     else if (best_dtheta_valid_arr.at(5)) // 34
       best_pair = 5;

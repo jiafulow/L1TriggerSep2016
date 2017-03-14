@@ -9,7 +9,8 @@ public:
   void configure(
       int verbose, int endcap, int sector, int bx,
       int bxShiftCSC, int bxShiftRPC,
-      bool includeNeighbor, bool duplicateTheta
+      bool includeNeighbor, bool duplicateTheta,
+      bool bugME11Dupes
   );
 
   template<typename T>
@@ -51,6 +52,8 @@ private:
   int bxShiftCSC_, bxShiftRPC_;
 
   bool includeNeighbor_, duplicateTheta_;
+
+  bool bugME11Dupes_;
 };
 
 #endif

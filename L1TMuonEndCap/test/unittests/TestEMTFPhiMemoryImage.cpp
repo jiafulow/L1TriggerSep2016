@@ -10,6 +10,7 @@ class TestEMTFPhiMemoryImage: public CppUnit::TestFixture
   CPPUNIT_TEST(test_bitset);
   CPPUNIT_TEST(test_rotation);
   CPPUNIT_TEST(test_out_of_range);
+  CPPUNIT_TEST(test_z130);
   CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -21,6 +22,7 @@ public:
   void test_bitset();
   void test_rotation();
   void test_out_of_range();
+  void test_z130();
 };
 
 ///registration of the test so that the runner can find it
@@ -135,4 +137,39 @@ void TestEMTFPhiMemoryImage::test_out_of_range()
   CPPUNIT_ASSERT_THROW(image.get_word(1, 4), std::out_of_range);
   CPPUNIT_ASSERT_THROW(image.set_bit(5, 0), std::out_of_range);
   CPPUNIT_ASSERT_THROW(image.test_bit(5, 4), std::out_of_range);
+}
+
+void TestEMTFPhiMemoryImage::test_z130()
+{
+  EMTFPhiMemoryImage image;
+  EMTFPhiMemoryImage pattern;
+
+  // Set pattern
+  int i = 0;
+  pattern.set_straightness(0);
+
+  for (i = 0; i <= 7; ++i)
+    pattern.set_bit(0, i);
+  for (i = 7+8; i <= 7+8; ++i)
+    pattern.set_bit(1, i);
+  for (i = 7+8; i <= 14+8; ++i)
+    pattern.set_bit(2, i);
+  for (i = 7+8; i <= 14+8; ++i)
+    pattern.set_bit(3, i);
+  pattern.rotr(8);
+
+  // Set image
+  image.set_bit(0, 115);
+  image.set_bit(1, 133);
+  image.set_bit(2, 136);
+  image.set_bit(3, 131);
+  image.rotl(7);
+  image.rotr(130);
+
+  int code = pattern.op_and(image);  // AND operation
+
+  //std::cout << "pattern:\n" << pattern << std::endl;
+  //std::cout << "image:\n" << image << std::endl;
+  //std::cout << "code: " << code << std::endl;
+  CPPUNIT_ASSERT_EQUAL(code, 0b101);
 }
