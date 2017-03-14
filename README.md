@@ -19,3 +19,9 @@ scram b -j 8
 
 Please do not work on the 'master' branch directly. Create a new branch for new features.
 
+## Versions
+
+- v0.2.X (since Mar 2017): Improved accuracy
+- v0.1.X (since Nov 2016): First feature-complete version
+- v0.0.X: Initial development
+
