@@ -12,6 +12,8 @@
 #include "L1Trigger/L1TMuonEndCap/interface/SubsystemTag.hh"
 
 
+// Resolve namespaces
+
 typedef l1t::EMTFHit             EMTFHit;
 typedef l1t::EMTFHitCollection   EMTFHitCollection;
 typedef l1t::EMTFRoad            EMTFRoad;
@@ -24,8 +26,8 @@ typedef L1TMuonEndCap::GeometryTranslator         GeometryTranslator;
 typedef L1TMuonEndCap::TriggerPrimitive           TriggerPrimitive;
 typedef L1TMuonEndCap::TriggerPrimitiveCollection TriggerPrimitiveCollection;
 
-typedef L1TMuonEndCap::CSCTag CSCTag;
-typedef L1TMuonEndCap::RPCTag RPCTag;
+typedef emtf::CSCTag CSCTag;
+typedef emtf::RPCTag RPCTag;
 
 // Constants
 
@@ -48,6 +50,8 @@ typedef L1TMuonEndCap::RPCTag RPCTag;
 
 // Fixed-size arrays
 #include <array>
+template<typename T>
+using sector_array = std::array<T, NUM_SECTORS>;
 template<typename T>
 using zone_array = std::array<T, NUM_ZONES>;
 
