@@ -12,21 +12,13 @@
 #include "L1Trigger/L1TMuonEndCap/interface/SubsystemTag.hh"
 
 
-typedef L1TMuonEndCap::EMTFHit             EMTFHit;
-typedef L1TMuonEndCap::EMTFHitCollection   EMTFHitCollection;
-typedef L1TMuonEndCap::EMTFRoad            EMTFRoad;
-typedef L1TMuonEndCap::EMTFRoadCollection  EMTFRoadCollection;
-typedef L1TMuonEndCap::EMTFTrack           EMTFTrack;
-typedef L1TMuonEndCap::EMTFTrackCollection EMTFTrackCollection;
-
-typedef L1TMuonEndCap::EMTFHit             EMTFHit;
-typedef L1TMuonEndCap::EMTFHitCollection   EMTFHitCollection;
-typedef L1TMuonEndCap::EMTFRoad            EMTFRoad;
-typedef L1TMuonEndCap::EMTFRoadCollection  EMTFRoadCollection;
-typedef L1TMuonEndCap::EMTFTrack           EMTFTrack;
-typedef L1TMuonEndCap::EMTFTrackCollection EMTFTrackCollection;
-
-typedef L1TMuonEndCap::EMTFPtLUT EMTFPtLUT;
+typedef l1t::EMTFHit             EMTFHit;
+typedef l1t::EMTFHitCollection   EMTFHitCollection;
+typedef l1t::EMTFRoad            EMTFRoad;
+typedef l1t::EMTFRoadCollection  EMTFRoadCollection;
+typedef l1t::EMTFTrack           EMTFTrack;
+typedef l1t::EMTFTrackCollection EMTFTrackCollection;
+typedef l1t::EMTFPtLUT           EMTFPtLUT;
 
 typedef L1TMuonEndCap::GeometryTranslator         GeometryTranslator;
 typedef L1TMuonEndCap::TriggerPrimitive           TriggerPrimitive;
