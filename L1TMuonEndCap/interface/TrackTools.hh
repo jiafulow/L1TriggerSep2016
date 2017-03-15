@@ -6,7 +6,7 @@
 #include "DataFormats/L1TMuon/interface/EMTFTrack.h"
 #include "DataFormats/L1TMuon/interface/EMTFTrack.h"
 
-namespace L1TMuonEndCap {
+namespace emtf {
 
   // Please refers to DN-2015/017 for uGMT conventions
 
@@ -79,8 +79,8 @@ namespace L1TMuonEndCap {
     return eta;
   }
 
-  //inline double calc_eta_corr(int bits, int endcap) {  // endcap [1-2]
-  //  bits = (endcap == 2) ? bits+1 : bits;
+  //inline double calc_eta_corr(int bits, int endcap) {  // endcap [-1,+1]
+  //  bits = (endcap == -1) ? bits+1 : bits;
   //  double eta = static_cast<double>(bits);
   //  eta *= 0.010875;
   //  return eta;
@@ -91,10 +91,10 @@ namespace L1TMuonEndCap {
     return eta;
   }
 
-  inline double calc_eta_from_theta_deg(double theta_deg, int endcap) {  // endcap [1-2]
-    double theta_rad = deg_to_rad(range_theta_deg(deg));  // put theta in [0, 90] range
+  inline double calc_eta_from_theta_deg(double theta_deg, int endcap) {  // endcap [-1,+1]
+    double theta_rad = deg_to_rad(range_theta_deg(theta_deg));  // put theta in [0, 90] range
     double eta = calc_eta_from_theta_rad(theta_rad);
-    eta = (endcap == 2) ? -eta : eta;
+    eta = (endcap == -1) ? -eta : eta;
     return eta;
   }
 
@@ -125,8 +125,8 @@ namespace L1TMuonEndCap {
     return rad_to_deg(calc_theta_rad(eta));
   }
 
-  inline int    calc_theta_int(double theta, int endcap) {  // theta in deg, endcap [1-2]
-    theta = (endcap == 2) ? (180. - theta) : theta;
+  inline int    calc_theta_int(double theta, int endcap) {  // theta in deg, endcap [-1,+1]
+    theta = (endcap == -1) ? (180. - theta) : theta;
     theta = (theta - 8.5) * 128./(45.0-8.5);
     int theta_int = static_cast<int>(std::round(theta));
     return theta_int;
@@ -154,14 +154,14 @@ namespace L1TMuonEndCap {
     return deg_to_rad(calc_phi_loc_deg(bits));
   }
 
-  //inline double calc_phi_loc_deg_corr(int bits, int endcap) {  // endcap [1-2]
+  //inline double calc_phi_loc_deg_corr(int bits, int endcap) {  // endcap [-1,+1]
   //  double loc = static_cast<double>(bits);
   //  loc = (loc/60.) - 22.;
-  //  loc = (endcap == 2) ? loc - (36./60.) : loc - (28./60.);
+  //  loc = (endcap == -1) ? loc - (36./60.) : loc - (28./60.);
   //  return loc;
   //}
 
-  //inline double calc_phi_loc_rad_corr(int bits, int endcap) {  // endcap [1-2]
+  //inline double calc_phi_loc_rad_corr(int bits, int endcap) {  // endcap [-1,+1]
   //  return deg_to_rad(calc_phi_loc_deg_corr(bits, endcap));
   //}
 
@@ -200,6 +200,6 @@ namespace L1TMuonEndCap {
     return gmt_phi;
   }
 
-}  // namespace L1TMuonEndCap
+}  // namespace emtf
 
 #endif
