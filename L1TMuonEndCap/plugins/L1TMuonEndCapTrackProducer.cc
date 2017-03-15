@@ -8,13 +8,9 @@ L1TMuonEndCapTrackProducer::L1TMuonEndCapTrackProducer(const edm::ParameterSet& 
     config_(iConfig)
 {
   // Make output products
-  produces<EMTFHitCollection>           ("");      // Same as EMTFHit, but with extra emulator-only variables
-  produces<EMTFTrackCollection>         ("");      // Same as EMTFTrack, but with extra emulator-only variables
-  produces<l1t::RegionalMuonCandBxCollection>("EMTF");  // EMTF tracks output to uGMT
-
   produces<EMTFHitCollection>                ("");      // All CSC LCTs and RPC clusters received by EMTF
-
   produces<EMTFTrackCollection>              ("");      // All output EMTF tracks, in same format as unpacked data
+  produces<l1t::RegionalMuonCandBxCollection>("EMTF");  // EMTF tracks output to uGMT
 }
 
 L1TMuonEndCapTrackProducer::~L1TMuonEndCapTrackProducer() {
@@ -23,29 +19,24 @@ L1TMuonEndCapTrackProducer::~L1TMuonEndCapTrackProducer() {
 
 void L1TMuonEndCapTrackProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   // Create pointers to output products
-  auto out_xhits   = std::make_unique<EMTFHitCollection>();
-  auto out_xtracks = std::make_unique<EMTFTrackCollection>();
-  auto out_cands   = std::make_unique<l1t::RegionalMuonCandBxCollection>();
-
-  auto out_hits    = std::make_unique<EMTFHitCollection>();
-  auto out_tracks  = std::make_unique<EMTFTrackCollection>();
+  auto out_hits   = std::make_unique<EMTFHitCollection>();
+  auto out_tracks = std::make_unique<EMTFTrackCollection>();
+  auto out_cands  = std::make_unique<l1t::RegionalMuonCandBxCollection>();
 
   // Main EMTF emulator process, produces tracks from hits in each sector in each event
-  track_finder_->process(iEvent, iSetup, *out_xhits, *out_xtracks);
+  track_finder_->process(iEvent, iSetup, *out_hits, *out_tracks);
 
-  // Convert into unpacker EMTFHit, EMTFTrack formats
-  track_adaptor_->convert_all(*out_xhits, *out_xtracks, *out_hits, *out_tracks);
+  // // Convert into unpacker EMTFHit, EMTFTrack formats
+  // // Deprecated with new format - AWB 21.02.17
+  // track_adaptor_->convert_all(*out_hits, *out_tracks, *out_hits, *out_tracks);
 
   // Convert into uGMT format
-  uGMT_converter_->convert_all(*out_xtracks, *out_cands);
+  uGMT_converter_->convert_all(*out_tracks, *out_cands);
 
   // Fill the output products
-  iEvent.put(std::move(out_xhits)  , "");
-  iEvent.put(std::move(out_xtracks), "");
-  iEvent.put(std::move(out_cands)  , "EMTF");
-
-  iEvent.put(std::move(out_hits)   , "");
-  iEvent.put(std::move(out_tracks) , "");
+  iEvent.put(std::move(out_hits)  , "");
+  iEvent.put(std::move(out_tracks), "");
+  iEvent.put(std::move(out_cands) , "EMTF");
 }
 
 void L1TMuonEndCapTrackProducer::beginJob() {
