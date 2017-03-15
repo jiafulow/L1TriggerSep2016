@@ -13,19 +13,14 @@ void MicroGMTConverter::convert(
     const EMTFTrack& in_track,
     l1t::RegionalMuonCand& out_cand
 ) const {
-  l1t::tftype tftype = (in_track.endcap == 1) ? l1t::tftype::emtf_pos : l1t::tftype::emtf_neg;
-  int sector = in_track.sector - 1;
+  l1t::tftype tftype = (in_track.Endcap() == 1) ? l1t::tftype::emtf_pos : l1t::tftype::emtf_neg;
+  int sector = in_track.Sector() - 1;
 
-  out_cand.setHwPt(in_track.gmt_pt);
-  out_cand.setHwPhi(in_track.gmt_phi);
-  out_cand.setHwEta(in_track.gmt_eta);
-  out_cand.setHwSign(in_track.gmt_charge);
-  out_cand.setHwSignValid(in_track.gmt_charge_valid);
-  out_cand.setHwQual(in_track.gmt_quality);
-  out_cand.setHwHF(0);  // EMTF: halo -> 1
+  out_cand = in_track.GMT();  // Already set pt, phi, eta, sign, sign valid, and qual
+  out_cand.setHwHF(0);        // EMTF: halo -> 1
   out_cand.setTFIdentifiers(sector, tftype);
 
-  const EMTFPtLUT& ptlut_data = in_track.ptlut_data;
+  const EMTFPtLUT& ptlut_data = in_track.PtLUT();
 
   // Form track sub addresses
   int me1_ch_id = (ptlut_data.bt_vi[0] == 0 && ptlut_data.bt_vi[1] != 0) ? ptlut_data.bt_ci[1]+16 : ptlut_data.bt_ci[0];
@@ -76,8 +71,8 @@ void MicroGMTConverter::convert(
   out_cand.setTrackSubAddress(l1t::RegionalMuonCand::kME3Ch , get_gmt_chamber(me3_ch_id));
   out_cand.setTrackSubAddress(l1t::RegionalMuonCand::kME4Seg, me4_seg_id);
   out_cand.setTrackSubAddress(l1t::RegionalMuonCand::kME4Ch , get_gmt_chamber(me4_ch_id));
-  out_cand.setTrackSubAddress(l1t::RegionalMuonCand::kTrkNum, in_track.track_num);
-  out_cand.setTrackSubAddress(l1t::RegionalMuonCand::kBX    , in_track.bx);
+  out_cand.setTrackSubAddress(l1t::RegionalMuonCand::kTrkNum, in_track.Track_num());
+  out_cand.setTrackSubAddress(l1t::RegionalMuonCand::kBX    , in_track.BX());
 }
 
 void MicroGMTConverter::convert_all(
@@ -91,7 +86,7 @@ void MicroGMTConverter::convert_all(
   out_cands.setBXRange(gmtMinBX, gmtMaxBX);
 
   for (const auto& in_track : in_tracks) {
-    int bx = in_track.bx;
+    int bx = in_track.BX();
 
     if (gmtMinBX <= bx && bx <= gmtMaxBX) {
       l1t::RegionalMuonCand out_cand;
