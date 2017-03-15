@@ -37,7 +37,7 @@ private:
 
   PtAssignmentEngine pt_assign_engine_;
 
-  std::array<SectorProcessor, NUM_SECTORS> sector_processors_;
+  sector_array<SectorProcessor> sector_processors_;
 
   const edm::ParameterSet config_;
 
