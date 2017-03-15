@@ -140,13 +140,13 @@ void PrimitiveConversion::convert_csc(
 
   const bool is_neighbor = (pc_station == 5);
 
-  int cscn_ID      = tp_csc_ID;  // modify csc_ID if coming from neighbor sector
+  int csc_nID      = tp_csc_ID;  // modify csc_ID if coming from neighbor sector
   if (is_neighbor) {
     // station 1 has 3 neighbor chambers: 13,14,15 in rings 1,2,3
     // (where are chambers 10,11,12 in station 1? they were used to label ME1/1a, but not anymore)
     // station 2,3,4 have 2 neighbor chambers: 10,11 in rings 1,2
-    cscn_ID = (pc_chamber < 3) ? (pc_chamber + 12) : ( ((pc_chamber - 1) % 2) + 9);
-    cscn_ID += 1;
+    csc_nID = (pc_chamber < 3) ? (pc_chamber + 12) : ( ((pc_chamber - 1) % 2) + 9);
+    csc_nID += 1;
 
     if (tp_station == 1) {  // neighbor ME1
       assert(tp_subsector == 2);
@@ -154,56 +154,59 @@ void PrimitiveConversion::convert_csc(
   }
 
   // Set properties
-  conv_hit.detId       = tp_detId.rawId();
+  conv_hit.SetCSCDetId     ( tp_detId );
 
-  conv_hit.endcap      = tp_endcap;
-  conv_hit.station     = tp_station;
-  conv_hit.ring        = tp_ring;
-  //conv_hit.roll        = tp_roll;
-  conv_hit.chamber     = tp_chamber;
-  conv_hit.sector      = tp_sector;
-  conv_hit.subsector   = tp_subsector;
-  conv_hit.csc_ID      = tp_csc_ID;
-  conv_hit.cscn_ID     = cscn_ID;
+  conv_hit.set_endcap      ( (tp_endcap == 2) ? -1 : tp_endcap );
+  conv_hit.set_station     ( tp_station );
+  conv_hit.set_ring        ( tp_ring );
+  //conv_hit.set_roll        ( tp_roll );
+  conv_hit.set_chamber     ( tp_chamber );
+  conv_hit.set_sector      ( tp_sector );
+  conv_hit.set_subsector   ( tp_subsector );
+  conv_hit.set_csc_ID      ( tp_csc_ID );
+  conv_hit.set_csc_nID     ( csc_nID );
+  conv_hit.set_track_num   ( tp_data.trknmb );
+  conv_hit.set_sync_err    ( tp_data.syncErr );
 
-  conv_hit.bx          = tp_bx + bxShiftCSC_;
-  conv_hit.subsystem   = TriggerPrimitive::kCSC;
+  conv_hit.set_bx          ( tp_bx + bxShiftCSC_ );
+  conv_hit.set_subsystem   ( TriggerPrimitive::kCSC );
+  conv_hit.set_is_CSC      ( true );
+  conv_hit.set_is_RPC      ( false );
 
-  conv_hit.pc_sector   = pc_sector;
-  conv_hit.pc_station  = pc_station;
-  conv_hit.pc_chamber  = pc_chamber;
-  conv_hit.pc_segment  = pc_segment;
+  conv_hit.set_pc_sector   ( pc_sector );
+  conv_hit.set_pc_station  ( pc_station );
+  conv_hit.set_pc_chamber  ( pc_chamber );
+  conv_hit.set_pc_segment  ( pc_segment );
 
-  conv_hit.valid       = tp_data.valid;
-  conv_hit.strip       = tp_data.strip;
-  //conv_hit.strip_low   = tp_data.strip_low;
-  //conv_hit.strip_hi    = tp_data.strip_hi;
-  conv_hit.wire        = tp_data.keywire;
-  conv_hit.quality     = tp_data.quality;
-  conv_hit.pattern     = tp_data.pattern;
-  conv_hit.bend        = tp_data.bend;
+  conv_hit.set_valid       ( tp_data.valid );
+  conv_hit.set_strip       ( tp_data.strip );
+  //conv_hit.set_strip_low   ( tp_data.strip_low );
+  //conv_hit.set_strip_hi    ( tp_data.strip_hi );
+  conv_hit.set_wire        ( tp_data.keywire );
+  conv_hit.set_quality     ( tp_data.quality );
+  conv_hit.set_pattern     ( tp_data.pattern );
+  conv_hit.set_bend        ( tp_data.bend );
+
+  conv_hit.set_neighbor    ( is_neighbor );
+  conv_hit.set_sector_idx  ( (endcap_ == 1) ? sector_ - 1 : sector_ + 5 );
 
   convert_csc_details(conv_hit);
 
   // Add coordinates from fullsim
   {
-    namespace l1t = L1TMuonEndCap;
-
     const GlobalPoint& gp = tp_geom_->getGlobalPoint(muon_primitive);
-    double glob_phi   = l1t::rad_to_deg(gp.phi().value());
-    double glob_theta = l1t::rad_to_deg(gp.theta());
+    double glob_phi   = emtf::rad_to_deg(gp.phi().value());
+    double glob_theta = emtf::rad_to_deg(gp.theta());
     double glob_eta   = gp.eta();
-    double loc_phi    = l1t::calc_phi_loc_deg_from_glob(glob_phi, sector_);
 
-    conv_hit.phi_glob_deg = glob_phi;
-    conv_hit.phi_loc_deg  = loc_phi;
-    conv_hit.theta_deg    = glob_theta;
-    conv_hit.eta          = glob_eta;
+    conv_hit.set_phi_sim   ( glob_phi );
+    conv_hit.set_theta_sim ( glob_theta );
+    conv_hit.set_eta_sim   ( glob_eta );
   }
 }
 
 void PrimitiveConversion::convert_csc_details(EMTFHit& conv_hit) const {
-  const bool is_neighbor = (conv_hit.pc_station == 5);
+  const bool is_neighbor = conv_hit.Neighbor();
 
   // Defined as in firmware
   // endcap : 0-1 for ME+,ME-
@@ -212,20 +215,20 @@ void PrimitiveConversion::convert_csc_details(EMTFHit& conv_hit) const {
   // cscid  : 0-14 (excluding 11), including neighbors
   const int fw_endcap  = (endcap_-1);
   const int fw_sector  = (sector_-1);
-  const int fw_station = (conv_hit.station == 1) ? (is_neighbor ? 0 : (conv_hit.subsector-1)) : conv_hit.station;
-  const int fw_cscid   = (conv_hit.cscn_ID-1);
-  const int fw_strip   = conv_hit.strip;  // it is half-strip, despite the name
-  const int fw_wire    = conv_hit.wire;   // it is wiregroup, despite the name
+  const int fw_station = (conv_hit.Station() == 1) ? (is_neighbor ? 0 : (conv_hit.Subsector()-1)) : conv_hit.Station();
+  const int fw_cscid   = (conv_hit.CSC_nID()-1);
+  const int fw_strip   = conv_hit.Strip();  // it is half-strip, despite the name
+  const int fw_wire    = conv_hit.Wire();   // it is wiregroup, despite the name
 
   // Primitive converter unit
   // station: 0-5 for st1 sub1, st1 sub2, st2, st3, st4, neigh all st*
   // chamber: 0-8
-  const int pc_station = conv_hit.pc_station;
-  const int pc_chamber = conv_hit.pc_chamber;
+  const int pc_station = conv_hit.PC_station();
+  const int pc_chamber = conv_hit.PC_chamber();
 
-  const bool is_me11a = (conv_hit.station == 1 && conv_hit.ring == 4);
-  const bool is_me11b = (conv_hit.station == 1 && conv_hit.ring == 1);
-  const bool is_me13  = (conv_hit.station == 1 && conv_hit.ring == 3);
+  const bool is_me11a = (conv_hit.Station() == 1 && conv_hit.Ring() == 4);
+  const bool is_me11b = (conv_hit.Station() == 1 && conv_hit.Ring() == 1);
+  const bool is_me13  = (conv_hit.Station() == 1 && conv_hit.Ring() == 3);
 
   // Is this chamber mounted in reverse direction?
   // (i.e., phi vs. strip number is reversed)
@@ -298,8 +301,8 @@ void PrimitiveConversion::convert_csc_details(EMTFHit& conv_hit) const {
   int eighth_strip = 0;
 
   // Apply phi correction from CLCT pattern number (from src/SectorProcessorLUT.cc)
-  int clct_pat_corr = lut().get_ph_patt_corr(conv_hit.pattern);
-  int clct_pat_corr_sign = (lut().get_ph_patt_corr_sign(conv_hit.pattern) == 0) ? 1 : -1;
+  int clct_pat_corr = lut().get_ph_patt_corr(conv_hit.Pattern());
+  int clct_pat_corr_sign = (lut().get_ph_patt_corr_sign(conv_hit.Pattern()) == 0) ? 1 : -1;
 
   // At strip number 0, protect against negative correction
   bool bugStrip0BeforeFW48200 = false;
@@ -332,6 +335,9 @@ void PrimitiveConversion::convert_csc_details(EMTFHit& conv_hit) const {
 
   int fph = lut().get_ph_init(fw_endcap, fw_sector, pc_lut_id);
   fph = fph + ph_tmp_sign * ph_tmp;
+
+  // // Add option to correct for endcap-dependence (needed to line up with global geometry / RPC hits) - AWB 03.03.17
+  // fph -= ( (fw_endcap == 0) ? 28 : 36);
 
   int ph_hit = lut().get_ph_disp(fw_endcap, fw_sector, pc_lut_id);
   ph_hit = (ph_hit >> 1) + ph_tmp_sign * (ph_tmp >> 5) + ph_coverage;
@@ -375,7 +381,7 @@ void PrimitiveConversion::convert_csc_details(EMTFHit& conv_hit) const {
     if (bugME11Dupes_) {
       bool bugME11DupesBeforeFW47114 = false;
       if (bugME11DupesBeforeFW47114) {
-        if (conv_hit.pc_segment == 1) {
+        if (conv_hit.PC_segment() == 1) {
           pc_wire_strip_id = (((fw_wire >> 4) & 0x3) << 5) | (0);  // 2-bit from wire, 5-bit from 2-strip
         }
       }
@@ -450,7 +456,7 @@ void PrimitiveConversion::convert_csc_details(EMTFHit& conv_hit) const {
   // bnd1 is the lower boundary, bnd2 the upper boundary
   int zone_code = 0;
   for (int izone = 0; izone < NUM_ZONES; ++izone) {
-    int zone_code_tmp = zone_code_func(conv_hit.station, conv_hit.ring, useNewZones_);
+    int zone_code_tmp = zone_code_func(conv_hit.Station(), conv_hit.Ring(), useNewZones_);
     if (zone_code_tmp & (1<<izone)) {
       bool no_use_bnd1 = ((izone==0) || ((zone_code_tmp & (1<<(izone-1))) == 0) || is_me13);  // first possible zone for this hit
       bool no_use_bnd2 = (((zone_code_tmp & (1<<(izone+1))) == 0) || is_me13);  // last possible zone for this hit
@@ -470,15 +476,15 @@ void PrimitiveConversion::convert_csc_details(EMTFHit& conv_hit) const {
   // phzvl: each chamber overlaps with at most 3 zones, so this "local" zone word says
   // which of the possible zones contain the hit: 1 for lower, 2 for middle, 4 for upper
   int phzvl = 0;
-  if (conv_hit.ring == 1 || conv_hit.ring == 4) {
+  if (conv_hit.Ring() == 1 || conv_hit.Ring() == 4) {
     phzvl = (zone_code >> 0);
-  } else if (conv_hit.ring == 2) {
-    if (conv_hit.station == 3 || conv_hit.station == 4) {
+  } else if (conv_hit.Ring() == 2) {
+    if (conv_hit.Station() == 3 || conv_hit.Station() == 4) {
       phzvl = (zone_code >> 1);
-    } else if (conv_hit.station == 1 || conv_hit.station == 2) {
+    } else if (conv_hit.Station() == 1 || conv_hit.Station() == 2) {
       phzvl = (zone_code >> 2);
     }
-  } else if (conv_hit.ring == 3) {
+  } else if (conv_hit.Ring() == 3) {
     phzvl = (zone_code >> 3);
   }
 
@@ -488,8 +494,8 @@ void PrimitiveConversion::convert_csc_details(EMTFHit& conv_hit) const {
 
   int fs_history = 0;                       // history id: not set here, to be set in primitive matching
   int fs_chamber = -1;                      // chamber id
-  int fs_segment = conv_hit.pc_segment % 2; // segment id
-  int fs_zone_code = zone_code_func(conv_hit.station, conv_hit.ring, useNewZones_);
+  int fs_segment = conv_hit.PC_segment() % 2; // segment id
+  int fs_zone_code = zone_code_func(conv_hit.Station(), conv_hit.Ring(), useNewZones_);
 
   // For ME1
   //   j = 0 is neighbor sector chamber
@@ -499,10 +505,10 @@ void PrimitiveConversion::convert_csc_details(EMTFHit& conv_hit) const {
   //   j = 0 is neighbor sector chamber
   //   j = 1,2,3,4,5,6 are native sector chambers
   if (fw_station <= 1) {  // ME1
-    int n = (conv_hit.csc_ID-1) % 3;
-    fs_chamber = is_neighbor ? 0 : ((conv_hit.subsector == 1) ? 1+n : 4+n);
+    int n = (conv_hit.CSC_ID()-1) % 3;
+    fs_chamber = is_neighbor ? 0 : ((conv_hit.Subsector() == 1) ? 1+n : 4+n);
   } else {  // ME2,3,4
-    int n = (conv_hit.ring == 1) ? (conv_hit.csc_ID-1) : (conv_hit.csc_ID-1-3);
+    int n = (conv_hit.Ring() == 1) ? (conv_hit.CSC_ID()-1) : (conv_hit.CSC_ID()-1-3);
     fs_chamber = is_neighbor ? 0 : 1+n;
   }
 
@@ -521,25 +527,30 @@ void PrimitiveConversion::convert_csc_details(EMTFHit& conv_hit) const {
   int bt_chamber = fw_cscid+1;
   if (fw_station == 0 && bt_chamber >= 13)  // ME1 neighbor chambers 13,14,15 -> 10,11,12
     bt_chamber -= 3;
-  int bt_segment = conv_hit.pc_segment % 2;
+  int bt_segment = conv_hit.PC_segment() % 2;
 
   bt_segment = ((bt_history & 0x3)<<5) | ((bt_chamber & 0xf)<<1) | (bt_segment & 0x1);
 
   // ___________________________________________________________________________
   // Output
 
-  conv_hit.phi_fp     = fph;        // Full-precision integer phi
-  conv_hit.theta_fp   = th;         // Full-precision integer theta
-  conv_hit.phzvl      = phzvl;      // Local zone word: (1*low) + (2*mid) + (4*low) - used in FW debugging
-  conv_hit.ph_hit     = ph_hit;     // Intermediate quantity in phi calculation - used in FW debugging
-  conv_hit.zone_hit   = zone_hit;   // Phi value for building patterns (0.53333 deg precision)
-  conv_hit.zone_code  = zone_code;  // Full zone word: 1*(zone 0) + 2*(zone 1) + 4*(zone 2) + 8*(zone 3)
+  conv_hit.set_phi_fp     ( fph );        // Full-precision integer phi
+  conv_hit.set_theta_fp   ( th );         // Full-precision integer theta
+  conv_hit.set_phzvl      ( phzvl );      // Local zone word: (1*low) + (2*mid) + (4*low) - used in FW debugging
+  conv_hit.set_ph_hit     ( ph_hit );     // Intermediate quantity in phi calculation - used in FW debugging
+  conv_hit.set_zone_hit   ( zone_hit );   // Phi value for building patterns (0.53333 deg precision)
+  conv_hit.set_zone_code  ( zone_code );  // Full zone word: 1*(zone 0) + 2*(zone 1) + 4*(zone 2) + 8*(zone 3)
 
-  conv_hit.fs_segment   = fs_segment;    // Segment number used in primitive matching
-  conv_hit.fs_zone_code = fs_zone_code;  // Zone word used in primitive matching
+  conv_hit.set_fs_segment   ( fs_segment );    // Segment number used in primitive matching
+  conv_hit.set_fs_zone_code ( fs_zone_code );  // Zone word used in primitive matching
 
-  conv_hit.bt_station   = bt_station;
-  conv_hit.bt_segment   = bt_segment;
+  conv_hit.set_bt_station   ( bt_station );
+  conv_hit.set_bt_segment   ( bt_segment );
+
+  conv_hit.set_phi_loc  ( emtf::calc_phi_loc_deg(fph) );
+  conv_hit.set_phi_glob ( emtf::calc_phi_glob_deg(conv_hit.Phi_loc(), conv_hit.Sector()) );
+  conv_hit.set_theta    ( emtf::calc_theta_deg_from_int(th) );
+  conv_hit.set_eta      ( emtf::calc_eta_from_theta_deg(conv_hit.Theta(), conv_hit.Endcap()) );
 }
 
 // _____________________________________________________________________________
@@ -562,49 +573,56 @@ void PrimitiveConversion::convert_rpc(
 
   int tp_bx        = tp_data.bx;
 
+  const bool is_neighbor = (pc_station == 5);
+
   // Set properties
-  conv_hit.detId       = tp_detId.rawId();
+  conv_hit.SetRPCDetId     ( tp_detId );
 
-  conv_hit.endcap      = tp_endcap;
-  conv_hit.station     = tp_station;
-  conv_hit.ring        = tp_ring;
-  conv_hit.roll        = tp_roll;
-  //conv_hit.chamber     = tp_chamber;
-  conv_hit.sector      = tp_sector;
-  conv_hit.subsector   = tp_subsector;
-  //conv_hit.csc_ID      = tp_csc_ID;
-  //conv_hit.cscn_ID     = cscn_ID;
+  conv_hit.set_endcap      ( (tp_endcap == 2) ? -1 : tp_endcap );
+  conv_hit.set_station     ( tp_station );
+  conv_hit.set_ring        ( tp_ring );
+  conv_hit.set_roll        ( tp_roll );
+  //conv_hit.set_chamber     ( tp_chamber );
+  conv_hit.set_sector      ( tp_sector );
+  conv_hit.set_subsector   ( tp_subsector );
+  //conv_hit.set_csc_ID      ( tp_csc_ID );
+  //conv_hit.set_csc_nID     ( csc_nID );
+  //conv_hit.set_track_num   ( tp_data.trknmb );
+  //conv_hit.set_sync_err    ( tp_data.syncErr );
 
-  conv_hit.bx          = tp_bx + bxShiftRPC_;
-  conv_hit.subsystem   = TriggerPrimitive::kRPC;
+  conv_hit.set_bx          ( tp_bx + bxShiftRPC_ );
+  conv_hit.set_subsystem   ( TriggerPrimitive::kRPC );
+  conv_hit.set_is_CSC      ( false );
+  conv_hit.set_is_RPC      ( true );
 
-  conv_hit.pc_sector   = pc_sector;
-  conv_hit.pc_station  = pc_station;
-  conv_hit.pc_chamber  = pc_chamber;
-  conv_hit.pc_segment  = pc_segment;
+  conv_hit.set_pc_sector   ( pc_sector );
+  conv_hit.set_pc_station  ( pc_station );
+  conv_hit.set_pc_chamber  ( pc_chamber );
+  conv_hit.set_pc_segment  ( pc_segment );
 
-  conv_hit.valid       = true;
-  conv_hit.strip       = int((tp_data.strip_low + tp_data.strip_hi) / 2);  // in full-strip unit
-  conv_hit.strip_low   = tp_data.strip_low;
-  conv_hit.strip_hi    = tp_data.strip_hi;
-  //conv_hit.wire        = tp_data.keywire;
-  //conv_hit.quality     = tp_data.quality;
-  conv_hit.pattern     = 10;  // Arbitrarily set to the straightest pattern for RPC hits
-  //conv_hit.bend        = tp_data.bend;
+  conv_hit.set_valid       ( true );
+  conv_hit.set_strip       ( int((tp_data.strip_low + tp_data.strip_hi) / 2) );  // in full-strip unit
+  conv_hit.set_strip_low   ( tp_data.strip_low );
+  conv_hit.set_strip_hi    ( tp_data.strip_hi );
+  //conv_hit.set_wire        ( tp_data.keywire );
+  //conv_hit.set_quality     ( tp_data.quality );
+  conv_hit.set_pattern     ( 10 );  // Arbitrarily set to the straightest pattern for RPC hits
+  //conv_hit.set_bend        ( tp_data.bend );
+
+  conv_hit.set_neighbor    ( is_neighbor );
+  conv_hit.set_sector_idx  ( (endcap_ == 1) ? sector_ - 1 : sector_ + 5 );
+
 
   // Get coordinates from fullsim since LUTs do not exist yet
   bool use_fullsim_coords = true;
   if (use_fullsim_coords) {
-    namespace l1t = L1TMuonEndCap;
-
     const GlobalPoint& gp = tp_geom_->getGlobalPoint(muon_primitive);
-    double glob_phi   = l1t::rad_to_deg(gp.phi().value());
-    double glob_theta = l1t::rad_to_deg(gp.theta());
+    double glob_phi   = emtf::rad_to_deg(gp.phi().value());
+    double glob_theta = emtf::rad_to_deg(gp.theta());
     double glob_eta   = gp.eta();
-    double loc_phi    = l1t::calc_phi_loc_deg_from_glob(glob_phi, sector_);
 
-    int phi_loc_int   = l1t::calc_phi_loc_int(glob_phi, sector_);
-    int theta_int     = l1t::calc_theta_int(glob_theta, endcap_);
+    int phi_loc_int   = emtf::calc_phi_loc_int(glob_phi, conv_hit.Sector());
+    int theta_int     = emtf::calc_theta_int(glob_theta, conv_hit.Endcap());
 
     // Use RPC-specific convention in docs/CPPF-EMTF-format_2016_11_01.docx
     // Phi precision is (1/15) degrees, 4x larger than CSC precision of (1/60) degrees
@@ -618,27 +636,26 @@ void PrimitiveConversion::convert_rpc(
     // _________________________________________________________________________
     // Output
 
-    conv_hit.phi_fp     = fph;        // Full-precision integer phi
-    conv_hit.theta_fp   = th;         // Full-precision integer theta
+    conv_hit.set_phi_sim   ( glob_phi );
+    conv_hit.set_theta_sim ( glob_theta );
+    conv_hit.set_eta_sim   ( glob_eta );
 
-    conv_hit.phi_glob_deg = glob_phi;
-    conv_hit.phi_loc_deg  = loc_phi;
-    conv_hit.theta_deg    = glob_theta;
-    conv_hit.eta          = glob_eta;
+    conv_hit.set_phi_fp    ( fph ); // Full-precision integer phi
+    conv_hit.set_theta_fp  ( th );  // Full-precision integer theta
   }
 
   convert_rpc_details(conv_hit);
 }
 
 void PrimitiveConversion::convert_rpc_details(EMTFHit& conv_hit) const {
-  const bool is_neighbor = (conv_hit.pc_station == 5);
+  const bool is_neighbor = conv_hit.Neighbor();
 
   //const int fw_endcap  = (endcap_-1);
   //const int fw_sector  = (sector_-1);
-  const int fw_station = (conv_hit.station == 1) ? 0 : conv_hit.station;
+  const int fw_station = (conv_hit.Station() == 1) ? 0 : conv_hit.Station();
 
-  int fph = conv_hit.phi_fp;
-  int th  = conv_hit.theta_fp;
+  int fph = conv_hit.Phi_fp();
+  int th  = conv_hit.Theta_fp();
 
   int zone_hit = ((fph + (1<<4)) >> 5);
 
@@ -662,13 +679,13 @@ void PrimitiveConversion::convert_rpc_details(EMTFHit& conv_hit) const {
 
   int fs_history = 0;                       // history id: not set here, to be set in primitive matching
   int fs_chamber = -1;                      // chamber id
-  int fs_segment = conv_hit.pc_segment % 2; // segment id
+  int fs_segment = conv_hit.PC_segment() % 2; // segment id
   int fs_zone_code = zone_code;             // same as zone code for now
 
   // For all RPC stations (REX)
   //   j = 0 is neighbor sector subsector
   //   j = 1,2,3,4,5,6 are native subsectors
-  fs_chamber = is_neighbor ? 0 : ((conv_hit.subsector + 3) % 6) + 1;
+  fs_chamber = is_neighbor ? 0 : ((conv_hit.Subsector() + 3) % 6) + 1;
 
   assert(fs_history >= 0 && fs_chamber != -1 && fs_segment < 2);
   // fs_segment is a 6-bit word, HHCCCS, encoding the segment number S in the subsector (0 or 1),
@@ -682,23 +699,28 @@ void PrimitiveConversion::convert_rpc_details(EMTFHit& conv_hit) const {
   int bt_station = fw_station;
   int bt_history = 0;
   int bt_chamber = 0;                       // wait for FW implementation
-  int bt_segment = conv_hit.pc_segment % 2;
+  int bt_segment = conv_hit.PC_segment() % 2;
 
   bt_segment = ((bt_history & 0x3)<<5) | ((bt_chamber & 0xf)<<1) | (bt_segment & 0x1);
 
   // ___________________________________________________________________________
   // Output
 
-  conv_hit.phi_fp     = fph;        // Full-precision integer phi
-  conv_hit.theta_fp   = th;         // Full-precision integer theta
-  //conv_hit.phzvl      = phzvl;      // Local zone word: (1*low) + (2*mid) + (4*low) - used in FW debugging
-  //conv_hit.ph_hit     = ph_hit;     // Intermediate quantity in phi calculation - used in FW debugging
-  conv_hit.zone_hit   = zone_hit;   // Phi value for building patterns (0.53333 deg precision)
-  conv_hit.zone_code  = zone_code;  // Full zone word: 1*(zone 0) + 2*(zone 1) + 4*(zone 2) + 8*(zone 3)
+  conv_hit.set_phi_fp     ( fph );        // Full-precision integer phi
+  conv_hit.set_theta_fp   ( th );         // Full-precision integer theta
+  //conv_hit.set_phzvl      ( phzvl );      // Local zone word: (1*low) + (2*mid) + (4*low) - used in FW debugging
+  //conv_hit.set_ph_hit     ( ph_hit );     // Intermediate quantity in phi calculation - used in FW debugging
+  conv_hit.set_zone_hit   ( zone_hit );   // Phi value for building patterns (0.53333 deg precision)
+  conv_hit.set_zone_code  ( zone_code );  // Full zone word: 1*(zone 0) + 2*(zone 1) + 4*(zone 2) + 8*(zone 3)
 
-  conv_hit.fs_segment   = fs_segment;    // Segment number used in primitive matching
-  conv_hit.fs_zone_code = fs_zone_code;  // Zone word used in primitive matching
+  conv_hit.set_fs_segment   ( fs_segment );    // Segment number used in primitive matching
+  conv_hit.set_fs_zone_code ( fs_zone_code );  // Zone word used in primitive matching
 
-  conv_hit.bt_station   = bt_station;
-  conv_hit.bt_segment   = bt_segment;
+  conv_hit.set_bt_station   ( bt_station );
+  conv_hit.set_bt_segment   ( bt_segment );
+
+  conv_hit.set_phi_loc  ( emtf::calc_phi_loc_deg(fph) );
+  conv_hit.set_phi_glob ( emtf::calc_phi_glob_deg(conv_hit.Phi_loc(), conv_hit.Sector()) );
+  conv_hit.set_theta    ( emtf::calc_theta_deg_from_int(th) );
+  conv_hit.set_eta      ( emtf::calc_eta_from_theta_deg(conv_hit.Theta(), conv_hit.Endcap()) );
 }
