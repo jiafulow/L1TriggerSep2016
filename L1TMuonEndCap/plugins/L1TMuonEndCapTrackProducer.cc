@@ -3,7 +3,6 @@
 
 L1TMuonEndCapTrackProducer::L1TMuonEndCapTrackProducer(const edm::ParameterSet& iConfig) :
     track_finder_(new TrackFinder(iConfig, consumesCollector())),
-    track_adaptor_(new TrackAdaptor()),
     uGMT_converter_(new MicroGMTConverter()),
     config_(iConfig)
 {
@@ -25,10 +24,6 @@ void L1TMuonEndCapTrackProducer::produce(edm::Event& iEvent, const edm::EventSet
 
   // Main EMTF emulator process, produces tracks from hits in each sector in each event
   track_finder_->process(iEvent, iSetup, *out_hits, *out_tracks);
-
-  // // Convert into unpacker EMTFHit, EMTFTrack formats
-  // // Deprecated with new format - AWB 21.02.17
-  // track_adaptor_->convert_all(*out_hits, *out_tracks, *out_hits, *out_tracks);
 
   // Convert into uGMT format
   uGMT_converter_->convert_all(*out_tracks, *out_cands);

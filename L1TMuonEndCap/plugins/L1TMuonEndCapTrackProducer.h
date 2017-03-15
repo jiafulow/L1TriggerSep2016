@@ -13,7 +13,6 @@
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
 #include "L1Trigger/L1TMuonEndCap/interface/TrackFinder.hh"
-#include "L1Trigger/L1TMuonEndCap/interface/TrackAdaptor.hh"
 #include "L1Trigger/L1TMuonEndCap/interface/MicroGMTConverter.hh"
 
 
@@ -37,7 +36,6 @@ private:
 
 private:
   std::unique_ptr<TrackFinder>       track_finder_;
-  std::unique_ptr<TrackAdaptor>      track_adaptor_;
   std::unique_ptr<MicroGMTConverter> uGMT_converter_;
 
   const edm::ParameterSet& config_;
