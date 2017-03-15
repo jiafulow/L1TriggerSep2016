@@ -1,10 +1,10 @@
-#ifndef L1TMuonEndCap_EMTFTrackTools_hh
-#define L1TMuonEndCap_EMTFTrackTools_hh
+#ifndef L1TMuonEndCap_TrackTools_hh
+#define L1TMuonEndCap_TrackTools_hh
 
 #include <cmath>
 
-#include "DataFormatsSep2016/L1TMuon/interface/EMTFTrack.h"
-#include "DataFormatsSep2016/L1TMuon/interface/EMTFTrackExtra.h"
+#include "DataFormats/L1TMuon/interface/EMTFTrack.h"
+#include "DataFormats/L1TMuon/interface/EMTFTrack.h"
 
 namespace L1TMuonEndCap {
 

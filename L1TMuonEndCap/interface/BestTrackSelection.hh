@@ -1,10 +1,10 @@
-#ifndef L1TMuonEndCap_EMTFBestTrackSelection_hh
-#define L1TMuonEndCap_EMTFBestTrackSelection_hh
+#ifndef L1TMuonEndCap_BestTrackSelection_hh
+#define L1TMuonEndCap_BestTrackSelection_hh
 
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFCommon.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/Common.hh"
 
 
-class EMTFBestTrackSelection {
+class BestTrackSelection {
 public:
   void configure(
       int verbose, int endcap, int sector, int bx,
@@ -14,18 +14,18 @@ public:
   );
 
   void process(
-      const std::deque<EMTFTrackExtraCollection>& extended_best_track_cands,
-      EMTFTrackExtraCollection& best_tracks
+      const std::deque<EMTFTrackCollection>& extended_best_track_cands,
+      EMTFTrackCollection& best_tracks
   ) const;
 
   void cancel_one_bx(
-      const std::deque<EMTFTrackExtraCollection>& extended_best_track_cands,
-      EMTFTrackExtraCollection& best_tracks
+      const std::deque<EMTFTrackCollection>& extended_best_track_cands,
+      EMTFTrackCollection& best_tracks
   ) const;
 
   void cancel_multi_bx(
-      const std::deque<EMTFTrackExtraCollection>& extended_best_track_cands,
-      EMTFTrackExtraCollection& best_tracks
+      const std::deque<EMTFTrackCollection>& extended_best_track_cands,
+      EMTFTrackCollection& best_tracks
   ) const;
 
 private:

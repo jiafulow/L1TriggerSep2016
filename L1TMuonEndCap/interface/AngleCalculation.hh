@@ -1,10 +1,10 @@
-#ifndef L1TMuonEndCap_EMTFAngleCalculation_hh
-#define L1TMuonEndCap_EMTFAngleCalculation_hh
+#ifndef L1TMuonEndCap_AngleCalculation_hh
+#define L1TMuonEndCap_AngleCalculation_hh
 
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFCommon.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/Common.hh"
 
 
-class EMTFAngleCalculation {
+class AngleCalculation {
 public:
   void configure(
       int verbose, int endcap, int sector, int bx,
@@ -14,14 +14,14 @@ public:
   );
 
   void process(
-      zone_array<EMTFTrackExtraCollection>& zone_tracks
+      zone_array<EMTFTrackCollection>& zone_tracks
   ) const;
 
-  void calculate_angles(EMTFTrackExtra& track) const;
+  void calculate_angles(EMTFTrack& track) const;
 
-  void calculate_bx(EMTFTrackExtra& track) const;
+  void calculate_bx(EMTFTrack& track) const;
 
-  void erase_tracks(EMTFTrackExtraCollection& tracks) const;
+  void erase_tracks(EMTFTrackCollection& tracks) const;
 
 private:
   int verbose_, endcap_, sector_, bx_;

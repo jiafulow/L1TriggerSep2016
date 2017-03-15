@@ -1,4 +1,4 @@
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPtAssignmentEngineAux.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/PtAssignmentEngineAux.hh"
 
 //ModeVariables is a 2D arrary indexed by [TrackMode(13 Total Listed Below)][VariableNumber(20 Total Constructed Above)]
 // Variable numbering
@@ -84,11 +84,11 @@ static const int dPhiNLBMap_7bit[128] = {0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 
 static const int dPhiNLBMap_8bit[256] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 27, 28, 29, 30, 31, 32, 33, 35, 36, 37, 38, 39, 40, 42, 43, 44, 45, 46, 48, 49, 50, 51, 53, 54, 55, 56, 58, 59, 60, 61, 63, 64, 65, 67, 68, 69, 70, 72, 73, 74, 76, 77, 79, 80, 81, 83, 84, 85, 87, 88, 90, 91, 92, 94, 95, 97, 98, 100, 101, 103, 104, 105, 107, 108, 110, 111, 113, 115, 116, 118, 119, 121, 122, 124, 125, 127, 129, 130, 132, 133, 135, 137, 138, 140, 141, 143, 145, 146, 148, 150, 151, 153, 155, 157, 158, 160, 162, 163, 165, 167, 169, 171, 172, 174, 176, 178, 180, 181, 183, 185, 187, 189, 191, 192, 194, 196, 198, 200, 202, 204, 206, 208, 210, 212, 214, 216, 218, 220, 222, 224, 226, 228, 230, 232, 234, 236, 238, 240, 242, 244, 246, 249, 251, 253, 255, 257, 259, 261, 264, 266, 268, 270, 273, 275, 277, 279, 282, 284, 286, 289, 291, 293, 296, 298, 300, 303, 305, 307, 310, 312, 315, 317, 320, 322, 324, 327, 329, 332, 334, 337, 340, 342, 345, 347, 350, 352, 355, 358, 360, 363, 366, 368, 371, 374, 376, 379, 382, 385, 387, 390, 393, 396, 398, 401, 404, 407, 410, 413, 416, 419, 421, 424, 427, 430, 433, 436, 439, 442, 445, 448, 451, 454, 457, 461, 464, 467, 470, 473, 476, 479, 483};
 
 
-const int (*EMTFPtAssignmentEngineAux::getModeVariables() const)[6] {
+const int (*PtAssignmentEngineAux::getModeVariables() const)[6] {
   return ModeVariables_Scheme3;
 }
 
-int EMTFPtAssignmentEngineAux::getNLBdPhi(int dPhi, int bits, int max) const {
+int PtAssignmentEngineAux::getNLBdPhi(int dPhi, int bits, int max) const {
   int dPhi_= max;
   int sign_ = 1;
   if (dPhi<0)
@@ -167,7 +167,7 @@ int EMTFPtAssignmentEngineAux::getNLBdPhi(int dPhi, int bits, int max) const {
   return (sign_ * dPhi_);
 }
 
-int EMTFPtAssignmentEngineAux::getNLBdPhiBin(int dPhi, int bits, int max) const {
+int PtAssignmentEngineAux::getNLBdPhiBin(int dPhi, int bits, int max) const {
   int dPhiBin_= (1<<bits)-1;
   int sign_ = 1;
   if (dPhi<0)
@@ -240,7 +240,7 @@ int EMTFPtAssignmentEngineAux::getNLBdPhiBin(int dPhi, int bits, int max) const 
   return (dPhiBin_);
 }
 
-int EMTFPtAssignmentEngineAux::getdPhiFromBin(int dPhiBin, int bits, int max) const {
+int PtAssignmentEngineAux::getdPhiFromBin(int dPhiBin, int bits, int max) const {
   int dPhi_= (1<<bits)-1;
 
   if (dPhiBin>(1<<bits)-1)
@@ -267,7 +267,7 @@ int EMTFPtAssignmentEngineAux::getdPhiFromBin(int dPhiBin, int bits, int max) co
   return (dPhi_);
 }
 
-int EMTFPtAssignmentEngineAux::getCLCT(int clct) const {
+int PtAssignmentEngineAux::getCLCT(int clct) const {
   int clct_ = 0;
   int sign_ = 1;
 
@@ -288,7 +288,7 @@ int EMTFPtAssignmentEngineAux::getCLCT(int clct) const {
   return (sign_ * clct_);
 }
 
-int EMTFPtAssignmentEngineAux::getdTheta(int dTheta) const {
+int PtAssignmentEngineAux::getdTheta(int dTheta) const {
   int dTheta_ = 0;
 
   if (dTheta<=-3)
@@ -310,7 +310,7 @@ int EMTFPtAssignmentEngineAux::getdTheta(int dTheta) const {
   return (dTheta_);
 }
 
-int EMTFPtAssignmentEngineAux::getdEta(int dEta) const {
+int PtAssignmentEngineAux::getdEta(int dEta) const {
   int dEta_ = 0;
 
   if (dEta<=-5)
@@ -332,7 +332,7 @@ int EMTFPtAssignmentEngineAux::getdEta(int dEta) const {
   return (dEta_);
 }
 
-int EMTFPtAssignmentEngineAux::getEtaInt(float eta, int bits) const {
+int PtAssignmentEngineAux::getEtaInt(float eta, int bits) const {
   eta = std::abs(eta);
   eta = (eta < 0.9) ? 0.9 : eta;
   bits = (bits > 5) ? 5 : bits;
@@ -344,7 +344,7 @@ int EMTFPtAssignmentEngineAux::getEtaInt(float eta, int bits) const {
   return etaInt;
 }
 
-float EMTFPtAssignmentEngineAux::getEtaFromThetaInt(int thetaInt, int bits) const {
+float PtAssignmentEngineAux::getEtaFromThetaInt(int thetaInt, int bits) const {
   thetaInt = (thetaInt > 127) ? 127 : thetaInt;  // 7-bit
   thetaInt = (thetaInt < 0) ? 0 : thetaInt;
   float theta = thetaInt;
@@ -354,7 +354,7 @@ float EMTFPtAssignmentEngineAux::getEtaFromThetaInt(int thetaInt, int bits) cons
   return eta;
 }
 
-float EMTFPtAssignmentEngineAux::getEtaFromEtaInt(int etaInt, int bits) const {
+float PtAssignmentEngineAux::getEtaFromEtaInt(int etaInt, int bits) const {
   etaInt = (etaInt > 31) ? 31 : etaInt;  // 5-bit
   etaInt = (etaInt < 0) ? 0 : etaInt;
   bits = (bits > 5) ? 5 : bits;
@@ -365,7 +365,7 @@ float EMTFPtAssignmentEngineAux::getEtaFromEtaInt(int etaInt, int bits) const {
   return eta;
 }
 
-float EMTFPtAssignmentEngineAux::getEtaFromBin(int etaBin, int bits) const {
+float PtAssignmentEngineAux::getEtaFromBin(int etaBin, int bits) const {
   // For backward compatibility
   return getEtaFromEtaInt(etaBin, bits);
 }
@@ -378,7 +378,7 @@ static const int FRLUT[2][5] = {
   {0b0000000100100, 0b0000001011010, 0b0111010100100, 0b0000101011010, 0b0000101011010}
 };
 
-int EMTFPtAssignmentEngineAux::getFRLUT(int sector, int station, int chamber) const {
+int PtAssignmentEngineAux::getFRLUT(int sector, int station, int chamber) const {
   int bits = FRLUT[(sector-1)%2][station];
   bool isFront = bits & (1<<chamber);
   return isFront;
@@ -396,19 +396,19 @@ static const int GMT_eta_from_theta[128] = {
    91,  91,  90,  89,  89,  88,  87,  87,  86,  85,  84,  84,  83,  83,  82,  81
 };
 
-int EMTFPtAssignmentEngineAux::getGMTPt(float pt) const {
+int PtAssignmentEngineAux::getGMTPt(float pt) const {
   // compressed pt = pt*2 (scale) + 1 (pt = 0 is empty candidate)
   int gmt_pt = (pt * 2) + 1;
   gmt_pt = (gmt_pt > 511) ? 511 : gmt_pt;
   return gmt_pt;
 }
 
-float EMTFPtAssignmentEngineAux::getPtFromGMTPt(int gmt_pt) const {
+float PtAssignmentEngineAux::getPtFromGMTPt(int gmt_pt) const {
   float pt = (gmt_pt <= 0) ?  0 : 0.5 * (gmt_pt-1);
   return pt;
 }
 
-int EMTFPtAssignmentEngineAux::getGMTPhi(int phi) const {
+int PtAssignmentEngineAux::getGMTPhi(int phi) const {
   // convert phi into gmt scale according to DN15-017
   // full scale is -16 to 100, or 116 values, covers range -10 to 62.5 deg
   // my internal ph scale is 0..5000, covers from -22 to 63.333 deg
@@ -420,7 +420,7 @@ int EMTFPtAssignmentEngineAux::getGMTPhi(int phi) const {
   return phi;
 }
 
-int EMTFPtAssignmentEngineAux::getGMTPhiV2(int phi) const {
+int PtAssignmentEngineAux::getGMTPhiV2(int phi) const {
   // convert phi into gmt scale according to DN15-017
   phi *= 6991;
   phi >>= 18; // divide by 0x40000
@@ -428,7 +428,7 @@ int EMTFPtAssignmentEngineAux::getGMTPhiV2(int phi) const {
   return phi;
 }
 
-int EMTFPtAssignmentEngineAux::getGMTEta(int theta, int endcap) const {
+int PtAssignmentEngineAux::getGMTEta(int theta, int endcap) const {
   if (theta < 0)
     return 0;
   if (endcap == 2 && theta > 127)
@@ -442,7 +442,7 @@ int EMTFPtAssignmentEngineAux::getGMTEta(int theta, int endcap) const {
   return eta;
 }
 
-int EMTFPtAssignmentEngineAux::getGMTQuality(int mode, int theta) const {
+int PtAssignmentEngineAux::getGMTQuality(int mode, int theta) const {
   int quality = 0;
   if (theta > 87) {  // if (eta < 1.2)
     switch (mode) {
@@ -469,7 +469,7 @@ int EMTFPtAssignmentEngineAux::getGMTQuality(int mode, int theta) const {
   return quality;
 }
 
-std::pair<int,int> EMTFPtAssignmentEngineAux::getGMTCharge(int mode, const std::vector<int>& phidiffs) const {
+std::pair<int,int> PtAssignmentEngineAux::getGMTCharge(int mode, const std::vector<int>& phidiffs) const {
   // -1 = postive physical charge to match pdgId code (i.e. -13 is positive, anti-muon). +1 = negative physical charge.
   // Also matches DN-2015/017 format for track finder --> uGMT interface format, where 0 indicates positive, 1 negative.
   int emuCharge = 0;

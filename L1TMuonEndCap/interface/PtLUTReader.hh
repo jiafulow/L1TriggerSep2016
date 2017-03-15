@@ -1,15 +1,15 @@
-#ifndef L1TMuonEndCap_EMTFPtLUTReader_hh
-#define L1TMuonEndCap_EMTFPtLUTReader_hh
+#ifndef L1TMuonEndCap_PtLUTReader_hh
+#define L1TMuonEndCap_PtLUTReader_hh
 
 #include <cstdint>
 #include <string>
 #include <vector>
 
 
-class EMTFPtLUTReader {
+class PtLUTReader {
 public:
-  explicit EMTFPtLUTReader();
-  ~EMTFPtLUTReader();
+  explicit PtLUTReader();
+  ~PtLUTReader();
 
   typedef uint16_t               content_t;
   typedef uint64_t               address_t;

@@ -1,15 +1,15 @@
 #include "L1TMuonEndCapTrackProducer.h"
 
 
-L1TMuonEndCapTrackProducerSep2016::L1TMuonEndCapTrackProducerSep2016(const edm::ParameterSet& iConfig) :
-    track_finder_(new EMTFTrackFinder(iConfig, consumesCollector())),
-    track_adaptor_(new EMTFTrackAdaptor()),
-    uGMT_converter_(new EMTFMicroGMTConverter()),
+L1TMuonEndCapTrackProducer::L1TMuonEndCapTrackProducer(const edm::ParameterSet& iConfig) :
+    track_finder_(new TrackFinder(iConfig, consumesCollector())),
+    track_adaptor_(new TrackAdaptor()),
+    uGMT_converter_(new MicroGMTConverter()),
     config_(iConfig)
 {
   // Make output products
-  produces<EMTFHitExtraCollection>           ("");      // Same as EMTFHit, but with extra emulator-only variables
-  produces<EMTFTrackExtraCollection>         ("");      // Same as EMTFTrack, but with extra emulator-only variables
+  produces<EMTFHitCollection>           ("");      // Same as EMTFHit, but with extra emulator-only variables
+  produces<EMTFTrackCollection>         ("");      // Same as EMTFTrack, but with extra emulator-only variables
   produces<l1t::RegionalMuonCandBxCollection>("EMTF");  // EMTF tracks output to uGMT
 
   produces<EMTFHitCollection>                ("");      // All CSC LCTs and RPC clusters received by EMTF
@@ -17,14 +17,14 @@ L1TMuonEndCapTrackProducerSep2016::L1TMuonEndCapTrackProducerSep2016(const edm::
   produces<EMTFTrackCollection>              ("");      // All output EMTF tracks, in same format as unpacked data
 }
 
-L1TMuonEndCapTrackProducerSep2016::~L1TMuonEndCapTrackProducerSep2016() {
+L1TMuonEndCapTrackProducer::~L1TMuonEndCapTrackProducer() {
 
 }
 
-void L1TMuonEndCapTrackProducerSep2016::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
+void L1TMuonEndCapTrackProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   // Create pointers to output products
-  auto out_xhits   = std::make_unique<EMTFHitExtraCollection>();
-  auto out_xtracks = std::make_unique<EMTFTrackExtraCollection>();
+  auto out_xhits   = std::make_unique<EMTFHitCollection>();
+  auto out_xtracks = std::make_unique<EMTFTrackCollection>();
   auto out_cands   = std::make_unique<l1t::RegionalMuonCandBxCollection>();
 
   auto out_hits    = std::make_unique<EMTFHitCollection>();
@@ -48,16 +48,16 @@ void L1TMuonEndCapTrackProducerSep2016::produce(edm::Event& iEvent, const edm::E
   iEvent.put(std::move(out_tracks) , "");
 }
 
-void L1TMuonEndCapTrackProducerSep2016::beginJob() {
+void L1TMuonEndCapTrackProducer::beginJob() {
 
 }
 
-void L1TMuonEndCapTrackProducerSep2016::endJob() {
+void L1TMuonEndCapTrackProducer::endJob() {
 
 }
 
 // Fill 'descriptions' with the allowed parameters
-void L1TMuonEndCapTrackProducerSep2016::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+void L1TMuonEndCapTrackProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   // The following says we do not know what parameters are allowed so do no validation
   // Please change this to state exactly what you do use, even if it is no parameters
   edm::ParameterSetDescription desc;
@@ -66,4 +66,4 @@ void L1TMuonEndCapTrackProducerSep2016::fillDescriptions(edm::ConfigurationDescr
 }
 
 // Define this as a plug-in
-DEFINE_FWK_MODULE(L1TMuonEndCapTrackProducerSep2016);
+DEFINE_FWK_MODULE(L1TMuonEndCapTrackProducer);

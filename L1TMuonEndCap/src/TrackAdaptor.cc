@@ -1,17 +1,17 @@
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFTrackAdaptor.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/TrackAdaptor.hh"
 
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFTrackTools.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/TrackTools.hh"
 
 
-EMTFTrackAdaptor::EMTFTrackAdaptor() {
-
-}
-
-EMTFTrackAdaptor::~EMTFTrackAdaptor() {
+TrackAdaptor::TrackAdaptor() {
 
 }
 
-void EMTFTrackAdaptor::convert_hit(const EMTFHitExtra& in_hit, EMTFHit& out_hit) const {
+TrackAdaptor::~TrackAdaptor() {
+
+}
+
+void TrackAdaptor::convert_hit(const EMTFHit& in_hit, EMTFHit& out_hit) const {
   out_hit.set_endcap       ( (in_hit.endcap == 2) ? -1 : 1    );
   out_hit.set_station      ( in_hit.station       );
   out_hit.set_ring         ( in_hit.ring          );
@@ -37,7 +37,7 @@ void EMTFTrackAdaptor::convert_hit(const EMTFHitExtra& in_hit, EMTFHit& out_hit)
   out_hit.set_is_RPC_hit   ( (in_hit.subsystem == TriggerPrimitive::kRPC) ? 1 : 0 );
 }
 
-void EMTFTrackAdaptor::convert_track(const EMTFTrackExtra& in_track, EMTFTrack& out_track) const {
+void TrackAdaptor::convert_track(const EMTFTrack& in_track, EMTFTrack& out_track) const {
   namespace l1t = L1TMuonEndCap;
 
   for (const auto& in_hit : in_track.xhits) {
@@ -130,8 +130,8 @@ void EMTFTrackAdaptor::convert_track(const EMTFTrackExtra& in_track, EMTFTrack& 
   //out_track.set_all_neighbor  ( 0                       );
 }
 
-void EMTFTrackAdaptor::convert_all(
-    const EMTFHitExtraCollection& in_hits, const EMTFTrackExtraCollection& in_tracks,
+void TrackAdaptor::convert_all(
+    const EMTFHitCollection& in_hits, const EMTFTrackCollection& in_tracks,
     EMTFHitCollection& out_hits, EMTFTrackCollection& out_tracks
 ) const {
   out_hits.clear();

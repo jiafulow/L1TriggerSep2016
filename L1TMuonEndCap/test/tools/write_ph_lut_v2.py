@@ -2,7 +2,7 @@
 
 import os
 
-path = 'L1TriggerSep2016/L1TMuonEndCap/data/emtf_luts/vl_lut_me11_edges/'
+path = 'L1Trigger/L1TMuonEndCap/data/emtf_luts/vl_lut_me11_edges/'
 
 
 def main():

@@ -1,10 +1,10 @@
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPtAssignment.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/PtAssignment.hh"
 
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPtAssignmentEngine.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/PtAssignmentEngine.hh"
 
 
-void EMTFPtAssignment::configure(
-    const EMTFPtAssignmentEngine* pt_assign_engine,
+void PtAssignment::configure(
+    const PtAssignmentEngine* pt_assign_engine,
     int verbose, int endcap, int sector, int bx,
     bool readPtLUTFile, bool fixMode15HighPt,
     bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt,
@@ -13,7 +13,7 @@ void EMTFPtAssignment::configure(
   assert(pt_assign_engine != nullptr);
 
   //pt_assign_engine_ = pt_assign_engine;
-  pt_assign_engine_ = const_cast<EMTFPtAssignmentEngine*>(pt_assign_engine);
+  pt_assign_engine_ = const_cast<PtAssignmentEngine*>(pt_assign_engine);
 
   verbose_ = verbose;
   endcap_  = endcap;
@@ -29,16 +29,16 @@ void EMTFPtAssignment::configure(
   bugGMTPhi_ = bugGMTPhi;
 }
 
-void EMTFPtAssignment::process(
-    EMTFTrackExtraCollection& best_tracks
+void PtAssignment::process(
+    EMTFTrackCollection& best_tracks
 ) {
-  using address_t = EMTFPtAssignmentEngine::address_t;
+  using address_t = PtAssignmentEngine::address_t;
 
-  EMTFTrackExtraCollection::iterator best_tracks_it  = best_tracks.begin();
-  EMTFTrackExtraCollection::iterator best_tracks_end = best_tracks.end();
+  EMTFTrackCollection::iterator best_tracks_it  = best_tracks.begin();
+  EMTFTrackCollection::iterator best_tracks_end = best_tracks.end();
 
   for (; best_tracks_it != best_tracks_end; ++best_tracks_it) {
-    EMTFTrackExtra& track = *best_tracks_it;  // pass by reference
+    EMTFTrack& track = *best_tracks_it;  // pass by reference
 
     address_t address = pt_assign_engine_->calculate_address(track);
     float     xmlpt   = pt_assign_engine_->calculate_pt(address);
@@ -100,6 +100,6 @@ void EMTFPtAssignment::process(
   }
 }
 
-const EMTFPtAssignmentEngineAux& EMTFPtAssignment::aux() const {
+const PtAssignmentEngineAux& PtAssignment::aux() const {
   return pt_assign_engine_->aux();
 }

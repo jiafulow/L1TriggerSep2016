@@ -1,11 +1,11 @@
-#ifndef L1TMuonEndCap_EMTFPatternRecognition_hh
-#define L1TMuonEndCap_EMTFPatternRecognition_hh
+#ifndef L1TMuonEndCap_PatternRecognition_hh
+#define L1TMuonEndCap_PatternRecognition_hh
 
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFCommon.hh"
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPhiMemoryImage.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/Common.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/PhiMemoryImage.hh"
 
 
-class EMTFPatternRecognition {
+class PatternRecognition {
 public:
   // Pattern detector ID: [zone, keystrip, pattern]
   typedef std::array<int, 3>  pattern_ref_t;
@@ -20,31 +20,31 @@ public:
   void configure_details();
 
   void process(
-      const std::deque<EMTFHitExtraCollection>& extended_conv_hits,
+      const std::deque<EMTFHitCollection>& extended_conv_hits,
       std::map<pattern_ref_t, int>& patt_lifetime_map,
-      zone_array<EMTFRoadExtraCollection>& zone_roads
+      zone_array<EMTFRoadCollection>& zone_roads
   ) const;
 
   bool is_zone_empty(
       int zone,
-      const std::deque<EMTFHitExtraCollection>& extended_conv_hits,
+      const std::deque<EMTFHitCollection>& extended_conv_hits,
       const std::map<pattern_ref_t, int>& patt_lifetime_map
   ) const;
 
   void make_zone_image(
       int zone,
-      const std::deque<EMTFHitExtraCollection>& extended_conv_hits,
-      EMTFPhiMemoryImage& image
+      const std::deque<EMTFHitCollection>& extended_conv_hits,
+      PhiMemoryImage& image
   ) const;
 
   void process_single_zone(
       int zone,
-      EMTFPhiMemoryImage cloned_image,
+      PhiMemoryImage cloned_image,
       std::map<pattern_ref_t, int>& patt_lifetime_map,
-      EMTFRoadExtraCollection& roads
+      EMTFRoadCollection& roads
   ) const;
 
-  void sort_single_zone(EMTFRoadExtraCollection& roads) const;
+  void sort_single_zone(EMTFRoadCollection& roads) const;
 
 
 private:
@@ -56,7 +56,7 @@ private:
   int maxRoadsPerZone_;
   bool useSecondEarliest_;
 
-  std::vector<EMTFPhiMemoryImage> patterns_;
+  std::vector<PhiMemoryImage> patterns_;
 };
 
 #endif

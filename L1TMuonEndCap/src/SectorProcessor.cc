@@ -1,18 +1,18 @@
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFSectorProcessor.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/SectorProcessor.hh"
 
 
-EMTFSectorProcessor::EMTFSectorProcessor() {
-
-}
-
-EMTFSectorProcessor::~EMTFSectorProcessor() {
+SectorProcessor::SectorProcessor() {
 
 }
 
-void EMTFSectorProcessor::configure(
+SectorProcessor::~SectorProcessor() {
+
+}
+
+void SectorProcessor::configure(
     const GeometryTranslator* tp_geom,
-    const EMTFSectorProcessorLUT* lut,
-    const EMTFPtAssignmentEngine* pt_assign_engine,
+    const SectorProcessorLUT* lut,
+    const PtAssignmentEngine* pt_assign_engine,
     int verbose, int endcap, int sector,
     int minBX, int maxBX, int bxWindow, int bxShiftCSC, int bxShiftRPC,
     const std::vector<int>& zoneBoundaries, int zoneOverlap, int zoneOverlapRPC,
@@ -73,19 +73,19 @@ void EMTFSectorProcessor::configure(
   bugGMTPhi_          = bugGMTPhi;
 }
 
-void EMTFSectorProcessor::process(
+void SectorProcessor::process(
     EventNumber_t ievent,
     const TriggerPrimitiveCollection& muon_primitives,
-    EMTFHitExtraCollection& out_hits,
-    EMTFTrackExtraCollection& out_tracks
+    EMTFHitCollection& out_hits,
+    EMTFTrackCollection& out_tracks
 ) const {
 
   // List of converted hits, extended from previous BXs
   // deque (double-ended queue) is similar to a vector, but allows insertion or deletion of elements at both beginning and end
-  std::deque<EMTFHitExtraCollection> extended_conv_hits;
+  std::deque<EMTFHitCollection> extended_conv_hits;
 
   // List of best track candidates, extended from previous BXs
-  std::deque<EMTFTrackExtraCollection> extended_best_track_cands;
+  std::deque<EMTFTrackCollection> extended_best_track_cands;
 
   // Map of pattern detector --> lifetime, tracked across BXs
   std::map<pattern_ref_t, int> patt_lifetime_map;
@@ -119,20 +119,20 @@ void EMTFSectorProcessor::process(
   return;
 }
 
-void EMTFSectorProcessor::process_single_bx(
+void SectorProcessor::process_single_bx(
     int bx,
     const TriggerPrimitiveCollection& muon_primitives,
-    EMTFHitExtraCollection& out_hits,
-    EMTFTrackExtraCollection& out_tracks,
-    std::deque<EMTFHitExtraCollection>& extended_conv_hits,
-    std::deque<EMTFTrackExtraCollection>& extended_best_track_cands,
+    EMTFHitCollection& out_hits,
+    EMTFTrackCollection& out_tracks,
+    std::deque<EMTFHitCollection>& extended_conv_hits,
+    std::deque<EMTFTrackCollection>& extended_best_track_cands,
     std::map<pattern_ref_t, int>& patt_lifetime_map
 ) const {
 
   // ___________________________________________________________________________
   // Configure
 
-  EMTFPrimitiveSelection prim_sel;
+  PrimitiveSelection prim_sel;
   prim_sel.configure(
       verbose_, endcap_, sector_, bx,
       bxShiftCSC_, bxShiftRPC_,
@@ -140,7 +140,7 @@ void EMTFSectorProcessor::process_single_bx(
       bugME11Dupes_
   );
 
-  EMTFPrimitiveConversion prim_conv;
+  PrimitiveConversion prim_conv;
   prim_conv.configure(
       tp_geom_, lut_,
       verbose_, endcap_, sector_, bx,
@@ -150,7 +150,7 @@ void EMTFSectorProcessor::process_single_bx(
       bugME11Dupes_
   );
 
-  EMTFPatternRecognition patt_recog;
+  PatternRecognition patt_recog;
   patt_recog.configure(
       verbose_, endcap_, sector_, bx,
       bxWindow_,
@@ -158,14 +158,14 @@ void EMTFSectorProcessor::process_single_bx(
       maxRoadsPerZone_, useSecondEarliest_
   );
 
-  EMTFPrimitiveMatching prim_match;
+  PrimitiveMatching prim_match;
   prim_match.configure(
       verbose_, endcap_, sector_, bx,
       fixZonePhi_, useNewZones_,
       bugME11Dupes_
   );
 
-  EMTFAngleCalculation angle_calc;
+  AngleCalculation angle_calc;
   angle_calc.configure(
       verbose_, endcap_, sector_, bx,
       bxWindow_,
@@ -173,7 +173,7 @@ void EMTFSectorProcessor::process_single_bx(
       bugME11Dupes_
   );
 
-  EMTFBestTrackSelection btrack_sel;
+  BestTrackSelection btrack_sel;
   btrack_sel.configure(
       verbose_, endcap_, sector_, bx,
       bxWindow_,
@@ -181,7 +181,7 @@ void EMTFSectorProcessor::process_single_bx(
       bugSameSectorPt0_
   );
 
-  EMTFPtAssignment pt_assign;
+  PtAssignment pt_assign;
   pt_assign.configure(
       pt_assign_engine_,
       verbose_, endcap_, sector_, bx,
@@ -193,49 +193,49 @@ void EMTFSectorProcessor::process_single_bx(
   std::map<int, TriggerPrimitiveCollection> selected_csc_map;
   std::map<int, TriggerPrimitiveCollection> selected_rpc_map;
 
-  EMTFHitExtraCollection conv_hits;
+  EMTFHitCollection conv_hits;
 
-  zone_array<EMTFRoadExtraCollection> zone_roads;  // each zone has its road collection
+  zone_array<EMTFRoadCollection> zone_roads;  // each zone has its road collection
 
-  zone_array<EMTFTrackExtraCollection> zone_tracks;  // each zone has its track collection
+  zone_array<EMTFTrackCollection> zone_tracks;  // each zone has its track collection
 
-  EMTFTrackExtraCollection best_tracks;
+  EMTFTrackCollection best_tracks;
 
   // ___________________________________________________________________________
   // Process
 
   // Select muon primitives that belong to this sector and this BX.
   // Put them into maps with an index that roughly corresponds to
-  // each input link. From src/EMTFPrimitiveSelection.cc.
+  // each input link. From src/PrimitiveSelection.cc.
   prim_sel.process(CSCTag(), muon_primitives, selected_csc_map);
   prim_sel.process(RPCTag(), muon_primitives, selected_rpc_map);
 
   // Convert trigger primitives into "converted hits"
   // A converted hit consists of integer representations of phi, theta, and zones
-  // From src/EMTFPrimitiveConversion.cc
+  // From src/PrimitiveConversion.cc
   prim_conv.process(CSCTag(), selected_csc_map, conv_hits);
   prim_conv.process(RPCTag(), selected_rpc_map, conv_hits);
   extended_conv_hits.push_back(conv_hits);
 
   // Detect patterns in all zones, find 3 best roads in each zone
-  // From src/EMTFPatternRecognition.cc
+  // From src/PatternRecognition.cc
   patt_recog.process(extended_conv_hits, patt_lifetime_map, zone_roads);
 
   // Match the trigger primitives to the roads, create tracks
-  // From src/EMTFPrimitiveMatching.cc
+  // From src/PrimitiveMatching.cc
   prim_match.process(extended_conv_hits, zone_roads, zone_tracks);
 
   // Calculate deflection angles for each track and fill track variables
-  // From src/EMTFAngleCalculation.cc
+  // From src/AngleCalculation.cc
   angle_calc.process(zone_tracks);
   extended_best_track_cands.insert(extended_best_track_cands.begin(), zone_tracks.begin(), zone_tracks.end());  // push_front
 
   // Identify 3 best tracks
-  // From src/EMTFBestTrackSelection.cc
+  // From src/BestTrackSelection.cc
   btrack_sel.process(extended_best_track_cands, best_tracks);
 
   // Construct pT address, assign pT
-  // From src/EMTFPtAssignment.cc
+  // From src/PtAssignment.cc
   pt_assign.process(best_tracks);
 
   // ___________________________________________________________________________

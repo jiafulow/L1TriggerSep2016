@@ -1,9 +1,9 @@
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFBestTrackSelection.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/BestTrackSelection.hh"
 
 #include "helper.hh"  // to_hex, to_binary
 
 
-void EMTFBestTrackSelection::configure(
+void BestTrackSelection::configure(
     int verbose, int endcap, int sector, int bx,
     int bxWindow,
     int maxRoadsPerZone, int maxTracks, bool useSecondEarliest,
@@ -21,9 +21,9 @@ void EMTFBestTrackSelection::configure(
   bugSameSectorPt0_   = bugSameSectorPt0;
 }
 
-void EMTFBestTrackSelection::process(
-    const std::deque<EMTFTrackExtraCollection>& extended_best_track_cands,
-    EMTFTrackExtraCollection& best_tracks
+void BestTrackSelection::process(
+    const std::deque<EMTFTrackCollection>& extended_best_track_cands,
+    EMTFTrackCollection& best_tracks
 ) const {
   int num_cands = 0;
   for (const auto& cands : extended_best_track_cands) {
@@ -68,9 +68,9 @@ void EMTFBestTrackSelection::process(
 
 }
 
-void EMTFBestTrackSelection::cancel_one_bx(
-    const std::deque<EMTFTrackExtraCollection>& extended_best_track_cands,
-    EMTFTrackExtraCollection& best_tracks
+void BestTrackSelection::cancel_one_bx(
+    const std::deque<EMTFTrackCollection>& extended_best_track_cands,
+    EMTFTrackCollection& best_tracks
 ) const {
   const int max_z = NUM_ZONES;        // = 4 zones
   const int max_n = maxRoadsPerZone_; // = 3 candidates per zone
@@ -91,13 +91,13 @@ void EMTFBestTrackSelection::cancel_one_bx(
 
   // Initialize arrays: rank, segments
   for (int z = 0; z < max_z; ++z) {
-    const EMTFTrackExtraCollection& tracks = extended_best_track_cands.at(z);
+    const EMTFTrackCollection& tracks = extended_best_track_cands.at(z);
     const int ntracks = tracks.size();
     assert(ntracks <= max_n);
 
     for (int n = 0; n < ntracks; ++n) {
       const int zn = (n * max_z) + z;  // for (i = 0; i < 12; i = i+1) rank[i%4][i/4]
-      const EMTFTrackExtra& track = tracks.at(n);
+      const EMTFTrack& track = tracks.at(n);
 
       rank.at(zn) = track.rank;
 
@@ -238,8 +238,8 @@ void EMTFBestTrackSelection::cancel_one_bx(
         n = i / max_z;
         z = i % max_z;
 
-        const EMTFTrackExtraCollection& tracks = extended_best_track_cands.at(z);
-        const EMTFTrackExtra& track = tracks.at(n);
+        const EMTFTrackCollection& tracks = extended_best_track_cands.at(z);
+        const EMTFTrack& track = tracks.at(n);
         best_tracks.push_back(track);
 
         // Update winner, BX
@@ -251,9 +251,9 @@ void EMTFBestTrackSelection::cancel_one_bx(
   }
 }
 
-void EMTFBestTrackSelection::cancel_multi_bx(
-    const std::deque<EMTFTrackExtraCollection>& extended_best_track_cands,
-    EMTFTrackExtraCollection& best_tracks
+void BestTrackSelection::cancel_multi_bx(
+    const std::deque<EMTFTrackCollection>& extended_best_track_cands,
+    EMTFTrackCollection& best_tracks
 ) const {
   const int max_h = bxWindow_;        // = 3 bx history
   const int max_z = NUM_ZONES;        // = 4 zones
@@ -284,13 +284,13 @@ void EMTFBestTrackSelection::cancel_multi_bx(
     // extended_best_track_cands[8..11] has 4 zones for road/pattern BX-2 with possible tracks from [BX-4, BX-3, BX-2]
 
     for (int z = 0; z < max_z; ++z) {
-      const EMTFTrackExtraCollection& tracks = extended_best_track_cands.at(h*max_z + z);
+      const EMTFTrackCollection& tracks = extended_best_track_cands.at(h*max_z + z);
       const int ntracks = tracks.size();
       assert(ntracks <= max_n);
 
       for (int n = 0; n < ntracks; ++n) {
         const int hzn = (h * max_z * max_n) + (n * max_z) + z;  // for (i = 0; i < 12; i = i+1) rank[i%4][i/4]
-        const EMTFTrackExtra& track = tracks.at(n);
+        const EMTFTrack& track = tracks.at(n);
         int cand_bx = track.second_bx;
         cand_bx -= (bx_ - delayBX);  // convert track.second_bx=[BX-2, BX-1, BX-0] --> cand_bx=[0,1,2]
 
@@ -443,8 +443,8 @@ void EMTFBestTrackSelection::cancel_multi_bx(
         n = (i / max_z) % max_n;
         z = i % max_z;
 
-        const EMTFTrackExtraCollection& tracks = extended_best_track_cands.at(h*max_z + z);
-        const EMTFTrackExtra& track = tracks.at(n);
+        const EMTFTrackCollection& tracks = extended_best_track_cands.at(h*max_z + z);
+        const EMTFTrack& track = tracks.at(n);
         best_tracks.push_back(track);
 
         // Update winner, BX

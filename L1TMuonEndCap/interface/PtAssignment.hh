@@ -1,16 +1,16 @@
-#ifndef L1TMuonEndCap_EMTFPtAssignment_hh
-#define L1TMuonEndCap_EMTFPtAssignment_hh
+#ifndef L1TMuonEndCap_PtAssignment_hh
+#define L1TMuonEndCap_PtAssignment_hh
 
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFCommon.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/Common.hh"
 
 
-class EMTFPtAssignmentEngine;
-class EMTFPtAssignmentEngineAux;
+class PtAssignmentEngine;
+class PtAssignmentEngineAux;
 
-class EMTFPtAssignment {
+class PtAssignment {
 public:
   void configure(
-      const EMTFPtAssignmentEngine* pt_assign_engine,
+      const PtAssignmentEngine* pt_assign_engine,
       int verbose, int endcap, int sector, int bx,
       bool readPtLUTFile, bool fixMode15HighPt,
       bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt,
@@ -18,13 +18,13 @@ public:
   );
 
   void process(
-      EMTFTrackExtraCollection& best_tracks
+      EMTFTrackCollection& best_tracks
   );
 
-  const EMTFPtAssignmentEngineAux& aux() const;
+  const PtAssignmentEngineAux& aux() const;
 
 private:
-  EMTFPtAssignmentEngine* pt_assign_engine_;
+  PtAssignmentEngine* pt_assign_engine_;
 
   int verbose_, endcap_, sector_, bx_;
 

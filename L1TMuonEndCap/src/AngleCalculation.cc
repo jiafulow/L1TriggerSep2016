@@ -1,4 +1,4 @@
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFAngleCalculation.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/AngleCalculation.hh"
 
 #include "helper.hh"  // to_hex, to_binary
 
@@ -10,7 +10,7 @@ namespace {
 }
 
 
-void EMTFAngleCalculation::configure(
+void AngleCalculation::configure(
     int verbose, int endcap, int sector, int bx,
     int bxWindow,
     int thetaWindow, int thetaWindowRPC,
@@ -27,15 +27,15 @@ void EMTFAngleCalculation::configure(
   bugME11Dupes_    = bugME11Dupes;
 }
 
-void EMTFAngleCalculation::process(
-    zone_array<EMTFTrackExtraCollection>& zone_tracks
+void AngleCalculation::process(
+    zone_array<EMTFTrackCollection>& zone_tracks
 ) const {
 
   for (int izone = 0; izone < NUM_ZONES; ++izone) {
-    EMTFTrackExtraCollection& tracks = zone_tracks.at(izone);  // pass by reference
+    EMTFTrackCollection& tracks = zone_tracks.at(izone);  // pass by reference
 
-    EMTFTrackExtraCollection::iterator tracks_it  = tracks.begin();
-    EMTFTrackExtraCollection::iterator tracks_end = tracks.end();
+    EMTFTrackCollection::iterator tracks_it  = tracks.begin();
+    EMTFTrackCollection::iterator tracks_end = tracks.end();
 
     // Calculate deltas
     for (; tracks_it != tracks_end; ++tracks_it) {
@@ -78,9 +78,9 @@ void EMTFAngleCalculation::process(
 
 }
 
-void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
+void AngleCalculation::calculate_angles(EMTFTrack& track) const {
   // Group track.xhits by station
-  std::array<EMTFHitExtraCollection, NUM_STATIONS> st_conv_hits;
+  std::array<EMTFHitCollection, NUM_STATIONS> st_conv_hits;
 
   for (int istation = 0; istation < NUM_STATIONS; ++istation) {
     for (const auto& conv_hit : track.xhits) {
@@ -130,8 +130,8 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
 
   for (int ist1 = 0; ist1+1 < NUM_STATIONS; ++ist1) {  // station A
     for (int ist2 = ist1+1; ist2 < NUM_STATIONS; ++ist2) {  // station B
-      const EMTFHitExtraCollection& conv_hitsA = st_conv_hits.at(ist1);
-      const EMTFHitExtraCollection& conv_hitsB = st_conv_hits.at(ist2);
+      const EMTFHitCollection& conv_hitsA = st_conv_hits.at(ist1);
+      const EMTFHitCollection& conv_hitsB = st_conv_hits.at(ist2);
 
       // More than 1 hit per station when hit has ambigous theta
       for (const auto& conv_hitA : conv_hitsA) {
@@ -281,7 +281,7 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
     // identifies the best strip, but does not resolve the ambiguity in theta.
     // In emulator, this additional logic also resolves the ambiguity in theta.
     struct {
-      typedef EMTFHitExtra value_type;
+      typedef EMTFHit value_type;
       constexpr bool operator()(const value_type& lhs, const value_type& rhs) {
         return std::abs(lhs.theta_fp-theta) < std::abs(rhs.theta_fp-theta);
       }
@@ -342,7 +342,7 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
   };
 
   // Fill ptlut_data
-  EMTFPtLUTData ptlut_data;
+  EMTFPtLUT ptlut_data;
   for (int i = 0; i < NUM_STATION_PAIRS; ++i) {
     ptlut_data.delta_ph[i] = best_dphi_arr.at(i);
     ptlut_data.sign_ph[i]  = best_dphi_sign_arr.at(i);
@@ -397,7 +397,7 @@ void EMTFAngleCalculation::calculate_angles(EMTFTrackExtra& track) const {
   flatten_container(st_conv_hits, track.xhits);
 }
 
-void EMTFAngleCalculation::calculate_bx(EMTFTrackExtra& track) const {
+void AngleCalculation::calculate_bx(EMTFTrack& track) const {
   const int delayBX = bxWindow_ - 1;
   assert(delayBX >= 0);
   std::vector<int> counter(delayBX+1, 0);
@@ -426,11 +426,11 @@ void EMTFAngleCalculation::calculate_bx(EMTFTrackExtra& track) const {
   track.second_bx = second_bx;
 }
 
-void EMTFAngleCalculation::erase_tracks(EMTFTrackExtraCollection& tracks) const {
+void AngleCalculation::erase_tracks(EMTFTrackCollection& tracks) const {
   // Erase tracks with rank == 0
   // using erase-remove idiom
   struct {
-    typedef EMTFTrackExtra value_type;
+    typedef EMTFTrack value_type;
     constexpr bool operator()(const value_type& x) {
       return (x.rank == 0);
     }

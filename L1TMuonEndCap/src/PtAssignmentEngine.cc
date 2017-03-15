@@ -1,10 +1,10 @@
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPtAssignmentEngine.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/PtAssignmentEngine.hh"
 
 #include <cassert>
 #include <iostream>
 
 
-EMTFPtAssignmentEngine::EMTFPtAssignmentEngine() :
+PtAssignmentEngine::PtAssignmentEngine() :
     allowedModes_({3,5,9,6,10,12,7,11,13,14,15}),
     forests_(),
     ptlut_reader_(),
@@ -13,15 +13,15 @@ EMTFPtAssignmentEngine::EMTFPtAssignmentEngine() :
 
 }
 
-EMTFPtAssignmentEngine::~EMTFPtAssignmentEngine() {
+PtAssignmentEngine::~PtAssignmentEngine() {
 
 }
 
-void EMTFPtAssignmentEngine::read(const std::string& xml_dir) {
+void PtAssignmentEngine::read(const std::string& xml_dir) {
   if (ok_)  return;
 
   //std::string xml_dir_full = "L1Trigger/L1TMuon/data/emtf_luts/" + xml_dir + "/ModeVariables/trees";
-  std::string xml_dir_full = "L1TriggerSep2016/L1TMuonEndCap/data/emtf_luts/" + xml_dir + "/ModeVariables/trees";
+  std::string xml_dir_full = "L1Trigger/L1TMuonEndCap/data/emtf_luts/" + xml_dir + "/ModeVariables/trees";
 
   for (unsigned i = 0; i < allowedModes_.size(); ++i) {
     int mode_inv = allowedModes_.at(i);  // inverted mode because reasons
@@ -34,7 +34,7 @@ void EMTFPtAssignmentEngine::read(const std::string& xml_dir) {
   return;
 }
 
-void EMTFPtAssignmentEngine::configure(
+void PtAssignmentEngine::configure(
     int verbose,
     bool readPtLUTFile, bool fixMode15HighPt,
     bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt
@@ -50,26 +50,26 @@ void EMTFPtAssignmentEngine::configure(
   configure_details();
 }
 
-void EMTFPtAssignmentEngine::configure_details() {
+void PtAssignmentEngine::configure_details() {
   if (readPtLUTFile_) {
     std::stringstream ss;
-    ss << std::getenv("CMSSW_BASE") << "/" << "src/L1TriggerSep2016/L1TMuonEndCap/data/emtf_luts/v_16_02_21_ptlut/LUT_AndrewFix_25July16.dat";  // hardcoded, it does not exist in CMSSW
-    //ss << std::getenv("CMSSW_BASE") << "/" << "src/L1TriggerSep2016/L1TMuonEndCap/data/emtf_luts/v_16_02_21_ptlut_madorsky/LUT_AndrewFix_25July16.dat";  // hardcoded, it does not exist in CMSSW
+    ss << std::getenv("CMSSW_BASE") << "/" << "src/L1Trigger/L1TMuonEndCap/data/emtf_luts/v_16_02_21_ptlut/LUT_AndrewFix_25July16.dat";  // hardcoded, it does not exist in CMSSW
+    //ss << std::getenv("CMSSW_BASE") << "/" << "src/L1Trigger/L1TMuonEndCap/data/emtf_luts/v_16_02_21_ptlut_madorsky/LUT_AndrewFix_25July16.dat";  // hardcoded, it does not exist in CMSSW
     std::string lut_full_path = ss.str();
 
     ptlut_reader_.read(lut_full_path);
   }
 }
 
-const EMTFPtAssignmentEngineAux& EMTFPtAssignmentEngine::aux() const {
-  static const EMTFPtAssignmentEngineAux instance;
+const PtAssignmentEngineAux& PtAssignmentEngine::aux() const {
+  static const PtAssignmentEngineAux instance;
   return instance;
 }
 
-EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(const EMTFTrackExtra& track) const {
+PtAssignmentEngine::address_t PtAssignmentEngine::calculate_address(const EMTFTrack& track) const {
   address_t address = 0;
 
-  const EMTFPtLUTData& ptlut_data = track.ptlut_data;
+  const EMTFPtLUT& ptlut_data = track.ptlut_data;
 
   int mode_inv  = track.mode_inv;
   int theta     = track.theta_int;
@@ -331,7 +331,7 @@ EMTFPtAssignmentEngine::address_t EMTFPtAssignmentEngine::calculate_address(cons
   return address;
 }
 
-float EMTFPtAssignmentEngine::calculate_pt(const address_t& address) {
+float PtAssignmentEngine::calculate_pt(const address_t& address) {
   float pt = 0.;
 
   if (readPtLUTFile_) {
@@ -343,7 +343,7 @@ float EMTFPtAssignmentEngine::calculate_pt(const address_t& address) {
   return pt;
 }
 
-float EMTFPtAssignmentEngine::calculate_pt_lut(const address_t& address) {
+float PtAssignmentEngine::calculate_pt_lut(const address_t& address) {
   // LUT outputs 'gmt_pt', so need to convert back to 'xmlpt'
   int gmt_pt = ptlut_reader_.lookup(address);
   float pt = aux().getPtFromGMTPt(gmt_pt);
@@ -353,7 +353,7 @@ float EMTFPtAssignmentEngine::calculate_pt_lut(const address_t& address) {
   return xmlpt;
 }
 
-float EMTFPtAssignmentEngine::calculate_pt_xml(const address_t& address) {
+float PtAssignmentEngine::calculate_pt_xml(const address_t& address) {
   float pt = 0.;
 
   if (address == 0)  // invalid address

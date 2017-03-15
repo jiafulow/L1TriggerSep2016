@@ -30,9 +30,9 @@
 //#include "DataFormats/MuonDetId/interface/CSCTriggerNumbering.h"
 #include "L1Trigger/CSCCommonTrigger/interface/CSCConstants.h"
 
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/GeometryTranslator.h"
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/MuonTriggerPrimitive.h"
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/MuonTriggerPrimitiveFwd.h"
+#include "L1Trigger/L1TMuonEndCap/interface/GeometryTranslator.h"
+#include "L1Trigger/L1TMuonEndCap/interface/MuonTriggerPrimitive.h"
+#include "L1Trigger/L1TMuonEndCap/interface/MuonTriggerPrimitiveFwd.h"
 
 typedef L1TMuonEndCap::GeometryTranslator         GeometryTranslator;
 typedef L1TMuonEndCap::TriggerPrimitive           TriggerPrimitive;
@@ -41,10 +41,10 @@ typedef L1TMuonEndCap::TriggerPrimitiveCollection TriggerPrimitiveCollection;
 #include "helper.hh"
 
 
-class MakeEMTFAngleLUT : public edm::EDAnalyzer {
+class MakeAngleLUT : public edm::EDAnalyzer {
 public:
-  explicit MakeEMTFAngleLUT(const edm::ParameterSet&);
-  virtual ~MakeEMTFAngleLUT();
+  explicit MakeAngleLUT(const edm::ParameterSet&);
+  virtual ~MakeAngleLUT();
 
 private:
   //virtual void beginJob();
@@ -74,7 +74,7 @@ private:
 
 
 // _____________________________________________________________________________
-MakeEMTFAngleLUT::MakeEMTFAngleLUT(const edm::ParameterSet& iConfig) :
+MakeAngleLUT::MakeAngleLUT(const edm::ParameterSet& iConfig) :
     geometry_translator_(),
     config_(iConfig),
     verbose_(iConfig.getUntrackedParameter<int>("verbosity")),
@@ -84,17 +84,17 @@ MakeEMTFAngleLUT::MakeEMTFAngleLUT(const edm::ParameterSet& iConfig) :
   assert(CSCConstants::KEY_CLCT_LAYER == CSCConstants::KEY_ALCT_LAYER);
 }
 
-MakeEMTFAngleLUT::~MakeEMTFAngleLUT() {}
+MakeAngleLUT::~MakeAngleLUT() {}
 
-void MakeEMTFAngleLUT::beginRun(const edm::Run& iRun, const edm::EventSetup& iSetup) {
+void MakeAngleLUT::beginRun(const edm::Run& iRun, const edm::EventSetup& iSetup) {
   geometry_translator_.checkAndUpdateGeometry(iSetup);
 }
 
-void MakeEMTFAngleLUT::endRun(const edm::Run& iRun, const edm::EventSetup& iSetup) {
+void MakeAngleLUT::endRun(const edm::Run& iRun, const edm::EventSetup& iSetup) {
 
 }
 
-void MakeEMTFAngleLUT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
+void MakeAngleLUT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
   if (done_)  return;
 
   generateLUTs();
@@ -104,7 +104,7 @@ void MakeEMTFAngleLUT::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 }
 
 // _____________________________________________________________________________
-void MakeEMTFAngleLUT::generateLUTs() {
+void MakeAngleLUT::generateLUTs() {
 
   const CSCGeometry& geocsc = geometry_translator_.getCSCGeometry();
   const RPCGeometry& georpc = geometry_translator_.getRPCGeometry();
@@ -333,4 +333,4 @@ void MakeEMTFAngleLUT::generateLUTs() {
 
 // DEFINE THIS AS A PLUG-IN
 #include "FWCore/Framework/interface/MakerMacros.h"
-DEFINE_FWK_MODULE(MakeEMTFAngleLUT);
+DEFINE_FWK_MODULE(MakeAngleLUT);

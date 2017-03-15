@@ -27,19 +27,19 @@ The 'top' module in firmware is the module `sp`. The following is the dependency
 
 In the emulator, the following processor classes perform the jobs of the firmware modules:
 
-- class `EMTFSectorProcessor`
-  - class `EMTFPrimitiveSelection`
+- class `SectorProcessor`
+  - class `PrimitiveSelection`
     - N/A (the job is done by input links/cables)
-  - class `EMTFPrimitiveConversion`
+  - class `PrimitiveConversion`
     - module `prim_conv_sector`
-  - class `EMTFPatternRecognition`
+  - class `PatternRecognition`
     - modules `zones`, `extend_sector`, `ph_pattern_sector`, `sort_sector`
-  - class `EMTFPrimitiveMatching`
+  - class `PrimitiveMatching`
     - module `match_ph_segments`
-  - class `EMTFAngleCalculation`
+  - class `AngleCalculation`
     - module `deltas_sector`
-  - class `EMTFBestTrackSelection`
+  - class `BestTrackSelection`
     - module `best_tracks`
-  - classes `EMTFPtAssignment`, `EMTFPtAssignmentEngine`
+  - classes `PtAssignment`, `PtAssignmentEngine`
     - module `ptlut_address`
 

@@ -1,5 +1,5 @@
-#ifndef L1TMuonEndCap_EMTFPtAssignmentEngine_hh
-#define L1TMuonEndCap_EMTFPtAssignmentEngine_hh
+#ifndef L1TMuonEndCap_PtAssignmentEngine_hh
+#define L1TMuonEndCap_PtAssignmentEngine_hh
 
 #include <cstdint>
 #include <cstdlib>
@@ -8,16 +8,16 @@
 #include <vector>
 #include <array>
 
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFCommon.hh"
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPtAssignmentEngineAux.hh"
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPtLUTReader.hh"
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/bdt/Forest.h"
+#include "L1Trigger/L1TMuonEndCap/interface/Common.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/PtAssignmentEngineAux.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/PtLUTReader.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/bdt/Forest.h"
 
 
-class EMTFPtAssignmentEngine {
+class PtAssignmentEngine {
 public:
-  explicit EMTFPtAssignmentEngine();
-  ~EMTFPtAssignmentEngine();
+  explicit PtAssignmentEngine();
+  ~PtAssignmentEngine();
 
   typedef uint64_t address_t;
 
@@ -31,9 +31,9 @@ public:
 
   void configure_details();
 
-  const EMTFPtAssignmentEngineAux& aux() const;
+  const PtAssignmentEngineAux& aux() const;
 
-  address_t calculate_address(const EMTFTrackExtra& track) const;
+  address_t calculate_address(const EMTFTrack& track) const;
 
   float calculate_pt(const address_t& address);
 
@@ -43,7 +43,7 @@ public:
 private:
   std::vector<int> allowedModes_;
   std::array<Forest, 16> forests_;
-  EMTFPtLUTReader ptlut_reader_;
+  PtLUTReader ptlut_reader_;
 
   bool ok_;
 

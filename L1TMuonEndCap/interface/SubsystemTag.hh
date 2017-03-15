@@ -1,5 +1,5 @@
-#ifndef L1TMuonEndCap_EMTFSubsystemTag_hh
-#define L1TMuonEndCap_EMTFSubsystemTag_hh
+#ifndef L1TMuonEndCap_SubsystemTag_hh
+#define L1TMuonEndCap_SubsystemTag_hh
 
 #include "DataFormats/CSCDigi/interface/CSCCorrelatedLCTDigi.h"
 #include "DataFormats/CSCDigi/interface/CSCCorrelatedLCTDigiCollection.h"

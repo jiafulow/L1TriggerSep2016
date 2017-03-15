@@ -35,10 +35,10 @@
 #include "helper.hh"
 
 
-class MakeEMTFCoordLUT : public edm::EDAnalyzer {
+class MakeCoordLUT : public edm::EDAnalyzer {
 public:
-  explicit MakeEMTFCoordLUT(const edm::ParameterSet&);
-  virtual ~MakeEMTFCoordLUT();
+  explicit MakeCoordLUT(const edm::ParameterSet&);
+  virtual ~MakeCoordLUT();
 
 private:
   //virtual void beginJob();
@@ -134,7 +134,7 @@ private:
 //#define REPRODUCE_OLD_LUTS 1
 
 
-MakeEMTFCoordLUT::MakeEMTFCoordLUT(const edm::ParameterSet& iConfig) :
+MakeCoordLUT::MakeCoordLUT(const edm::ParameterSet& iConfig) :
     config_(iConfig),
     verbose_(iConfig.getUntrackedParameter<int>("verbosity")),
     outdir_(iConfig.getParameter<std::string>("outdir")),
@@ -163,9 +163,9 @@ MakeEMTFCoordLUT::MakeEMTFCoordLUT(const edm::ParameterSet& iConfig) :
   assert(CSCConstants::KEY_CLCT_LAYER == CSCConstants::KEY_ALCT_LAYER);
 }
 
-MakeEMTFCoordLUT::~MakeEMTFCoordLUT() {}
+MakeCoordLUT::~MakeCoordLUT() {}
 
-void MakeEMTFCoordLUT::beginRun(const edm::Run& iRun, const edm::EventSetup& iSetup) {
+void MakeCoordLUT::beginRun(const edm::Run& iRun, const edm::EventSetup& iSetup) {
   /// Geometry setup
   edm::ESHandle<CSCGeometry> cscGeometryHandle;
   iSetup.get<MuonGeometryRecord>().get(cscGeometryHandle);
@@ -176,11 +176,11 @@ void MakeEMTFCoordLUT::beginRun(const edm::Run& iRun, const edm::EventSetup& iSe
   }
 }
 
-void MakeEMTFCoordLUT::endRun(const edm::Run& iRun, const edm::EventSetup& iSetup) {
+void MakeCoordLUT::endRun(const edm::Run& iRun, const edm::EventSetup& iSetup) {
 
 }
 
-void MakeEMTFCoordLUT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
+void MakeCoordLUT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
   if (done_)  return;
 
   generateLUTs();
@@ -192,13 +192,13 @@ void MakeEMTFCoordLUT::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 }
 
 // _____________________________________________________________________________
-void MakeEMTFCoordLUT::generateLUTs() {
+void MakeCoordLUT::generateLUTs() {
   generateLUTs_init();
   generateLUTs_run();
   generateLUTs_final();
 }
 
-void MakeEMTFCoordLUT::generateLUTs_init() {
+void MakeCoordLUT::generateLUTs_init() {
   // Sanity checks
   {
     // Test ME2/2
@@ -221,7 +221,7 @@ void MakeEMTFCoordLUT::generateLUTs_init() {
   return;
 }
 
-void MakeEMTFCoordLUT::generateLUTs_run() {
+void MakeCoordLUT::generateLUTs_run() {
   constexpr double theta_scale = (UPPER_THETA - LOWER_THETA)/128;  // = 0.28515625 (7 bits encode 128 values)
   constexpr double nominal_pitch = 10./75.;  // = 0.133333 (ME2/2 strip pitch. 10-degree chamber, 80 strips - 5 overlap strips)
 
@@ -496,7 +496,7 @@ void MakeEMTFCoordLUT::generateLUTs_run() {
   return;
 }
 
-void MakeEMTFCoordLUT::generateLUTs_final() {
+void MakeCoordLUT::generateLUTs_final() {
   // update max coverages
   for (int es = 0; es < 12; ++es) {
     for (int st = 0; st < 5; ++st) {
@@ -529,7 +529,7 @@ void MakeEMTFCoordLUT::generateLUTs_final() {
 }
 
 // Compare simulated (with floating-point) vs emulated (fixed-point) phi and theta coordinates
-void MakeEMTFCoordLUT::validateLUTs() {
+void MakeCoordLUT::validateLUTs() {
   std::stringstream filename;
 
   filename << outdir_ << "/" << "validate.root";
@@ -649,7 +649,7 @@ void MakeEMTFCoordLUT::validateLUTs() {
       const int maxStrip = layerGeom->numberOfStrips();
 
       // _______________________________________________________________________
-      // Copied from EMTFPrimitiveConversion
+      // Copied from PrimitiveConversion
 
       const int fw_endcap  = (es/6);
       const int fw_sector  = (es%6);
@@ -808,7 +808,7 @@ void MakeEMTFCoordLUT::validateLUTs() {
 }
 
 // produce the LUT text files
-void MakeEMTFCoordLUT::writeFiles() {
+void MakeCoordLUT::writeFiles() {
   int num_of_files = 0;
 
   std::stringstream filename;
@@ -930,14 +930,14 @@ void MakeEMTFCoordLUT::writeFiles() {
 }
 
 // _____________________________________________________________________________
-CSCDetId MakeEMTFCoordLUT::getCSCDetId(int endcap, int sector, int subsector, int station, int cscid, bool isME1A) const {
+CSCDetId MakeCoordLUT::getCSCDetId(int endcap, int sector, int subsector, int station, int cscid, bool isME1A) const {
   int ring = isME1A ? 4 : CSCTriggerNumbering::ringFromTriggerLabels(station, cscid);
   int chamber = CSCTriggerNumbering::chamberFromTriggerLabels(sector, subsector, station, cscid);
   const CSCDetId cscDetId = CSCDetId(endcap, station, ring, chamber, CSCConstants::KEY_CLCT_LAYER);
   return cscDetId;
 }
 
-bool MakeEMTFCoordLUT::isStripPhiCounterClockwise(const CSCDetId& cscDetId) const {
+bool MakeCoordLUT::isStripPhiCounterClockwise(const CSCDetId& cscDetId) const {
   const CSCChamber* chamb = theCSCGeometry_->chamber(cscDetId);
   const CSCLayer* layer = chamb->layer(CSCConstants::KEY_CLCT_LAYER);
 
@@ -947,7 +947,7 @@ bool MakeEMTFCoordLUT::isStripPhiCounterClockwise(const CSCDetId& cscDetId) cons
   return ccw;
 }
 
-double MakeEMTFCoordLUT::getStripPitch(const CSCDetId& cscDetId) const {
+double MakeCoordLUT::getStripPitch(const CSCDetId& cscDetId) const {
   const CSCChamber* chamb = theCSCGeometry_->chamber(cscDetId);
   const CSCLayerGeometry* layerGeom = chamb->layer(CSCConstants::KEY_CLCT_LAYER)->geometry();
 
@@ -956,7 +956,7 @@ double MakeEMTFCoordLUT::getStripPitch(const CSCDetId& cscDetId) const {
   return pitch;
 }
 
-double MakeEMTFCoordLUT::getGlobalPhi(int endcap, int sector, int subsector, int station, int cscid, bool isME1A, int wiregroup, int halfstrip) const {
+double MakeCoordLUT::getGlobalPhi(int endcap, int sector, int subsector, int station, int cscid, bool isME1A, int wiregroup, int halfstrip) const {
   int fullstrip = (halfstrip/2);
   int oddhs     = (halfstrip%2);
   double phi = getGlobalPhiFullstrip(endcap, sector, subsector, station, cscid, isME1A, wiregroup, fullstrip);
@@ -973,7 +973,7 @@ double MakeEMTFCoordLUT::getGlobalPhi(int endcap, int sector, int subsector, int
   return phi;
 }
 
-double MakeEMTFCoordLUT::getGlobalPhiFullstrip(int endcap, int sector, int subsector, int station, int cscid, bool isME1A, int wiregroup, int fullstrip) const {
+double MakeCoordLUT::getGlobalPhiFullstrip(int endcap, int sector, int subsector, int station, int cscid, bool isME1A, int wiregroup, int fullstrip) const {
   const CSCDetId cscDetId = getCSCDetId(endcap, sector, subsector, station, cscid, isME1A);
   const CSCChamber* chamb = theCSCGeometry_->chamber(cscDetId);
   const CSCLayerGeometry* layerGeom = chamb->layer(CSCConstants::KEY_CLCT_LAYER)->geometry();
@@ -986,12 +986,12 @@ double MakeEMTFCoordLUT::getGlobalPhiFullstrip(int endcap, int sector, int subse
   return phi;
 }
 
-double MakeEMTFCoordLUT::getGlobalTheta(int endcap, int sector, int subsector, int station, int cscid, bool isME1A, int wiregroup, int halfstrip) const {
+double MakeCoordLUT::getGlobalTheta(int endcap, int sector, int subsector, int station, int cscid, bool isME1A, int wiregroup, int halfstrip) const {
   int fullstrip = (halfstrip/2);
   return getGlobalThetaFullstrip(endcap, sector, subsector, station, cscid, isME1A, wiregroup, fullstrip);
 }
 
-double MakeEMTFCoordLUT::getGlobalThetaFullstrip(int endcap, int sector, int subsector, int station, int cscid, bool isME1A, int wiregroup, int fullstrip) const {
+double MakeCoordLUT::getGlobalThetaFullstrip(int endcap, int sector, int subsector, int station, int cscid, bool isME1A, int wiregroup, int fullstrip) const {
   const CSCDetId cscDetId = getCSCDetId(endcap, sector, subsector, station, cscid, isME1A);
   const CSCChamber* chamb = theCSCGeometry_->chamber(cscDetId);
   const CSCLayerGeometry* layerGeom = chamb->layer(CSCConstants::KEY_CLCT_LAYER)->geometry();
@@ -1006,7 +1006,7 @@ double MakeEMTFCoordLUT::getGlobalThetaFullstrip(int endcap, int sector, int sub
   return theta;
 }
 
-double MakeEMTFCoordLUT::getSectorPhi(int endcap, int sector, int subsector, int station, int cscid, bool isME1A, bool isNeighbor, int wiregroup, int halfstrip) const {
+double MakeCoordLUT::getSectorPhi(int endcap, int sector, int subsector, int station, int cscid, bool isME1A, bool isNeighbor, int wiregroup, int halfstrip) const {
   double globalPhi = getGlobalPhi(endcap, sector, subsector, station, cscid, isME1A, wiregroup, halfstrip);
 
   // sector boundary should not depend on station, cscid, etc. For now, take station 2 csc 1 strip 0 as boundary, -2 deg (Darin, 2009-09-18)
@@ -1034,4 +1034,4 @@ double MakeEMTFCoordLUT::getSectorPhi(int endcap, int sector, int subsector, int
 
 // DEFINE THIS AS A PLUG-IN
 #include "FWCore/Framework/interface/MakerMacros.h"
-DEFINE_FWK_MODULE(MakeEMTFCoordLUT);
+DEFINE_FWK_MODULE(MakeCoordLUT);

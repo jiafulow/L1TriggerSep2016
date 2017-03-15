@@ -8,17 +8,17 @@
 #include "FWCore/Framework/interface/ESHandle.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPtAssignmentEngine.hh"
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPtLUTWriter.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/PtAssignmentEngine.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/PtLUTWriter.hh"
 
 #include "helper.hh"
 #include "progress_bar.hh"
 
 
-class MakeEMTFPtLUT : public edm::EDAnalyzer {
+class MakePtLUT : public edm::EDAnalyzer {
 public:
-  explicit MakeEMTFPtLUT(const edm::ParameterSet&);
-  virtual ~MakeEMTFPtLUT();
+  explicit MakePtLUT(const edm::ParameterSet&);
+  virtual ~MakePtLUT();
 
 private:
   //virtual void beginJob();
@@ -34,9 +34,9 @@ private:
   void checkAddresses();
 
 private:
-  std::unique_ptr<EMTFPtAssignmentEngine> pt_assign_engine_;
+  std::unique_ptr<PtAssignmentEngine> pt_assign_engine_;
 
-  EMTFPtLUTWriter ptlut_writer_;
+  PtLUTWriter ptlut_writer_;
 
   const edm::ParameterSet config_;
 
@@ -53,8 +53,8 @@ private:
 // _____________________________________________________________________________
 #define PTLUT_SIZE (1<<30)
 
-MakeEMTFPtLUT::MakeEMTFPtLUT(const edm::ParameterSet& iConfig) :
-    pt_assign_engine_(new EMTFPtAssignmentEngine()),
+MakePtLUT::MakePtLUT(const edm::ParameterSet& iConfig) :
+    pt_assign_engine_(new PtAssignmentEngine()),
     ptlut_writer_(),
     config_(iConfig),
     verbose_(iConfig.getUntrackedParameter<int>("verbosity")),
@@ -83,9 +83,9 @@ MakeEMTFPtLUT::MakeEMTFPtLUT(const edm::ParameterSet& iConfig) :
   );
 }
 
-MakeEMTFPtLUT::~MakeEMTFPtLUT() {}
+MakePtLUT::~MakePtLUT() {}
 
-void MakeEMTFPtLUT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
+void MakePtLUT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
   if (done_)  return;
 
   if (onlyCheck_) {
@@ -99,10 +99,10 @@ void MakeEMTFPtLUT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
   return;
 }
 
-void MakeEMTFPtLUT::makeLUT() {
+void MakePtLUT::makeLUT() {
   std::cout << "Calculating pT for " << PTLUT_SIZE << " addresses, please sit tight..." << std::endl;
 
-  EMTFPtLUTWriter::address_t address = 0;
+  PtLUTWriter::address_t address = 0;
 
   float xmlpt = 0.;
   float pt = 0.;
@@ -131,11 +131,11 @@ void MakeEMTFPtLUT::makeLUT() {
   ptlut_writer_.write(outfile_);
 }
 
-void MakeEMTFPtLUT::checkAddresses() {
+void MakePtLUT::checkAddresses() {
   unsigned int n = addressesToCheck_.size();
   std::cout << "Calculating pT for " << n << " addresses, please sit tight..." << std::endl;
 
-  EMTFPtLUTWriter::address_t address = 0;
+  PtLUTWriter::address_t address = 0;
 
   float xmlpt = 0.;
   float pt = 0.;
@@ -163,4 +163,4 @@ void MakeEMTFPtLUT::checkAddresses() {
 
 // DEFINE THIS AS A PLUG-IN
 #include "FWCore/Framework/interface/MakerMacros.h"
-DEFINE_FWK_MODULE(MakeEMTFPtLUT);
+DEFINE_FWK_MODULE(MakePtLUT);

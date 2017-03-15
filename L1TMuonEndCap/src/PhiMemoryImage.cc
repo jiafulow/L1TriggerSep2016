@@ -1,4 +1,4 @@
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPhiMemoryImage.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/PhiMemoryImage.hh"
 
 #include <stdexcept>
 #include <iostream>
@@ -7,74 +7,74 @@
 #define UINT64_BITS 64
 
 
-EMTFPhiMemoryImage::EMTFPhiMemoryImage() {
+PhiMemoryImage::PhiMemoryImage() {
   reset();
 }
 
-EMTFPhiMemoryImage::~EMTFPhiMemoryImage() {
+PhiMemoryImage::~PhiMemoryImage() {
 
 }
 
-EMTFPhiMemoryImage::EMTFPhiMemoryImage(const EMTFPhiMemoryImage& other) {
+PhiMemoryImage::PhiMemoryImage(const PhiMemoryImage& other) {
   std::copy(&(other._buffer[0][0]), &(other._buffer[0][0]) + (_layers*_units), &(_buffer[0][0]));
 
   _straightness = other._straightness;
 }
 
-EMTFPhiMemoryImage::EMTFPhiMemoryImage(EMTFPhiMemoryImage&& other) noexcept : EMTFPhiMemoryImage() {
+PhiMemoryImage::PhiMemoryImage(PhiMemoryImage&& other) noexcept : PhiMemoryImage() {
   swap(other);
 }
 
 // Copy-and-swap idiom
-EMTFPhiMemoryImage& EMTFPhiMemoryImage::operator=(EMTFPhiMemoryImage other) {
+PhiMemoryImage& PhiMemoryImage::operator=(PhiMemoryImage other) {
   swap(other);
   return *this;
 }
 
-void EMTFPhiMemoryImage::swap(EMTFPhiMemoryImage& other) {
+void PhiMemoryImage::swap(PhiMemoryImage& other) {
   std::swap_ranges(&(other._buffer[0][0]), &(other._buffer[0][0]) + (_layers*_units), &(_buffer[0][0]));
 
   std::swap(other._straightness, _straightness);
 }
 
-void EMTFPhiMemoryImage::reset() {
+void PhiMemoryImage::reset() {
   std::fill(&(_buffer[0][0]), &(_buffer[0][0]) + (_layers*_units), 0);
 
   _straightness = 0;
 }
 
-void EMTFPhiMemoryImage::set_bit(unsigned int layer, unsigned int bit) {
+void PhiMemoryImage::set_bit(unsigned int layer, unsigned int bit) {
   check_input(layer, bit);
   value_type unit = bit / UINT64_BITS;
   value_type mask = (1ul << (bit % UINT64_BITS));
   _buffer[layer][unit] |= mask;
 }
 
-void EMTFPhiMemoryImage::clear_bit(unsigned int layer, unsigned int bit) {
+void PhiMemoryImage::clear_bit(unsigned int layer, unsigned int bit) {
   check_input(layer, bit);
   value_type unit = bit / UINT64_BITS;
   value_type mask = (1ul << (bit % UINT64_BITS));
   _buffer[layer][unit] &= ~mask;
 }
 
-bool EMTFPhiMemoryImage::test_bit(unsigned int layer, unsigned int bit) const {
+bool PhiMemoryImage::test_bit(unsigned int layer, unsigned int bit) const {
   check_input(layer, bit);
   value_type unit = bit / UINT64_BITS;
   value_type mask = (1ul << (bit % UINT64_BITS));
   return _buffer[layer][unit] & mask;
 }
 
-void EMTFPhiMemoryImage::set_word(unsigned int layer, unsigned int unit, value_type value) {
+void PhiMemoryImage::set_word(unsigned int layer, unsigned int unit, value_type value) {
   check_input(layer, unit*UINT64_BITS);
   _buffer[layer][unit] = value;
 }
 
-EMTFPhiMemoryImage::value_type EMTFPhiMemoryImage::get_word(unsigned int layer, unsigned int unit) const {
+PhiMemoryImage::value_type PhiMemoryImage::get_word(unsigned int layer, unsigned int unit) const {
   check_input(layer, unit*UINT64_BITS);
   return _buffer[layer][unit];
 }
 
-void EMTFPhiMemoryImage::check_input(unsigned int layer, unsigned int bit) const {
+void PhiMemoryImage::check_input(unsigned int layer, unsigned int bit) const {
   if (layer >= _layers) {
     char what[128];
     snprintf(what, sizeof(what), "layer (which is %u) >= _layers (which is %u)", layer, _layers);
@@ -91,7 +91,7 @@ void EMTFPhiMemoryImage::check_input(unsigned int layer, unsigned int bit) const
 
 // See https://en.wikipedia.org/wiki/Circular_shift#Implementing_circular_shifts
 // return (val << len) | ((unsigned) val >> (-len & (sizeof(INT) * CHAR_BIT - 1)));
-void EMTFPhiMemoryImage::rotl(unsigned int n) {
+void PhiMemoryImage::rotl(unsigned int n) {
   if (n >= _units*UINT64_BITS)
     return;
 
@@ -119,7 +119,7 @@ void EMTFPhiMemoryImage::rotl(unsigned int n) {
   }
 }
 
-void EMTFPhiMemoryImage::rotr(unsigned int n) {
+void PhiMemoryImage::rotr(unsigned int n) {
   if (n >= _units*UINT64_BITS)
     return;
 
@@ -147,7 +147,7 @@ void EMTFPhiMemoryImage::rotr(unsigned int n) {
   }
 }
 
-unsigned int EMTFPhiMemoryImage::op_and(const EMTFPhiMemoryImage& other) const {
+unsigned int PhiMemoryImage::op_and(const PhiMemoryImage& other) const {
   static_assert((_layers == 4 && _units == 3), "This function assumes (_layers == 4 && _units == 3)");
 
   // Unroll
@@ -171,7 +171,7 @@ unsigned int EMTFPhiMemoryImage::op_and(const EMTFPhiMemoryImage& other) const {
   return ly;
 }
 
-void EMTFPhiMemoryImage::print(std::ostream& out) const {
+void PhiMemoryImage::print(std::ostream& out) const {
   constexpr int N = 160;
   out << std::bitset<N-128>(_buffer[3][2]) << std::bitset<128-64>(_buffer[3][1]) << std::bitset<64>(_buffer[3][0]) << std::endl;
   out << std::bitset<N-128>(_buffer[2][2]) << std::bitset<128-64>(_buffer[2][1]) << std::bitset<64>(_buffer[2][0]) << std::endl;
@@ -181,7 +181,7 @@ void EMTFPhiMemoryImage::print(std::ostream& out) const {
 
 // _____________________________________________________________________________
 // Output streams
-std::ostream& operator<<(std::ostream& o, const EMTFPhiMemoryImage& patt) {
+std::ostream& operator<<(std::ostream& o, const PhiMemoryImage& patt) {
   patt.print(o);
   return o;
 }

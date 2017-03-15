@@ -1,37 +1,37 @@
-#ifndef L1TMuonEndCap_EMTFSectorProcessor_hh
-#define L1TMuonEndCap_EMTFSectorProcessor_hh
+#ifndef L1TMuonEndCap_SectorProcessor_hh
+#define L1TMuonEndCap_SectorProcessor_hh
 
 #include <deque>
 #include <map>
 #include <string>
 #include <vector>
 
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFCommon.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/Common.hh"
 
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFSectorProcessorLUT.hh"
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPtAssignmentEngine.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/SectorProcessorLUT.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/PtAssignmentEngine.hh"
 
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPrimitiveSelection.hh"
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPrimitiveConversion.hh"
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPatternRecognition.hh"
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPrimitiveMatching.hh"
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFAngleCalculation.hh"
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFBestTrackSelection.hh"
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPtAssignment.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/PrimitiveSelection.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/PrimitiveConversion.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/PatternRecognition.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/PrimitiveMatching.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/AngleCalculation.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/BestTrackSelection.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/PtAssignment.hh"
 
 
-class EMTFSectorProcessor {
+class SectorProcessor {
 public:
-  explicit EMTFSectorProcessor();
-  ~EMTFSectorProcessor();
+  explicit SectorProcessor();
+  ~SectorProcessor();
 
   typedef unsigned long long EventNumber_t;
-  typedef EMTFPatternRecognition::pattern_ref_t pattern_ref_t;
+  typedef PatternRecognition::pattern_ref_t pattern_ref_t;
 
   void configure(
       const GeometryTranslator* tp_geom,
-      const EMTFSectorProcessorLUT* lut,
-      const EMTFPtAssignmentEngine* pt_assign_engine,
+      const SectorProcessorLUT* lut,
+      const PtAssignmentEngine* pt_assign_engine,
       int verbose, int endcap, int sector,
       int minBX, int maxBX, int bxWindow, int bxShiftCSC, int bxShiftRPC,
       const std::vector<int>& zoneBoundaries, int zoneOverlap, int zoneOverlapRPC,
@@ -47,8 +47,8 @@ public:
       EventNumber_t ievent,
       const TriggerPrimitiveCollection& muon_primitives,
       // Output
-      EMTFHitExtraCollection& out_hits,
-      EMTFTrackExtraCollection& out_tracks
+      EMTFHitCollection& out_hits,
+      EMTFTrackCollection& out_tracks
   ) const;
 
   void process_single_bx(
@@ -56,20 +56,20 @@ public:
       int bx,
       const TriggerPrimitiveCollection& muon_primitives,
       // Output
-      EMTFHitExtraCollection& out_hits,
-      EMTFTrackExtraCollection& out_tracks,
+      EMTFHitCollection& out_hits,
+      EMTFTrackCollection& out_tracks,
       // Intermediate objects
-      std::deque<EMTFHitExtraCollection>& extended_conv_hits,
-      std::deque<EMTFTrackExtraCollection>& extended_best_track_cands,
+      std::deque<EMTFHitCollection>& extended_conv_hits,
+      std::deque<EMTFTrackCollection>& extended_best_track_cands,
       std::map<pattern_ref_t, int>& patt_lifetime_map
   ) const;
 
 private:
   const GeometryTranslator* tp_geom_;
 
-  const EMTFSectorProcessorLUT* lut_;
+  const SectorProcessorLUT* lut_;
 
-  const EMTFPtAssignmentEngine* pt_assign_engine_;
+  const PtAssignmentEngine* pt_assign_engine_;
 
   int verbose_, endcap_, sector_;
 

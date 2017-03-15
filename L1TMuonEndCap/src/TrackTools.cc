@@ -1,4 +1,4 @@
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFTrackTools.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/TrackTools.hh"
 
 namespace L1TMuonEndCap {
 

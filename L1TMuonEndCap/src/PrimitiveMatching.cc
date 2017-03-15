@@ -1,4 +1,4 @@
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPrimitiveMatching.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/PrimitiveMatching.hh"
 
 #include "helper.hh"  // to_hex, to_binary
 
@@ -9,7 +9,7 @@ namespace {
 }
 
 
-void EMTFPrimitiveMatching::configure(
+void PrimitiveMatching::configure(
     int verbose, int endcap, int sector, int bx,
     bool fixZonePhi, bool useNewZones,
     bool bugME11Dupes
@@ -24,10 +24,10 @@ void EMTFPrimitiveMatching::configure(
   bugME11Dupes_    = bugME11Dupes;
 }
 
-void EMTFPrimitiveMatching::process(
-    const std::deque<EMTFHitExtraCollection>& extended_conv_hits,
-    const zone_array<EMTFRoadExtraCollection>& zone_roads,
-    zone_array<EMTFTrackExtraCollection>& zone_tracks
+void PrimitiveMatching::process(
+    const std::deque<EMTFHitCollection>& extended_conv_hits,
+    const zone_array<EMTFRoadCollection>& zone_roads,
+    zone_array<EMTFTrackCollection>& zone_tracks
 ) const {
   int num_roads = 0;
   for (const auto& roads : zone_roads)
@@ -50,16 +50,16 @@ void EMTFPrimitiveMatching::process(
   }
 
   // Organize converted hits by (zone, station)
-  std::array<EMTFHitExtraCollection, NUM_ZONES*NUM_STATIONS> zs_conv_hits;
+  std::array<EMTFHitCollection, NUM_ZONES*NUM_STATIONS> zs_conv_hits;
 
   bool use_fs_zone_code = true;  // use zone code as in firmware find_segment module
 
-  std::deque<EMTFHitExtraCollection>::const_iterator ext_conv_hits_it  = extended_conv_hits.begin();
-  std::deque<EMTFHitExtraCollection>::const_iterator ext_conv_hits_end = extended_conv_hits.end();
+  std::deque<EMTFHitCollection>::const_iterator ext_conv_hits_it  = extended_conv_hits.begin();
+  std::deque<EMTFHitCollection>::const_iterator ext_conv_hits_end = extended_conv_hits.end();
 
   for (; ext_conv_hits_it != ext_conv_hits_end; ++ext_conv_hits_it) {
-    EMTFHitExtraCollection::const_iterator conv_hits_it  = ext_conv_hits_it->begin();
-    EMTFHitExtraCollection::const_iterator conv_hits_end = ext_conv_hits_it->end();
+    EMTFHitCollection::const_iterator conv_hits_it  = ext_conv_hits_it->begin();
+    EMTFHitCollection::const_iterator conv_hits_end = ext_conv_hits_it->end();
 
     for (; conv_hits_it != conv_hits_end; ++conv_hits_it) {
 
@@ -152,13 +152,13 @@ void EMTFPrimitiveMatching::process(
 
   // Build all tracks in each zone
   for (int izone = 0; izone < NUM_ZONES; ++izone) {
-    const EMTFRoadExtraCollection& roads = zone_roads.at(izone);
+    const EMTFRoadCollection& roads = zone_roads.at(izone);
 
     for (unsigned iroad = 0; iroad < roads.size(); ++iroad) {
-      const EMTFRoadExtra& road = roads.at(iroad);
+      const EMTFRoad& road = roads.at(iroad);
 
       // Create a track
-      EMTFTrackExtra track;
+      EMTFTrack track;
       track.endcap   = road.endcap;
       track.sector   = road.sector;
       track.bx       = road.bx;
@@ -174,7 +174,7 @@ void EMTFPrimitiveMatching::process(
       for (int istation = 0; istation < NUM_STATIONS; ++istation) {
         const int zs = (izone*NUM_STATIONS) + istation;
 
-        const EMTFHitExtraCollection& conv_hits = zs_conv_hits.at(zs);
+        const EMTFHitCollection& conv_hits = zs_conv_hits.at(zs);
         int       ph_diff      = zs_phi_differences.at(zs).at(iroad).first;
         hit_ptr_t conv_hit_ptr = zs_phi_differences.at(zs).at(iroad).second;
 
@@ -211,10 +211,10 @@ void EMTFPrimitiveMatching::process(
 
 }
 
-void EMTFPrimitiveMatching::process_single_zone_station(
+void PrimitiveMatching::process_single_zone_station(
     int zone, int station,
-    const EMTFRoadExtraCollection& roads,
-    const EMTFHitExtraCollection& conv_hits,
+    const EMTFRoadCollection& roads,
+    const EMTFHitCollection& conv_hits,
     std::vector<hit_sort_pair_t>& phi_differences
 ) const {
   // max phi difference between pattern and segment
@@ -286,8 +286,8 @@ void EMTFPrimitiveMatching::process_single_zone_station(
   // ___________________________________________________________________________
   // For each road, find the segment with min phi difference in every station
 
-  EMTFRoadExtraCollection::const_iterator roads_it  = roads.begin();
-  EMTFRoadExtraCollection::const_iterator roads_end = roads.end();
+  EMTFRoadCollection::const_iterator roads_it  = roads.begin();
+  EMTFRoadCollection::const_iterator roads_end = roads.end();
 
   for (; roads_it != roads_end; ++roads_it) {
     int ph_pat = roads_it->key_zhit;     // pattern key phi value
@@ -300,8 +300,8 @@ void EMTFPrimitiveMatching::process_single_zone_station(
 
     std::vector<hit_sort_pair_t> tmp_phi_differences;
 
-    EMTFHitExtraCollection::const_iterator conv_hits_it  = conv_hits.begin();
-    EMTFHitExtraCollection::const_iterator conv_hits_end = conv_hits.end();
+    EMTFHitCollection::const_iterator conv_hits_it  = conv_hits.begin();
+    EMTFHitCollection::const_iterator conv_hits_end = conv_hits.end();
 
     for (; conv_hits_it != conv_hits_end; ++conv_hits_it) {
       int ph_seg     = conv_hits_it->phi_fp;  // ph from segments
@@ -405,19 +405,19 @@ void EMTFPrimitiveMatching::process_single_zone_station(
   }  // end loop over roads
 }
 
-void EMTFPrimitiveMatching::insert_hits(
-    hit_ptr_t conv_hit_ptr, const EMTFHitExtraCollection& conv_hits,
-    EMTFTrackExtra& track
+void PrimitiveMatching::insert_hits(
+    hit_ptr_t conv_hit_ptr, const EMTFHitCollection& conv_hits,
+    EMTFTrack& track
 ) const {
-  EMTFHitExtraCollection::const_iterator conv_hits_it  = conv_hits.begin();
-  EMTFHitExtraCollection::const_iterator conv_hits_end = conv_hits.end();
+  EMTFHitCollection::const_iterator conv_hits_it  = conv_hits.begin();
+  EMTFHitCollection::const_iterator conv_hits_end = conv_hits.end();
 
   const bool is_csc_me11 = (conv_hit_ptr->subsystem == TriggerPrimitive::kCSC) && (conv_hit_ptr->station == 1) && (conv_hit_ptr->ring == 1 || conv_hit_ptr->ring == 4);
 
   // Find all possible duplicated hits, insert them
   for (; conv_hits_it != conv_hits_end; ++conv_hits_it) {
-    const EMTFHitExtra& conv_hit_i = *conv_hits_it;
-    const EMTFHitExtra& conv_hit_j = *conv_hit_ptr;
+    const EMTFHit& conv_hit_i = *conv_hits_it;
+    const EMTFHit& conv_hit_j = *conv_hit_ptr;
 
     // All these must match: [bx_history][station][chamber][segment]
     if (
@@ -467,7 +467,7 @@ void EMTFPrimitiveMatching::insert_hits(
 
   // Sort by station
   struct {
-    typedef EMTFHitExtra value_type;
+    typedef EMTFHit value_type;
     constexpr bool operator()(const value_type& lhs, const value_type& rhs) {
       return lhs.station < rhs.station;
     }

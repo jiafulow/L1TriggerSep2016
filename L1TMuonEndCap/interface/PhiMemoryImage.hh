@@ -1,5 +1,5 @@
-#ifndef L1TMuonEndCap_EMTFPhiMemoryImage_hh
-#define L1TMuonEndCap_EMTFPhiMemoryImage_hh
+#ifndef L1TMuonEndCap_PhiMemoryImage_hh
+#define L1TMuonEndCap_PhiMemoryImage_hh
 
 #include <cstdint>
 #include <iosfwd>
@@ -7,19 +7,19 @@
 // Originally written by Ivan Furic and Matt Carver (Univ of Florida)
 
 
-class EMTFPhiMemoryImage {
+class PhiMemoryImage {
 public:
   typedef uint64_t value_type;
 
-  EMTFPhiMemoryImage();
-  ~EMTFPhiMemoryImage();
+  PhiMemoryImage();
+  ~PhiMemoryImage();
 
   // Copy constructor, move constructor and copy assignment
-  EMTFPhiMemoryImage(const EMTFPhiMemoryImage& other);
-  EMTFPhiMemoryImage(EMTFPhiMemoryImage&& other) noexcept;
-  EMTFPhiMemoryImage& operator=(EMTFPhiMemoryImage other);
+  PhiMemoryImage(const PhiMemoryImage& other);
+  PhiMemoryImage(PhiMemoryImage&& other) noexcept;
+  PhiMemoryImage& operator=(PhiMemoryImage other);
 
-  void swap(EMTFPhiMemoryImage& other);
+  void swap(PhiMemoryImage& other);
 
   void reset();
 
@@ -48,7 +48,7 @@ public:
   //   bit 0: st3 or st4 hit
   //   bit 1: st2 hit
   //   bit 2: st1 hit
-  unsigned int op_and(const EMTFPhiMemoryImage& other) const;
+  unsigned int op_and(const PhiMemoryImage& other) const;
 
   void print(std::ostream& out) const;
 
@@ -71,6 +71,6 @@ private:
 
 // _____________________________________________________________________________
 // Output streams
-std::ostream& operator<<(std::ostream& o, const EMTFPhiMemoryImage& p);
+std::ostream& operator<<(std::ostream& o, const PhiMemoryImage& p);
 
 #endif

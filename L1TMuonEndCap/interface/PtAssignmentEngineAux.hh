@@ -1,5 +1,5 @@
-#ifndef L1TMuonEndCap_EMTFPtAssignmentEngineAux_hh
-#define L1TMuonEndCap_EMTFPtAssignmentEngineAux_hh
+#ifndef L1TMuonEndCap_PtAssignmentEngineAux_hh
+#define L1TMuonEndCap_PtAssignmentEngineAux_hh
 
 #include <cstdint>
 #include <cstdlib>
@@ -7,7 +7,7 @@
 #include <vector>
 
 
-class EMTFPtAssignmentEngineAux {
+class PtAssignmentEngineAux {
 public:
   // Functions for pT assignment
   const int (*getModeVariables() const)[6];

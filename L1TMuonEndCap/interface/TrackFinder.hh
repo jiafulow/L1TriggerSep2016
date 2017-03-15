@@ -1,5 +1,5 @@
-#ifndef L1TMuonEndCap_EMTFTrackFinder_hh
-#define L1TMuonEndCap_EMTFTrackFinder_hh
+#ifndef L1TMuonEndCap_TrackFinder_hh
+#define L1TMuonEndCap_TrackFinder_hh
 
 #include <memory>
 #include <string>
@@ -11,33 +11,33 @@
 #include "FWCore/Framework/interface/ConsumesCollector.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFSectorProcessorLUT.hh"
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPtAssignmentEngine.hh"
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFSectorProcessor.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/SectorProcessorLUT.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/PtAssignmentEngine.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/SectorProcessor.hh"
 
 
-class EMTFTrackFinder {
+class TrackFinder {
 public:
-  explicit EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollector&& iConsumes);
-  ~EMTFTrackFinder();
+  explicit TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollector&& iConsumes);
+  ~TrackFinder();
 
   void process(
       // Input
       const edm::Event& iEvent, const edm::EventSetup& iSetup,
       // Output
-      EMTFHitExtraCollection& out_hits,
-      EMTFTrackExtraCollection& out_tracks
+      EMTFHitCollection& out_hits,
+      EMTFTrackCollection& out_tracks
   ) const;
 
 private:
   // 'mutable' because GeometryTranslator has to 'update' inside the const function
   mutable GeometryTranslator geometry_translator_;
 
-  EMTFSectorProcessorLUT sector_processor_lut_;
+  SectorProcessorLUT sector_processor_lut_;
 
-  EMTFPtAssignmentEngine pt_assign_engine_;
+  PtAssignmentEngine pt_assign_engine_;
 
-  std::array<EMTFSectorProcessor, NUM_SECTORS> sector_processors_;
+  std::array<SectorProcessor, NUM_SECTORS> sector_processors_;
 
   const edm::ParameterSet config_;
 

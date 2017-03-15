@@ -1,19 +1,19 @@
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPrimitiveConversion.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/PrimitiveConversion.hh"
 
 #include "DataFormats/MuonDetId/interface/DTChamberId.h"
 #include "DataFormats/MuonDetId/interface/CSCDetId.h"
 #include "DataFormats/MuonDetId/interface/RPCDetId.h"
 
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFSectorProcessorLUT.hh"
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFTrackTools.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/SectorProcessorLUT.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/TrackTools.hh"
 
 using CSCData = TriggerPrimitive::CSCData;
 using RPCData = TriggerPrimitive::RPCData;
 
 
-void EMTFPrimitiveConversion::configure(
+void PrimitiveConversion::configure(
     const GeometryTranslator* tp_geom,
-    const EMTFSectorProcessorLUT* lut,
+    const SectorProcessorLUT* lut,
     int verbose, int endcap, int sector, int bx,
     int bxShiftCSC, int bxShiftRPC,
     const std::vector<int>& zoneBoundaries, int zoneOverlap, int zoneOverlapRPC,
@@ -47,16 +47,16 @@ void EMTFPrimitiveConversion::configure(
 
 // Specialized for CSC
 template<>
-void EMTFPrimitiveConversion::process(
+void PrimitiveConversion::process(
     CSCTag tag,
     const std::map<int, TriggerPrimitiveCollection>& selected_csc_map,
-    EMTFHitExtraCollection& conv_hits
+    EMTFHitCollection& conv_hits
 ) const {
   std::map<int, TriggerPrimitiveCollection>::const_iterator map_tp_it  = selected_csc_map.begin();
   std::map<int, TriggerPrimitiveCollection>::const_iterator map_tp_end = selected_csc_map.end();
 
   for (; map_tp_it != map_tp_end; ++map_tp_it) {
-    // Unique chamber ID in FW, {0, 53} as defined in get_index_csc in src/EMTFPrimitiveSelection.cc
+    // Unique chamber ID in FW, {0, 53} as defined in get_index_csc in src/PrimitiveSelection.cc
     int selected   = map_tp_it->first;
     // "Primitive Conversion" sector/station/chamber ID scheme used in FW
     int pc_sector  = sector_;
@@ -68,7 +68,7 @@ void EMTFPrimitiveConversion::process(
     TriggerPrimitiveCollection::const_iterator tp_end = map_tp_it->second.end();
 
     for (; tp_it != tp_end; ++tp_it) {
-      EMTFHitExtra conv_hit;
+      EMTFHit conv_hit;
       convert_csc(pc_sector, pc_station, pc_chamber, pc_segment, *tp_it, conv_hit);
       conv_hits.push_back(conv_hit);
       pc_segment += 1;
@@ -80,10 +80,10 @@ void EMTFPrimitiveConversion::process(
 
 // Specialized for RPC
 template<>
-void EMTFPrimitiveConversion::process(
+void PrimitiveConversion::process(
     RPCTag tag,
     const std::map<int, TriggerPrimitiveCollection>& selected_rpc_map,
-    EMTFHitExtraCollection& conv_hits
+    EMTFHitCollection& conv_hits
 ) const {
   std::map<int, TriggerPrimitiveCollection>::const_iterator map_tp_it  = selected_rpc_map.begin();
   std::map<int, TriggerPrimitiveCollection>::const_iterator map_tp_end = selected_rpc_map.end();
@@ -101,7 +101,7 @@ void EMTFPrimitiveConversion::process(
     TriggerPrimitiveCollection::const_iterator tp_end = map_tp_it->second.end();
 
     for (; tp_it != tp_end; ++tp_it) {
-      EMTFHitExtra conv_hit;
+      EMTFHit conv_hit;
       convert_rpc(pc_sector, pc_station, pc_chamber, pc_segment, *tp_it, conv_hit);
       conv_hits.push_back(conv_hit);
       pc_segment += 1;
@@ -111,16 +111,16 @@ void EMTFPrimitiveConversion::process(
   }
 }
 
-const EMTFSectorProcessorLUT& EMTFPrimitiveConversion::lut() const {
+const SectorProcessorLUT& PrimitiveConversion::lut() const {
   return *lut_;
 }
 
 // _____________________________________________________________________________
 // CSC functions
-void EMTFPrimitiveConversion::convert_csc(
+void PrimitiveConversion::convert_csc(
     int pc_sector, int pc_station, int pc_chamber, int pc_segment,
     const TriggerPrimitive& muon_primitive,
-    EMTFHitExtra& conv_hit
+    EMTFHit& conv_hit
 ) const {
   const CSCDetId& tp_detId = muon_primitive.detId<CSCDetId>();
   const CSCData&  tp_data  = muon_primitive.getCSCData();
@@ -202,7 +202,7 @@ void EMTFPrimitiveConversion::convert_csc(
   }
 }
 
-void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const {
+void PrimitiveConversion::convert_csc_details(EMTFHit& conv_hit) const {
   const bool is_neighbor = (conv_hit.pc_station == 5);
 
   // Defined as in firmware
@@ -297,7 +297,7 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
   // Convert half-strip into 1/8-strip
   int eighth_strip = 0;
 
-  // Apply phi correction from CLCT pattern number (from src/EMTFSectorProcessorLUT.cc)
+  // Apply phi correction from CLCT pattern number (from src/SectorProcessorLUT.cc)
   int clct_pat_corr = lut().get_ph_patt_corr(conv_hit.pattern);
   int clct_pat_corr_sign = (lut().get_ph_patt_corr_sign(conv_hit.pattern) == 0) ? 1 : -1;
 
@@ -544,10 +544,10 @@ void EMTFPrimitiveConversion::convert_csc_details(EMTFHitExtra& conv_hit) const 
 
 // _____________________________________________________________________________
 // RPC functions
-void EMTFPrimitiveConversion::convert_rpc(
+void PrimitiveConversion::convert_rpc(
     int pc_sector, int pc_station, int pc_chamber, int pc_segment,
     const TriggerPrimitive& muon_primitive,
-    EMTFHitExtra& conv_hit
+    EMTFHit& conv_hit
 ) const {
   const RPCDetId& tp_detId = muon_primitive.detId<RPCDetId>();
   const RPCData&  tp_data  = muon_primitive.getRPCData();
@@ -630,7 +630,7 @@ void EMTFPrimitiveConversion::convert_rpc(
   convert_rpc_details(conv_hit);
 }
 
-void EMTFPrimitiveConversion::convert_rpc_details(EMTFHitExtra& conv_hit) const {
+void PrimitiveConversion::convert_rpc_details(EMTFHit& conv_hit) const {
   const bool is_neighbor = (conv_hit.pc_station == 5);
 
   //const int fw_endcap  = (endcap_-1);

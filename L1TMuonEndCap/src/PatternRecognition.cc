@@ -1,4 +1,4 @@
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPatternRecognition.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/PatternRecognition.hh"
 
 #include "helper.hh"  // to_hex, to_binary
 
@@ -9,7 +9,7 @@ namespace {
 }
 
 
-void EMTFPatternRecognition::configure(
+void PatternRecognition::configure(
     int verbose, int endcap, int sector, int bx,
     int bxWindow,
     const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions, bool useSymPatterns,
@@ -30,7 +30,7 @@ void EMTFPatternRecognition::configure(
   configure_details();
 }
 
-void EMTFPatternRecognition::configure_details() {
+void PatternRecognition::configure_details() {
   patterns_.clear();
 
   // Parse pattern definitions
@@ -68,7 +68,7 @@ void EMTFPatternRecognition::configure_details() {
       st4_min += padding_extra_w_st1;
 
       // Create a pattern
-      EMTFPhiMemoryImage pattern;
+      PhiMemoryImage pattern;
       pattern.set_straightness(straightness);
       int i = 0;
 
@@ -136,7 +136,7 @@ void EMTFPatternRecognition::configure_details() {
       st4_min2 += padding_extra_w_st1;
 
       // Create a pattern
-      EMTFPhiMemoryImage pattern;
+      PhiMemoryImage pattern;
       pattern.set_straightness(straightness);
       int i = 0;
 
@@ -172,10 +172,10 @@ void EMTFPatternRecognition::configure_details() {
   }
 }
 
-void EMTFPatternRecognition::process(
-    const std::deque<EMTFHitExtraCollection>& extended_conv_hits,
+void PatternRecognition::process(
+    const std::deque<EMTFHitCollection>& extended_conv_hits,
     std::map<pattern_ref_t, int>& patt_lifetime_map,
-    zone_array<EMTFRoadExtraCollection>& zone_roads
+    zone_array<EMTFRoadCollection>& zone_roads
 ) const {
   int num_conv_hits = 0;
   for (const auto& conv_hits : extended_conv_hits)
@@ -201,7 +201,7 @@ void EMTFPatternRecognition::process(
   }
 
   // Perform pattern recognition in each zone
-  zone_array<EMTFPhiMemoryImage> zone_images;
+  zone_array<PhiMemoryImage> zone_images;
 
   for (int izone = 0; izone < NUM_ZONES; ++izone) {
     // Skip the zone if no hits and no patterns
@@ -243,21 +243,21 @@ void EMTFPatternRecognition::process(
 
 }
 
-bool EMTFPatternRecognition::is_zone_empty(
+bool PatternRecognition::is_zone_empty(
     int zone,
-    const std::deque<EMTFHitExtraCollection>& extended_conv_hits,
+    const std::deque<EMTFHitCollection>& extended_conv_hits,
     const std::map<pattern_ref_t, int>& patt_lifetime_map
 ) const {
   int izone = zone-1;
   int num_conv_hits = 0;
   int num_patts = 0;
 
-  std::deque<EMTFHitExtraCollection>::const_iterator ext_conv_hits_it  = extended_conv_hits.begin();
-  std::deque<EMTFHitExtraCollection>::const_iterator ext_conv_hits_end = extended_conv_hits.end();
+  std::deque<EMTFHitCollection>::const_iterator ext_conv_hits_it  = extended_conv_hits.begin();
+  std::deque<EMTFHitCollection>::const_iterator ext_conv_hits_end = extended_conv_hits.end();
 
   for (; ext_conv_hits_it != ext_conv_hits_end; ++ext_conv_hits_it) {
-    EMTFHitExtraCollection::const_iterator conv_hits_it  = ext_conv_hits_it->begin();
-    EMTFHitExtraCollection::const_iterator conv_hits_end = ext_conv_hits_it->end();
+    EMTFHitCollection::const_iterator conv_hits_it  = ext_conv_hits_it->begin();
+    EMTFHitCollection::const_iterator conv_hits_end = ext_conv_hits_it->end();
 
     for (; conv_hits_it != conv_hits_end; ++conv_hits_it) {
       if (conv_hits_it->subsystem == TriggerPrimitive::kRPC)
@@ -281,19 +281,19 @@ bool EMTFPatternRecognition::is_zone_empty(
   return (num_conv_hits == 0) && (num_patts == 0);
 }
 
-void EMTFPatternRecognition::make_zone_image(
+void PatternRecognition::make_zone_image(
     int zone,
-    const std::deque<EMTFHitExtraCollection>& extended_conv_hits,
-    EMTFPhiMemoryImage& image
+    const std::deque<EMTFHitCollection>& extended_conv_hits,
+    PhiMemoryImage& image
 ) const {
   int izone = zone-1;
 
-  std::deque<EMTFHitExtraCollection>::const_iterator ext_conv_hits_it  = extended_conv_hits.begin();
-  std::deque<EMTFHitExtraCollection>::const_iterator ext_conv_hits_end = extended_conv_hits.end();
+  std::deque<EMTFHitCollection>::const_iterator ext_conv_hits_it  = extended_conv_hits.begin();
+  std::deque<EMTFHitCollection>::const_iterator ext_conv_hits_end = extended_conv_hits.end();
 
   for (; ext_conv_hits_it != ext_conv_hits_end; ++ext_conv_hits_it) {
-    EMTFHitExtraCollection::const_iterator conv_hits_it  = ext_conv_hits_it->begin();
-    EMTFHitExtraCollection::const_iterator conv_hits_end = ext_conv_hits_it->end();
+    EMTFHitCollection::const_iterator conv_hits_it  = ext_conv_hits_it->begin();
+    EMTFHitCollection::const_iterator conv_hits_end = ext_conv_hits_it->end();
 
     for (; conv_hits_it != conv_hits_end; ++conv_hits_it) {
       if (conv_hits_it->subsystem == TriggerPrimitive::kRPC)
@@ -308,11 +308,11 @@ void EMTFPatternRecognition::make_zone_image(
   }  // end loop over extended_conv_hits
 }
 
-void EMTFPatternRecognition::process_single_zone(
+void PatternRecognition::process_single_zone(
     int zone,
-    EMTFPhiMemoryImage cloned_image,
+    PhiMemoryImage cloned_image,
     std::map<pattern_ref_t, int>& patt_lifetime_map,
-    EMTFRoadExtraCollection& roads
+    EMTFRoadCollection& roads
 ) const {
   roads.clear();
 
@@ -330,11 +330,11 @@ void EMTFPatternRecognition::process_single_zone(
       cloned_image.rotr(1);
 
     int max_quality_code = -1;
-    EMTFRoadExtra tmp_road;
+    EMTFRoad tmp_road;
 
     // Compare with patterns
     for (int ipatt = 0; ipatt < npatterns; ++ipatt) {
-      const EMTFPhiMemoryImage& patt = patterns_.at(ipatt);
+      const PhiMemoryImage& patt = patterns_.at(ipatt);
       const pattern_ref_t patt_ref = {{zone, izhit, ipatt}};  // due to GCC bug, use {{}} instead of {}
       int straightness = patt.get_straightness();
 
@@ -400,7 +400,7 @@ void EMTFPatternRecognition::process_single_zone(
         );
 
         // Create a road (fired pattern)
-        EMTFRoadExtra road;
+        EMTFRoad road;
         road.endcap   = endcap_;
         road.sector   = sector_;
         road.bx       = bx_ - drift_time;
@@ -436,8 +436,8 @@ void EMTFPatternRecognition::process_single_zone(
     std::array<int, NUM_ZONE_HITS> quality_codes;
     quality_codes.fill(0);
 
-    EMTFRoadExtraCollection::iterator roads_it  = roads.begin();
-    EMTFRoadExtraCollection::iterator roads_end = roads.end();
+    EMTFRoadCollection::iterator roads_it  = roads.begin();
+    EMTFRoadCollection::iterator roads_end = roads.end();
 
     for (; roads_it != roads_end; ++roads_it) {
       quality_codes.at(roads_it->key_zhit) = roads_it->quality_code;
@@ -467,7 +467,7 @@ void EMTFPatternRecognition::process_single_zone(
   // Erase roads with quality_code == 0
   // using erase-remove idiom
   struct {
-    typedef EMTFRoadExtra value_type;
+    typedef EMTFRoad value_type;
     constexpr bool operator()(const value_type& x) {
       return (x.quality_code == 0);
     }
@@ -476,10 +476,10 @@ void EMTFPatternRecognition::process_single_zone(
   roads.erase(std::remove_if(roads.begin(), roads.end(), quality_code_zero_pred), roads.end());
 }
 
-void EMTFPatternRecognition::sort_single_zone(EMTFRoadExtraCollection& roads) const {
+void PatternRecognition::sort_single_zone(EMTFRoadCollection& roads) const {
   // First, order by key_zhit (highest to lowest)
   struct {
-    typedef EMTFRoadExtra value_type;
+    typedef EMTFRoad value_type;
     constexpr bool operator()(const value_type& lhs, const value_type& rhs) {
       return lhs.key_zhit > rhs.key_zhit;
     }
@@ -489,7 +489,7 @@ void EMTFPatternRecognition::sort_single_zone(EMTFRoadExtraCollection& roads) co
 
   // Second, sort by quality_code (highest to lowest), but preserving the original order if qualities are equal
   struct {
-    typedef EMTFRoadExtra value_type;
+    typedef EMTFRoad value_type;
     constexpr bool operator()(const value_type& lhs, const value_type& rhs) {
       return lhs.quality_code > rhs.quality_code;
     }

@@ -1,10 +1,10 @@
-#ifndef L1TMuonEndCap_EMTFPrimitiveSelection_hh
-#define L1TMuonEndCap_EMTFPrimitiveSelection_hh
+#ifndef L1TMuonEndCap_PrimitiveSelection_hh
+#define L1TMuonEndCap_PrimitiveSelection_hh
 
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFCommon.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/Common.hh"
 
 
-class EMTFPrimitiveSelection {
+class PrimitiveSelection {
 public:
   void configure(
       int verbose, int endcap, int sector, int bx,

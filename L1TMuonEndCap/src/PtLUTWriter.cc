@@ -1,4 +1,4 @@
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPtLUTWriter.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/PtLUTWriter.hh"
 
 #include <fstream>
 #include <iostream>
@@ -6,7 +6,7 @@
 
 #define PTLUT_SIZE (1<<30)
 
-EMTFPtLUTWriter::EMTFPtLUTWriter() :
+PtLUTWriter::PtLUTWriter() :
     ptlut_(),
     version_(4),
     ok_(false)
@@ -14,11 +14,11 @@ EMTFPtLUTWriter::EMTFPtLUTWriter() :
   ptlut_.reserve(PTLUT_SIZE);
 }
 
-EMTFPtLUTWriter::~EMTFPtLUTWriter() {
+PtLUTWriter::~PtLUTWriter() {
 
 }
 
-void EMTFPtLUTWriter::write(const std::string& lut_full_path) const {
+void PtLUTWriter::write(const std::string& lut_full_path) const {
   //if (ok_)  return;
 
   std::cout << "Writing LUT, this might take a while..." << std::endl;
@@ -65,6 +65,6 @@ void EMTFPtLUTWriter::write(const std::string& lut_full_path) const {
   return;
 }
 
-void EMTFPtLUTWriter::push_back(const content_t& pt) {
+void PtLUTWriter::push_back(const content_t& pt) {
   ptlut_.push_back(pt);
 }

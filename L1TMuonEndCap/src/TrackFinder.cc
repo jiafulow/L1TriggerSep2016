@@ -1,12 +1,12 @@
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFTrackFinder.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/TrackFinder.hh"
 
 #include <iostream>
 #include <sstream>
 
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFSubsystemCollector.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/SubsystemCollector.hh"
 
 
-EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollector&& iConsumes) :
+TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollector&& iConsumes) :
     geometry_translator_(),
     sector_processor_lut_(),
     pt_assign_engine_(),
@@ -97,14 +97,14 @@ EMTFTrackFinder::EMTFTrackFinder(const edm::ParameterSet& iConfig, edm::Consumes
   }
 }
 
-EMTFTrackFinder::~EMTFTrackFinder() {
+TrackFinder::~TrackFinder() {
 
 }
 
-void EMTFTrackFinder::process(
+void TrackFinder::process(
     const edm::Event& iEvent, const edm::EventSetup& iSetup,
-    EMTFHitExtraCollection& out_hits,
-    EMTFTrackExtraCollection& out_tracks
+    EMTFHitCollection& out_hits,
+    EMTFTrackCollection& out_tracks
 ) const {
 
   // Clear output collections
@@ -118,7 +118,7 @@ void EMTFTrackFinder::process(
   // Extract all trigger primitives
   TriggerPrimitiveCollection muon_primitives;
 
-  EMTFSubsystemCollector collector;
+  SubsystemCollector collector;
   if (useCSC_)
     collector.extractPrimitives(CSCTag(), iEvent, tokenCSC_, muon_primitives);
   if (useRPC_)
@@ -135,7 +135,7 @@ void EMTFTrackFinder::process(
   // ___________________________________________________________________________
   // Run each sector processor
 
-  // MIN/MAX ENDCAP and TRIGSECTOR set in interface/EMTFCommon.hh
+  // MIN/MAX ENDCAP and TRIGSECTOR set in interface/Common.hh
   for (int endcap = MIN_ENDCAP; endcap <= MAX_ENDCAP; ++endcap) {
     for (int sector = MIN_TRIGSECTOR; sector <= MAX_TRIGSECTOR; ++sector) {
       const int es = (endcap - MIN_ENDCAP) * (MAX_TRIGSECTOR - MIN_TRIGSECTOR + 1) + (sector - MIN_TRIGSECTOR);
@@ -150,7 +150,7 @@ void EMTFTrackFinder::process(
   }
 
   if (verbose_ > 0) {  // debug
-    std::cout << "Num of EMTFHitExtra: " << out_hits.size() << std::endl;
+    std::cout << "Num of EMTFHit: " << out_hits.size() << std::endl;
     std::cout << "bx e s ss st vf ql cp wg id bd hs" << std::endl;
     for (const auto& h : out_hits) {
       int bx      = h.bx + 3;
@@ -167,7 +167,7 @@ void EMTFTrackFinder::process(
       std::cout << h.pc_station << " " << h.pc_chamber << " " << h.phi_fp << " " << h.theta_fp << " " << (1ul<<h.ph_hit) << " " << h.phzvl << std::endl;
     }
 
-    std::cout << "Num of EMTFTrackExtra: " << out_tracks.size() << std::endl;
+    std::cout << "Num of EMTFTrack: " << out_tracks.size() << std::endl;
     std::cout << "bx e s a mo et ph cr q pt" << std::endl;
     for (const auto& t : out_tracks) {
       std::cout << t.bx << " " << t.endcap << " " << t.sector << " " << t.ptlut_address << " " << t.mode << " " << t.gmt_eta << " " << t.gmt_phi << " " << t.gmt_charge << " " << t.gmt_quality << " " << t.pt << std::endl;

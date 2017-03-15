@@ -45,7 +45,7 @@ from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, '80X_mcRun2_asymptotic_v14', '') ## Different than in data ("auto:run2_data"?)
 
 # ## Event Setup Producer
-# process.load('L1TriggerSep2016.L1TMuonEndCap.fakeEmtfParams_cff') ## Why does this file have "fake" in the name? - AWB 18.04.16
+# process.load('L1Trigger.L1TMuonEndCap.fakeEmtfParams_cff') ## Why does this file have "fake" in the name? - AWB 18.04.16
 # process.esProd = cms.EDAnalyzer("EventSetupRecordDataGetter",
 #                                 toGet = cms.VPSet(
 #         ## Apparently L1TMuonEndcapParamsRcd doesn't exist in CondFormats/DataRecord/src/ (Important? - AWB 18.04.16)
@@ -127,37 +127,37 @@ process.L1RePack_step = cms.Path(SimL1Emulator_AWB)
 process.simCscTriggerPrimitiveDigis.CSCComparatorDigiProducer = cms.InputTag('unpackCSC', 'MuonCSCComparatorDigi')
 process.simCscTriggerPrimitiveDigis.CSCWireDigiProducer       = cms.InputTag('unpackCSC', 'MuonCSCWireDigi')
 
-## process.load('L1TriggerSep2016.L1TMuonEndCap.simEmtfDigis_cfi')
-process.load('L1TriggerSep2016.L1TMuonEndCap.simEmtfDigisSep2016_cfi')
+## process.load('L1Trigger.L1TMuonEndCap.simEmtfDigis_cfi')
+process.load('L1Trigger.L1TMuonEndCap.simEmtfDigis_cfi')
 
-process.simEmtfDigisSep2016.MinBX = cms.int32(-3)
-process.simEmtfDigisSep2016.MaxBX = cms.int32(+3)
+process.simEmtfDigis.MinBX = cms.int32(-3)
+process.simEmtfDigis.MaxBX = cms.int32(+3)
 
-process.simEmtfDigisSep2016.spPCParams16.FixZonePhi     = cms.bool(True)
-process.simEmtfDigisSep2016.spPCParams16.UseNewZones    = cms.bool(True)
-#process.simEmtfDigisSep2016.spPCParams16.ZoneBoundaries = cms.vint32(0,41,49,87,127)
-process.simEmtfDigisSep2016.spPCParams16.ZoneBoundaries = cms.vint32(0,36,54,96,127)
+process.simEmtfDigis.spPCParams16.FixZonePhi     = cms.bool(True)
+process.simEmtfDigis.spPCParams16.UseNewZones    = cms.bool(True)
+#process.simEmtfDigis.spPCParams16.ZoneBoundaries = cms.vint32(0,41,49,87,127)
+process.simEmtfDigis.spPCParams16.ZoneBoundaries = cms.vint32(0,36,54,96,127)
 
-process.simEmtfDigisSep2016.spPRParams16.UseSymmetricalPatterns = cms.bool(True)
+process.simEmtfDigis.spPRParams16.UseSymmetricalPatterns = cms.bool(True)
 
-process.simEmtfDigisSep2016.spGCParams16.UseSecondEarliest = cms.bool(True)
+process.simEmtfDigis.spGCParams16.UseSecondEarliest = cms.bool(True)
 
-process.simEmtfDigisSep2016.spPAParams16.FixMode15HighPt = cms.bool(True)
-process.simEmtfDigisSep2016.spPAParams16.Bug9BitDPhi     = cms.bool(False)
-process.simEmtfDigisSep2016.spPAParams16.BugMode7CLCT    = cms.bool(False)
-process.simEmtfDigisSep2016.spPAParams16.BugNegPt        = cms.bool(False)
+process.simEmtfDigis.spPAParams16.FixMode15HighPt = cms.bool(True)
+process.simEmtfDigis.spPAParams16.Bug9BitDPhi     = cms.bool(False)
+process.simEmtfDigis.spPAParams16.BugMode7CLCT    = cms.bool(False)
+process.simEmtfDigis.spPAParams16.BugNegPt        = cms.bool(False)
 
-process.simEmtfDigisSep2016.CSCInput        = cms.InputTag('simCscTriggerPrimitiveDigis','MPCSORTED')
-process.simEmtfDigisSep2016.RPCInput        = cms.InputTag('simMuonRPCDigis')
-process.simEmtfDigisSep2016.CSCEnable       = cms.bool(True)
-process.simEmtfDigisSep2016.RPCEnable       = cms.bool(False)
-process.simEmtfDigisSep2016.CSCInputBXShift = cms.int32(-6)
-process.simEmtfDigisSep2016.RPCInputBXShift = cms.int32(0)
-process.simEmtfDigisSep2016.verbosity       = cms.untracked.int32(0)
+process.simEmtfDigis.CSCInput        = cms.InputTag('simCscTriggerPrimitiveDigis','MPCSORTED')
+process.simEmtfDigis.RPCInput        = cms.InputTag('simMuonRPCDigis')
+process.simEmtfDigis.CSCEnable       = cms.bool(True)
+process.simEmtfDigis.RPCEnable       = cms.bool(False)
+process.simEmtfDigis.CSCInputBXShift = cms.int32(-6)
+process.simEmtfDigis.RPCInputBXShift = cms.int32(0)
+process.simEmtfDigis.verbosity       = cms.untracked.int32(0)
 
 # RawToDigi_AWB = cms.Sequence(process.muonCSCDigis+process.muonRPCDigis+process.csctfDigis)
-RawToDigi_AWB = cms.Sequence(process.simCscTriggerPrimitiveDigis+process.muonCSCDigis+process.muonRPCDigis+process.csctfDigis+process.simEmtfDigisSep2016)
-# RawToDigi_AWB = cms.Sequence(process.simMuonCSCDigis+process.cscTriggerPrimitiveDigis+process.muonCSCDigis+process.muonRPCDigis+process.cscTriggerPrimitiveDigis+process.csctfDigis+process.simEmtfDigisSep2016)
+RawToDigi_AWB = cms.Sequence(process.simCscTriggerPrimitiveDigis+process.muonCSCDigis+process.muonRPCDigis+process.csctfDigis+process.simEmtfDigis)
+# RawToDigi_AWB = cms.Sequence(process.simMuonCSCDigis+process.cscTriggerPrimitiveDigis+process.muonCSCDigis+process.muonRPCDigis+process.cscTriggerPrimitiveDigis+process.csctfDigis+process.simEmtfDigis)
 process.raw2digi_step = cms.Path(RawToDigi_AWB)
 
 ## Defined in Configuration/StandardSequences/python/EndOfProcess_cff.py
@@ -169,7 +169,7 @@ process.endjob_step = cms.EndPath(process.endOfProcess)
 #     process.muonRPCDigis +
 #     ## process.esProd + ## What do we loose by not having this? - AWB 18.04.16
 #     process.emtfStage2Digis +
-#     process.simEmtfDigisSep2016
+#     process.simEmtfDigis
 #     ## process.ntuple
 #     )
 
@@ -193,8 +193,8 @@ outCommands = cms.untracked.vstring(
     'keep *_csctfDigis_*_*',
     'keep *_emtfStage2Digis_*_*',
     'keep *_simEmtfDigis_*_*',
-    'keep *_simEmtfDigisSep2016_*_*',
-    'keep *_simEmtfDigisSep2016MC_*_*',
+    'keep *_simEmtfDigis_*_*',
+    'keep *_simEmtfDigisMC_*_*',
     'keep *_gmtStage2Digis_*_*',
     'keep *_simGmtStage2Digis_*_*',
 

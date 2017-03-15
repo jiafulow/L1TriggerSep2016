@@ -1,5 +1,5 @@
-#ifndef L1TMuonEndCap_L1TMuonEndCapTrackProducerSep2016_h
-#define L1TMuonEndCap_L1TMuonEndCapTrackProducerSep2016_h
+#ifndef L1TMuonEndCap_L1TMuonEndCapTrackProducer_h
+#define L1TMuonEndCap_L1TMuonEndCapTrackProducer_h
 
 // system include files
 #include <memory>
@@ -12,16 +12,16 @@
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFTrackFinder.hh"
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFTrackAdaptor.hh"
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFMicroGMTConverter.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/TrackFinder.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/TrackAdaptor.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/MicroGMTConverter.hh"
 
 
 // Class declaration
-class L1TMuonEndCapTrackProducerSep2016 : public edm::EDProducer {
+class L1TMuonEndCapTrackProducer : public edm::EDProducer {
 public:
-  explicit L1TMuonEndCapTrackProducerSep2016(const edm::ParameterSet&);
-  virtual ~L1TMuonEndCapTrackProducerSep2016();
+  explicit L1TMuonEndCapTrackProducer(const edm::ParameterSet&);
+  virtual ~L1TMuonEndCapTrackProducer();
 
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
@@ -36,9 +36,9 @@ private:
   //virtual void endLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&);
 
 private:
-  std::unique_ptr<EMTFTrackFinder>       track_finder_;
-  std::unique_ptr<EMTFTrackAdaptor>      track_adaptor_;
-  std::unique_ptr<EMTFMicroGMTConverter> uGMT_converter_;
+  std::unique_ptr<TrackFinder>       track_finder_;
+  std::unique_ptr<TrackAdaptor>      track_adaptor_;
+  std::unique_ptr<MicroGMTConverter> uGMT_converter_;
 
   const edm::ParameterSet& config_;
 };

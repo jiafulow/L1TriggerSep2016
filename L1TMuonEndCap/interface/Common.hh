@@ -1,19 +1,15 @@
-#ifndef L1TMuonEndCap_EMTFCommon_hh
-#define L1TMuonEndCap_EMTFCommon_hh
+#ifndef L1TMuonEndCap_Common_hh
+#define L1TMuonEndCap_Common_hh
 
-#include "DataFormatsSep2016/L1TMuon/interface/EMTFHit.h"
-#include "DataFormatsSep2016/L1TMuon/interface/EMTFRoad.h"
-#include "DataFormatsSep2016/L1TMuon/interface/EMTFTrack.h"
+#include "DataFormats/L1TMuon/interface/EMTFHit.h"
+#include "DataFormats/L1TMuon/interface/EMTFRoad.h"
+#include "DataFormats/L1TMuon/interface/EMTFTrack.h"
 
-#include "DataFormatsSep2016/L1TMuon/interface/EMTFHitExtra.h"
-#include "DataFormatsSep2016/L1TMuon/interface/EMTFRoadExtra.h"
-#include "DataFormatsSep2016/L1TMuon/interface/EMTFTrackExtra.h"
+#include "L1Trigger/L1TMuonEndCap/interface/GeometryTranslator.h"
+#include "L1Trigger/L1TMuonEndCap/interface/MuonTriggerPrimitive.h"
+#include "L1Trigger/L1TMuonEndCap/interface/MuonTriggerPrimitiveFwd.h"
 
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/GeometryTranslator.h"
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/MuonTriggerPrimitive.h"
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/MuonTriggerPrimitiveFwd.h"
-
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFSubsystemTag.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/SubsystemTag.hh"
 
 
 typedef L1TMuonEndCap::EMTFHit             EMTFHit;
@@ -23,14 +19,14 @@ typedef L1TMuonEndCap::EMTFRoadCollection  EMTFRoadCollection;
 typedef L1TMuonEndCap::EMTFTrack           EMTFTrack;
 typedef L1TMuonEndCap::EMTFTrackCollection EMTFTrackCollection;
 
-typedef L1TMuonEndCap::EMTFHitExtra             EMTFHitExtra;
-typedef L1TMuonEndCap::EMTFHitExtraCollection   EMTFHitExtraCollection;
-typedef L1TMuonEndCap::EMTFRoadExtra            EMTFRoadExtra;
-typedef L1TMuonEndCap::EMTFRoadExtraCollection  EMTFRoadExtraCollection;
-typedef L1TMuonEndCap::EMTFTrackExtra           EMTFTrackExtra;
-typedef L1TMuonEndCap::EMTFTrackExtraCollection EMTFTrackExtraCollection;
+typedef L1TMuonEndCap::EMTFHit             EMTFHit;
+typedef L1TMuonEndCap::EMTFHitCollection   EMTFHitCollection;
+typedef L1TMuonEndCap::EMTFRoad            EMTFRoad;
+typedef L1TMuonEndCap::EMTFRoadCollection  EMTFRoadCollection;
+typedef L1TMuonEndCap::EMTFTrack           EMTFTrack;
+typedef L1TMuonEndCap::EMTFTrackCollection EMTFTrackCollection;
 
-typedef L1TMuonEndCap::EMTFPtLUTData EMTFPtLUTData;
+typedef L1TMuonEndCap::EMTFPtLUT EMTFPtLUT;
 
 typedef L1TMuonEndCap::GeometryTranslator         GeometryTranslator;
 typedef L1TMuonEndCap::TriggerPrimitive           TriggerPrimitive;

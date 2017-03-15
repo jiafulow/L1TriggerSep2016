@@ -1,16 +1,16 @@
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFMicroGMTConverter.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/MicroGMTConverter.hh"
 
 
-EMTFMicroGMTConverter::EMTFMicroGMTConverter() {
-
-}
-
-EMTFMicroGMTConverter::~EMTFMicroGMTConverter() {
+MicroGMTConverter::MicroGMTConverter() {
 
 }
 
-void EMTFMicroGMTConverter::convert(
-    const EMTFTrackExtra& in_track,
+MicroGMTConverter::~MicroGMTConverter() {
+
+}
+
+void MicroGMTConverter::convert(
+    const EMTFTrack& in_track,
     l1t::RegionalMuonCand& out_cand
 ) const {
   l1t::tftype tftype = (in_track.endcap == 1) ? l1t::tftype::emtf_pos : l1t::tftype::emtf_neg;
@@ -25,7 +25,7 @@ void EMTFMicroGMTConverter::convert(
   out_cand.setHwHF(0);  // EMTF: halo -> 1
   out_cand.setTFIdentifiers(sector, tftype);
 
-  const EMTFPtLUTData& ptlut_data = in_track.ptlut_data;
+  const EMTFPtLUT& ptlut_data = in_track.ptlut_data;
 
   // Form track sub addresses
   int me1_ch_id = (ptlut_data.bt_vi[0] == 0 && ptlut_data.bt_vi[1] != 0) ? ptlut_data.bt_ci[1]+16 : ptlut_data.bt_ci[0];
@@ -80,8 +80,8 @@ void EMTFMicroGMTConverter::convert(
   out_cand.setTrackSubAddress(l1t::RegionalMuonCand::kBX    , in_track.bx);
 }
 
-void EMTFMicroGMTConverter::convert_all(
-    const EMTFTrackExtraCollection& in_tracks,
+void MicroGMTConverter::convert_all(
+    const EMTFTrackCollection& in_tracks,
     l1t::RegionalMuonCandBxCollection& out_cands
 ) const {
   int gmtMinBX = -2;

@@ -6,7 +6,7 @@ import FWCore.ParameterSet.Config as cms
 #   * 'csctfDigis' : real trigger primitives as received by CSCTF (legacy trigger)
 #   * 'emtfStage2Digis' : real trigger primitives as received by EMTF, unpacked in EventFilter/L1TRawToDigi/
 
-simEmtfDigisSep2016MC = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
+simEmtfDigisMC = cms.EDProducer("L1TMuonEndCapTrackProducer",
     # Verbosity level
     verbosity = cms.untracked.int32(0),
 
@@ -101,9 +101,9 @@ simEmtfDigisSep2016MC = cms.EDProducer("L1TMuonEndCapTrackProducerSep2016",
 
 )
 
-simEmtfDigisSep2016Data = simEmtfDigisSep2016MC.clone(
+simEmtfDigisData = simEmtfDigisMC.clone(
     CSCInput = cms.InputTag('emtfStage2Digis'),
     RPCInput = cms.InputTag('muonRPCDigis'),
 )
 
-simEmtfDigisSep2016 = simEmtfDigisSep2016MC.clone()
+simEmtfDigis = simEmtfDigisMC.clone()

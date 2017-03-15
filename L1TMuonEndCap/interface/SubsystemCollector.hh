@@ -1,7 +1,7 @@
-#ifndef L1TMuonEndCap_EMTFSubsystemCollector_hh
-#define L1TMuonEndCap_EMTFSubsystemCollector_hh
+#ifndef L1TMuonEndCap_SubsystemCollector_hh
+#define L1TMuonEndCap_SubsystemCollector_hh
 
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFCommon.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/Common.hh"
 
 
 // Forward declarations
@@ -12,7 +12,7 @@ namespace edm {
 
 
 // Class declaration
-class EMTFSubsystemCollector {
+class SubsystemCollector {
 public:
   template<typename T>
   void extractPrimitives(

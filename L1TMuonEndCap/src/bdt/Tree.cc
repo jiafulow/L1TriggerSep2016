@@ -15,7 +15,7 @@
 // _______________________Includes_______________________________________//
 ///////////////////////////////////////////////////////////////////////////
 
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/bdt/Tree.h"
+#include "L1Trigger/L1TMuonEndCap/interface/bdt/Tree.h"
 
 #include <iostream>
 #include <sstream>

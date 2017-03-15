@@ -1,15 +1,15 @@
-#ifndef L1TMuonEndCap_EMTFPtLUTWriter_hh
-#define L1TMuonEndCap_EMTFPtLUTWriter_hh
+#ifndef L1TMuonEndCap_PtLUTWriter_hh
+#define L1TMuonEndCap_PtLUTWriter_hh
 
 #include <cstdint>
 #include <string>
 #include <vector>
 
 
-class EMTFPtLUTWriter {
+class PtLUTWriter {
 public:
-  explicit EMTFPtLUTWriter();
-  ~EMTFPtLUTWriter();
+  explicit PtLUTWriter();
+  ~PtLUTWriter();
 
   typedef uint16_t               content_t;
   typedef uint64_t               address_t;

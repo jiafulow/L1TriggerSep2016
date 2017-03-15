@@ -1,1 +1,1 @@
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFSubsystemTag.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/SubsystemTag.hh"

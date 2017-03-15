@@ -1,4 +1,4 @@
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPtLUTReader.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/PtLUTReader.hh"
 
 #include <fstream>
 #include <iostream>
@@ -6,7 +6,7 @@
 
 #define PTLUT_SIZE (1<<30)
 
-EMTFPtLUTReader::EMTFPtLUTReader() :
+PtLUTReader::PtLUTReader() :
     ptlut_(),
     version_(4),
     ok_(false)
@@ -14,11 +14,11 @@ EMTFPtLUTReader::EMTFPtLUTReader() :
 
 }
 
-EMTFPtLUTReader::~EMTFPtLUTReader() {
+PtLUTReader::~PtLUTReader() {
 
 }
 
-void EMTFPtLUTReader::read(const std::string& lut_full_path) {
+void PtLUTReader::read(const std::string& lut_full_path) {
   if (ok_)  return;
 
   std::cout << "Loading LUT, this might take a while..." << std::endl;
@@ -60,6 +60,6 @@ void EMTFPtLUTReader::read(const std::string& lut_full_path) {
   return;
 }
 
-EMTFPtLUTReader::content_t EMTFPtLUTReader::lookup(const address_t& address) const {
+PtLUTReader::content_t PtLUTReader::lookup(const address_t& address) const {
   return ptlut_.at(address);
 }

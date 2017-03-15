@@ -1,15 +1,15 @@
-#ifndef L1TMuonEndCap_EMTFSectorProcessorLUT_hh
-#define L1TMuonEndCap_EMTFSectorProcessorLUT_hh
+#ifndef L1TMuonEndCap_SectorProcessorLUT_hh
+#define L1TMuonEndCap_SectorProcessorLUT_hh
 
 #include <cstdint>
 #include <string>
 #include <vector>
 
 
-class EMTFSectorProcessorLUT {
+class SectorProcessorLUT {
 public:
-  explicit EMTFSectorProcessorLUT();
-  ~EMTFSectorProcessorLUT();
+  explicit SectorProcessorLUT();
+  ~SectorProcessorLUT();
 
   void read(const std::string& ph_th_lut);
 

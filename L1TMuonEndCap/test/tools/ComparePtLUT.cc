@@ -11,16 +11,16 @@
 #include "FWCore/Framework/interface/ESHandle.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPtLUTReader.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/PtLUTReader.hh"
 
 #include "helper.hh"
 #include "progress_bar.hh"
 
 
-class CompareEMTFPtLUT : public edm::EDAnalyzer {
+class ComparePtLUT : public edm::EDAnalyzer {
 public:
-  explicit CompareEMTFPtLUT(const edm::ParameterSet&);
-  virtual ~CompareEMTFPtLUT();
+  explicit ComparePtLUT(const edm::ParameterSet&);
+  virtual ~ComparePtLUT();
 
 private:
   //virtual void beginJob();
@@ -34,8 +34,8 @@ private:
   void compareLUTs();
 
 private:
-  EMTFPtLUTReader ptlut_reader1_;
-  EMTFPtLUTReader ptlut_reader2_;
+  PtLUTReader ptlut_reader1_;
+  PtLUTReader ptlut_reader2_;
 
   const edm::ParameterSet config_;
 
@@ -50,7 +50,7 @@ private:
 // _____________________________________________________________________________
 #define PTLUT_SIZE (1<<30)
 
-CompareEMTFPtLUT::CompareEMTFPtLUT(const edm::ParameterSet& iConfig) :
+ComparePtLUT::ComparePtLUT(const edm::ParameterSet& iConfig) :
     ptlut_reader1_(),
     ptlut_reader2_(),
     config_(iConfig),
@@ -63,9 +63,9 @@ CompareEMTFPtLUT::CompareEMTFPtLUT(const edm::ParameterSet& iConfig) :
   ptlut_reader2_.read(infile2_);
 }
 
-CompareEMTFPtLUT::~CompareEMTFPtLUT() {}
+ComparePtLUT::~ComparePtLUT() {}
 
-void CompareEMTFPtLUT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
+void ComparePtLUT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
   if (done_)  return;
 
   compareLUTs();
@@ -74,7 +74,7 @@ void CompareEMTFPtLUT::analyze(const edm::Event& iEvent, const edm::EventSetup& 
   return;
 }
 
-void CompareEMTFPtLUT::compareLUTs() {
+void ComparePtLUT::compareLUTs() {
   TFile* f = TFile::Open("diff.root", "RECREATE");
 
   std::map<int, TH1F*> histograms;
@@ -87,7 +87,7 @@ void CompareEMTFPtLUT::compareLUTs() {
     histograms[100+ivar] = new TH1F(Form("diff_subaddress_%i", ivar), "", 32+1, 0.-0.5, 32.+0.5);
   }
 
-  EMTFPtLUTReader::address_t address = 0;
+  PtLUTReader::address_t address = 0;
 
   for (; address<PTLUT_SIZE; ++address) {
     show_progress_bar(address, PTLUT_SIZE);
@@ -142,4 +142,4 @@ void CompareEMTFPtLUT::compareLUTs() {
 
 // DEFINE THIS AS A PLUG-IN
 #include "FWCore/Framework/interface/MakerMacros.h"
-DEFINE_FWK_MODULE(CompareEMTFPtLUT);
+DEFINE_FWK_MODULE(ComparePtLUT);

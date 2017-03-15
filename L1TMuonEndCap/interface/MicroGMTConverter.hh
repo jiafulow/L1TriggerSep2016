@@ -1,24 +1,24 @@
-#ifndef L1TMuonEndCap_EMTFMicroGMTConverter_hh
-#define L1TMuonEndCap_EMTFMicroGMTConverter_hh
+#ifndef L1TMuonEndCap_MicroGMTConverter_hh
+#define L1TMuonEndCap_MicroGMTConverter_hh
 
 #include "DataFormats/L1TMuon/interface/RegionalMuonCand.h"
 #include "DataFormats/L1TMuon/interface/RegionalMuonCandFwd.h"
 
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFCommon.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/Common.hh"
 
 
-class EMTFMicroGMTConverter {
+class MicroGMTConverter {
 public:
-  explicit EMTFMicroGMTConverter();
-  ~EMTFMicroGMTConverter();
+  explicit MicroGMTConverter();
+  ~MicroGMTConverter();
 
   void convert(
-      const EMTFTrackExtra& in_track,
+      const EMTFTrack& in_track,
       l1t::RegionalMuonCand& out_cand
   ) const;
 
   void convert_all(
-      const EMTFTrackExtraCollection& in_tracks,
+      const EMTFTrackCollection& in_tracks,
       l1t::RegionalMuonCandBxCollection& out_cands
   ) const;
 

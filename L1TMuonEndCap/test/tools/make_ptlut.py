@@ -6,7 +6,7 @@ process.source = cms.Source("EmptySource")
 
 process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(1))
 
-process.analyzer1 = cms.EDAnalyzer("MakeEMTFPtLUT",
+process.analyzer1 = cms.EDAnalyzer("MakePtLUT",
     # Verbosity level
     verbosity = cms.untracked.int32(0),
 
@@ -33,9 +33,9 @@ process.analyzer1 = cms.EDAnalyzer("MakeEMTFPtLUT",
 
 import os
 outfile = os.environ.get("CMSSW_BASE") + "/"
-#outfile += "src/L1TriggerSep2016/L1TMuonEndCap/data/emtf_luts/v_16_02_21_ptlut_jftest/LUT_AndrewFix_25July16.dat"
-#outfile += "src/L1TriggerSep2016/L1TMuonEndCap/data/emtf_luts/v_16_02_21_ptlut_jftest2/LUT_AndrewFix_25July16.dat"
-outfile += "src/L1TriggerSep2016/L1TMuonEndCap/data/emtf_luts/v_16_02_21_ptlut_jftest2/LUT_v5_24Oct16.dat"
+#outfile += "src/L1Trigger/L1TMuonEndCap/data/emtf_luts/v_16_02_21_ptlut_jftest/LUT_AndrewFix_25July16.dat"
+#outfile += "src/L1Trigger/L1TMuonEndCap/data/emtf_luts/v_16_02_21_ptlut_jftest2/LUT_AndrewFix_25July16.dat"
+outfile += "src/L1Trigger/L1TMuonEndCap/data/emtf_luts/v_16_02_21_ptlut_jftest2/LUT_v5_24Oct16.dat"
 process.analyzer1.outfile = outfile  # make sure the directory exists
 
 #process.analyzer1.spPAParams16.ReadPtLUTFile = True

@@ -1,16 +1,16 @@
-#ifndef L1TMuonEndCap_EMTFPrimitiveConversion_hh
-#define L1TMuonEndCap_EMTFPrimitiveConversion_hh
+#ifndef L1TMuonEndCap_PrimitiveConversion_hh
+#define L1TMuonEndCap_PrimitiveConversion_hh
 
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFCommon.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/Common.hh"
 
 
-class EMTFSectorProcessorLUT;
+class SectorProcessorLUT;
 
-class EMTFPrimitiveConversion {
+class PrimitiveConversion {
 public:
   void configure(
       const GeometryTranslator* tp_geom,
-      const EMTFSectorProcessorLUT* lut,
+      const SectorProcessorLUT* lut,
       int verbose, int endcap, int sector, int bx,
       int bxShiftCSC, int bxShiftRPC,
       const std::vector<int>& zoneBoundaries, int zoneOverlap, int zoneOverlapRPC,
@@ -22,31 +22,31 @@ public:
   void process(
       T tag,
       const std::map<int, TriggerPrimitiveCollection>& selected_prim_map,
-      EMTFHitExtraCollection& conv_hits
+      EMTFHitCollection& conv_hits
   ) const;
 
-  const EMTFSectorProcessorLUT& lut() const;
+  const SectorProcessorLUT& lut() const;
 
   // CSC functions
   void convert_csc(
       int pc_sector, int pc_station, int pc_chamber, int pc_segment,
       const TriggerPrimitive& muon_primitive,
-      EMTFHitExtra& conv_hit
+      EMTFHit& conv_hit
   ) const;
-  void convert_csc_details(EMTFHitExtra& conv_hit) const;
+  void convert_csc_details(EMTFHit& conv_hit) const;
 
   // RPC functions
   void convert_rpc(
       int pc_sector, int pc_station, int pc_chamber, int pc_segment,
       const TriggerPrimitive& muon_primitive,
-      EMTFHitExtra& conv_hit
+      EMTFHit& conv_hit
   ) const;
-  void convert_rpc_details(EMTFHitExtra& conv_hit) const;
+  void convert_rpc_details(EMTFHit& conv_hit) const;
 
 private:
   const GeometryTranslator* tp_geom_;
 
-  const EMTFSectorProcessorLUT* lut_;
+  const SectorProcessorLUT* lut_;
 
   int verbose_, endcap_, sector_, bx_;
 
