@@ -90,7 +90,6 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
         );
       }
     }
-    assert(sector_processors_.size() == NUM_SECTORS);
 
   } catch (...) {
     throw;
@@ -153,24 +152,29 @@ void TrackFinder::process(
     std::cout << "Num of EMTFHit: " << out_hits.size() << std::endl;
     std::cout << "bx e s ss st vf ql cp wg id bd hs" << std::endl;
     for (const auto& h : out_hits) {
-      int bx      = h.bx + 3;
-      int sector  = h.pc_sector;
-      int station = (h.pc_station == 0 && h.subsector == 1) ? 1 : h.pc_station;
-      int chamber = h.pc_chamber + 1;
-      int strip   = (h.station == 1 && h.ring == 4) ? h.strip + 128 : h.strip;  // ME1/1a
-      std::cout << bx << " " << h.endcap << " " << sector << " " << h.subsector << " " << station << " " << h.valid << " " << h.quality << " " << h.pattern << " " << h.wire << " " << chamber << " " << h.bend << " " << strip << std::endl;
+      int bx      = h.BX() + 3;
+      int sector  = h.PC_sector();
+      int station = (h.PC_station() == 0 && h.Subsector() == 1) ? 1 : h.PC_station();
+      int chamber = h.PC_chamber() + 1;
+      int strip   = (h.Station() == 1 && h.Ring() == 4) ? h.Strip() + 128 : h.Strip();  // ME1/1a
+      std::cout << bx << " " << h.Endcap() << " " << sector << " " << h.Subsector() << " "
+          << station << " " << h.Valid() << " " << h.Quality() << " " << h.Pattern() << " "
+          << h.Wire() << " " << chamber << " " << h.Bend() << " " << strip << std::endl;
     }
 
     std::cout << "Converted hits: " << std::endl;
     std::cout << "st ch ph th ph_hit phzvl" << std::endl;
     for (const auto& h : out_hits) {
-      std::cout << h.pc_station << " " << h.pc_chamber << " " << h.phi_fp << " " << h.theta_fp << " " << (1ul<<h.ph_hit) << " " << h.phzvl << std::endl;
+      std::cout << h.PC_station() << " " << h.PC_chamber() << " " << h.Phi_fp() << " " << h.Theta_fp() << " "
+          << (1ul<<h.Ph_hit()) << " " << h.Phzvl() << std::endl;
     }
 
     std::cout << "Num of EMTFTrack: " << out_tracks.size() << std::endl;
     std::cout << "bx e s a mo et ph cr q pt" << std::endl;
     for (const auto& t : out_tracks) {
-      std::cout << t.bx << " " << t.endcap << " " << t.sector << " " << t.ptlut_address << " " << t.mode << " " << t.gmt_eta << " " << t.gmt_phi << " " << t.gmt_charge << " " << t.gmt_quality << " " << t.pt << std::endl;
+      std::cout << t.BX() << " " << t.Endcap() << " " << t.Sector() << " " << t.PtLUT().address << " " << t.Mode() << " "
+          << t.GMT().hwEta() << " " << t.GMT().hwPhi() << " " << t.GMT().hwSign() << " " << t.GMT().hwQual() << " " << t.Pt()
+          << std::endl;
     }
   }
 
