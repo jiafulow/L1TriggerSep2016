@@ -54,7 +54,6 @@ void PtAssignmentEngine::configure_details() {
   if (readPtLUTFile_) {
     std::stringstream ss;
     ss << std::getenv("CMSSW_BASE") << "/" << "src/L1Trigger/L1TMuonEndCap/data/emtf_luts/v_16_02_21_ptlut/LUT_AndrewFix_25July16.dat";  // hardcoded, it does not exist in CMSSW
-    //ss << std::getenv("CMSSW_BASE") << "/" << "src/L1Trigger/L1TMuonEndCap/data/emtf_luts/v_16_02_21_ptlut_madorsky/LUT_AndrewFix_25July16.dat";  // hardcoded, it does not exist in CMSSW
     std::string lut_full_path = ss.str();
 
     ptlut_reader_.read(lut_full_path);
@@ -69,10 +68,10 @@ const PtAssignmentEngineAux& PtAssignmentEngine::aux() const {
 PtAssignmentEngine::address_t PtAssignmentEngine::calculate_address(const EMTFTrack& track) const {
   address_t address = 0;
 
-  const EMTFPtLUT& ptlut_data = track.ptlut_data;
+  const EMTFPtLUT& ptlut_data = track.PtLUT();
 
-  int mode_inv  = track.mode_inv;
-  int theta     = track.theta_int;
+  int mode_inv  = track.Mode_inv();
+  int theta     = track.Theta_fp();
   theta >>= 2;  // truncate from 7-bit to 5-bit
 
   int dPhi12    = ptlut_data.delta_ph[0];
@@ -133,12 +132,12 @@ PtAssignmentEngine::address_t PtAssignmentEngine::calculate_address(const EMTFTr
   bool use_FRLUT = true;
   if (use_FRLUT) {
     if (CSCID1 >= 16)
-      FR1 = aux().getFRLUT(track.sector, 1, CSCID1-16);
+      FR1 = aux().getFRLUT(track.Sector(), 1, CSCID1-16);
     else
-      FR1 = aux().getFRLUT(track.sector, 0, CSCID1);
-    FR2 = aux().getFRLUT(track.sector, 2, CSCID2);
-    FR3 = aux().getFRLUT(track.sector, 3, CSCID3);
-    FR4 = aux().getFRLUT(track.sector, 4, CSCID4);
+      FR1 = aux().getFRLUT(track.Sector(), 0, CSCID1);
+    FR2 = aux().getFRLUT(track.Sector(), 2, CSCID2);
+    FR3 = aux().getFRLUT(track.Sector(), 3, CSCID3);
+    FR4 = aux().getFRLUT(track.Sector(), 4, CSCID4);
   }
 
   // Can we automate the assigning of addresses?  Would decrease typos, speed future development. - AWB 03.10.16
