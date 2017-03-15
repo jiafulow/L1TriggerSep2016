@@ -189,12 +189,12 @@ void PatternRecognition::process(
   if (verbose_ > 0) {  // debug
     for (const auto& conv_hits : extended_conv_hits) {
       for (const auto& conv_hit : conv_hits) {
-        std::cout << "st: " << conv_hit.pc_station << " ch: " << conv_hit.pc_chamber
-            << " ph: " << conv_hit.phi_fp << " th: " << conv_hit.theta_fp
-            << " ph_hit: " << (1ul<<conv_hit.ph_hit) << " phzvl: " << conv_hit.phzvl
-            << " strip: " << conv_hit.strip << " wire: " << conv_hit.wire << " cpat: " << conv_hit.pattern
-            << " zone_hit: " << conv_hit.zone_hit << " zone_code: " << conv_hit.zone_code
-            << " bx: " << conv_hit.bx
+        std::cout << "st: " << conv_hit.PC_station() << " ch: " << conv_hit.PC_chamber()
+            << " ph: " << conv_hit.Phi_fp() << " th: " << conv_hit.Theta_fp()
+            << " ph_hit: " << (1ul<<conv_hit.Ph_hit()) << " phzvl: " << conv_hit.Phzvl()
+            << " strip: " << conv_hit.Strip() << " wire: " << conv_hit.Wire() << " cpat: " << conv_hit.Pattern()
+            << " zone_hit: " << conv_hit.Zone_hit() << " zone_code: " << conv_hit.Zone_code()
+            << " bx: " << conv_hit.BX()
             << std::endl;
       }
     }
@@ -228,9 +228,9 @@ void PatternRecognition::process(
   if (verbose_ > 0) {  // debug
     for (const auto& roads : zone_roads) {
       for (const auto& road : reversed(roads)) {
-        std::cout << "pattern: z: " << road.zone-1 << " ph: " << road.key_zhit
-            << " q: " << to_hex(road.quality_code) << " ly: " << to_binary(road.layer_code, 3)
-            << " str: " << to_binary(road.straightness, 3) << " bx: " << road.bx
+        std::cout << "pattern: z: " << road.Zone()-1 << " ph: " << road.Key_zhit()
+            << " q: " << to_hex(road.Quality_code()) << " ly: " << to_binary(road.Layer_code(), 3)
+            << " str: " << to_binary(road.Straightness(), 3) << " bx: " << road.BX()
             << std::endl;
       }
     }
@@ -260,10 +260,10 @@ bool PatternRecognition::is_zone_empty(
     EMTFHitCollection::const_iterator conv_hits_end = ext_conv_hits_it->end();
 
     for (; conv_hits_it != conv_hits_end; ++conv_hits_it) {
-      if (conv_hits_it->subsystem == TriggerPrimitive::kRPC)
+      if (conv_hits_it->Subsystem() == TriggerPrimitive::kRPC)
         continue;  // Don't use RPCs for pattern formation
 
-      if (conv_hits_it->zone_code & (1 << izone)) {  // hit belongs to this zone
+      if (conv_hits_it->Zone_code() & (1 << izone)) {  // hit belongs to this zone
         num_conv_hits += 1;
       }
     }  // end loop over conv_hits
@@ -296,12 +296,12 @@ void PatternRecognition::make_zone_image(
     EMTFHitCollection::const_iterator conv_hits_end = ext_conv_hits_it->end();
 
     for (; conv_hits_it != conv_hits_end; ++conv_hits_it) {
-      if (conv_hits_it->subsystem == TriggerPrimitive::kRPC)
+      if (conv_hits_it->Subsystem() == TriggerPrimitive::kRPC)
         continue;  // Don't use RPCs for pattern formation
 
-      if (conv_hits_it->zone_code & (1 << izone)) {  // hit belongs to this zone
-        unsigned int layer = conv_hits_it->station - 1;
-        unsigned int bit   = conv_hits_it->zone_hit;
+      if (conv_hits_it->Zone_code() & (1 << izone)) {  // hit belongs to this zone
+        unsigned int layer = conv_hits_it->Station() - 1;
+        unsigned int bit   = conv_hits_it->Zone_hit();
         image.set_bit(layer, bit);
       }
     }  // end loop over conv_hits
@@ -401,21 +401,22 @@ void PatternRecognition::process_single_zone(
 
         // Create a road (fired pattern)
         EMTFRoad road;
-        road.endcap   = endcap_;
-        road.sector   = sector_;
-        road.bx       = bx_ - drift_time;
+        road.set_endcap     ( (endcap_ == 1) ? 1 : -1 );
+        road.set_sector     ( sector_ );
+        road.set_sector_idx ( (endcap_ == 1) ? sector_ - 1 : sector_ + 5 );
+        road.set_bx         ( bx_ - drift_time );
 
-        road.zone     = patt_ref.at(0);
-        road.key_zhit = patt_ref.at(1);
-        road.pattern  = patt_ref.at(2);
+        road.set_zone     ( patt_ref.at(0) );
+        road.set_key_zhit ( patt_ref.at(1) );
+        road.set_pattern  ( patt_ref.at(2) );
 
-        road.straightness = straightness;
-        road.layer_code   = layer_code;
-        road.quality_code = quality_code;
+        road.set_straightness ( straightness );
+        road.set_layer_code   ( layer_code );
+        road.set_quality_code ( quality_code );
 
         // Find max quality code in a given key_zhit
-        if (max_quality_code < road.quality_code) {
-          max_quality_code = road.quality_code;
+        if (max_quality_code < quality_code) {
+          max_quality_code = quality_code;
           tmp_road = std::move(road);
         }
       }  // end if is_lifetime_up
@@ -440,14 +441,14 @@ void PatternRecognition::process_single_zone(
     EMTFRoadCollection::iterator roads_end = roads.end();
 
     for (; roads_it != roads_end; ++roads_it) {
-      quality_codes.at(roads_it->key_zhit) = roads_it->quality_code;
+      quality_codes.at(roads_it->Key_zhit()) = roads_it->Quality_code();
     }
 
     roads_it  = roads.begin();
     roads_end = roads.end();
 
     for (; roads_it != roads_end; ++roads_it) {
-      int izhit = roads_it->key_zhit;
+      int izhit = roads_it->Key_zhit();
 
       // Center quality is the current one
       int qc = quality_codes.at(izhit);
@@ -459,7 +460,7 @@ void PatternRecognition::process_single_zone(
 
       // Cancellation conditions
       if (qc <= ql || qc < qr) {  // this pattern is lower quality than neighbors
-        roads_it->quality_code = 0;   // cancel
+        roads_it->set_quality_code( 0 );   // cancel
       }
     }
   }
@@ -468,8 +469,8 @@ void PatternRecognition::process_single_zone(
   // using erase-remove idiom
   struct {
     typedef EMTFRoad value_type;
-    constexpr bool operator()(const value_type& x) {
-      return (x.quality_code == 0);
+    bool operator()(const value_type& x) const {
+      return (x.Quality_code() == 0);
     }
   } quality_code_zero_pred;
 
@@ -480,8 +481,8 @@ void PatternRecognition::sort_single_zone(EMTFRoadCollection& roads) const {
   // First, order by key_zhit (highest to lowest)
   struct {
     typedef EMTFRoad value_type;
-    constexpr bool operator()(const value_type& lhs, const value_type& rhs) {
-      return lhs.key_zhit > rhs.key_zhit;
+    bool operator()(const value_type& lhs, const value_type& rhs) const {
+      return lhs.Key_zhit() > rhs.Key_zhit();
     }
   } greater_zhit_cmp;
 
@@ -490,8 +491,8 @@ void PatternRecognition::sort_single_zone(EMTFRoadCollection& roads) const {
   // Second, sort by quality_code (highest to lowest), but preserving the original order if qualities are equal
   struct {
     typedef EMTFRoad value_type;
-    constexpr bool operator()(const value_type& lhs, const value_type& rhs) {
-      return lhs.quality_code > rhs.quality_code;
+    bool operator()(const value_type& lhs, const value_type& rhs) const {
+      return lhs.Quality_code() > rhs.Quality_code();
     }
   } greater_quality_cmp;
 
@@ -506,6 +507,6 @@ void PatternRecognition::sort_single_zone(EMTFRoadCollection& roads) const {
 
   // Assign the winner variable
   for (unsigned iroad = 0; iroad < roads.size(); ++iroad) {
-    roads.at(iroad).winner = iroad;
+    roads.at(iroad).set_winner( iroad );
   }
 }
