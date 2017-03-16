@@ -1,12 +1,12 @@
 #include "Utilities/Testing/interface/CppUnit_testdriver.icpp"
 #include "cppunit/extensions/HelperMacros.h"
 
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFTrackTools.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/TrackTools.hh"
 
 
-class TestEMTFTrackTools: public CppUnit::TestFixture
+class TestTrackTools: public CppUnit::TestFixture
 {
-  CPPUNIT_TEST_SUITE(TestEMTFTrackTools);
+  CPPUNIT_TEST_SUITE(TestTrackTools);
   CPPUNIT_TEST(test_pt);
   CPPUNIT_TEST(test_eta);
   CPPUNIT_TEST(test_theta);
@@ -14,8 +14,8 @@ class TestEMTFTrackTools: public CppUnit::TestFixture
   CPPUNIT_TEST_SUITE_END();
 
 public:
-  TestEMTFTrackTools() {}
-  ~TestEMTFTrackTools() {}
+  TestTrackTools() {}
+  ~TestTrackTools() {}
   void setUp() {}
   void tearDown() {}
 
@@ -26,12 +26,12 @@ public:
 };
 
 ///registration of the test so that the runner can find it
-CPPUNIT_TEST_SUITE_REGISTRATION(TestEMTFTrackTools);
+CPPUNIT_TEST_SUITE_REGISTRATION(TestTrackTools);
 
 
-using namespace L1TMuonEndCap;
+using namespace emtf;
 
-void TestEMTFTrackTools::test_pt()
+void TestTrackTools::test_pt()
 {
   for (int i = 0; i < 2048; ++i) {
     double pt = 0.5 * static_cast<double>(i);  // pt=[0,1024,step=0.5]
@@ -40,7 +40,7 @@ void TestEMTFTrackTools::test_pt()
   }
 }
 
-void TestEMTFTrackTools::test_eta()
+void TestTrackTools::test_eta()
 {
   for (int i = 0; i < 501; ++i) {
     double eta = -2.5 + 0.01 * static_cast<double>(i);  // eta=[-2.5,2.5,step=0.01]
@@ -49,7 +49,7 @@ void TestEMTFTrackTools::test_eta()
   }
 }
 
-void TestEMTFTrackTools::test_theta()
+void TestTrackTools::test_theta()
 {
   for (int i = 0; i < 1801; ++i) {
     double theta = 0. + 0.1 * static_cast<double>(i);  // theta=[0,180,step=0.1]
@@ -59,7 +59,7 @@ void TestEMTFTrackTools::test_theta()
   }
 }
 
-void TestEMTFTrackTools::test_phi()
+void TestTrackTools::test_phi()
 {
   for (int i = 0; i < 3600; ++i) {
     double phi = -180. + 0.1 * static_cast<double>(i);  // phi=[-180,180,step=0.1]

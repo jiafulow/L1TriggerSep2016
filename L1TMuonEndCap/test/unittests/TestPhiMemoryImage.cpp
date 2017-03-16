@@ -1,12 +1,12 @@
 #include "Utilities/Testing/interface/CppUnit_testdriver.icpp"
 #include "cppunit/extensions/HelperMacros.h"
 
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/EMTFPhiMemoryImage.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/PhiMemoryImage.hh"
 
 
-class TestEMTFPhiMemoryImage: public CppUnit::TestFixture
+class TestPhiMemoryImage: public CppUnit::TestFixture
 {
-  CPPUNIT_TEST_SUITE(TestEMTFPhiMemoryImage);
+  CPPUNIT_TEST_SUITE(TestPhiMemoryImage);
   CPPUNIT_TEST(test_bitset);
   CPPUNIT_TEST(test_rotation);
   CPPUNIT_TEST(test_out_of_range);
@@ -14,8 +14,8 @@ class TestEMTFPhiMemoryImage: public CppUnit::TestFixture
   CPPUNIT_TEST_SUITE_END();
 
 public:
-  TestEMTFPhiMemoryImage() {}
-  ~TestEMTFPhiMemoryImage() {}
+  TestPhiMemoryImage() {}
+  ~TestPhiMemoryImage() {}
   void setUp() {}
   void tearDown() {}
 
@@ -26,12 +26,12 @@ public:
 };
 
 ///registration of the test so that the runner can find it
-CPPUNIT_TEST_SUITE_REGISTRATION(TestEMTFPhiMemoryImage);
+CPPUNIT_TEST_SUITE_REGISTRATION(TestPhiMemoryImage);
 
 
-void TestEMTFPhiMemoryImage::test_bitset()
+void TestPhiMemoryImage::test_bitset()
 {
-  EMTFPhiMemoryImage image;
+  PhiMemoryImage image;
 
   image.set_bit(1, 31);
   CPPUNIT_ASSERT_EQUAL(image.test_bit(1, 31), true);
@@ -70,9 +70,9 @@ void TestEMTFPhiMemoryImage::test_bitset()
   CPPUNIT_ASSERT_EQUAL(image.test_bit(3, 99), false);
 }
 
-void TestEMTFPhiMemoryImage::test_rotation()
+void TestPhiMemoryImage::test_rotation()
 {
-  EMTFPhiMemoryImage image;
+  PhiMemoryImage image;
 
   uint64_t word0 = 0x0000000011111111;
   uint64_t word1 = 0x2222222233333333;
@@ -129,9 +129,9 @@ void TestEMTFPhiMemoryImage::test_rotation()
 
 }
 
-void TestEMTFPhiMemoryImage::test_out_of_range()
+void TestPhiMemoryImage::test_out_of_range()
 {
-  EMTFPhiMemoryImage image;
+  PhiMemoryImage image;
 
   CPPUNIT_ASSERT_THROW(image.set_word(0, 3, 0x0), std::out_of_range);
   CPPUNIT_ASSERT_THROW(image.get_word(1, 4), std::out_of_range);
@@ -139,10 +139,10 @@ void TestEMTFPhiMemoryImage::test_out_of_range()
   CPPUNIT_ASSERT_THROW(image.test_bit(5, 4), std::out_of_range);
 }
 
-void TestEMTFPhiMemoryImage::test_z130()
+void TestPhiMemoryImage::test_z130()
 {
-  EMTFPhiMemoryImage image;
-  EMTFPhiMemoryImage pattern;
+  PhiMemoryImage image;
+  PhiMemoryImage pattern;
 
   // Set pattern
   int i = 0;
