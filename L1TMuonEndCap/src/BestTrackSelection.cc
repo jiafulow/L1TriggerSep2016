@@ -28,7 +28,7 @@ void BestTrackSelection::process(
   int num_cands = 0;
   for (const auto& cands : extended_best_track_cands) {
     for (const auto& cand : cands) {
-      if (cand.rank > 0) {
+      if (cand.Rank() > 0) {
         num_cands += 1;
       }
     }
@@ -47,20 +47,20 @@ void BestTrackSelection::process(
 
   if (verbose_ > 0) {  // debug
     for (const auto& track : best_tracks) {
-      std::cout << "track: " << track.winner << " rank: " << to_hex(track.rank)
-          << " ph_deltas: " << array_as_string(track.ptlut_data.delta_ph)
-          << " th_deltas: " << array_as_string(track.ptlut_data.delta_th)
-          << " phi: " << track.phi_int << " theta: " << track.theta_int
-          << " cpat: " << array_as_string(track.ptlut_data.cpattern)
-          << " bx: " << track.bx
+      std::cout << "track: " << track.Winner() << " rank: " << to_hex(track.Rank())
+          << " ph_deltas: " << array_as_string(track.PtLUT().delta_ph)
+          << " th_deltas: " << array_as_string(track.PtLUT().delta_th)
+          << " phi: " << track.Phi_fp() << " theta: " << track.Theta_fp()
+          << " cpat: " << array_as_string(track.PtLUT().cpattern)
+          << " bx: " << track.BX()
           << std::endl;
       for (int i = 0; i < NUM_STATIONS+1; ++i) {  // stations 0-4
-        if (track.ptlut_data.bt_vi[i] != 0)
+        if (track.PtLUT().bt_vi[i] != 0)
           std::cout << ".. track segments: st: " << i
-              << " v: " << track.ptlut_data.bt_vi[i]
-              << " h: " << track.ptlut_data.bt_hi[i]
-              << " c: " << track.ptlut_data.bt_ci[i]
-              << " s: " << track.ptlut_data.bt_si[i]
+              << " v: " << track.PtLUT().bt_vi[i]
+              << " h: " << track.PtLUT().bt_hi[i]
+              << " c: " << track.PtLUT().bt_ci[i]
+              << " s: " << track.PtLUT().bt_si[i]
               << std::endl;
       }
     }
@@ -99,17 +99,17 @@ void BestTrackSelection::cancel_one_bx(
       const int zn = (n * max_z) + z;  // for (i = 0; i < 12; i = i+1) rank[i%4][i/4]
       const EMTFTrack& track = tracks.at(n);
 
-      rank.at(zn) = track.rank;
+      rank.at(zn) = track.Rank();
 
-      for (const auto& conv_hit : track.xhits) {
-        assert(conv_hit.valid);
+      for (const auto& conv_hit : track.Hits()) {
+        assert(conv_hit.Valid());
 
         // A segment identifier (chamber, strip, bx)
-        //const segment_ref_t segment = {{conv_hit.pc_station*9 + conv_hit.pc_chamber, conv_hit.strip, 0}};
-        int chamber_index  = int(conv_hit.subsystem == TriggerPrimitive::kRPC)*9*5;
-        chamber_index     += conv_hit.pc_station*9;
-        chamber_index     += conv_hit.pc_chamber;
-        const segment_ref_t segment = {{chamber_index, conv_hit.strip, 0}};
+        //const segment_ref_t segment = {{conv_hit.PC_station()*9 + conv_hit.PC_chamber(), conv_hit.Strip(), 0}};
+        int chamber_index  = int(conv_hit.Subsystem() == TriggerPrimitive::kRPC)*9*5;
+        chamber_index     += conv_hit.PC_station()*9;
+        chamber_index     += conv_hit.PC_chamber();
+        const segment_ref_t segment = {{chamber_index, conv_hit.Strip(), 0}};
         segments.at(zn).push_back(segment);
       }
     }  // end loop over n
@@ -243,9 +243,9 @@ void BestTrackSelection::cancel_one_bx(
         best_tracks.push_back(track);
 
         // Update winner, BX
-        best_tracks.back().track_num = best_tracks.size() - 1;
-        best_tracks.back().winner = o;
-        best_tracks.back().bx = best_tracks.back().first_bx;
+        best_tracks.back().set_track_num ( best_tracks.size() - 1 );
+        best_tracks.back().set_winner ( o );
+        best_tracks.back().set_bx ( best_tracks.back().First_BX() );
       }
     }
   }
@@ -291,22 +291,22 @@ void BestTrackSelection::cancel_multi_bx(
       for (int n = 0; n < ntracks; ++n) {
         const int hzn = (h * max_z * max_n) + (n * max_z) + z;  // for (i = 0; i < 12; i = i+1) rank[i%4][i/4]
         const EMTFTrack& track = tracks.at(n);
-        int cand_bx = track.second_bx;
+        int cand_bx = track.Second_BX();
         cand_bx -= (bx_ - delayBX);  // convert track.second_bx=[BX-2, BX-1, BX-0] --> cand_bx=[0,1,2]
 
-        rank.at(hzn) = track.rank;
+        rank.at(hzn) = track.Rank();
         if (cand_bx == 0)
           good_bx.at(hzn) = 1;  // kill this rank if it's not the right BX
 
-        for (const auto& conv_hit : track.xhits) {
-          assert(conv_hit.valid);
+        for (const auto& conv_hit : track.Hits()) {
+          assert(conv_hit.Valid());
 
           // A segment identifier (chamber, strip, bx)
-          //const segment_ref_t segment = {{conv_hit.pc_station*9 + conv_hit.pc_chamber, conv_hit.strip, conv_hit.bx}};
-          int chamber_index  = int(conv_hit.subsystem == TriggerPrimitive::kRPC)*9*5;
-          chamber_index     += conv_hit.pc_station*9;
-          chamber_index     += conv_hit.pc_chamber;
-          const segment_ref_t segment = {{chamber_index, conv_hit.strip, conv_hit.bx}};
+          //const segment_ref_t segment = {{conv_hit.PC_station()*9 + conv_hit.PC_chamber(), conv_hit.Strip(), conv_hit.BX()}};
+          int chamber_index  = int(conv_hit.Subsystem() == TriggerPrimitive::kRPC)*9*5;
+          chamber_index     += conv_hit.PC_station()*9;
+          chamber_index     += conv_hit.PC_chamber();
+          const segment_ref_t segment = {{chamber_index, conv_hit.Strip(), conv_hit.BX()}};
           segments.at(hzn).push_back(segment);
         }
       }  // end loop over n
@@ -448,9 +448,9 @@ void BestTrackSelection::cancel_multi_bx(
         best_tracks.push_back(track);
 
         // Update winner, BX
-        best_tracks.back().track_num = best_tracks.size() - 1;
-        best_tracks.back().winner = o;
-        best_tracks.back().bx = best_tracks.back().second_bx;
+        best_tracks.back().set_track_num ( best_tracks.size() - 1 );
+        best_tracks.back().set_winner ( o );
+        best_tracks.back().set_bx ( best_tracks.back().Second_BX() );
       }
     }
   }
