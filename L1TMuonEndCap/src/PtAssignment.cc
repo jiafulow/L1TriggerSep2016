@@ -48,12 +48,13 @@ void PtAssignment::process(
     int gmt_pt = aux().getGMTPt(pt);            // Encode integer pT in GMT format
     pt = (gmt_pt <= 0) ?  0 : (gmt_pt-1) * 0.5; // Decode integer pT (result is in 0.5 GeV step)
 
-    int gmt_phi = aux().getGMTPhi(track.phi_int);
+    int gmt_phi = aux().getGMTPhi(track.Phi_fp());
 
-    if (!bugGMTPhi_)
-      gmt_phi = aux().getGMTPhiV2(track.phi_int);
+    if (!bugGMTPhi_) {
+      gmt_phi = aux().getGMTPhiV2(track.Phi_fp());
+    }
 
-    int gmt_eta = aux().getGMTEta(track.theta_int, endcap_);  // Convert to integer eta using FW LUT
+    int gmt_eta = aux().getGMTEta(track.Theta_fp(), track.Endcap());  // Convert to integer eta using FW LUT
 
     // Explanation from Alex:
     // When using two's complement, you get two eta bins with zero coordinate.
@@ -66,35 +67,47 @@ void PtAssignment::process(
       gmt_eta = (gmt_eta < 0) ? ~(-gmt_eta) : gmt_eta;
     }
 
-    int gmt_quality = aux().getGMTQuality(track.mode, track.theta_int);
+    int gmt_quality = aux().getGMTQuality(track.Mode(), track.Theta_fp());
 
     std::vector<int> phidiffs;
     for (int i = 0; i < NUM_STATION_PAIRS; ++i) {
-      int phidiff = (track.ptlut_data.sign_ph[i] == 1) ? track.ptlut_data.delta_ph[i] : -track.ptlut_data.delta_ph[i];
+      int phidiff = (track.PtLUT().sign_ph[i] == 1) ? track.PtLUT().delta_ph[i] : -track.PtLUT().delta_ph[i];
       phidiffs.push_back(phidiff);
     }
-    std::pair<int,int> gmt_charge = aux().getGMTCharge(track.mode, phidiffs);
+    std::pair<int, int> gmt_charge = aux().getGMTCharge(track.Mode(), phidiffs);
 
     // _________________________________________________________________________
     // Output
-    track.ptlut_address    = address;
-    track.xmlpt            = xmlpt;
-    track.pt               = pt;
 
-    track.gmt_pt           = gmt_pt;
-    track.gmt_phi          = gmt_phi;
-    track.gmt_eta          = gmt_eta;
-    track.gmt_quality      = gmt_quality;
-    track.gmt_charge       = gmt_charge.first;
-    track.gmt_charge_valid = gmt_charge.second;
+    l1t::RegionalMuonCand tmp_cand = track.GMT();
+    tmp_cand.setHwPt            ( gmt_pt );
+    tmp_cand.setHwPhi           ( gmt_phi );
+    tmp_cand.setHwEta           ( gmt_eta );
+    tmp_cand.setHwQual          ( gmt_quality );
+    tmp_cand.setHwSign          ( gmt_charge.first );
+    tmp_cand.setHwSignValid     ( gmt_charge.second );
+    // tmp_cand.setTFIdentifiers   ();  // Done in MicroGMTConverter
+    // tmp_cand.setLink            ();
+    // tmp_cand.setDataword        ();
+    // tmp_cand.setTrackSubAddress ();  // Done in MicroGMTConverter
+    // tmp_cand.setTrackAddress    ();
+
+    EMTFPtLUT tmp_LUT = track.PtLUT();
+    tmp_LUT.address   = address;
+
+    track.set_PtLUT  ( tmp_LUT );
+    track.set_pt_XML ( xmlpt );
+    track.set_pt     ( pt );
+    track.set_charge ( (gmt_charge.second == 1) ? ((gmt_charge.first == 1) ? -1 : +1) : 0 );
+    track.set_GMT    ( tmp_cand );
   }
 
   if (verbose_ > 0) {  // debug
     for (const auto& track: best_tracks) {
-      std::cout << "track: " << track.winner << " pt address: " << track.ptlut_address << " GMT pt: " << track.gmt_pt
-          << " pt: " << track.pt << " mode: " << track.mode
-          << " GMT charge: " << track.gmt_charge << " quality: " << track.gmt_quality
-          << " eta: " << track.gmt_eta << " phi: " << track.gmt_phi
+      std::cout << "track: " << track.Winner() << " pt address: " << track.PtLUT().address
+          << " GMT pt: " << track.GMT().hwPt() << " pt: " << track.Pt() << " mode: " << track.Mode()
+          << " GMT charge: " << track.GMT().hwSign() << " quality: " << track.GMT().hwQual()
+          << " eta: " << track.GMT().hwEta() << " phi: " << track.GMT().hwPhi()
           << std::endl;
     }
   }
