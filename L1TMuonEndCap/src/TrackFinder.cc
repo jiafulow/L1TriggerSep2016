@@ -173,8 +173,7 @@ void TrackFinder::process(
     std::cout << "bx e s a mo et ph cr q pt" << std::endl;
     for (const auto& t : out_tracks) {
       std::cout << t.BX() << " " << t.Endcap() << " " << t.Sector() << " " << t.PtLUT().address << " " << t.Mode() << " "
-          << t.GMT().hwEta() << " " << t.GMT().hwPhi() << " " << t.GMT().hwSign() << " " << t.GMT().hwQual() << " " << t.Pt()
-          << std::endl;
+          << t.GMT_eta() << " " << t.GMT_phi() << " " << t.GMT_charge() << " " << t.GMT_quality() << " " << t.Pt() << std::endl;
     }
   }
 

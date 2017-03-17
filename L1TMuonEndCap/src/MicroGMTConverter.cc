@@ -16,9 +16,14 @@ void MicroGMTConverter::convert(
   l1t::tftype tftype = (in_track.Endcap() == 1) ? l1t::tftype::emtf_pos : l1t::tftype::emtf_neg;
   int sector = in_track.Sector() - 1;
 
-  out_cand = in_track.GMT();  // Already set pt, phi, eta, sign, sign valid, and qual
-  out_cand.setHwHF(0);        // EMTF: halo -> 1
-  out_cand.setTFIdentifiers(sector, tftype);
+  out_cand.setHwPt            ( in_track.GMT_pt() );
+  out_cand.setHwPhi           ( in_track.GMT_phi() );
+  out_cand.setHwEta           ( in_track.GMT_eta() );
+  out_cand.setHwSign          ( in_track.GMT_charge() );
+  out_cand.setHwSignValid     ( in_track.GMT_charge_valid() );
+  out_cand.setHwQual          ( in_track.GMT_quality() );
+  out_cand.setHwHF            ( 0 );  // EMTF: halo -> 1
+  out_cand.setTFIdentifiers   ( sector, tftype );
 
   const EMTFPtLUT& ptlut_data = in_track.PtLUT();
 

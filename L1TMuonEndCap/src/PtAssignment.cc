@@ -79,19 +79,6 @@ void PtAssignment::process(
     // _________________________________________________________________________
     // Output
 
-    l1t::RegionalMuonCand tmp_cand = track.GMT();
-    tmp_cand.setHwPt            ( gmt_pt );
-    tmp_cand.setHwPhi           ( gmt_phi );
-    tmp_cand.setHwEta           ( gmt_eta );
-    tmp_cand.setHwQual          ( gmt_quality );
-    tmp_cand.setHwSign          ( gmt_charge.first );
-    tmp_cand.setHwSignValid     ( gmt_charge.second );
-    // tmp_cand.setTFIdentifiers   ();  // Done in MicroGMTConverter
-    // tmp_cand.setLink            ();
-    // tmp_cand.setDataword        ();
-    // tmp_cand.setTrackSubAddress ();  // Done in MicroGMTConverter
-    // tmp_cand.setTrackAddress    ();
-
     EMTFPtLUT tmp_LUT = track.PtLUT();
     tmp_LUT.address   = address;
 
@@ -99,15 +86,21 @@ void PtAssignment::process(
     track.set_pt_XML ( xmlpt );
     track.set_pt     ( pt );
     track.set_charge ( (gmt_charge.second == 1) ? ((gmt_charge.first == 1) ? -1 : +1) : 0 );
-    track.set_GMT    ( tmp_cand );
+
+    track.set_gmt_pt           ( gmt_pt );
+    track.set_gmt_phi          ( gmt_phi );
+    track.set_gmt_eta          ( gmt_eta );
+    track.set_gmt_quality      ( gmt_quality );
+    track.set_gmt_charge       ( gmt_charge.first );
+    track.set_gmt_charge_valid ( gmt_charge.second );
   }
 
   if (verbose_ > 0) {  // debug
     for (const auto& track: best_tracks) {
       std::cout << "track: " << track.Winner() << " pt address: " << track.PtLUT().address
-          << " GMT pt: " << track.GMT().hwPt() << " pt: " << track.Pt() << " mode: " << track.Mode()
-          << " GMT charge: " << track.GMT().hwSign() << " quality: " << track.GMT().hwQual()
-          << " eta: " << track.GMT().hwEta() << " phi: " << track.GMT().hwPhi()
+          << " GMT pt: " << track.GMT_pt() << " pt: " << track.Pt() << " mode: " << track.Mode()
+          << " GMT charge: " << track.GMT_charge() << " quality: " << track.GMT_quality()
+          << " eta: " << track.GMT_eta() << " phi: " << track.GMT_phi()
           << std::endl;
     }
   }
