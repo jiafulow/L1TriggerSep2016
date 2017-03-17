@@ -127,7 +127,6 @@ process.L1RePack_step = cms.Path(SimL1Emulator_AWB)
 process.simCscTriggerPrimitiveDigis.CSCComparatorDigiProducer = cms.InputTag('unpackCSC', 'MuonCSCComparatorDigi')
 process.simCscTriggerPrimitiveDigis.CSCWireDigiProducer       = cms.InputTag('unpackCSC', 'MuonCSCWireDigi')
 
-## process.load('L1Trigger.L1TMuonEndCap.simEmtfDigis_cfi')
 process.load('L1Trigger.L1TMuonEndCap.simEmtfDigis_cfi')
 
 process.simEmtfDigis.MinBX = cms.int32(-3)
