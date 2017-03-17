@@ -7,7 +7,7 @@
 #include "DataFormats/RPCDigi/interface/RPCDigiCollection.h"
 
 
-namespace L1TMuonEndCap {
+namespace emtf {
 
   struct CSCTag {
     typedef CSCCorrelatedLCTDigi           digi_type;
@@ -19,6 +19,6 @@ namespace L1TMuonEndCap {
     typedef RPCDigiCollection digi_collection;
   };
 
-}  //  namespace L1TMuonEndCap
+}  //  namespace emtf
 
 #endif
