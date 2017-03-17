@@ -1,6 +1,6 @@
 #include "L1Trigger/L1TMuonEndCap/interface/TrackTools.hh"
 
-namespace L1TMuonEndCap {
+namespace emtf {
 
 int calc_ring(int station, int csc_ID, int strip) {
   if (station > 1) {
@@ -58,4 +58,4 @@ int calc_uGMT_chamber(int csc_ID, int subsector, int neighbor, int station) {
   }
 }
 
-}  // namespace L1TMuonEndCap
+}  // namespace emtf
