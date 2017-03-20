@@ -1,11 +1,11 @@
 import FWCore.ParameterSet.Config as cms
 
-emtfParamsSource = cms.ESSource(
-	"EmptyESSource",
-	recordName = cms.string('L1TMuonEndCapParamsRcd'),
-	iovIsRunNotTime = cms.bool(True),
-	firstValid = cms.vuint32(1)
-)
+#emtfParamsSource = cms.ESSource(
+#	"EmptyESSource",
+#	recordName = cms.string('L1TMuonEndCapParamsRcd'),
+#	iovIsRunNotTime = cms.bool(True),
+#	firstValid = cms.vuint32(1)
+#)
 
 # ##EMTF ESProducer. Fills CondFormats from XML files.
 # emtfParams = cms.ESProducer(
