@@ -428,16 +428,16 @@ int PtAssignmentEngineAux::getGMTPhiV2(int phi) const {
   return phi;
 }
 
-int PtAssignmentEngineAux::getGMTEta(int theta, int endcap) const {
+int PtAssignmentEngineAux::getGMTEta(int theta, int endcap) const {  // [-1,+1]
   if (theta < 0)
     return 0;
-  if (endcap == 2 && theta > 127)
+  if (endcap == -1 && theta > 127)
     return -240;
-  if (endcap == 1 && theta > 127)
+  if (endcap == +1 && theta > 127)
     return 239;
 
   int eta = GMT_eta_from_theta[theta];
-  if (endcap == 2)
+  if (endcap == -1)
     eta = -eta;
   return eta;
 }
