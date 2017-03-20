@@ -16,8 +16,8 @@
 // _______________________Includes_______________________________________//
 ///////////////////////////////////////////////////////////////////////////
 
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/bdt/Forest.h"
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/bdt/Utilities.h"
+#include "L1Trigger/L1TMuonEndCap/interface/bdt/Forest.h"
+#include "L1Trigger/L1TMuonEndCap/interface/bdt/Utilities.h"
 
 #include "TStopwatch.h"
 

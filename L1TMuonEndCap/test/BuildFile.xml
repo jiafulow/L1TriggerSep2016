@@ -1,16 +1,16 @@
 <environment>
-  <bin name="TestL1TriggerSep2016L1TMuonEndCap" file="unittests/TestDriver.cpp">
-    <flags TEST_RUNNER_ARGS=" /bin/bash L1TriggerSep2016/L1TMuonEndCap/test/unittests runtests.sh"/>
+  <bin name="TestL1TriggerL1TMuonEndCap" file="unittests/TestDriver.cpp">
+    <flags TEST_RUNNER_ARGS=" /bin/bash L1Trigger/L1TMuonEndCap/test/unittests runtests.sh"/>
     <use name="FWCore/Utilities"/>
   </bin>
 
-  <bin name="TestEMTFPhiMemoryImage" file="unittests/TestEMTFPhiMemoryImage.cpp">
-    <use name="L1TriggerSep2016/L1TMuonEndCap"/>
+  <bin name="TestPhiMemoryImage" file="unittests/TestPhiMemoryImage.cpp">
+    <use name="L1Trigger/L1TMuonEndCap"/>
     <use name="cppunit"/>
   </bin>
 
-  <bin name="TestEMTFTrackTools" file="unittests/TestEMTFTrackTools.cpp">
-    <use name="L1TriggerSep2016/L1TMuonEndCap"/>
+  <bin name="TestTrackTools" file="unittests/TestTrackTools.cpp">
+    <use name="L1Trigger/L1TMuonEndCap"/>
     <use name="cppunit"/>
   </bin>
 </environment>
@@ -20,8 +20,8 @@
   <export>
   </export>
 
-  <library file="tools/*.cc" name="L1TriggerSep2016L1TMuonEndCap_tools">
-    <use name="L1TriggerSep2016/L1TMuonEndCap"/>
+  <library file="tools/*.cc" name="L1TriggerL1TMuonEndCap_tools">
+    <use name="L1Trigger/L1TMuonEndCap"/>
     <use name="Geometry/DTGeometry"/>
     <use name="Geometry/RPCGeometry"/>
     <use name="Geometry/CSCGeometry"/>

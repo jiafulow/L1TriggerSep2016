@@ -15,8 +15,8 @@ class TestEvent134854523(unittest.TestCase):
     # 4 2 6 2 1 1 12 4 1 6 0 39
 
     handles = {
-      "hits": ("std::vector<L1TMuonEndCap::EMTFHitExtra>", "simEmtfDigisData"),
-      "tracks": ("std::vector<L1TMuonEndCap::EMTFTrackExtra>", "simEmtfDigisData"),
+      "hits": ("std::vector<L1TMuonEndCap::EMTFHit>", "simEmtfDigisData"),
+      "tracks": ("std::vector<L1TMuonEndCap::EMTFTrack>", "simEmtfDigisData"),
     }
 
     self.analyzer = FWLiteAnalyzer(inputFiles, handles)

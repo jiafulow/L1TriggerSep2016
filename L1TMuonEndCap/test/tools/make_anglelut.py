@@ -1,5 +1,5 @@
 #
-# This cfg calls MakeEMTFAngleLUT which is obsolete and completely unused.
+# This cfg calls MakeAngleLUT which is obsolete and completely unused.
 #
 
 import FWCore.ParameterSet.Config as cms
@@ -24,7 +24,7 @@ process.source = cms.Source("EmptySource")
 
 process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(1))
 
-process.analyzer1 = cms.EDAnalyzer("MakeEMTFAngleLUT",
+process.analyzer1 = cms.EDAnalyzer("MakeAngleLUT",
     # Verbosity level
     verbosity = cms.untracked.int32(1),
 

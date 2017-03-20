@@ -84,7 +84,7 @@ if __name__ == "__main__":
 
   #gSystem.Load("libDataFormatsFWLite.so")
   #gSystem.Load("libDataFormatsPatCandidates.so")
-  #gSystem.Load("libDataFormatsSep2016L1TMuon.so")
+  #gSystem.Load("libDataFormatsL1TMuon.so")
 
   analyzer = FWLiteAnalyzer(inputFiles='pippo.root')
   analyzer.analyze()

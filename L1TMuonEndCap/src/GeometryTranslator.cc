@@ -1,5 +1,5 @@
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/GeometryTranslator.h"
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/MuonTriggerPrimitive.h"
+#include "L1Trigger/L1TMuonEndCap/interface/GeometryTranslator.h"
+#include "L1Trigger/L1TMuonEndCap/interface/MuonTriggerPrimitive.h"
 
 // event setup stuff / geometries
 #include "FWCore/Framework/interface/EventSetup.h"

@@ -1,4 +1,4 @@
-#include "L1TriggerSep2016/L1TMuonEndCap/interface/MuonTriggerPrimitive.h"
+#include "L1Trigger/L1TMuonEndCap/interface/MuonTriggerPrimitive.h"
 
 // the primitive types we can use
 #include "DataFormats/CSCDigi/interface/CSCCorrelatedLCTDigi.h"

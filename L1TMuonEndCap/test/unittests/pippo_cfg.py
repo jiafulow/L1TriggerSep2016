@@ -48,7 +48,7 @@ from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:run2_data', '')
 
 # Plugin: simEmtfDigis
-process.load("L1TriggerSep2016.L1TMuonEndCap.simEmtfDigis_cfi")
+process.load("L1Trigger.L1TMuonEndCap.simEmtfDigis_cfi")
 process.simEmtfDigisData.verbosity = options.verbosity
 
 # Paths
