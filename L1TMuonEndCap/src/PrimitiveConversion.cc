@@ -90,12 +90,11 @@ void PrimitiveConversion::process(
 
   for (; map_tp_it != map_tp_end; ++map_tp_it) {
     int selected   = map_tp_it->first;
-    // Try to match the definitions used for CSC primitive conversion (unconfirmed!)
+    // RPC chambers have been mapped to CSC chambers
     int pc_sector  = sector_;
-    int pc_station = (selected < 12 ? (selected / 6) + 1 : (selected / 12) + 2);  // {1, 5} = {RE1, RE2, RE3, RE4, neighbor}
-    if (pc_station == 1)  pc_station = 0;  // because CSC pc_station 0 has neighbor, but pc_station 1 has no neighbor
-    int pc_chamber = (selected < 12 ? (selected % 6) : (selected % 12));  // Unique identifier per station
-    int pc_segment = 0;
+    int pc_station = selected / 9;  // {0, 5} = {ME1 sub 1, ME1 sub 2, ME2, ME3, ME4, neighbor}
+    int pc_chamber = selected % 9;  // Equals CSC ID - 1 for all except neighbor chambers
+    int pc_segment = 0;             // Counts hits in a single chamber
 
     TriggerPrimitiveCollection::const_iterator tp_it  = map_tp_it->second.begin();
     TriggerPrimitiveCollection::const_iterator tp_end = map_tp_it->second.end();
