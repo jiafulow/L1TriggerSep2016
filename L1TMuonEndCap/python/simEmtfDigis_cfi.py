@@ -17,7 +17,7 @@ simEmtfDigisMC = cms.EDProducer("L1TMuonEndCapTrackProducer",
 
     # Run with CSC, RPC
     CSCEnable = cms.bool(True),
-    RPCEnable = cms.bool(False),
+    RPCEnable = cms.bool(True),
 
     # BX
     MinBX    = cms.int32(-3),
@@ -75,7 +75,7 @@ simEmtfDigisMC = cms.EDProducer("L1TMuonEndCapTrackProducer",
 
     # Sector processor track-building parameters
     spTBParams16 = cms.PSet(
-        ThetaWindow    = cms.int32(4),
+        ThetaWindow    = cms.int32(8),
         ThetaWindowRPC = cms.int32(8),
         BugME11Dupes   = cms.bool(False),
     ),

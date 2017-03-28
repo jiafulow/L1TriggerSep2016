@@ -224,6 +224,7 @@ void PrimitiveConversion::convert_csc_details(EMTFHit& conv_hit) const {
   // chamber: 0-8
   const int pc_station = conv_hit.PC_station();
   const int pc_chamber = conv_hit.PC_chamber();
+  const int pc_segment = conv_hit.PC_segment();
 
   const bool is_me11a = (conv_hit.Station() == 1 && conv_hit.Ring() == 4);
   const bool is_me11b = (conv_hit.Station() == 1 && conv_hit.Ring() == 1);
@@ -380,7 +381,7 @@ void PrimitiveConversion::convert_csc_details(EMTFHit& conv_hit) const {
     if (bugME11Dupes_) {
       bool bugME11DupesBeforeFW47114 = false;
       if (bugME11DupesBeforeFW47114) {
-        if (conv_hit.PC_segment() == 1) {
+        if (pc_segment == 1) {
           pc_wire_strip_id = (((fw_wire >> 4) & 0x3) << 5) | (0);  // 2-bit from wire, 5-bit from 2-strip
         }
       }
@@ -491,9 +492,9 @@ void PrimitiveConversion::convert_csc_details(EMTFHit& conv_hit) const {
   // For later use in primitive matching
   // (in the firmware, this happens in the find_segment module)
 
-  int fs_history = 0;                       // history id: not set here, to be set in primitive matching
-  int fs_chamber = -1;                      // chamber id
-  int fs_segment = conv_hit.PC_segment() % 2; // segment id
+  int fs_history = 0;              // history id: not set here, to be set in primitive matching
+  int fs_chamber = -1;             // chamber id
+  int fs_segment = pc_segment % 2; // segment id
   int fs_zone_code = zone_code_func(conv_hit.Station(), conv_hit.Ring(), useNewZones_);
 
   // For ME1
@@ -504,14 +505,14 @@ void PrimitiveConversion::convert_csc_details(EMTFHit& conv_hit) const {
   //   j = 0 is neighbor sector chamber
   //   j = 1,2,3,4,5,6 are native sector chambers
   if (fw_station <= 1) {  // ME1
-    int n = (conv_hit.CSC_ID()-1) % 3;
-    fs_chamber = is_neighbor ? 0 : ((conv_hit.Subsector() == 1) ? 1+n : 4+n);
+    int n = fw_cscid % 3;
+    fs_chamber = is_neighbor ? 0 : ((fw_station == 0) ? 1+n : 4+n);
   } else {  // ME2,3,4
-    int n = (conv_hit.Ring() == 1) ? (conv_hit.CSC_ID()-1) : (conv_hit.CSC_ID()-1-3);
+    int n = (conv_hit.Ring() == 1) ? fw_cscid : (fw_cscid-3);
     fs_chamber = is_neighbor ? 0 : 1+n;
   }
 
-  assert(fs_history >= 0 && fs_chamber != -1 && fs_segment < 2);
+  assert(fs_history == 0 && (0 <= fs_chamber && fs_chamber < 7) && (0 <= fs_segment && fs_segment < 2));
   // fs_segment is a 6-bit word, HHCCCS, encoding the segment number S in the chamber (1 or 2),
   // the chamber number CCC ("j" above: uniquely identifies chamber within station and ring),
   // and the history HH (0 for current BX, 1 for previous BX, 2 for BX before that)
@@ -526,7 +527,7 @@ void PrimitiveConversion::convert_csc_details(EMTFHit& conv_hit) const {
   int bt_chamber = fw_cscid+1;
   if (fw_station == 0 && bt_chamber >= 13)  // ME1 neighbor chambers 13,14,15 -> 10,11,12
     bt_chamber -= 3;
-  int bt_segment = conv_hit.PC_segment() % 2;
+  int bt_segment = pc_segment % 2;
 
   bt_segment = ((bt_history & 0x3)<<5) | ((bt_chamber & 0xf)<<1) | (bt_segment & 0x1);
 
@@ -605,7 +606,7 @@ void PrimitiveConversion::convert_rpc(
   conv_hit.set_strip_hi    ( tp_data.strip_hi );
   //conv_hit.set_wire        ( tp_data.keywire );
   //conv_hit.set_quality     ( tp_data.quality );
-  conv_hit.set_pattern     ( 10 );  // Arbitrarily set to the straightest pattern for RPC hits
+  conv_hit.set_pattern     ( 0 );  // In firmware, this marks RPC stub
   //conv_hit.set_bend        ( tp_data.bend );
 
   conv_hit.set_neighbor    ( is_neighbor );
@@ -626,10 +627,13 @@ void PrimitiveConversion::convert_rpc(
     // Use RPC-specific convention in docs/CPPF-EMTF-format_2016_11_01.docx
     // Phi precision is (1/15) degrees, 4x larger than CSC precision of (1/60) degrees
     // Theta precision is (36.5/32) degrees, 4x larger than CSC precision of (36.5/128) degrees
-    int fph = ((phi_loc_int + (1<<1)) >> 2) << 2;
-    int th  = ((theta_int + (1<<1)) >> 2) << 2;
-    assert(0 <= fph && fph < 4920);
-    assert(0 <=  th &&  th <  128);
+    int fph = ((phi_loc_int + (1<<1)) >> 2);
+    int th  = ((theta_int + (1<<1)) >> 2);
+    assert(0 <= fph && fph < 1024);
+    assert(0 <=  th &&  th < 32);
+    assert(th != 0b11111);  // RPC hit valid when data is not all ones
+    fph <<= 2;  // upgrade to full CSC precision by adding 2 zeros
+    th <<= 2;   // upgrade to full CSC precision by adding 2 zeros
     th = (th == 0) ? 1 : th;  // protect against invalid value
 
     // _________________________________________________________________________
@@ -649,56 +653,138 @@ void PrimitiveConversion::convert_rpc(
 void PrimitiveConversion::convert_rpc_details(EMTFHit& conv_hit) const {
   const bool is_neighbor = conv_hit.Neighbor();
 
+  const int pc_station = conv_hit.PC_station();
+  const int pc_chamber = conv_hit.PC_chamber();
+  const int pc_segment = conv_hit.PC_segment();
+
   //const int fw_endcap  = (endcap_-1);
   //const int fw_sector  = (sector_-1);
-  const int fw_station = (conv_hit.Station() == 1) ? 0 : conv_hit.Station();
+  const int fw_station = (conv_hit.Station() == 1) ? (is_neighbor ? 0 : pc_station) : conv_hit.Station();
+
+  int fw_cscid = pc_chamber;
+  if (is_neighbor) {
+    int csc_nID = -1;
+
+    // station 1 has 3 neighbor chambers: 13,14,15 in rings 1,2,3
+    // (where are chambers 10,11,12 in station 1? they were used to label ME1/1a, but not anymore)
+    // station 2,3,4 have 2 neighbor chambers: 10,11 in rings 1,2
+    csc_nID = (pc_chamber < 3) ? (pc_chamber + 12) : ( ((pc_chamber - 1) % 2) + 9);
+    csc_nID += 1;
+
+    //if (tp_station == 1) {  // neighbor ME1
+    //  assert(tp_subsector == 2);
+    //}
+
+    fw_cscid = csc_nID - 1;
+  }
+
+  //const bool is_me11a = false;
+  //const bool is_me11b = false;
+  const bool is_me13  = false;
 
   int fph = conv_hit.Phi_fp();
   int th  = conv_hit.Theta_fp();
 
   int zone_hit = ((fph + (1<<4)) >> 5);
 
+  if (verbose_ > 1) {  // debug
+    std::cout << "RPC hit pc_station: " << pc_station << " pc_chamber: " << pc_chamber
+        << " fw_station: " << fw_station << " fw_cscid: " << fw_cscid
+        << " tp_station: " << conv_hit.Station() << " tp_ring: " << conv_hit.Ring()
+        << " tp_sector: " << conv_hit.Sector() << " tp_subsector: " << conv_hit.Subsector()
+        << " fph: " << fph << " th: " << th
+        << std::endl;
+  }
+
+
   // ___________________________________________________________________________
   // zones
 
-  // Compute the zone code based only on theta, with wider overlap (unconfirmed!)
+  static const unsigned int zone_code_table[4][3] = {  // map (station,ring) to zone_code
+    {0b0011, 0b0100, 0b1000},  // st1 r1: [z0,z1], r2: [z2],      r3: [z3]
+    {0b0011, 0b1100, 0b0000},  // st2 r1: [z0,z1], r2: [z2,z3]
+    {0b0001, 0b1110, 0b0000},  // st3 r1: [z0],    r2: [z1,z2,z3]
+    {0b0001, 0b0110, 0b0000}   // st4 r1: [z0],    r2: [z1,z2]
+  };
+
+  static const unsigned int zone_code_table_new[4][3] = {  // map (station,ring) to zone_code
+    {0b0011, 0b0110, 0b1000},  // st1 r1: [z0,z1], r2: [z1,z2],   r3: [z3]
+    {0b0011, 0b1110, 0b0000},  // st2 r1: [z0,z1], r2: [z1,z2,z3]
+    {0b0011, 0b1110, 0b0000},  // st3 r1: [z0,z1], r2: [z1,z2,z3]
+    {0b0001, 0b0110, 0b0000}   // st4 r1: [z0],    r2: [z1,z2]
+  };
+
+  struct {
+    constexpr unsigned int operator()(int tp_station, int tp_ring, bool use_new_table) {
+      unsigned int istation = (tp_station-1);
+      unsigned int iring = (tp_ring == 4) ? 0 : (tp_ring-1);
+      if (istation >= 2 && iring == 2)  iring = 1;  // Treat RPC ring 3 as ring 2
+      assert(istation < 4 && iring < 3);
+      unsigned int zone_code = (use_new_table) ? zone_code_table_new[istation][iring] : zone_code_table[istation][iring];
+      return zone_code;
+    }
+  } zone_code_func;
+
+  // ph zone boundaries for chambers that cover more than one zone
+  // bnd1 is the lower boundary, bnd2 the upper boundary
   int zone_code = 0;
   for (int izone = 0; izone < NUM_ZONES; ++izone) {
-    if (
-        (th >  (zoneBoundaries_.at(izone)   - zoneOverlapRPC_)) &&
-        (th <= (zoneBoundaries_.at(izone+1) + zoneOverlapRPC_))
-    ) {
-      zone_code |= (1 << izone);
+    int zone_code_tmp = zone_code_func(conv_hit.Station(), conv_hit.Ring(), useNewZones_);
+    if (zone_code_tmp & (1<<izone)) {
+      bool no_use_bnd1 = ((izone==0) || ((zone_code_tmp & (1<<(izone-1))) == 0) || is_me13);  // first possible zone for this hit
+      bool no_use_bnd2 = (((zone_code_tmp & (1<<(izone+1))) == 0) || is_me13);  // last possible zone for this hit
+
+      int ph_zone_bnd1 = no_use_bnd1 ? zoneBoundaries_.at(0) : zoneBoundaries_.at(izone);
+      int ph_zone_bnd2 = no_use_bnd2 ? zoneBoundaries_.at(NUM_ZONES) : zoneBoundaries_.at(izone+1);
+      int zone_overlap = zoneOverlapRPC_;
+
+      if ((th > (ph_zone_bnd1 - zone_overlap)) && (th <= (ph_zone_bnd2 + zone_overlap))) {
+        zone_code |= (1<<izone);
+      }
     }
   }
   assert(zone_code > 0);
 
   // ___________________________________________________________________________
-  // For later use in primitive matching (unconfirmed!)
+  // For later use in primitive matching
+  // (in the firmware, this happens in the find_segment module)
 
-  int fs_history = 0;                       // history id: not set here, to be set in primitive matching
-  int fs_chamber = -1;                      // chamber id
-  int fs_segment = conv_hit.PC_segment() % 2; // segment id
-  int fs_zone_code = zone_code;             // same as zone code for now
+  int fs_history = 0;          // history id: not set here, to be set in primitive matching
+  int fs_chamber = -1;         // chamber id
+  int fs_segment = pc_segment; // segment id
+  int fs_zone_code = zone_code_func(conv_hit.Station(), conv_hit.Ring(), useNewZones_);
 
-  // For all RPC stations (REX)
-  //   j = 0 is neighbor sector subsector
-  //   j = 1,2,3,4,5,6 are native subsectors
-  fs_chamber = is_neighbor ? 0 : ((conv_hit.Subsector() + 3) % 6) + 1;
+  // For ME1
+  //   j = 0 is neighbor sector chamber
+  //   j = 1,2,3 are native subsector 1 chambers
+  //   j = 4,5,6 are native subsector 2 chambers
+  // For ME2,3,4:
+  //   j = 0 is neighbor sector chamber
+  //   j = 1,2,3,4,5,6 are native sector chambers
+  if (fw_station <= 1) {  // ME1
+    int n = fw_cscid % 3;
+    fs_chamber = is_neighbor ? 0 : ((fw_station == 0) ? 1+n : 4+n);
+  } else {  // ME2,3,4
+    int n = (conv_hit.Ring() == 1) ? fw_cscid : (fw_cscid-3);
+    fs_chamber = is_neighbor ? 0 : 1+n;
+  }
 
-  assert(fs_history >= 0 && fs_chamber != -1 && fs_segment < 2);
-  // fs_segment is a 6-bit word, HHCCCS, encoding the segment number S in the subsector (0 or 1),
-  // the the subsector number CCC ("j" above: uniquely identifies subsector within station and ring),
+  assert(fs_history == 0 && (0 <= fs_chamber && fs_chamber < 7) && (0 <= fs_segment && fs_segment < 2));
+  // fs_segment is a 6-bit word, HHCCCS, encoding the segment number S in the chamber (1 or 2),
+  // the chamber number CCC ("j" above: uniquely identifies chamber within station and ring),
   // and the history HH (0 for current BX, 1 for previous BX, 2 for BX before that)
   fs_segment = ((fs_history & 0x3)<<4) | ((fs_chamber & 0x7)<<1) | (fs_segment & 0x1);
 
   // ___________________________________________________________________________
-  // For later use in angle calculation and best track selection (unconfirmed!)
+  // For later use in angle calculation and best track selection
+  // (in the firmware, this happens in the best_tracks module)
 
   int bt_station = fw_station;
   int bt_history = 0;
-  int bt_chamber = 0;                       // wait for FW implementation
-  int bt_segment = conv_hit.PC_segment() % 2;
+  int bt_chamber = fw_cscid+1;
+  if (fw_station == 0 && bt_chamber >= 13)  // ME1 neighbor chambers 13,14,15 -> 10,11,12
+    bt_chamber -= 3;
+  int bt_segment = pc_segment % 2;
 
   bt_segment = ((bt_history & 0x3)<<5) | ((bt_chamber & 0xf)<<1) | (bt_segment & 0x1);
 

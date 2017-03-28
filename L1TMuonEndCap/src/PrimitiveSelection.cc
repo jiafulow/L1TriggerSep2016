@@ -168,6 +168,18 @@ void PrimitiveSelection::process(
       bool operator()(const value_type& lhs, const value_type& rhs) const {
         bool cmp = (
             (lhs.detId<RPCDetId>().roll() == rhs.detId<RPCDetId>().roll()) &&
+            (lhs.getRPCData().strip_hi == rhs.getRPCData().strip_hi) &&
+            (lhs.getRPCData().strip_low == rhs.getRPCData().strip_low)
+        );
+        return cmp;
+      }
+    } rpc_digi_equal;
+
+    struct {
+      typedef TriggerPrimitive value_type;
+      bool operator()(const value_type& lhs, const value_type& rhs) const {
+        bool cmp = (
+            (lhs.detId<RPCDetId>().roll() == rhs.detId<RPCDetId>().roll()) &&
             (lhs.getRPCData().strip_hi+1 == rhs.getRPCData().strip_low)
         );
         return cmp;
@@ -215,8 +227,14 @@ void PrimitiveSelection::process(
         //    << " strip: " << x.getRPCData().strip << " strip_low: " << x.getRPCData().strip_low << " strip_hi: " << x.getRPCData().strip_hi << std::endl;
       }
 
-      // Cluster
+      // Remove duplicates
       std::sort(tmp_primitives.begin(), tmp_primitives.end(), rpc_digi_less);
+      tmp_primitives.erase(
+          std::unique(tmp_primitives.begin(), tmp_primitives.end(), rpc_digi_equal),
+          tmp_primitives.end()
+      );
+
+      // Cluster
       tmp_primitives.erase(
           adjacent_cluster(tmp_primitives.begin(), tmp_primitives.end(), rpc_digi_adjacent, rpc_digi_cluster),
           tmp_primitives.end()
@@ -244,6 +262,7 @@ void PrimitiveSelection::process(
   }  // end if do_clustering
 
   // Map RPC subsector and chamber to CSC chambers
+  // Note: RE3/2 & RE3/3 are considered as one chamber; RE4/2 & RE4/3 too.
   bool map_rpc_to_csc = true;
   if (map_rpc_to_csc) {
     std::map<int, TriggerPrimitiveCollection> tmp_selected_rpc_map;
@@ -299,7 +318,18 @@ void PrimitiveSelection::process(
 
       selected = (pc_station * 9) + pc_chamber;
 
-      tmp_selected_rpc_map[selected] = tmp_primitives;
+      bool ignore_this_rpc_chm = false;
+      if (rpc_chm == 3 || rpc_chm == 5) { // special case of RE34/2 and RE34/3 chambers
+        // if RE34/2 exists, ignore RE34/3. In C++, this assumes that the loop
+        // over selected_rpc_map will always find RE34/2 before RE34/3
+        if (tmp_selected_rpc_map.find(selected) != tmp_selected_rpc_map.end())
+          ignore_this_rpc_chm = true;
+      }
+
+      if (!ignore_this_rpc_chm) {
+        assert(tmp_selected_rpc_map.find(selected) == tmp_selected_rpc_map.end());  // make sure it does not exist
+        tmp_selected_rpc_map[selected] = tmp_primitives;
+      }
     }  // end loop over selected_rpc_map
 
     std::swap(selected_rpc_map, tmp_selected_rpc_map);
@@ -485,7 +515,7 @@ int PrimitiveSelection::get_index_rpc(int tp_station, int tp_ring, int tp_subsec
   // of 2 segments (x2).
   //
   // Firmware uses 'rpc_sub' as RPC subsector index and 'rpc_chm' as RPC chamber index
-  // rpc_ch  [0,6] = RPC subsector 3, 4, 5, 6, 1 from neighbor, 2 from neighbor, 2. They correspond to
+  // rpc_sub [0,6] = RPC subsector 3, 4, 5, 6, 1 from neighbor, 2 from neighbor, 2. They correspond to
   //                 CSC sector phi 0-10 deg, 10-20, 20-30, 30-40, 40-50, 50-60, 50-60 from neighbor
   // rpc_chm [0,5] = RPC chamber RE1/2, RE2/2, RE3/2, RE3/3, RE4/2, RE4/3
   //
