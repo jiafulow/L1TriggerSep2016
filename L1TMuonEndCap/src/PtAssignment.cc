@@ -56,8 +56,9 @@ void PtAssignment::process(
 
     int gmt_eta = aux().getGMTEta(track.Theta_fp(), track.Endcap());  // Convert to integer eta using FW LUT
 
-    // Explanation from Alex:
-    // When using two's complement, you get two eta bins with zero coordinate.
+    // Notes from Alex (2016-09-28):
+    //
+    //     When using two's complement, you get two eta bins with zero coordinate.
     // This peculiarity is created because positive and negative endcaps are
     // processed by separate processors, so each of them gets its own zero bin.
     // With simple inversion, the eta scale becomes uniform, one bin for one

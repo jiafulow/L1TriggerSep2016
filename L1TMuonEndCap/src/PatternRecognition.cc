@@ -189,13 +189,27 @@ void PatternRecognition::process(
   if (verbose_ > 0) {  // debug
     for (const auto& conv_hits : extended_conv_hits) {
       for (const auto& conv_hit : conv_hits) {
-        std::cout << "st: " << conv_hit.PC_station() << " ch: " << conv_hit.PC_chamber()
-            << " ph: " << conv_hit.Phi_fp() << " th: " << conv_hit.Theta_fp()
-            << " ph_hit: " << (1ul<<conv_hit.Ph_hit()) << " phzvl: " << conv_hit.Phzvl()
-            << " strip: " << conv_hit.Strip() << " wire: " << conv_hit.Wire() << " cpat: " << conv_hit.Pattern()
-            << " zone_hit: " << conv_hit.Zone_hit() << " zone_code: " << conv_hit.Zone_code()
-            << " bx: " << conv_hit.BX()
-            << std::endl;
+        if (conv_hit.Subsystem() == TriggerPrimitive::kCSC) {
+          std::cout << "st: " << conv_hit.PC_station() << " ch: " << conv_hit.PC_chamber()
+              << " ph: " << conv_hit.Phi_fp() << " th: " << conv_hit.Theta_fp()
+              << " ph_hit: " << (1ul<<conv_hit.Ph_hit()) << " phzvl: " << conv_hit.Phzvl()
+              << " strip: " << conv_hit.Strip() << " wire: " << conv_hit.Wire() << " cpat: " << conv_hit.Pattern()
+              << " zone_hit: " << conv_hit.Zone_hit() << " zone_code: " << conv_hit.Zone_code()
+              << " bx: " << conv_hit.BX()
+              << std::endl;
+        }
+      }
+    }
+
+    for (const auto& conv_hits : extended_conv_hits) {
+      for (const auto& conv_hit : conv_hits) {
+        if (conv_hit.Subsystem() == TriggerPrimitive::kRPC) {
+          std::cout << "RPC hit st: " << conv_hit.PC_station() << " ch: " << conv_hit.PC_chamber()
+              << " ph>>2: " << (conv_hit.Phi_fp()>>2) << " th>>2: " << (conv_hit.Theta_fp()>>2)
+              << " strip: " << conv_hit.Strip() << " roll: " << conv_hit.Roll() << " cpat: " << conv_hit.Pattern()
+              << " bx: " << conv_hit.BX()
+              << std::endl;
+        }
       }
     }
   }
@@ -215,7 +229,7 @@ void PatternRecognition::process(
     process_single_zone(izone+1, zone_images.at(izone), patt_lifetime_map, zone_roads.at(izone));
   }
 
-  if (verbose_ > 1) {  // debug
+  if (verbose_ > 2) {  // debug
     for (int izone = NUM_ZONES; izone >= 1; --izone) {
       std::cout << "zone: " << izone << std::endl;
       std::cout << zone_images.at(izone-1) << std::endl;
