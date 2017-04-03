@@ -1,10 +1,12 @@
 // Forest.h
 
-#ifndef ADD_FOREST
-#define ADD_FOREST
+#ifndef L1Trigger_L1TMuonEndCap_emtf_Forest
+#define L1Trigger_L1TMuonEndCap_emtf_Forest
 
 #include "Tree.h"
 #include "LossFunctions.h"
+
+namespace emtf {
 
 class Forest
 {
@@ -59,5 +61,7 @@ class Forest
         std::vector< std::vector<Event*> > subSample;
         std::vector<Tree*> trees;
 };
+
+} // end of emtf namespace
 
 #endif

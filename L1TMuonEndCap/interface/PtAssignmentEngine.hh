@@ -42,7 +42,7 @@ public:
 
 private:
   std::vector<int> allowedModes_;
-  std::array<Forest, 16> forests_;
+  std::array<emtf::Forest, 16> forests_;
   PtLUTReader ptlut_reader_;
 
   bool ok_;

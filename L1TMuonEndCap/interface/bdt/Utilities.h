@@ -1,7 +1,7 @@
 // Utilities.h
 
-#ifndef ADD_UTILITIES
-#define ADD_UTILITIES 
+#ifndef L1Trigger_L1TMuonEndCap_emtf_Utilities
+#define L1Trigger_L1TMuonEndCap_emtf_Utilities
 
 #include <vector>
 #include <string>
@@ -9,6 +9,8 @@
 #include <algorithm>
 #include <utility>
 #include "TMath.h"
+
+namespace emtf {
 
 //////////////////////////////////////////////////////////////////////////
 // ------------------Some Helpful Things----------------------------------
@@ -54,5 +56,7 @@ float processPrediction(float BDTPt, int Quality, float PrelimFit);
 void mergeNtuples(const char* ntuplename, const char* filestomerge, const char* outputfile);
 
 void sortNtupleByEvent(const char* ntuplename, const char* filenametosort, const char* outputfile);
+
+} // end of emtf namespace
 
 #endif

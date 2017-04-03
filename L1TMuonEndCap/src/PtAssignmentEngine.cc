@@ -725,7 +725,7 @@ float PtAssignmentEngine::calculate_pt_xml(const address_t& address) {
     std::cout << std::endl;
   }
 
-  auto tree_event = std::make_unique<Event>();
+  auto tree_event = std::make_unique<emtf::Event>();
   tree_event->predictedValue = 0;  // must explicitly initialize
   tree_event->data = tree_data;
 

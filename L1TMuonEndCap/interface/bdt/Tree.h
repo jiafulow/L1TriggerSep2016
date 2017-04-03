@@ -1,7 +1,7 @@
 // Tree.h
 
-#ifndef ADD_TREE
-#define ADD_TREE
+#ifndef L1Trigger_L1TMuonEndCap_emtf_Tree
+#define L1Trigger_L1TMuonEndCap_emtf_Tree
 
 #include <list>
 #include "Node.h"
@@ -11,6 +11,7 @@
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
+namespace emtf {
 
 //class Node;
 
@@ -55,5 +56,7 @@ class Tree
         Int_t numTerminalNodes;
         Double_t rmsError;
 };
+
+} // end of emtf namespace
 
 #endif
