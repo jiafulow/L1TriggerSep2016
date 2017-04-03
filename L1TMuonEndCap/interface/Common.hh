@@ -9,7 +9,7 @@
 #include "L1Trigger/L1TMuonEndCap/interface/MuonTriggerPrimitive.h"
 #include "L1Trigger/L1TMuonEndCap/interface/MuonTriggerPrimitiveFwd.h"
 
-#include "L1Trigger/L1TMuonEndCap/interface/SubsystemTag.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/EMTFSubsystemTag.hh"
 
 
 // Resolve namespaces
