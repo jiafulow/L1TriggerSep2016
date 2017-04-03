@@ -3,7 +3,7 @@
 #include <iostream>
 #include <sstream>
 
-#include "L1Trigger/L1TMuonEndCap/interface/SubsystemCollector.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/EMTFSubsystemCollector.hh"
 
 
 TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollector&& iConsumes) :
@@ -117,7 +117,7 @@ void TrackFinder::process(
   // Extract all trigger primitives
   TriggerPrimitiveCollection muon_primitives;
 
-  SubsystemCollector collector;
+  EMTFSubsystemCollector collector;
   if (useCSC_)
     collector.extractPrimitives(CSCTag(), iEvent, tokenCSC_, muon_primitives);
   if (useRPC_)
