@@ -45,10 +45,12 @@ from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, '80X_mcRun2_asymptotic_v14', '') ## Different than in data ("auto:run2_data"?)
 
 # ## Event Setup Producer
-# process.load('L1Trigger.L1TMuonEndCap.fakeEmtfParams_cff') ## Why does this file have "fake" in the name? - AWB 18.04.16
+process.load('L1Trigger.L1TMuonEndCap.fakeEmtfParams_cff') ## Why does this file have "fake" in the name? - AWB 18.04.16
+                                                           ## Because this is merely a placeholder for real stuff from CondDV - KK 2016.04.28
 # process.esProd = cms.EDAnalyzer("EventSetupRecordDataGetter",
 #                                 toGet = cms.VPSet(
 #         ## Apparently L1TMuonEndcapParamsRcd doesn't exist in CondFormats/DataRecord/src/ (Important? - AWB 18.04.16)
+#         ## The record does exists there, but this getter can be safely removed as it is just debugging tool here - KK 2016.04.28
 #         cms.PSet(record = cms.string('L1TMuonEndcapParamsRcd'),
 #                  data = cms.vstring('L1TMuonEndcapParams'))
 #         ),

@@ -53,6 +53,7 @@ process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:run2_data', '') ## Good f
 
 ## Event Setup Producer
 process.load('L1Trigger.L1TMuonEndCap.fakeEmtfParams_cff') ## Why does this file have "fake" in the name? - AWB 18.04.16
+                                                           ## for the data we should rely on the global tag mechanism - KK 2016.04.28
 process.esProd = cms.EDAnalyzer("EventSetupRecordDataGetter",
                                 toGet = cms.VPSet(
         ## Apparently L1TMuonEndcapParamsRcd doesn't exist in CondFormats/DataRecord/src/ (Important? - AWB 18.04.16)
