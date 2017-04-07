@@ -9,7 +9,7 @@
 #define NUM_CSC_CHAMBERS 6*9   // 18 in ME1; 9 in ME2,3,4; 9 from neighbor sector.
                                // Arranged in FW as 6 stations, 9 chambers per station
 #define NUM_RPC_CHAMBERS 7*6   // 6 in RE1,2; 12 in RE3,4; 6 from neighbor sector.
-                               // Arranged in FW as 7 stations, 6 chambers per station (unconfirmed!)
+                               // Arranged in FW as 7 stations, 6 chambers per station
 
 using CSCData = TriggerPrimitive::CSCData;
 using RPCData = TriggerPrimitive::RPCData;
@@ -168,6 +168,18 @@ void PrimitiveSelection::process(
       bool operator()(const value_type& lhs, const value_type& rhs) const {
         bool cmp = (
             (lhs.detId<RPCDetId>().roll() == rhs.detId<RPCDetId>().roll()) &&
+            (lhs.getRPCData().strip_hi == rhs.getRPCData().strip_hi) &&
+            (lhs.getRPCData().strip_low == rhs.getRPCData().strip_low)
+        );
+        return cmp;
+      }
+    } rpc_digi_equal;
+
+    struct {
+      typedef TriggerPrimitive value_type;
+      bool operator()(const value_type& lhs, const value_type& rhs) const {
+        bool cmp = (
+            (lhs.detId<RPCDetId>().roll() == rhs.detId<RPCDetId>().roll()) &&
             (lhs.getRPCData().strip_hi+1 == rhs.getRPCData().strip_low)
         );
         return cmp;
@@ -215,8 +227,14 @@ void PrimitiveSelection::process(
         //    << " strip: " << x.getRPCData().strip << " strip_low: " << x.getRPCData().strip_low << " strip_hi: " << x.getRPCData().strip_hi << std::endl;
       }
 
-      // Cluster
+      // Remove duplicates
       std::sort(tmp_primitives.begin(), tmp_primitives.end(), rpc_digi_less);
+      tmp_primitives.erase(
+          std::unique(tmp_primitives.begin(), tmp_primitives.end(), rpc_digi_equal),
+          tmp_primitives.end()
+      );
+
+      // Cluster
       tmp_primitives.erase(
           adjacent_cluster(tmp_primitives.begin(), tmp_primitives.end(), rpc_digi_adjacent, rpc_digi_cluster),
           tmp_primitives.end()
@@ -242,6 +260,80 @@ void PrimitiveSelection::process(
 
     }  // end loop over selected_rpc_map
   }  // end if do_clustering
+
+  // Map RPC subsector and chamber to CSC chambers
+  // Note: RE3/2 & RE3/3 are considered as one chamber; RE4/2 & RE4/3 too.
+  bool map_rpc_to_csc = true;
+  if (map_rpc_to_csc) {
+    std::map<int, TriggerPrimitiveCollection> tmp_selected_rpc_map;
+
+    std::map<int, TriggerPrimitiveCollection>::iterator map_tp_it  = selected_rpc_map.begin();
+    std::map<int, TriggerPrimitiveCollection>::iterator map_tp_end = selected_rpc_map.end();
+
+    for (; map_tp_it != map_tp_end; ++map_tp_it) {
+      int selected = map_tp_it->first;
+      TriggerPrimitiveCollection& tmp_primitives = map_tp_it->second;  // pass by reference
+      assert(tmp_primitives.size() <= 2);  // at most 2
+
+      int rpc_sub = selected / 6;
+      int rpc_chm = selected % 6;
+
+      int pc_station = -1;
+      int pc_chamber = -1;
+
+      if (rpc_sub != 6) {  // native
+        if (rpc_chm == 0) {  // RE1/2
+          if (0 <= rpc_sub && rpc_sub < 3) {
+            pc_station = 0;
+            pc_chamber = 3 + rpc_sub;
+          } else if (3 <= rpc_sub && rpc_sub < 6) {
+            pc_station = 1;
+            pc_chamber = 3 + (rpc_sub - 3);
+          }
+        } else if (rpc_chm == 1) {  // RE2/2
+           pc_station = 2;
+           pc_chamber = 3 + rpc_sub;
+        } else if (2 <= rpc_chm && rpc_chm <= 3) {  // RE3/2, RE3/3
+           pc_station = 3;
+           pc_chamber = 3 + rpc_sub;
+        } else if (4 <= rpc_chm && rpc_chm <= 5) {  // RE4/2, RE4/3
+           pc_station = 4;
+           pc_chamber = 3 + rpc_sub;
+        }
+
+      } else {  // neighbor
+         pc_station = 5;
+         if (rpc_chm == 0) {  // RE1/2
+           pc_chamber = 1;
+         } else if (rpc_chm == 1) {  // RE2/2
+           pc_chamber = 4;
+         } else if (2 <= rpc_chm && rpc_chm <= 3) {  // RE3/2, RE3/3
+           pc_chamber = 6;
+         } else if (4 <= rpc_chm && rpc_chm <= 5) {  // RE4/2, RE4/3
+           pc_chamber = 8;
+         }
+      }
+
+      assert(pc_station != -1 && pc_chamber != -1);
+
+      selected = (pc_station * 9) + pc_chamber;
+
+      bool ignore_this_rpc_chm = false;
+      if (rpc_chm == 3 || rpc_chm == 5) { // special case of RE34/2 and RE34/3 chambers
+        // if RE34/2 exists, ignore RE34/3. In C++, this assumes that the loop
+        // over selected_rpc_map will always find RE34/2 before RE34/3
+        if (tmp_selected_rpc_map.find(selected) != tmp_selected_rpc_map.end())
+          ignore_this_rpc_chm = true;
+      }
+
+      if (!ignore_this_rpc_chm) {
+        assert(tmp_selected_rpc_map.find(selected) == tmp_selected_rpc_map.end());  // make sure it does not exist
+        tmp_selected_rpc_map[selected] = tmp_primitives;
+      }
+    }  // end loop over selected_rpc_map
+
+    std::swap(selected_rpc_map, tmp_selected_rpc_map);
+  }  // end if map_rpc_to_csc
 }
 
 // _____________________________________________________________________________
@@ -418,20 +510,33 @@ bool PrimitiveSelection::is_in_bx_rpc(int tp_bx) const {
 int PrimitiveSelection::get_index_rpc(int tp_station, int tp_ring, int tp_subsector, bool is_neighbor) const {
   int selected = -1;
 
-  if (!is_neighbor) {
-    if (tp_station <= 2) {  // RE1:  0 -  5, RE2:  6 - 11
-      selected = ((tp_station - 1)*6) + ((tp_subsector + 3) % 6);
-    } else {                // RE3: 12 - 23, RE4: 24 - 35
-      selected = (2)*6 + ((tp_station - 3)*12) + ((tp_ring - 2)*6) + ((tp_subsector + 3) % 6);
-    }
+  // CPPF RX data come in 3 frames x 64 bits, for 7 links. Each 64-bit data
+  // carry 2 words of 32 bits. Each word carries phi (11 bits) and theta (5 bits)
+  // of 2 segments (x2).
+  //
+  // Firmware uses 'rpc_sub' as RPC subsector index and 'rpc_chm' as RPC chamber index
+  // rpc_sub [0,6] = RPC subsector 3, 4, 5, 6, 1 from neighbor, 2 from neighbor, 2. They correspond to
+  //                 CSC sector phi 0-10 deg, 10-20, 20-30, 30-40, 40-50, 50-60, 50-60 from neighbor
+  // rpc_chm [0,5] = RPC chamber RE1/2, RE2/2, RE3/2, RE3/3, RE4/2, RE4/3
+  //
 
+  int rpc_sub = -1;
+  int rpc_chm = -1;
+
+  if (!is_neighbor) {
+    rpc_sub = ((tp_subsector + 3) % 6);
   } else {
-    if (tp_station <= 2) {  // RE1: 36       RE2: 37
-      selected = (2)*6 + (2)*12 + (tp_station - 1);
-    } else {                // RE3: 38 - 39, RE4: 40 - 41
-      selected = (2)*6 + (2)*12 + (1)*2 + ((tp_station - 3)*2) + (tp_ring - 2);
-    }
+    rpc_sub = 6;
   }
 
+  if (tp_station <= 2) {
+    rpc_chm = (tp_station - 1);
+  } else {
+    rpc_chm = 2 + (tp_station - 3)*2 + (tp_ring - 2);
+  }
+
+  assert(rpc_sub != -1 && rpc_chm != -1);
+
+  selected = (rpc_sub * 6) + rpc_chm;
   return selected;
 }
