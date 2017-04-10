@@ -1,0 +1,111 @@
+46624 2016-07-27
+before adding CSCID=1 BC0 for all links
+
+46650 2016-07-29
+added CSCID=1 BC0 for all links
+
+46723 2016-08-10
+reworked best_tracks to sort current and delayed tracks, 
+cancel ghosts across BXs, and delay tracks for second-earliest LCT timing. 
+Ph_pattern reports patterns on first-earliest LCT, as before
+
+46731 2016-08-11
+added programmable th_window, fixed enb inputs on spy memory delay memories
+
+46773 2016-08-16
+best_tracks reworked to use each track on second-earliest LCT,
+cancel ghosts across 3 BX.
+Tested in simulator extensively
+
+46782 2016-08-17
+small mistake in best_tracks fixed (now counts zeros in all 36 
+comparisons results). Added debugging for links that go out of sync
+
+46799 2016-08-19
+reworked IDLE detection to detect long train of IDLEs, not a single
+symbol. Single IDLE happens often in garbage data
+
+46827 2016-08-24
+rate counters made 26-bit wide, 1 sec integration time
+added user-programmable AF delays, af_enable=0 now applies these delays
+
+46841 2016-08-26
+fixed bug in track rate counters when it was taking only track 2 for 
+all rates
+
+47109 2016-09-19
+before ph_hit logic rework and find_segment full-precision diff sort
+
+47114 2016-09-19
+prim_conv units reworked to provide close match between full and pattern
+lower precision phi
+find_segment unit reworked to use full-precision phi differences. 
+That way it will find better-matching segments
+fixed bug in ph_pattern unit, one of the patterns in ME3,4 was one bit 
+short
+
+47165 2016-09-23
+minor rework to make timing fit
+ 
+47174 2016-09-27
+reworked DAQ to run at 80 MHz, fixed bug in ptlut address for 
+two-stub tracks when phi diff was not limited to 511. DAQ untested
+
+47214 2016-10-06
+DAQ stress-tested at 80 MHz. Fixed bug that prevented sending ME records
+
+47233 2016-10-12
+fixed a small problem in AMC13 module (from BU) which used async resets. 
+Made timing much easier to fit. 
+
+47249 2016-10-13
+added MPC link error reporting to DAQ
+
+47421 2016-10-31
+timing errors in BU DAQ removed by adding async_reg attributes, 
+ignoring some async paths
+
+47423 2016-11-01
+fixed constraints to remove a few warnings in PAR
+fixed bug found by Jia Fu, now only relevant duplicated thetas are used 
+
+47864 2017-01-21
+adding CPPF input links. Not done yet, just synthesizing now
+
+47869 2017-01-23
+implementation OK with CPPF links and debug probes on their outputs. Generated bit file
+
+47970 2017-02-02
+first attempt at RPC logic. CSC stub replacement, but not wider theta 
+windows yet. Attempting synthesis now
+
+47979 2017-02-06
+RPC logic implements fine, very crudely tested in Modelsim. 
+Added RPC DAQ block, implemented OK. Need to add RPC AF
+
+48086 2017-02-15
+compiles and fits timing with RPC link IDs and debug probes. Tested in HW. 
+RPC AF still not implemented 
+
+48093 2017-02-16
+Added reset for cppf deframer fifo, trying to prevent unsynchronized trailers. 
+Added CPPF mapping array (links to subsectors)
+
+
+48096 2017-02-17
+fixed bug in cppf link mapping, was starting from 1, need to start from 0
+
+48232 2017-03-08
+can see CPPF data correlated with CSC, but 7 BX later than needed by algorithm.
+Correction: RPC data come 1BX before they are needed. 
+Before removing FIFOs from CPPF rx deframers
+
+48269 2017-03-15
+removed FIFOs from CPPF RX deframers, needs testing
+
+48302 2017-03-21
+added RX buffer reset for CPPF links, 
+changed phi conversion factor to 6991 on Jia Fu request
+
+48431 2017-04-03
+reworked RPC hit slipping logic to use all available hits
