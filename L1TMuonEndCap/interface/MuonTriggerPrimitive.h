@@ -39,13 +39,17 @@ class CSCDetId;
 class RPCDigiL1Link;
 class RPCDetId;
 
+// GEM digi types
+class GEMPadDigi;
+class GEMDetId;
+
 
 namespace L1TMuonEndCap {
 
   class TriggerPrimitive {
   public:
     // define the subsystems that we have available
-    enum subsystem_type{kDT,kCSC,kRPC,kNSubsystems};
+    enum subsystem_type{kDT,kCSC,kRPC,kGEM,kNSubsystems};
 
     // define the data we save locally from each subsystem type
     // variables in these structs keep their colloquial meaning
@@ -54,8 +58,8 @@ namespace L1TMuonEndCap {
     struct RPCData {
       RPCData() : strip(0), strip_low(0), strip_hi(0), layer(0), bx(0) {}
       uint16_t strip;
-      uint16_t strip_low;
-      uint16_t strip_hi;
+      uint16_t strip_low; // for use in clustering
+      uint16_t strip_hi;  // for use in clustering
       uint16_t layer;
       int16_t bx;
     };
@@ -105,6 +109,14 @@ namespace L1TMuonEndCap {
       int theta_quality;
     };
 
+    struct GEMData {
+      GEMData() : pad(0), pad_low(0), pad_hi(0), bx(0) {}
+      uint16_t pad;
+      uint16_t pad_low; // for use in clustering
+      uint16_t pad_hi;  // for use in clustering
+      int16_t bx;
+    };
+
     //Persistency
     TriggerPrimitive(): _subsystem(kNSubsystems) {}
 
@@ -127,6 +139,10 @@ namespace L1TMuonEndCap {
                      const unsigned strip,
                      const unsigned layer,
                      const int bx);
+
+    // GEM
+    TriggerPrimitive(const GEMDetId& detid,
+                     const GEMPadDigi& digi);
 
     //copy
     TriggerPrimitive(const TriggerPrimitive&);
@@ -161,14 +177,17 @@ namespace L1TMuonEndCap {
     void setDTData(const DTData& dt) { _dt = dt; }
     void setCSCData(const CSCData& csc) { _csc = csc; }
     void setRPCData(const RPCData& rpc) { _rpc = rpc; }
+    void setGEMData(const GEMData& gem) { _gem = gem; }
 
     const DTData  getDTData()  const { return _dt;  }
     const CSCData getCSCData() const { return _csc; }
     const RPCData getRPCData() const { return _rpc; }
+    const GEMData getGEMData() const { return _gem; }
 
     DTData&  accessDTData()  { return _dt; }
     CSCData& accessCSCData() { return _csc; }
     RPCData& accessRPCData() { return _rpc; }
+    GEMData& accessGEMData() { return _gem; }
 
     // consistent accessors to common information
     const int getBX() const;
@@ -176,7 +195,6 @@ namespace L1TMuonEndCap {
     const int getWire() const;
     const int getPattern() const;
     const DetId rawId() const {return _id;};
-    const int Id() const;
 
     const unsigned getGlobalSector() const { return _globalsector; }
     const unsigned getSubSector() const { return _subsector; }
@@ -195,10 +213,14 @@ namespace L1TMuonEndCap {
     void calculateRPCGlobalSector(const RPCDetId& chid,
                                   unsigned& global_sector,
                                   unsigned& subsector );
+    void calculateGEMGlobalSector(const GEMDetId& chid,
+                                  unsigned& global_sector,
+                                  unsigned& subsector );
 
     DTData  _dt;
     CSCData _csc;
     RPCData _rpc;
+    GEMData _gem;
 
     DetId _id;
 
