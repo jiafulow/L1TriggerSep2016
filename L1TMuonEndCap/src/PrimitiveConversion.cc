@@ -3,19 +3,17 @@
 #include "DataFormats/MuonDetId/interface/DTChamberId.h"
 #include "DataFormats/MuonDetId/interface/CSCDetId.h"
 #include "DataFormats/MuonDetId/interface/RPCDetId.h"
+#include "DataFormats/MuonDetId/interface/GEMDetId.h"
 
 #include "L1Trigger/L1TMuonEndCap/interface/SectorProcessorLUT.hh"
 #include "L1Trigger/L1TMuonEndCap/interface/TrackTools.hh"
-
-using CSCData = TriggerPrimitive::CSCData;
-using RPCData = TriggerPrimitive::RPCData;
 
 
 void PrimitiveConversion::configure(
     const GeometryTranslator* tp_geom,
     const SectorProcessorLUT* lut,
     int verbose, int endcap, int sector, int bx,
-    int bxShiftCSC, int bxShiftRPC,
+    int bxShiftCSC, int bxShiftRPC, int bxShiftGEM,
     const std::vector<int>& zoneBoundaries, int zoneOverlap, int zoneOverlapRPC,
     bool duplicateTheta, bool fixZonePhi, bool useNewZones, bool fixME11Edges,
     bool bugME11Dupes
@@ -33,6 +31,7 @@ void PrimitiveConversion::configure(
 
   bxShiftCSC_      = bxShiftCSC;
   bxShiftRPC_      = bxShiftRPC;
+  bxShiftGEM_      = bxShiftGEM;
 
   zoneBoundaries_  = zoneBoundaries;
   zoneOverlap_     = zoneOverlap;
@@ -45,7 +44,8 @@ void PrimitiveConversion::configure(
 }
 
 
-// Specialized for CSC
+// _____________________________________________________________________________
+// Specialized process() for CSC
 template<>
 void PrimitiveConversion::process(
     CSCTag tag,
@@ -78,7 +78,9 @@ void PrimitiveConversion::process(
   }
 }
 
-// Specialized for RPC
+
+// _____________________________________________________________________________
+// Specialized process() for RPC
 template<>
 void PrimitiveConversion::process(
     RPCTag tag,
@@ -110,9 +112,22 @@ void PrimitiveConversion::process(
   }
 }
 
-const SectorProcessorLUT& PrimitiveConversion::lut() const {
-  return *lut_;
+
+// _____________________________________________________________________________
+// Specialized process() for GEM
+template<>
+void PrimitiveConversion::process(
+    GEMTag tag,
+    const std::map<int, TriggerPrimitiveCollection>& selected_gem_map,
+    EMTFHitCollection& conv_hits
+) const {
+  std::map<int, TriggerPrimitiveCollection>::const_iterator map_tp_it  = selected_gem_map.begin();
+  std::map<int, TriggerPrimitiveCollection>::const_iterator map_tp_end = selected_gem_map.end();
+
+  for (; map_tp_it != map_tp_end; ++map_tp_it) {
+  }
 }
+
 
 // _____________________________________________________________________________
 // CSC functions
@@ -553,6 +568,7 @@ void PrimitiveConversion::convert_csc_details(EMTFHit& conv_hit) const {
   conv_hit.set_eta      ( emtf::calc_eta_from_theta_deg(conv_hit.Theta(), conv_hit.Endcap()) );
 }
 
+
 // _____________________________________________________________________________
 // RPC functions
 void PrimitiveConversion::convert_rpc(
@@ -649,6 +665,7 @@ void PrimitiveConversion::convert_rpc(
 
   convert_rpc_details(conv_hit);
 }
+
 
 void PrimitiveConversion::convert_rpc_details(EMTFHit& conv_hit) const {
   const bool is_neighbor = conv_hit.Neighbor();

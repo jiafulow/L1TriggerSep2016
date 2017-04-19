@@ -3,21 +3,20 @@
 #include "DataFormats/MuonDetId/interface/DTChamberId.h"
 #include "DataFormats/MuonDetId/interface/CSCDetId.h"
 #include "DataFormats/MuonDetId/interface/RPCDetId.h"
+#include "DataFormats/MuonDetId/interface/GEMDetId.h"
 
 #include "helper.hh"  // adjacent_cluster
 
 #define NUM_CSC_CHAMBERS 6*9   // 18 in ME1; 9 in ME2,3,4; 9 from neighbor sector.
-                               // Arranged in FW as 6 stations, 9 chambers per station
+                               // Arranged in FW as 6 stations, 9 chambers per station.
 #define NUM_RPC_CHAMBERS 7*6   // 6 in RE1,2; 12 in RE3,4; 6 from neighbor sector.
-                               // Arranged in FW as 7 stations, 6 chambers per station
-
-using CSCData = TriggerPrimitive::CSCData;
-using RPCData = TriggerPrimitive::RPCData;
+                               // Arranged in FW as 7 stations, 6 chambers per station.
+#define NUM_GEM_CHAMBERS 1*1   //FIXME
 
 
 void PrimitiveSelection::configure(
       int verbose, int endcap, int sector, int bx,
-      int bxShiftCSC, int bxShiftRPC,
+      int bxShiftCSC, int bxShiftRPC, int bxShiftGEM,
       bool includeNeighbor, bool duplicateTheta,
       bool bugME11Dupes
 ) {
@@ -28,13 +27,16 @@ void PrimitiveSelection::configure(
 
   bxShiftCSC_      = bxShiftCSC;
   bxShiftRPC_      = bxShiftRPC;
+  bxShiftGEM_      = bxShiftGEM;
 
   includeNeighbor_ = includeNeighbor;
   duplicateTheta_  = duplicateTheta;
   bugME11Dupes_    = bugME11Dupes;
 }
 
-// Specialized for CSC
+
+// _____________________________________________________________________________
+// Specialized process() for CSC
 template<>
 void PrimitiveSelection::process(
     CSCTag tag,
@@ -124,7 +126,9 @@ void PrimitiveSelection::process(
   }  // end if duplicate theta
 }
 
-// Specialized for RPC
+
+// _____________________________________________________________________________
+// Specialized process() for RPC
 template<>
 void PrimitiveSelection::process(
     RPCTag tag,
@@ -261,6 +265,7 @@ void PrimitiveSelection::process(
     }  // end loop over selected_rpc_map
   }  // end if do_clustering
 
+
   // Map RPC subsector and chamber to CSC chambers
   // Note: RE3/2 & RE3/3 are considered as one chamber; RE4/2 & RE4/3 too.
   bool map_rpc_to_csc = true;
@@ -336,6 +341,23 @@ void PrimitiveSelection::process(
   }  // end if map_rpc_to_csc
 }
 
+
+// _____________________________________________________________________________
+// Specialized process() for GEM
+template<>
+void PrimitiveSelection::process(
+    GEMTag tag,
+    const TriggerPrimitiveCollection& muon_primitives,
+    std::map<int, TriggerPrimitiveCollection>& selected_gem_map
+) const {
+  TriggerPrimitiveCollection::const_iterator tp_it  = muon_primitives.begin();
+  TriggerPrimitiveCollection::const_iterator tp_end = muon_primitives.end();
+
+  for (; tp_it != tp_end; ++tp_it) {
+  }
+}
+
+
 // _____________________________________________________________________________
 // CSC functions
 int PrimitiveSelection::select_csc(const TriggerPrimitive& muon_primitive) const {
@@ -383,7 +405,6 @@ int PrimitiveSelection::select_csc(const TriggerPrimitive& muon_primitive) const
     if (is_in_bx_csc(tp_bx)) {
       if (is_in_sector_csc(tp_endcap, tp_sector)) {
         selected = get_index_csc(tp_subsector, tp_station, tp_csc_ID, false);
-
       } else if (is_in_neighbor_sector_csc(tp_endcap, tp_sector, tp_subsector, tp_station, tp_csc_ID)) {
         selected = get_index_csc(tp_subsector, tp_station, tp_csc_ID, true);
       }
@@ -444,6 +465,7 @@ int PrimitiveSelection::get_index_csc(int tp_subsector, int tp_station, int tp_c
   return selected;
 }
 
+
 // _____________________________________________________________________________
 // RPC functions
 int PrimitiveSelection::select_rpc(const TriggerPrimitive& muon_primitive) const {
@@ -478,7 +500,6 @@ int PrimitiveSelection::select_rpc(const TriggerPrimitive& muon_primitive) const
     if (is_in_bx_rpc(tp_bx)) {
       if (is_in_sector_rpc(tp_endcap, tp_sector, tp_subsector)) {
         selected = get_index_rpc(tp_station, tp_ring, tp_subsector, false);
-
       } else if (is_in_neighbor_sector_rpc(tp_endcap, tp_sector, tp_subsector)) {
         selected = get_index_rpc(tp_station, tp_ring, tp_subsector, true);
       }

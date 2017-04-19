@@ -8,7 +8,7 @@ class PrimitiveSelection {
 public:
   void configure(
       int verbose, int endcap, int sector, int bx,
-      int bxShiftCSC, int bxShiftRPC,
+      int bxShiftCSC, int bxShiftRPC, int bxShiftGEM,
       bool includeNeighbor, bool duplicateTheta,
       bool bugME11Dupes
   );
@@ -46,10 +46,22 @@ public:
 
   int get_index_rpc(int tp_station, int tp_ring, int tp_subsector, bool is_neighbor) const;
 
+  // GEM functions
+  int select_gem(const TriggerPrimitive& muon_primitive) const;
+
+  bool is_in_sector_gem(int tp_endcap, int tp_sector, int tp_subsector) const;
+
+  bool is_in_neighbor_sector_gem(int tp_endcap, int tp_sector, int tp_subsector) const;
+
+  bool is_in_bx_gem(int tp_bx) const;
+
+  int get_index_gem(int tp_station, int tp_ring, int tp_subsector, bool is_neighbor) const;
+
+
 private:
   int verbose_, endcap_, sector_, bx_;
 
-  int bxShiftCSC_, bxShiftRPC_;
+  int bxShiftCSC_, bxShiftRPC_, bxShiftGEM_;
 
   bool includeNeighbor_, duplicateTheta_;
 
