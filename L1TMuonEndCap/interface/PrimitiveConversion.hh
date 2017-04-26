@@ -52,6 +52,19 @@ public:
 
   void convert_gem_details(EMTFHit& conv_hit) const;
 
+  // Aux functions
+  int get_zone_code(const EMTFHit& conv_hit, int th) const;
+
+  int get_phzvl(const EMTFHit& conv_hit, int zone_code) const;
+
+  int get_fs_zone_code(const EMTFHit& conv_hit) const;
+
+  int get_fs_segment(const EMTFHit& conv_hit, int fw_station, int fw_cscid, int pc_segment) const;
+
+  int get_bt_station(const EMTFHit& conv_hit, int fw_station, int fw_cscid, int pc_segment) const;
+
+  int get_bt_segment(const EMTFHit& conv_hit, int fw_station, int fw_cscid, int pc_segment) const;
+
 
 private:
   const GeometryTranslator* tp_geom_;
