@@ -49,13 +49,13 @@ public:
   // GEM functions
   int select_gem(const TriggerPrimitive& muon_primitive) const;
 
-  bool is_in_sector_gem(int tp_endcap, int tp_sector, int tp_subsector) const;
+  bool is_in_sector_gem(int tp_endcap, int tp_sector) const;
 
-  bool is_in_neighbor_sector_gem(int tp_endcap, int tp_sector, int tp_subsector) const;
+  bool is_in_neighbor_sector_gem(int tp_endcap, int tp_sector, int tp_subsector, int tp_station, int tp_csc_ID) const;
 
   bool is_in_bx_gem(int tp_bx) const;
 
-  int get_index_gem(int tp_station, int tp_ring, int tp_subsector, bool is_neighbor) const;
+  int get_index_gem(int tp_subsector, int tp_station, int tp_csc_ID, bool is_neighbor) const;
 
 
 private:

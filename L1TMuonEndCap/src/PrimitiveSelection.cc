@@ -11,7 +11,8 @@
                                // Arranged in FW as 6 stations, 9 chambers per station.
 #define NUM_RPC_CHAMBERS 7*6   // 6 in RE1,2; 12 in RE3,4; 6 from neighbor sector.
                                // Arranged in FW as 7 stations, 6 chambers per station.
-#define NUM_GEM_CHAMBERS 1*1   //FIXME
+#define NUM_GEM_CHAMBERS 6*9   // 6 in GE1/1; 3 in GE2/1; 2 from neighbor sector.
+                               // Arranged in FW as 6 stations, 9 chambers per station, mimicking CSC. (unconfirmed!)
 
 
 void PrimitiveSelection::configure(
@@ -410,7 +411,6 @@ int PrimitiveSelection::select_csc(const TriggerPrimitive& muon_primitive) const
       }
     }
   }
-
   return selected;
 }
 
@@ -461,7 +461,6 @@ int PrimitiveSelection::get_index_csc(int tp_subsector, int tp_station, int tp_c
       selected = (5) * 9 + (tp_station) * 2 - 1 + (tp_csc_ID-1 < 3 ? 0 : 1);
     }
   }
-
   return selected;
 }
 
@@ -505,7 +504,6 @@ int PrimitiveSelection::select_rpc(const TriggerPrimitive& muon_primitive) const
       }
     }
   }
-
   return selected;
 }
 
@@ -560,4 +558,120 @@ int PrimitiveSelection::get_index_rpc(int tp_station, int tp_ring, int tp_subsec
 
   selected = (rpc_sub * 6) + rpc_chm;
   return selected;
+}
+
+
+// _____________________________________________________________________________
+// GEM functions
+int PrimitiveSelection::select_gem(const TriggerPrimitive& muon_primitive) const {
+  int selected = -1;
+
+  if (muon_primitive.subsystem() == TriggerPrimitive::kGEM) {
+    const GEMDetId& tp_detId = muon_primitive.detId<GEMDetId>();
+    const GEMData&  tp_data  = muon_primitive.getGEMData();
+
+    int tp_region    = tp_detId.region();     // 0 for Barrel, +/-1 for +/- Endcap
+    int tp_endcap    = (tp_region == -1) ? 2 : tp_region;
+    int tp_station   = tp_detId.station();
+    int tp_ring      = tp_detId.ring();
+    int tp_roll      = tp_detId.roll();
+    int tp_layer     = tp_detId.layer();
+    int tp_chamber   = tp_detId.chamber();
+
+    int tp_bx        = tp_data.bx;
+    int tp_pad       = tp_data.pad;
+
+    // Use CSC trigger sector definitions
+    // Code copied from DataFormats/MuonDetId/src/CSCDetId.cc
+    auto get_trigger_sector = [](int ring, int station, int chamber) {
+      int result = 0;
+      if( station > 1 && ring > 1 ) {
+        result = ((static_cast<unsigned>(chamber-3) & 0x7f) / 6) + 1; // ch 3-8->1, 9-14->2, ... 1,2 -> 6
+      }
+      else {
+        result =  (station != 1) ? ((static_cast<unsigned>(chamber-2) & 0x1f) / 3) + 1 : // ch 2-4-> 1, 5-7->2, ...
+                               ((static_cast<unsigned>(chamber-3) & 0x7f) / 6) + 1;
+      }
+      return (result <= 6) ? result : 6; // max sector is 6, some calculations give a value greater than six but this is expected.
+    };
+
+    // Use CSC trigger "CSC ID" definitions
+    // Code copied from DataFormats/MuonDetId/src/CSCDetId.cc
+    auto get_trigger_csc_ID = [](int ring, int station, int chamber) {
+      int result = 0;
+      if( station == 1 ) {
+        result = (chamber) % 3 + 1; // 1,2,3
+        switch (ring) {
+        case 1:
+          break;
+        case 2:
+          result += 3; // 4,5,6
+          break;
+        case 3:
+          result += 6; // 7,8,9
+          break;
+        }
+      }
+      else {
+        if( ring == 1 ) {
+          result = (chamber+1) % 3 + 1; // 1,2,3
+        }
+        else {
+          result = (chamber+3) % 6 + 4; // 4,5,6,7,8,9
+        }
+      }
+      return result;
+    };
+
+    int tp_sector    = get_trigger_sector(tp_ring, tp_station, tp_chamber);
+    int tp_csc_ID    = get_trigger_csc_ID(tp_ring, tp_station, tp_chamber);
+
+    // station 1 --> subsector 1 or 2
+    // station 2,3,4 --> subsector 0
+    int tp_subsector = (tp_station != 1) ? 0 : ((tp_chamber%6 > 2) ? 1 : 2);
+
+    assert(MIN_ENDCAP <= tp_endcap && tp_endcap <= MAX_ENDCAP);
+    assert(MIN_TRIGSECTOR <= tp_sector && tp_sector <= MAX_TRIGSECTOR);
+    assert(1 <= tp_station && tp_station <= 2);
+    assert(1 <= tp_ring && tp_ring <= 1);
+    //assert(1 <= tp_roll && tp_roll <= 12);
+    assert((tp_station == 1 && 1 <= tp_roll && tp_roll <= 8) || (tp_station != 1));
+    assert((tp_station == 2 && 1 <= tp_roll && tp_roll <= 12) || (tp_station != 2));
+    assert(1 <= tp_layer && tp_layer <= 2);
+    assert(1 <= tp_csc_ID && tp_csc_ID <= 9);
+    //assert(tp_data.pad < 192);
+    assert((tp_station == 1 && 1 <= tp_pad && tp_pad <= 192) || (tp_station != 1));
+    assert((tp_station == 2 && 1 <= tp_pad && tp_pad <= 192) || (tp_station != 2));
+
+    // Selection
+    if (is_in_bx_gem(tp_bx)) {
+      if (is_in_sector_gem(tp_endcap, tp_sector)) {
+        selected = get_index_gem(tp_subsector, tp_station, tp_csc_ID, false);
+      } else if (is_in_neighbor_sector_gem(tp_endcap, tp_sector, tp_subsector, tp_station, tp_csc_ID)) {
+        selected = get_index_gem(tp_subsector, tp_station, tp_csc_ID, true);
+      }
+    }
+  }
+  return selected;
+}
+
+bool PrimitiveSelection::is_in_sector_gem(int tp_endcap, int tp_sector) const {
+  // Identical to the corresponding CSC function
+  return is_in_sector_csc(tp_endcap, tp_sector);
+}
+
+bool PrimitiveSelection::is_in_neighbor_sector_gem(int tp_endcap, int tp_sector, int tp_subsector, int tp_station, int tp_csc_ID) const {
+  // Identical to the corresponding CSC function
+  return is_in_neighbor_sector_gem(tp_endcap, tp_sector, tp_subsector, tp_station, tp_csc_ID);
+}
+
+bool PrimitiveSelection::is_in_bx_gem(int tp_bx) const {
+  tp_bx += bxShiftGEM_;
+  return (bx_ == tp_bx);
+}
+
+// Returns CSC input "link".  Index used by FW for unique chamber identification.
+int PrimitiveSelection::get_index_gem(int tp_subsector, int tp_station, int tp_csc_ID, bool is_neighbor) const {
+  // Identical to the corresponding CSC function
+  return get_index_csc(tp_subsector, tp_station, tp_csc_ID, is_neighbor);
 }
