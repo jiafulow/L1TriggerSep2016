@@ -18,9 +18,7 @@ public:
       bool bugME11Dupes
   );
 
-  template<typename T>
   void process(
-      T tag,
       const std::map<int, TriggerPrimitiveCollection>& selected_prim_map,
       EMTFHitCollection& conv_hits
   ) const;

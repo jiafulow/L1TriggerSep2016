@@ -43,17 +43,12 @@ void PrimitiveConversion::configure(
   bugME11Dupes_    = bugME11Dupes;
 }
 
-
-// _____________________________________________________________________________
-// Specialized process() for CSC
-template<>
 void PrimitiveConversion::process(
-    CSCTag tag,
-    const std::map<int, TriggerPrimitiveCollection>& selected_csc_map,
+    const std::map<int, TriggerPrimitiveCollection>& selected_prim_map,
     EMTFHitCollection& conv_hits
 ) const {
-  std::map<int, TriggerPrimitiveCollection>::const_iterator map_tp_it  = selected_csc_map.begin();
-  std::map<int, TriggerPrimitiveCollection>::const_iterator map_tp_end = selected_csc_map.end();
+  std::map<int, TriggerPrimitiveCollection>::const_iterator map_tp_it  = selected_prim_map.begin();
+  std::map<int, TriggerPrimitiveCollection>::const_iterator map_tp_end = selected_prim_map.end();
 
   for (; map_tp_it != map_tp_end; ++map_tp_it) {
     // Unique chamber ID in FW, {0, 53} as defined in get_index_csc in src/PrimitiveSelection.cc
@@ -69,62 +64,19 @@ void PrimitiveConversion::process(
 
     for (; tp_it != tp_end; ++tp_it) {
       EMTFHit conv_hit;
-      convert_csc(pc_sector, pc_station, pc_chamber, pc_segment, *tp_it, conv_hit);
+      if (tp_it->subsystem() == TriggerPrimitive::kCSC) {
+        convert_csc(pc_sector, pc_station, pc_chamber, pc_segment, *tp_it, conv_hit);
+      } else if (tp_it->subsystem() == TriggerPrimitive::kRPC) {
+        convert_rpc(pc_sector, pc_station, pc_chamber, pc_segment, *tp_it, conv_hit);
+      } else if (tp_it->subsystem() == TriggerPrimitive::kGEM) {
+        convert_gem(pc_sector, pc_station, pc_chamber, pc_segment, *tp_it, conv_hit);
+      } else {
+        assert(false && "Incorrect subsystem type");
+      }
       conv_hits.push_back(conv_hit);
       pc_segment += 1;
     }
-
     assert(pc_segment <= 4);  // With 2 unique LCTs, 4 possible strip/wire combinations
-  }
-}
-
-
-// _____________________________________________________________________________
-// Specialized process() for RPC
-template<>
-void PrimitiveConversion::process(
-    RPCTag tag,
-    const std::map<int, TriggerPrimitiveCollection>& selected_rpc_map,
-    EMTFHitCollection& conv_hits
-) const {
-  std::map<int, TriggerPrimitiveCollection>::const_iterator map_tp_it  = selected_rpc_map.begin();
-  std::map<int, TriggerPrimitiveCollection>::const_iterator map_tp_end = selected_rpc_map.end();
-
-  for (; map_tp_it != map_tp_end; ++map_tp_it) {
-    int selected   = map_tp_it->first;
-    // RPC chambers have been mapped to CSC chambers
-    int pc_sector  = sector_;
-    int pc_station = selected / 9;  // {0, 5} = {ME1 sub 1, ME1 sub 2, ME2, ME3, ME4, neighbor}
-    int pc_chamber = selected % 9;  // Equals CSC ID - 1 for all except neighbor chambers
-    int pc_segment = 0;             // Counts hits in a single chamber
-
-    TriggerPrimitiveCollection::const_iterator tp_it  = map_tp_it->second.begin();
-    TriggerPrimitiveCollection::const_iterator tp_end = map_tp_it->second.end();
-
-    for (; tp_it != tp_end; ++tp_it) {
-      EMTFHit conv_hit;
-      convert_rpc(pc_sector, pc_station, pc_chamber, pc_segment, *tp_it, conv_hit);
-      conv_hits.push_back(conv_hit);
-      pc_segment += 1;
-    }
-
-    assert(pc_segment <= 2);  // at most 2 clusters per RPC chamber
-  }
-}
-
-
-// _____________________________________________________________________________
-// Specialized process() for GEM
-template<>
-void PrimitiveConversion::process(
-    GEMTag tag,
-    const std::map<int, TriggerPrimitiveCollection>& selected_gem_map,
-    EMTFHitCollection& conv_hits
-) const {
-  std::map<int, TriggerPrimitiveCollection>::const_iterator map_tp_it  = selected_gem_map.begin();
-  std::map<int, TriggerPrimitiveCollection>::const_iterator map_tp_end = selected_gem_map.end();
-
-  for (; map_tp_it != map_tp_end; ++map_tp_it) {
   }
 }
 

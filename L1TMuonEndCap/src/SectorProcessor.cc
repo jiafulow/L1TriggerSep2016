@@ -205,6 +205,7 @@ void SectorProcessor::process_single_bx(
   std::map<int, TriggerPrimitiveCollection> selected_csc_map;
   std::map<int, TriggerPrimitiveCollection> selected_rpc_map;
   std::map<int, TriggerPrimitiveCollection> selected_gem_map;
+  std::map<int, TriggerPrimitiveCollection> selected_prim_map;
 
   EMTFHitCollection conv_hits;  // "converted" hits converted by primitive converter
 
@@ -224,13 +225,12 @@ void SectorProcessor::process_single_bx(
   prim_sel.process(CSCTag(), muon_primitives, selected_csc_map);
   prim_sel.process(RPCTag(), muon_primitives, selected_rpc_map);
   prim_sel.process(GEMTag(), muon_primitives, selected_gem_map);
+  prim_sel.merge(selected_csc_map, selected_rpc_map, selected_gem_map, selected_prim_map);
 
   // Convert trigger primitives into "converted" hits
   // A converted hit consists of integer representations of phi, theta, and zones
   // From src/PrimitiveConversion.cc
-  prim_conv.process(CSCTag(), selected_csc_map, conv_hits);
-  prim_conv.process(RPCTag(), selected_rpc_map, conv_hits);
-  prim_conv.process(GEMTag(), selected_gem_map, conv_hits);
+  prim_conv.process(selected_prim_map, conv_hits);
   extended_conv_hits.push_back(conv_hits);
 
   // Detect patterns in all zones, find 3 best roads in each zone
