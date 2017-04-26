@@ -20,6 +20,13 @@ public:
       std::map<int, TriggerPrimitiveCollection>& selected_prim_map
   ) const;
 
+  void merge(
+      std::map<int, TriggerPrimitiveCollection>& selected_csc_map,
+      std::map<int, TriggerPrimitiveCollection>& selected_rpc_map,
+      std::map<int, TriggerPrimitiveCollection>& selected_gem_map,
+      std::map<int, TriggerPrimitiveCollection>& selected_prim_map
+  ) const;
+
   // CSC functions
   // If selected, return an index 0-53, else return -1
   // The index 0-53 roughly corresponds to an input link. It maps to the
@@ -36,6 +43,8 @@ public:
   int get_index_csc(int tp_subsector, int tp_station, int tp_csc_ID, bool is_neighbor) const;
 
   // RPC functions
+  void cluster_rpc(const TriggerPrimitiveCollection& muon_primitives, TriggerPrimitiveCollection& clus_muon_primitives) const;
+
   int select_rpc(const TriggerPrimitive& muon_primitive) const;
 
   bool is_in_sector_rpc(int tp_endcap, int tp_sector, int tp_subsector) const;
@@ -47,6 +56,8 @@ public:
   int get_index_rpc(int tp_station, int tp_ring, int tp_subsector, bool is_neighbor) const;
 
   // GEM functions
+  void cluster_gem(const TriggerPrimitiveCollection& muon_primitives, TriggerPrimitiveCollection& clus_muon_primitives) const;
+
   int select_gem(const TriggerPrimitive& muon_primitive) const;
 
   bool is_in_sector_gem(int tp_endcap, int tp_sector) const;

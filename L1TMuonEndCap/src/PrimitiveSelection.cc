@@ -136,8 +136,13 @@ void PrimitiveSelection::process(
     const TriggerPrimitiveCollection& muon_primitives,
     std::map<int, TriggerPrimitiveCollection>& selected_rpc_map
 ) const {
-  TriggerPrimitiveCollection::const_iterator tp_it  = muon_primitives.begin();
-  TriggerPrimitiveCollection::const_iterator tp_end = muon_primitives.end();
+  // Cluster the RPC digis.
+  // Technically this is done by the CPPF, before the EMTF.
+  TriggerPrimitiveCollection clus_muon_primitives;
+  cluster_rpc(muon_primitives, clus_muon_primitives);
+
+  TriggerPrimitiveCollection::const_iterator tp_it  = clus_muon_primitives.begin();
+  TriggerPrimitiveCollection::const_iterator tp_end = clus_muon_primitives.end();
 
   for (; tp_it != tp_end; ++tp_it) {
     int selected_rpc = select_rpc(*tp_it);  // Returns RPC "link" index (0 - 41)
@@ -148,74 +153,24 @@ void PrimitiveSelection::process(
     }
   }
 
-  // Cluster RPC digis
-  bool do_clustering = true;
-  if (do_clustering) {
-    // Define operator to sort the trigger primitives prior to clustering
-    // Here, the RPC trigger primitives are already contained inside the same
-    // sector, subsector, station, ring, BX. So, only sort by roll, strip
-    struct {
-      typedef TriggerPrimitive value_type;
-      bool operator()(const value_type& lhs, const value_type& rhs) const {
-        bool cmp = (
-            std::make_pair(lhs.detId<RPCDetId>().roll(), lhs.getRPCData().strip) <
-            std::make_pair(rhs.detId<RPCDetId>().roll(), rhs.getRPCData().strip)
-        );
-        return cmp;
-      }
-    } rpc_digi_less;
-
-    // Define operators for the nearest-neighbor clustering algorithm
-    // If two digis are next to each other (check strip_hi on the 'left', and
-    // strip_low on the 'right'), cluster them (increment strip_hi on the 'left')
-    struct {
-      typedef TriggerPrimitive value_type;
-      bool operator()(const value_type& lhs, const value_type& rhs) const {
-        bool cmp = (
-            (lhs.detId<RPCDetId>().roll() == rhs.detId<RPCDetId>().roll()) &&
-            (lhs.getRPCData().strip_hi == rhs.getRPCData().strip_hi) &&
-            (lhs.getRPCData().strip_low == rhs.getRPCData().strip_low)
-        );
-        return cmp;
-      }
-    } rpc_digi_equal;
-
-    struct {
-      typedef TriggerPrimitive value_type;
-      bool operator()(const value_type& lhs, const value_type& rhs) const {
-        bool cmp = (
-            (lhs.detId<RPCDetId>().roll() == rhs.detId<RPCDetId>().roll()) &&
-            (lhs.getRPCData().strip_hi+1 == rhs.getRPCData().strip_low)
-        );
-        return cmp;
-      }
-    } rpc_digi_adjacent;
-
-    struct {
-      typedef TriggerPrimitive value_type;
-      void operator()(value_type& lhs, value_type& rhs) {  // pass by reference
-        lhs.accessRPCData().strip_hi += 1;
-      }
-    } rpc_digi_cluster;
-
-    // Define operator to apply cuts as in firmware: keep first 2 RPC clusters,
-    // max cluster size = 3 strips.
-    // According to Karol Bunkowski, for one chamber (so 3 eta rolls) only up
-    // to 2 hits (cluster centres) are produced. First two 'first' clusters are
-    // chosen, and only after the cut on the cluster size is applied. So if
-    // there are 1 large cluster and 2 small clusters, it is possible that
-    // one of the two small clusters is discarded first, and the large cluster
-    // then is removed by the cluster size cut, leaving only one cluster.
+  // Apply truncation as in firmware: keep first 2 clusters, max cluster
+  // size = 3 strips.
+  // According to Karol Bunkowski, for one chamber (so 3 eta rolls) only up
+  // to 2 hits (cluster centres) are produced. First two 'first' clusters are
+  // chosen, and only after the cut on the cluster size is applied. So if
+  // there are 1 large cluster and 2 small clusters, it is possible that
+  // one of the two small clusters is discarded first, and the large cluster
+  // then is removed by the cluster size cut, leaving only one cluster.
+  bool apply_truncation = true;
+  if (apply_truncation) {
     struct {
       typedef TriggerPrimitive value_type;
       bool operator()(const value_type& x) const {
         int sz = x.getRPCData().strip_hi - x.getRPCData().strip_low + 1;
         return sz > 3;
       }
-    } rpc_digi_cluster_size_cut;
+    } cluster_size_cut;
 
-
-    // Loop over selected_rpc_map, do the clustering
     std::map<int, TriggerPrimitiveCollection>::iterator map_tp_it  = selected_rpc_map.begin();
     std::map<int, TriggerPrimitiveCollection>::iterator map_tp_end = selected_rpc_map.end();
 
@@ -223,49 +178,17 @@ void PrimitiveSelection::process(
       //int selected = map_tp_it->first;
       TriggerPrimitiveCollection& tmp_primitives = map_tp_it->second;  // pass by reference
 
-      // Sanity check
-      for (const auto& x : tmp_primitives) {
-        assert(x.getRPCData().strip == x.getRPCData().strip_low);
-        assert(x.getRPCData().strip == x.getRPCData().strip_hi);
-        //std::cout << ".. before: st: " << x.detId<RPCDetId>().station() << " ri: " << x.detId<RPCDetId>().ring() << " sub: " << x.detId<RPCDetId>().subsector()
-        //    << " bx: " << x.getRPCData().bx << " layer: " << x.getRPCData().layer << " roll: " << x.detId<RPCDetId>().roll()
-        //    << " strip: " << x.getRPCData().strip << " strip_low: " << x.getRPCData().strip_low << " strip_hi: " << x.getRPCData().strip_hi << std::endl;
-      }
-
-      // Remove duplicates
-      std::sort(tmp_primitives.begin(), tmp_primitives.end(), rpc_digi_less);
-      tmp_primitives.erase(
-          std::unique(tmp_primitives.begin(), tmp_primitives.end(), rpc_digi_equal),
-          tmp_primitives.end()
-      );
-
-      // Cluster
-      tmp_primitives.erase(
-          adjacent_cluster(tmp_primitives.begin(), tmp_primitives.end(), rpc_digi_adjacent, rpc_digi_cluster),
-          tmp_primitives.end()
-      );
-
       // Keep the first two clusters
       if (tmp_primitives.size() > 2)
         tmp_primitives.erase(tmp_primitives.begin()+2, tmp_primitives.end());
 
       // Apply cluster size cut
       tmp_primitives.erase(
-          std::remove_if(tmp_primitives.begin(), tmp_primitives.end(), rpc_digi_cluster_size_cut),
+          std::remove_if(tmp_primitives.begin(), tmp_primitives.end(), cluster_size_cut),
           tmp_primitives.end()
       );
-
-      // Sanity check
-      for (const auto& x : tmp_primitives) {
-        assert(x.getRPCData().strip_low <= x.getRPCData().strip_hi);
-        //std::cout << ".. after : st: " << x.detId<RPCDetId>().station() << " ri: " << x.detId<RPCDetId>().ring() << " sub: " << x.detId<RPCDetId>().subsector()
-        //    << " bx: " << x.getRPCData().bx << " layer: " << x.getRPCData().layer << " roll: " << x.detId<RPCDetId>().roll()
-        //    << " strip: " << x.getRPCData().strip << " strip_low: " << x.getRPCData().strip_low << " strip_hi: " << x.getRPCData().strip_hi << std::endl;
-      }
-
-    }  // end loop over selected_rpc_map
-  }  // end if do_clustering
-
+    }
+  }  // end if apply_truncation
 
   // Map RPC subsector and chamber to CSC chambers
   // Note: RE3/2 & RE3/3 are considered as one chamber; RE4/2 & RE4/3 too.
@@ -338,7 +261,7 @@ void PrimitiveSelection::process(
       }
     }  // end loop over selected_rpc_map
 
-    std::swap(selected_rpc_map, tmp_selected_rpc_map);
+    std::swap(selected_rpc_map, tmp_selected_rpc_map);  // release memory usage
   }  // end if map_rpc_to_csc
 }
 
@@ -351,11 +274,65 @@ void PrimitiveSelection::process(
     const TriggerPrimitiveCollection& muon_primitives,
     std::map<int, TriggerPrimitiveCollection>& selected_gem_map
 ) const {
-  TriggerPrimitiveCollection::const_iterator tp_it  = muon_primitives.begin();
-  TriggerPrimitiveCollection::const_iterator tp_end = muon_primitives.end();
+  // Cluster the GEM digis.
+  // Technically this is done before the EMTF.
+  TriggerPrimitiveCollection clus_muon_primitives;
+  cluster_gem(muon_primitives, clus_muon_primitives);
+
+  TriggerPrimitiveCollection::const_iterator tp_it  = clus_muon_primitives.begin();
+  TriggerPrimitiveCollection::const_iterator tp_end = clus_muon_primitives.end();
 
   for (; tp_it != tp_end; ++tp_it) {
+    int selected_gem = select_gem(*tp_it);  // Returns GEM "link" index (0 - 53)
+
+    if (selected_gem >= 0) {
+      assert(selected_gem < NUM_GEM_CHAMBERS);
+      selected_gem_map[selected_gem].push_back(*tp_it);
+    }
   }
+
+  // Apply truncation: max cluster size = 8 pads, keep first 8 clusters.
+  bool apply_truncation = true;
+  if (apply_truncation) {
+    struct {
+      typedef TriggerPrimitive value_type;
+      bool operator()(const value_type& x) const {
+        int sz = x.getRPCData().strip_hi - x.getRPCData().strip_low + 1;
+        return sz > 8;
+      }
+    } cluster_size_cut;
+
+    std::map<int, TriggerPrimitiveCollection>::iterator map_tp_it  = selected_gem_map.begin();
+    std::map<int, TriggerPrimitiveCollection>::iterator map_tp_end = selected_gem_map.end();
+
+    for (; map_tp_it != map_tp_end; ++map_tp_it) {
+      //int selected = map_tp_it->first;
+      TriggerPrimitiveCollection& tmp_primitives = map_tp_it->second;  // pass by reference
+
+      // Apply cluster size cut
+      tmp_primitives.erase(
+          std::remove_if(tmp_primitives.begin(), tmp_primitives.end(), cluster_size_cut),
+          tmp_primitives.end()
+      );
+
+      // Keep the first two clusters
+      if (tmp_primitives.size() > 8)
+        tmp_primitives.erase(tmp_primitives.begin()+8, tmp_primitives.end());
+    }
+  }  // end if apply_truncation
+
+  //FIXME: What to do about the two layers?
+}
+
+
+// _____________________________________________________________________________
+void PrimitiveSelection::merge(
+    std::map<int, TriggerPrimitiveCollection>& selected_csc_map,
+    std::map<int, TriggerPrimitiveCollection>& selected_rpc_map,
+    std::map<int, TriggerPrimitiveCollection>& selected_gem_map,
+    std::map<int, TriggerPrimitiveCollection>& selected_prim_map
+) const {
+  //FIXME: Not yet implemented
 }
 
 
@@ -467,6 +444,85 @@ int PrimitiveSelection::get_index_csc(int tp_subsector, int tp_station, int tp_c
 
 // _____________________________________________________________________________
 // RPC functions
+void PrimitiveSelection::cluster_rpc(const TriggerPrimitiveCollection& muon_primitives, TriggerPrimitiveCollection& clus_muon_primitives) const {
+  // Define operator to select RPC digis
+  struct {
+    typedef TriggerPrimitive value_type;
+    bool operator()(const value_type& x) const {
+      return (x.subsystem() == TriggerPrimitive::kRPC);
+    }
+  } rpc_digi_select;
+
+  // Define operator to sort the RPC digis prior to clustering.
+  // Use rawId, bx and strip as the sorting id. RPC rawId fully specifies
+  // sector, subsector, endcap, station, ring, layer, roll. Strip is used as
+  // the least significant sorting id.
+  struct {
+    typedef TriggerPrimitive value_type;
+    bool operator()(const value_type& lhs, const value_type& rhs) const {
+      bool cmp = (
+          std::make_pair(std::make_pair(lhs.rawId(), lhs.getRPCData().bx), lhs.getRPCData().strip) <
+          std::make_pair(std::make_pair(rhs.rawId(), rhs.getRPCData().bx), rhs.getRPCData().strip)
+      );
+      return cmp;
+    }
+  } rpc_digi_less;
+
+  struct {
+    typedef TriggerPrimitive value_type;
+    bool operator()(const value_type& lhs, const value_type& rhs) const {
+      bool cmp = (
+          std::make_pair(std::make_pair(lhs.rawId(), lhs.getRPCData().bx), lhs.getRPCData().strip) ==
+          std::make_pair(std::make_pair(rhs.rawId(), rhs.getRPCData().bx), rhs.getRPCData().strip)
+      );
+      return cmp;
+    }
+  } rpc_digi_equal;
+
+  // Define operators for the nearest-neighbor clustering algorithm.
+  // If two digis are next to each other (check strip_hi on the 'left', and
+  // strip_low on the 'right'), cluster them (increment strip_hi on the 'left')
+  struct {
+    typedef TriggerPrimitive value_type;
+    bool operator()(const value_type& lhs, const value_type& rhs) const {
+      bool cmp = (
+          (lhs.rawId() == rhs.rawId()) &&
+          (lhs.getRPCData().bx == rhs.getRPCData().bx) &&
+          (lhs.getRPCData().strip_hi+1 == rhs.getRPCData().strip_low)
+      );
+      return cmp;
+    }
+  } rpc_digi_adjacent;
+
+  struct {
+    typedef TriggerPrimitive value_type;
+    void operator()(value_type& lhs, value_type& rhs) {  // pass by reference
+      lhs.accessRPCData().strip_hi += 1;
+    }
+  } rpc_digi_cluster;
+
+  // ___________________________________________________________________________
+  // Do clustering using C++ <algorithm> functions
+
+  // 1. Select RPC digis
+  std::copy_if(muon_primitives.begin(), muon_primitives.end(), std::back_inserter(clus_muon_primitives), rpc_digi_select);
+
+  // 2. Sort
+  std::sort(clus_muon_primitives.begin(), clus_muon_primitives.end(), rpc_digi_less);
+
+  // 3. Remove duplicates
+  clus_muon_primitives.erase(
+      std::unique(clus_muon_primitives.begin(), clus_muon_primitives.end(), rpc_digi_equal),
+      clus_muon_primitives.end()
+  );
+
+  // 4. Cluster adjacent digis
+  clus_muon_primitives.erase(
+      adjacent_cluster(clus_muon_primitives.begin(), clus_muon_primitives.end(), rpc_digi_adjacent, rpc_digi_cluster),
+      clus_muon_primitives.end()
+  );
+}
+
 int PrimitiveSelection::select_rpc(const TriggerPrimitive& muon_primitive) const {
   int selected = -1;
 
@@ -481,6 +537,7 @@ int PrimitiveSelection::select_rpc(const TriggerPrimitive& muon_primitive) const
     int tp_station   = tp_detId.station();    // 1 - 4
     int tp_ring      = tp_detId.ring();       // 2 - 3 (increasing theta)
     int tp_roll      = tp_detId.roll();       // 1 - 3 (decreasing theta; aka A - C; space between rolls is 9 - 15 in theta_fp)
+    //int tp_layer     = tp_detId.layer();
 
     int tp_bx        = tp_data.bx;
     int tp_strip     = tp_data.strip;
@@ -538,7 +595,6 @@ int PrimitiveSelection::get_index_rpc(int tp_station, int tp_ring, int tp_subsec
   //                 CSC sector phi 0-10 deg, 10-20, 20-30, 30-40, 40-50, 50-60, 50-60 from neighbor
   // rpc_chm [0,5] = RPC chamber RE1/2, RE2/2, RE3/2, RE3/3, RE4/2, RE4/3
   //
-
   int rpc_sub = -1;
   int rpc_chm = -1;
 
@@ -563,6 +619,85 @@ int PrimitiveSelection::get_index_rpc(int tp_station, int tp_ring, int tp_subsec
 
 // _____________________________________________________________________________
 // GEM functions
+void PrimitiveSelection::cluster_gem(const TriggerPrimitiveCollection& muon_primitives, TriggerPrimitiveCollection& clus_muon_primitives) const {
+  // Define operator to select GEM digis
+  struct {
+    typedef TriggerPrimitive value_type;
+    bool operator()(const value_type& x) const {
+      return (x.subsystem() == TriggerPrimitive::kGEM);
+    }
+  } gem_digi_select;
+
+  // Define operator to sort the GEM digis prior to clustering.
+  // Use rawId, bx and pad as the sorting id. GEM rawId fully specifies
+  // endcap, station, ring, layer, roll, chamber. Pad is used as
+  // the least significant sorting id.
+  struct {
+    typedef TriggerPrimitive value_type;
+    bool operator()(const value_type& lhs, const value_type& rhs) const {
+      bool cmp = (
+          std::make_pair(std::make_pair(lhs.rawId(), lhs.getGEMData().bx), lhs.getGEMData().pad) <
+          std::make_pair(std::make_pair(rhs.rawId(), rhs.getGEMData().bx), rhs.getGEMData().pad)
+      );
+      return cmp;
+    }
+  } gem_digi_less;
+
+  struct {
+    typedef TriggerPrimitive value_type;
+    bool operator()(const value_type& lhs, const value_type& rhs) const {
+      bool cmp = (
+          std::make_pair(std::make_pair(lhs.rawId(), lhs.getGEMData().bx), lhs.getGEMData().pad) ==
+          std::make_pair(std::make_pair(rhs.rawId(), rhs.getGEMData().bx), rhs.getGEMData().pad)
+      );
+      return cmp;
+    }
+  } gem_digi_equal;
+
+  // Define operators for the nearest-neighbor clustering algorithm.
+  // If two digis are next to each other (check pad_hi on the 'left', and
+  // pad_low on the 'right'), cluster them (increment pad_hi on the 'left')
+  struct {
+    typedef TriggerPrimitive value_type;
+    bool operator()(const value_type& lhs, const value_type& rhs) const {
+      bool cmp = (
+          (lhs.rawId() == rhs.rawId()) &&
+          (lhs.getGEMData().bx == rhs.getGEMData().bx) &&
+          (lhs.getGEMData().pad_hi+1 == rhs.getGEMData().pad_low)
+      );
+      return cmp;
+    }
+  } gem_digi_adjacent;
+
+  struct {
+    typedef TriggerPrimitive value_type;
+    void operator()(value_type& lhs, value_type& rhs) {  // pass by reference
+      lhs.accessGEMData().pad_hi += 1;
+    }
+  } gem_digi_cluster;
+
+  // ___________________________________________________________________________
+  // Do clustering using C++ <algorithm> functions
+
+  // 1. Select GEM digis
+  std::copy_if(muon_primitives.begin(), muon_primitives.end(), std::back_inserter(clus_muon_primitives), gem_digi_select);
+
+  // 2. Sort
+  std::sort(clus_muon_primitives.begin(), clus_muon_primitives.end(), gem_digi_less);
+
+  // 3. Remove duplicates
+  clus_muon_primitives.erase(
+      std::unique(clus_muon_primitives.begin(), clus_muon_primitives.end(), gem_digi_equal),
+      clus_muon_primitives.end()
+  );
+
+  // 4. Cluster adjacent digis
+  clus_muon_primitives.erase(
+      adjacent_cluster(clus_muon_primitives.begin(), clus_muon_primitives.end(), gem_digi_adjacent, gem_digi_cluster),
+      clus_muon_primitives.end()
+  );
+}
+
 int PrimitiveSelection::select_gem(const TriggerPrimitive& muon_primitive) const {
   int selected = -1;
 
@@ -670,7 +805,6 @@ bool PrimitiveSelection::is_in_bx_gem(int tp_bx) const {
   return (bx_ == tp_bx);
 }
 
-// Returns CSC input "link".  Index used by FW for unique chamber identification.
 int PrimitiveSelection::get_index_gem(int tp_subsector, int tp_station, int tp_csc_ID, bool is_neighbor) const {
   // Identical to the corresponding CSC function
   return get_index_csc(tp_subsector, tp_station, tp_csc_ID, is_neighbor);
