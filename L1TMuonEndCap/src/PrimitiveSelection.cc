@@ -86,7 +86,7 @@ void PrimitiveSelection::process(
     for (; map_tp_it != map_tp_end; ++map_tp_it) {
       int selected = map_tp_it->first;
       TriggerPrimitiveCollection& tmp_primitives = map_tp_it->second;  // pass by reference
-      assert(tmp_primitives.size() <= 2);  // at most 2
+      assert(tmp_primitives.size() <= 2);  // at most 2 hits
 
       if (tmp_primitives.size() == 2) {
         if (
@@ -202,7 +202,6 @@ void PrimitiveSelection::process(
     for (; map_tp_it != map_tp_end; ++map_tp_it) {
       int selected = map_tp_it->first;
       TriggerPrimitiveCollection& tmp_primitives = map_tp_it->second;  // pass by reference
-      assert(tmp_primitives.size() <= 2);  // at most 2
 
       int rpc_sub = selected / 6;
       int rpc_chm = selected % 6;
@@ -261,7 +260,7 @@ void PrimitiveSelection::process(
       }
     }  // end loop over selected_rpc_map
 
-    std::swap(selected_rpc_map, tmp_selected_rpc_map);  // release memory usage
+    std::swap(selected_rpc_map, tmp_selected_rpc_map);  // replace the original map
   }  // end if map_rpc_to_csc
 }
 
@@ -326,13 +325,99 @@ void PrimitiveSelection::process(
 
 
 // _____________________________________________________________________________
+// Put the hits from CSC, RPC, GEM together in one collection
+
+// Notes from Alex (2017-03-28):
+//
+//     The RPC inclusion logic is very simple currently:
+//     - each CSC is analyzed for having track stubs in each BX
+//     - IF a CSC chamber is missing at least one track stub,
+//         AND there is an RPC overlapping with it in phi and theta,
+//         AND that RPC has hits,
+//       THEN RPC hit is inserted instead of missing CSC stub.
+//
+//     This is done at the output of coord_delay module, so such
+// inserted RPC hits can be matched to patterns by match_ph_segments
+// module, just like any CSC stubs. Note that substitution of missing
+// CSC stubs with RPC hits happens regardless of what's going on in
+// other chambers, regardless of whether a pattern has been detected
+// or not, basically regardless of anything. RPCs are treated as a
+// supplemental source of stubs for CSCs.
+
 void PrimitiveSelection::merge(
     std::map<int, TriggerPrimitiveCollection>& selected_csc_map,
     std::map<int, TriggerPrimitiveCollection>& selected_rpc_map,
     std::map<int, TriggerPrimitiveCollection>& selected_gem_map,
     std::map<int, TriggerPrimitiveCollection>& selected_prim_map
 ) const {
-  //FIXME: Not yet implemented
+
+  // First, put CSC hits
+  std::map<int, TriggerPrimitiveCollection>::const_iterator map_tp_it  = selected_csc_map.begin();
+  std::map<int, TriggerPrimitiveCollection>::const_iterator map_tp_end = selected_csc_map.end();
+
+  for (; map_tp_it != map_tp_end; ++map_tp_it) {
+    int selected_csc = map_tp_it->first;
+    const TriggerPrimitiveCollection& csc_primitives = map_tp_it->second;
+    assert(csc_primitives.size() <= 4);  // at most 4 hits, including duplicated hits
+
+    // Insert all CSC hits
+    selected_prim_map[selected_csc] = csc_primitives;
+  }
+
+  // Second, insert RPC stubs if there is no CSC hits
+  map_tp_it  = selected_rpc_map.begin();
+  map_tp_end = selected_rpc_map.end();
+
+  for (; map_tp_it != map_tp_end; ++map_tp_it) {
+    int selected_rpc = map_tp_it->first;
+    const TriggerPrimitiveCollection& rpc_primitives = map_tp_it->second;
+    if (rpc_primitives.empty())  continue;
+    assert(rpc_primitives.size() <= 2);  // at most 2 hits
+
+    bool found = (selected_prim_map.find(selected_rpc) != selected_prim_map.end());
+    if (!found) {
+      // No CSC hits, insert all RPC hits
+      selected_prim_map[selected_rpc] = rpc_primitives;
+
+    } else {
+      // If only one CSC hit, insert the first RPC hit
+      TriggerPrimitiveCollection& tmp_primitives = selected_prim_map[selected_rpc];  // pass by reference
+
+      if (tmp_primitives.size() < 2) {
+        tmp_primitives.push_back(rpc_primitives.front());
+      }
+    }
+  }
+
+  // Third, insert GEM stubs if there is no CSC/RPC hits
+  map_tp_it  = selected_gem_map.begin();
+  map_tp_end = selected_gem_map.end();
+
+  for (; map_tp_it != map_tp_end; ++map_tp_it) {
+    int selected_gem = map_tp_it->first;
+    const TriggerPrimitiveCollection& gem_primitives = map_tp_it->second;
+    if (gem_primitives.empty())  continue;
+    assert(gem_primitives.size() <= 2);  // at most 2 hits
+
+    bool found = (selected_prim_map.find(selected_gem) != selected_prim_map.end());
+    if (!found) {
+      // No CSC/RPC hits, insert all GEM hits
+      selected_prim_map[selected_gem] = gem_primitives;
+
+    } else {
+      // If only one CSC/RPC hit, insert the first GEM hit
+      TriggerPrimitiveCollection& tmp_primitives = selected_prim_map[selected_gem];  // pass by reference
+
+      if (tmp_primitives.size() < 2) {
+        tmp_primitives.push_back(gem_primitives.front());
+      }
+    }
+  }
+
+  // Finally, clear the input maps to save memory
+  selected_csc_map.clear();
+  selected_rpc_map.clear();
+  selected_gem_map.clear();
 }
 
 

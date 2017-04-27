@@ -20,6 +20,7 @@ public:
       std::map<int, TriggerPrimitiveCollection>& selected_prim_map
   ) const;
 
+  // Put the hits from CSC, RPC, GEM together in one collection
   void merge(
       std::map<int, TriggerPrimitiveCollection>& selected_csc_map,
       std::map<int, TriggerPrimitiveCollection>& selected_rpc_map,
