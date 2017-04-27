@@ -138,6 +138,7 @@ void PrimitiveConversion::convert_csc(
   conv_hit.set_subsystem   ( TriggerPrimitive::kCSC );
   conv_hit.set_is_CSC      ( true );
   conv_hit.set_is_RPC      ( false );
+  conv_hit.set_is_GEM      ( false );
 
   conv_hit.set_pc_sector   ( pc_sector );
   conv_hit.set_pc_station  ( pc_station );
@@ -444,8 +445,10 @@ void PrimitiveConversion::convert_rpc(
   int tp_station   = tp_detId.station();    // 1 - 4
   int tp_ring      = tp_detId.ring();       // 2 - 3 (increasing theta)
   int tp_roll      = tp_detId.roll();       // 1 - 3 (decreasing theta; aka A - C; space between rolls is 9 - 15 in theta_fp)
+  //int tp_layer     = tp_detId.layer();
 
   int tp_bx        = tp_data.bx;
+  int tp_strip     = ((tp_data.strip_low + tp_data.strip_hi) / 2);  // in full-strip unit
 
   const bool is_neighbor = (pc_station == 5);
 
@@ -468,6 +471,7 @@ void PrimitiveConversion::convert_rpc(
   conv_hit.set_subsystem   ( TriggerPrimitive::kRPC );
   conv_hit.set_is_CSC      ( false );
   conv_hit.set_is_RPC      ( true );
+  conv_hit.set_is_GEM      ( false );
 
   conv_hit.set_pc_sector   ( pc_sector );
   conv_hit.set_pc_station  ( pc_station );
@@ -475,7 +479,7 @@ void PrimitiveConversion::convert_rpc(
   conv_hit.set_pc_segment  ( pc_segment );
 
   conv_hit.set_valid       ( true );
-  conv_hit.set_strip       ( int((tp_data.strip_low + tp_data.strip_hi) / 2) );  // in full-strip unit
+  conv_hit.set_strip       ( tp_strip );
   conv_hit.set_strip_low   ( tp_data.strip_low );
   conv_hit.set_strip_hi    ( tp_data.strip_hi );
   //conv_hit.set_wire        ( tp_data.keywire );
@@ -601,8 +605,223 @@ void PrimitiveConversion::convert_rpc_details(EMTFHit& conv_hit) const {
 
 
 // _____________________________________________________________________________
-// Aux functions
+// GEM functions
+void PrimitiveConversion::convert_gem(
+    int pc_sector, int pc_station, int pc_chamber, int pc_segment,
+    const TriggerPrimitive& muon_primitive,
+    EMTFHit& conv_hit
+) const {
+  const GEMDetId& tp_detId = muon_primitive.detId<GEMDetId>();
+  const GEMData&  tp_data  = muon_primitive.getGEMData();
 
+  int tp_region    = tp_detId.region();     // 0 for Barrel, +/-1 for +/- Endcap
+  int tp_endcap    = (tp_region == -1) ? 2 : tp_region;
+  int tp_station   = tp_detId.station();
+  int tp_ring      = tp_detId.ring();
+  int tp_roll      = tp_detId.roll();
+  //int tp_layer     = tp_detId.layer();
+  int tp_chamber   = tp_detId.chamber();
+
+  int tp_bx        = tp_data.bx;
+  int tp_strip     = ((tp_data.pad_low + tp_data.pad_hi) / 2);  // in full-strip unit
+
+  // Use CSC trigger sector definitions
+  // Code copied from DataFormats/MuonDetId/src/CSCDetId.cc
+  auto get_trigger_sector = [](int ring, int station, int chamber) {
+    int result = 0;
+    if( station > 1 && ring > 1 ) {
+      result = ((static_cast<unsigned>(chamber-3) & 0x7f) / 6) + 1; // ch 3-8->1, 9-14->2, ... 1,2 -> 6
+    }
+    else {
+      result =  (station != 1) ? ((static_cast<unsigned>(chamber-2) & 0x1f) / 3) + 1 : // ch 2-4-> 1, 5-7->2, ...
+                             ((static_cast<unsigned>(chamber-3) & 0x7f) / 6) + 1;
+    }
+    return (result <= 6) ? result : 6; // max sector is 6, some calculations give a value greater than six but this is expected.
+  };
+
+  // Use CSC trigger "CSC ID" definitions
+  // Code copied from DataFormats/MuonDetId/src/CSCDetId.cc
+  auto get_trigger_csc_ID = [](int ring, int station, int chamber) {
+    int result = 0;
+    if( station == 1 ) {
+      result = (chamber) % 3 + 1; // 1,2,3
+      switch (ring) {
+      case 1:
+        break;
+      case 2:
+        result += 3; // 4,5,6
+        break;
+      case 3:
+        result += 6; // 7,8,9
+        break;
+      }
+    }
+    else {
+      if( ring == 1 ) {
+        result = (chamber+1) % 3 + 1; // 1,2,3
+      }
+      else {
+        result = (chamber+3) % 6 + 4; // 4,5,6,7,8,9
+      }
+    }
+    return result;
+  };
+
+  int tp_sector    = get_trigger_sector(tp_ring, tp_station, tp_chamber);
+  int tp_csc_ID    = get_trigger_csc_ID(tp_ring, tp_station, tp_chamber);
+
+  // station 1 --> subsector 1 or 2
+  // station 2,3,4 --> subsector 0
+  int tp_subsector = (tp_station != 1) ? 0 : ((tp_chamber%6 > 2) ? 1 : 2);
+
+  const bool is_neighbor = (pc_station == 5);
+
+  int csc_nID      = tp_csc_ID;  // modify csc_ID if coming from neighbor sector
+  if (is_neighbor) {
+    // station 1 has 3 neighbor chambers: 13,14,15 in rings 1,2,3
+    // (where are chambers 10,11,12 in station 1? they were used to label ME1/1a, but not anymore)
+    // station 2,3,4 have 2 neighbor chambers: 10,11 in rings 1,2
+    csc_nID = (pc_chamber < 3) ? (pc_chamber + 12) : ( ((pc_chamber - 1) % 2) + 9);
+    csc_nID += 1;
+
+    if (tp_station == 1) {  // neighbor ME1
+      assert(tp_subsector == 2);
+    }
+  }
+
+  // Set properties
+  conv_hit.SetGEMDetId     ( tp_detId );
+
+  conv_hit.set_endcap      ( (tp_endcap == 2) ? -1 : tp_endcap );
+  conv_hit.set_station     ( tp_station );
+  conv_hit.set_ring        ( tp_ring );
+  conv_hit.set_roll        ( tp_roll );
+  conv_hit.set_chamber     ( tp_chamber );
+  conv_hit.set_sector      ( tp_sector );
+  conv_hit.set_subsector   ( tp_subsector );
+  conv_hit.set_csc_ID      ( tp_csc_ID );
+  conv_hit.set_csc_nID     ( csc_nID );
+  //conv_hit.set_track_num   ( tp_data.trknmb );
+  //conv_hit.set_sync_err    ( tp_data.syncErr );
+
+  conv_hit.set_bx          ( tp_bx + bxShiftGEM_ );
+  conv_hit.set_subsystem   ( TriggerPrimitive::kGEM );
+  conv_hit.set_is_CSC      ( false );
+  conv_hit.set_is_RPC      ( false );
+  conv_hit.set_is_GEM      ( true  );
+
+  conv_hit.set_pc_sector   ( pc_sector );
+  conv_hit.set_pc_station  ( pc_station );
+  conv_hit.set_pc_chamber  ( pc_chamber );
+  conv_hit.set_pc_segment  ( pc_segment );
+
+  conv_hit.set_valid       ( true );
+  conv_hit.set_strip       ( tp_strip );
+  conv_hit.set_strip_low   ( tp_data.pad_low );
+  conv_hit.set_strip_hi    ( tp_data.pad_hi );
+  //conv_hit.set_wire        ( tp_data.keywire );
+  //conv_hit.set_quality     ( tp_data.quality );
+  conv_hit.set_pattern     ( 1 );  // In firmware, this marks GEM stub (unconfirmed!)
+  //conv_hit.set_bend        ( tp_data.bend );
+
+  conv_hit.set_neighbor    ( is_neighbor );
+  conv_hit.set_sector_idx  ( (endcap_ == 1) ? sector_ - 1 : sector_ + 5 );
+
+
+  // Get coordinates from fullsim since LUTs do not exist yet
+  bool use_fullsim_coords = true;
+  if (use_fullsim_coords) {
+    const GlobalPoint& gp = tp_geom_->getGlobalPoint(muon_primitive);
+    double glob_phi   = emtf::rad_to_deg(gp.phi().value());
+    double glob_theta = emtf::rad_to_deg(gp.theta());
+    double glob_eta   = gp.eta();
+
+    int phi_loc_int   = emtf::calc_phi_loc_int(glob_phi, conv_hit.Sector());
+    int theta_int     = emtf::calc_theta_int(glob_theta, conv_hit.Endcap());
+
+    // Use the CSC precision (unconfirmed!)
+    int fph = phi_loc_int;
+    int th  = theta_int;
+    assert(0 <= fph && fph < 5000);
+    assert(0 <=  th &&  th < 128);
+    th = (th == 0) ? 1 : th;  // protect against invalid value
+
+    // _________________________________________________________________________
+    // Output
+
+    conv_hit.set_phi_sim   ( glob_phi );
+    conv_hit.set_theta_sim ( glob_theta );
+    conv_hit.set_eta_sim   ( glob_eta );
+
+    conv_hit.set_phi_fp    ( fph ); // Full-precision integer phi
+    conv_hit.set_theta_fp  ( th );  // Full-precision integer theta
+  }
+
+  convert_gem_details(conv_hit);
+}
+
+void PrimitiveConversion::convert_gem_details(EMTFHit& conv_hit) const {
+  const bool is_neighbor = conv_hit.Neighbor();
+
+  const int pc_station = conv_hit.PC_station();
+  const int pc_chamber = conv_hit.PC_chamber();
+  const int pc_segment = conv_hit.PC_segment();
+
+  //const int fw_endcap  = (endcap_-1);
+  //const int fw_sector  = (sector_-1);
+  const int fw_station = (conv_hit.Station() == 1) ? (is_neighbor ? 0 : (conv_hit.Subsector()-1)) : conv_hit.Station();
+  const int fw_cscid   = (conv_hit.CSC_nID()-1);
+
+  int fph = conv_hit.Phi_fp();
+  int th  = conv_hit.Theta_fp();
+
+  if (verbose_ > 1) {  // debug
+    std::cout << "GEM hit pc_station: " << pc_station << " pc_chamber: " << pc_chamber
+        << " fw_station: " << fw_station << " fw_cscid: " << fw_cscid
+        << " tp_station: " << conv_hit.Station() << " tp_ring: " << conv_hit.Ring()
+        << " tp_sector: " << conv_hit.Sector() << " tp_subsector: " << conv_hit.Subsector()
+        << " fph: " << fph << " th: " << th
+        << std::endl;
+  }
+
+  // ___________________________________________________________________________
+  // Zone codes and other segment IDs
+
+  int zone_hit     = ((fph + (1<<4)) >> 5);
+  int zone_code    = get_zone_code(conv_hit, th);
+  //int phzvl        = get_phzvl(conv_hit, zone_code);
+
+  int fs_zone_code = get_fs_zone_code(conv_hit);
+  int fs_segment   = get_fs_segment(conv_hit, fw_station, fw_cscid, pc_segment);
+
+  int bt_station   = get_bt_station(conv_hit, fw_station, fw_cscid, pc_segment);
+  int bt_segment   = get_bt_segment(conv_hit, fw_station, fw_cscid, pc_segment);
+
+  // ___________________________________________________________________________
+  // Output
+
+  conv_hit.set_phi_fp     ( fph );        // Full-precision integer phi
+  conv_hit.set_theta_fp   ( th );         // Full-precision integer theta
+  //conv_hit.set_phzvl      ( phzvl );      // Local zone word: (1*low) + (2*mid) + (4*low) - used in FW debugging
+  //conv_hit.set_ph_hit     ( ph_hit );     // Intermediate quantity in phi calculation - used in FW debugging
+  conv_hit.set_zone_hit   ( zone_hit );   // Phi value for building patterns (0.53333 deg precision)
+  conv_hit.set_zone_code  ( zone_code );  // Full zone word: 1*(zone 0) + 2*(zone 1) + 4*(zone 2) + 8*(zone 3)
+
+  conv_hit.set_fs_segment   ( fs_segment );    // Segment number used in primitive matching
+  conv_hit.set_fs_zone_code ( fs_zone_code );  // Zone word used in primitive matching
+
+  conv_hit.set_bt_station   ( bt_station );
+  conv_hit.set_bt_segment   ( bt_segment );
+
+  conv_hit.set_phi_loc  ( emtf::calc_phi_loc_deg(fph) );
+  conv_hit.set_phi_glob ( emtf::calc_phi_glob_deg(conv_hit.Phi_loc(), conv_hit.Sector()) );
+  conv_hit.set_theta    ( emtf::calc_theta_deg_from_int(th) );
+  conv_hit.set_eta      ( emtf::calc_eta_from_theta_deg(conv_hit.Theta(), conv_hit.Endcap()) );
+}
+
+
+// _____________________________________________________________________________
+// Aux functions
 int PrimitiveConversion::get_zone_code(const EMTFHit& conv_hit, int th) const {
   // ph zone boundaries for chambers that cover more than one zone
   // bnd1 is the lower boundary, bnd2 the upper boundary
