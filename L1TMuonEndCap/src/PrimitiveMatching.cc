@@ -29,6 +29,25 @@ void PrimitiveMatching::process(
     const zone_array<EMTFRoadCollection>& zone_roads,
     zone_array<EMTFTrackCollection>& zone_tracks
 ) const {
+
+  // Function to update fs_history encoded in fs_segment
+  auto update_fs_history = [](int fs_segment, int this_bx, int hit_bx) {
+    // 0 for current BX, 1 for previous BX, 2 for BX before that
+    int fs_history = this_bx - hit_bx;
+    fs_segment |= ((fs_history & 0x3)<<4);
+    return fs_segment;
+  };
+
+  // Function to update bt_history encoded in bt_segment
+  auto update_bt_history = [](int bt_segment, int this_bx, int hit_bx) {
+    // 0 for current BX, 1 for previous BX, 2 for BX before that
+    int bt_history = this_bx - hit_bx;
+    bt_segment |= ((bt_history & 0x3)<<5);
+    return bt_segment;
+  };
+
+
+  // Exit if no roads
   int num_roads = 0;
   for (const auto& roads : zone_roads)
     num_roads += roads.size();
@@ -80,19 +99,16 @@ void PrimitiveMatching::process(
             const int zs = (izone*NUM_STATIONS) + istation;
             zs_conv_hits.at(zs).push_back(*conv_hits_it);
 
-            // Update fs_history encoded in fs_segment
+            // Update fs_history and bt_history depending on the processor BX
             // This update only goes into the hits associated to a track, it does not affect the original hit collection
-            int fs_history = bx_ - (conv_hits_it->BX());  // 0 for current BX, 1 for previous BX, 2 for BX before that
-            int fs_segment = zs_conv_hits.at(zs).back().FS_segment();
-            fs_segment |= ((fs_history & 0x3)<<4);
-            zs_conv_hits.at(zs).back().set_fs_segment( fs_segment );
+            EMTFHit& conv_hit = zs_conv_hits.at(zs).back();   // pass by reference
+            int old_fs_segment = conv_hit.FS_segment();
+            int new_fs_segment = update_fs_history(old_fs_segment, bx_, conv_hit.BX());
+            conv_hit.set_fs_segment( new_fs_segment );
 
-            // Update bt_history encoded in bt_segment
-            // This update only goes into the hits associated to a track, it does not affect the original hit collection
-            int bt_history = fs_history;
-            int bt_segment = zs_conv_hits.at(zs).back().BT_segment();
-            bt_segment |= ((bt_history & 0x3)<<5);
-            zs_conv_hits.at(zs).back().set_bt_segment( bt_segment );
+            int old_bt_segment = conv_hit.BT_segment();
+            int new_bt_segment = update_bt_history(old_bt_segment, bx_, conv_hit.BX());
+            conv_hit.set_bt_segment( new_bt_segment );
           }
         }
       }
@@ -343,81 +359,23 @@ void PrimitiveMatching::process_single_zone_station(
 
         std::vector<hit_sort_pair_t> fw_sort_array(tot_diff, std::make_pair(invalid_ph_diff, conv_hits_end));
 
-
-        // Notes from Alex (2017-03-28):
-        //
-        //     The RPC inclusion logic is very simple currently:
-        //     - each CSC is analyzed for having track stubs in each BX
-        //     - IF a CSC chamber is missing at least one track stub,
-        //         AND there is an RPC overlapping with it in phi and theta,
-        //         AND that RPC has hits,
-        //       THEN RPC hit is inserted instead of missing CSC stub.
-        //
-        //     This is done at the output of coord_delay module, so such
-        // inserted RPC hits can be matched to patterns by match_ph_segments
-        // module, just like any CSC stubs. Note that substitution of missing
-        // CSC stubs with RPC hits happens regardless of what's going on in
-        // other chambers, regardless of whether a pattern has been detected
-        // or not, basically regardless of anything. RPCs are treated as a
-        // supplemental source of stubs for CSCs.
-
-        // First, put CSC hits
+        // FW doesn't check if the hit is CSC or RPC
         std::vector<hit_sort_pair_t>::const_iterator phdiffs_it  = tmp_phi_differences.begin();
         std::vector<hit_sort_pair_t>::const_iterator phdiffs_end = tmp_phi_differences.end();
 
         for (; phdiffs_it != phdiffs_end; ++phdiffs_it) {
-          if (phdiffs_it->second->Subsystem() == TriggerPrimitive::kCSC) {
-            //int ph_diff    = phdiffs_it->first;
-            int fs_segment = phdiffs_it->second->FS_segment();
+          //int ph_diff    = phdiffs_it->first;
+          int fs_segment = phdiffs_it->second->FS_segment();
 
-            // Calculate the index to put into the fw_sort_array
-            int fs_history = ((fs_segment>>4) & 0x3);
-            int fs_chamber = ((fs_segment>>1) & 0x7);
-            fs_segment = (fs_segment & 0x1);
-            unsigned fw_sort_array_index = (fs_history * zone_cham * seg_ch) + (fs_chamber * seg_ch) + fs_segment;
+          // Calculate the index to put into the fw_sort_array
+          int fs_history = ((fs_segment>>4) & 0x3);
+          int fs_chamber = ((fs_segment>>1) & 0x7);
+          fs_segment = (fs_segment & 0x1);
+          unsigned fw_sort_array_index = (fs_history * zone_cham * seg_ch) + (fs_chamber * seg_ch) + fs_segment;
 
-            assert(fs_history < max_drift && fs_chamber < zone_cham && fs_segment < seg_ch);
-            assert(fw_sort_array_index < fw_sort_array.size());
-            fw_sort_array.at(fw_sort_array_index) = *phdiffs_it;
-          }
-        }
-
-        // Second, slip RPC stub if CSC is invalid
-        phdiffs_it  = tmp_phi_differences.begin();
-        phdiffs_end = tmp_phi_differences.end();
-
-        for (; phdiffs_it != phdiffs_end; ++phdiffs_it) {
-          if (phdiffs_it->second->Subsystem() == TriggerPrimitive::kRPC) {
-            //int ph_diff    = phdiffs_it->first;
-            int fs_segment = phdiffs_it->second->FS_segment();
-
-            // Calculate the index to put into the fw_sort_array
-            int fs_history = ((fs_segment>>4) & 0x3);
-            int fs_chamber = ((fs_segment>>1) & 0x7);
-            fs_segment = (fs_segment & 0x1);
-            unsigned fw_sort_array_index_0 = (fs_history * zone_cham * seg_ch) + (fs_chamber * seg_ch) + 0;
-            unsigned fw_sort_array_index_1 = (fs_history * zone_cham * seg_ch) + (fs_chamber * seg_ch) + 1;
-
-            assert(fs_history < max_drift && fs_chamber < zone_cham && fs_segment < seg_ch);
-            assert(fw_sort_array_index_0 < fw_sort_array.size());
-            assert(fw_sort_array_index_1 < fw_sort_array.size());
-
-            if (fw_sort_array.at(fw_sort_array_index_0).first == invalid_ph_diff) {
-              fw_sort_array.at(fw_sort_array_index_0) = *phdiffs_it;
-
-            } else if (fw_sort_array.at(fw_sort_array_index_1).first == invalid_ph_diff) {
-              fw_sort_array.at(fw_sort_array_index_1) = *phdiffs_it;
-
-              if (fs_segment == 0) {
-                // If fs_segment = 0, update to fs_segment = 1
-                EMTFHitCollection::const_iterator conv_hit_ptr = fw_sort_array.at(fw_sort_array_index_1).second;
-                EMTFHit* conv_hit_ptr_tmp = const_cast<EMTFHit*>(&(*conv_hit_ptr));  // get the raw pointer to update the value, unsafe practice
-                conv_hit_ptr_tmp->set_fs_segment(conv_hit_ptr_tmp->FS_segment() + 1);
-                conv_hit_ptr_tmp->set_bt_segment(conv_hit_ptr_tmp->BT_segment() + 1);
-              }
-            }
-
-          }
+          assert(fs_history < max_drift && fs_chamber < zone_cham && fs_segment < seg_ch);
+          assert(fw_sort_array_index < fw_sort_array.size());
+          fw_sort_array.at(fw_sort_array_index) = *phdiffs_it;
         }
 
         // Debug

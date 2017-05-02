@@ -15,15 +15,18 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
     config_(iConfig),
     tokenCSC_(iConsumes.consumes<CSCTag::digi_collection>(iConfig.getParameter<edm::InputTag>("CSCInput"))),
     tokenRPC_(iConsumes.consumes<RPCTag::digi_collection>(iConfig.getParameter<edm::InputTag>("RPCInput"))),
+    tokenGEM_(iConsumes.consumes<GEMTag::digi_collection>(iConfig.getParameter<edm::InputTag>("GEMInput"))),
     verbose_(iConfig.getUntrackedParameter<int>("verbosity")),
     useCSC_(iConfig.getParameter<bool>("CSCEnable")),
-    useRPC_(iConfig.getParameter<bool>("RPCEnable"))
+    useRPC_(iConfig.getParameter<bool>("RPCEnable")),
+    useGEM_(iConfig.getParameter<bool>("GEMEnable"))
 {
   auto minBX       = iConfig.getParameter<int>("MinBX");
   auto maxBX       = iConfig.getParameter<int>("MaxBX");
   auto bxWindow    = iConfig.getParameter<int>("BXWindow");
   auto bxShiftCSC  = iConfig.getParameter<int>("CSCInputBXShift");
   auto bxShiftRPC  = iConfig.getParameter<int>("RPCInputBXShift");
+  auto bxShiftGEM  = iConfig.getParameter<int>("GEMInputBXShift");
   //auto version     = iConfig.getParameter<int>("Version");        // not yet used
   //auto ptlut_ver   = iConfig.getParameter<int>("PtLUTVersion");   // not yet used
 
@@ -82,7 +85,7 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
             &sector_processor_lut_,
             &pt_assign_engine_,
             verbose_, endcap, sector,
-            minBX, maxBX, bxWindow, bxShiftCSC, bxShiftRPC,
+            minBX, maxBX, bxWindow, bxShiftCSC, bxShiftRPC, bxShiftGEM,
             zoneBoundaries, zoneOverlap, zoneOverlapRPC,
             includeNeighbor, duplicateTheta, fixZonePhi, useNewZones, fixME11Edges,
             pattDefinitions, symPattDefinitions, useSymPatterns,
@@ -120,6 +123,7 @@ void TrackFinder::process(
 
   // ___________________________________________________________________________
   // Extract all trigger primitives
+
   TriggerPrimitiveCollection muon_primitives;
 
   EMTFSubsystemCollector collector;
@@ -127,6 +131,8 @@ void TrackFinder::process(
     collector.extractPrimitives(CSCTag(), iEvent, tokenCSC_, muon_primitives);
   if (useRPC_)
     collector.extractPrimitives(RPCTag(), iEvent, tokenRPC_, muon_primitives);
+  if (useGEM_)
+    collector.extractPrimitives(GEMTag(), iEvent, tokenGEM_, muon_primitives);
 
   // Check trigger primitives
   if (verbose_ > 2) {  // debug
@@ -152,6 +158,11 @@ void TrackFinder::process(
       );
     }
   }
+
+
+  // ___________________________________________________________________________
+  // Check emulator input and output. They are printed in a way that is friendly
+  // for comparison with the firmware simulator.
 
   if (verbose_ > 0) {  // debug
 

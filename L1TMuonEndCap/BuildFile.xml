@@ -6,15 +6,12 @@
 
 <use name="FWCore/Framework"/>
 <use name="FWCore/ParameterSet"/>
-<use name="DataFormats/CSCDigi"/>
-<use name="DataFormats/RPCDigi"/>
-<use name="DataFormats/DTDigi"/>
-<use name="DataFormats/L1DTTrackFinder"/>
-<use name="DataFormats/L1TMuon"/>
 
+<use name="DataFormats/L1TMuon"/>
 <use name="Geometry/DTGeometry"/>
 <use name="Geometry/RPCGeometry"/>
 <use name="Geometry/CSCGeometry"/>
+<use name="Geometry/GEMGeometry"/>
 <use name="L1Trigger/DTUtilities"/>
 <use name="L1Trigger/CSCCommonTrigger"/>
 <use name="MagneticField/Engine"/>

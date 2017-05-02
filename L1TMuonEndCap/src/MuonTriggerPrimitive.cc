@@ -5,16 +5,18 @@
 #include "DataFormats/L1DTTrackFinder/interface/L1MuDTChambPhDigi.h"
 #include "DataFormats/L1DTTrackFinder/interface/L1MuDTChambThDigi.h"
 #include "DataFormats/RPCDigi/interface/RPCDigiL1Link.h"
+#include "DataFormats/GEMDigi/interface/GEMPadDigi.h"
 
 // detector ID types
 #include "DataFormats/MuonDetId/interface/DTChamberId.h"
 #include "DataFormats/MuonDetId/interface/CSCDetId.h"
 #include "DataFormats/MuonDetId/interface/RPCDetId.h"
+#include "DataFormats/MuonDetId/interface/GEMDetId.h"
 
 using namespace L1TMuonEndCap;
 
 namespace {
-  const char subsystem_names[][4] = {"DT","CSC","RPC"};
+  const char subsystem_names[][4] = {"DT","CSC","RPC","GEM"};
 }
 
 //constructors from DT data
@@ -129,10 +131,23 @@ TriggerPrimitive::TriggerPrimitive(const RPCDetId& detid,
   _rpc.bx = bx;
 }
 
+// constructor from GEM data
+TriggerPrimitive::TriggerPrimitive(const GEMDetId& detid,
+                                   const GEMPadDigi& digi):
+  _id(detid),
+  _subsystem(TriggerPrimitive::kGEM) {
+  calculateGEMGlobalSector(detid,_globalsector,_subsector);
+  _gem.pad = digi.pad();
+  _gem.pad_low = digi.pad();
+  _gem.pad_hi = digi.pad();
+  _gem.bx = digi.bx();
+}
+
 TriggerPrimitive::TriggerPrimitive(const TriggerPrimitive& tp):
   _dt(tp._dt),
   _csc(tp._csc),
   _rpc(tp._rpc),
+  _gem(tp._gem),
   _id(tp._id),
   _subsystem(tp._subsystem),
   _globalsector(tp._globalsector),
@@ -147,6 +162,7 @@ TriggerPrimitive& TriggerPrimitive::operator=(const TriggerPrimitive& tp) {
   this->_dt = tp._dt;
   this->_csc = tp._csc;
   this->_rpc = tp._rpc;
+  this->_gem = tp._gem;
   this->_id = tp._id;
   this->_subsystem = tp._subsystem;
   this->_globalsector = tp._globalsector;
@@ -189,6 +205,10 @@ bool TriggerPrimitive::operator==(const TriggerPrimitive& tp) const {
            this->_rpc.strip_hi == tp._rpc.strip_hi &&
            this->_rpc.layer == tp._rpc.layer &&
            this->_rpc.bx == tp._rpc.bx &&
+           this->_gem.pad == tp._gem.pad &&
+           this->_gem.pad_low == tp._gem.pad_low &&
+           this->_gem.pad_hi == tp._gem.pad_hi &&
+           this->_gem.bx == tp._gem.bx &&
            this->_id == tp._id &&
            this->_subsystem == tp._subsystem &&
            this->_globalsector == tp._globalsector &&
@@ -203,6 +223,8 @@ const int TriggerPrimitive::getBX() const {
     return _csc.bx;
   case kRPC:
     return _rpc.bx;
+  case kGEM:
+    return _gem.bx;
   default:
     throw cms::Exception("Invalid Subsytem")
       << "The specified subsystem for this track stub is out of range"
@@ -219,6 +241,8 @@ const int TriggerPrimitive::getStrip() const {
     return _csc.strip;
   case kRPC:
     return _rpc.strip;
+  case kGEM:
+    return _gem.pad;
   default:
     throw cms::Exception("Invalid Subsytem")
       << "The specified subsystem for this track stub is out of range"
@@ -234,6 +258,8 @@ const int TriggerPrimitive::getWire() const {
   case kCSC:
     return _csc.keywire;
   case kRPC:
+    return -1;
+  case kGEM:
     return -1;
   default:
     throw cms::Exception("Invalid Subsytem")
@@ -251,20 +277,7 @@ const int TriggerPrimitive::getPattern() const {
     return _csc.pattern;
   case kRPC:
     return -1;
-  default:
-    throw cms::Exception("Invalid Subsytem")
-      << "The specified subsystem for this track stub is out of range"
-      << std::endl;
-  }
-  return -1;
-}
-const int TriggerPrimitive::Id() const {
-  switch(_subsystem) {
-  case kDT:
-    return -1;
-  case kCSC:
-    return _csc.cscID;
-  case kRPC:
+  case kGEM:
     return -1;
   default:
     throw cms::Exception("Invalid Subsytem")
@@ -289,6 +302,13 @@ void TriggerPrimitive::calculateCSCGlobalSector(const CSCDetId& chid,
 }
 
 void TriggerPrimitive::calculateRPCGlobalSector(const RPCDetId& chid,
+                                                unsigned& global_sector,
+                                                unsigned& subsector ) {
+  global_sector = 0;
+  subsector = 0;
+}
+
+void TriggerPrimitive::calculateGEMGlobalSector(const GEMDetId& chid,
                                                 unsigned& global_sector,
                                                 unsigned& subsector ) {
   global_sector = 0;
@@ -336,6 +356,13 @@ void TriggerPrimitive::print(std::ostream& out) const {
     out << "Strip Low     : " << _rpc.strip_low << std::endl;
     out << "Strip High    : " << _rpc.strip_hi << std::endl;
     out << "Layer         : " << _rpc.layer << std::endl;
+    break;
+  case kGEM:
+    out << detId<GEMDetId>() << std::endl;
+    out << "Local BX      : " << _gem.bx << std::endl;
+    out << "Pad           : " << _gem.pad << std::endl;
+    out << "Pad Low       : " << _gem.pad_low << std::endl;
+    out << "Pad High      : " << _gem.pad_hi << std::endl;
     break;
   default:
     throw cms::Exception("Invalid Subsytem")

@@ -330,6 +330,10 @@ void AngleCalculation::calculate_angles(EMTFTrack& track) const {
     if (subsystem == TriggerPrimitive::kRPC)
       return (station == 2);
 
+    // GEMs are in front of the CSCs
+    if (subsystem == TriggerPrimitive::kGEM)
+      return true;
+
     bool result = false;
     bool isOverlapping = !(station == 1 && ring == 3);
     // not overlapping means back

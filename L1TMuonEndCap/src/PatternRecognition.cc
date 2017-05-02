@@ -177,6 +177,7 @@ void PatternRecognition::process(
     std::map<pattern_ref_t, int>& patt_lifetime_map,
     zone_array<EMTFRoadCollection>& zone_roads
 ) const {
+  // Exit if no hits
   int num_conv_hits = 0;
   for (const auto& conv_hits : extended_conv_hits)
     num_conv_hits += conv_hits.size();
@@ -212,7 +213,19 @@ void PatternRecognition::process(
         }
       }
     }
-  }
+
+    for (const auto& conv_hits : extended_conv_hits) {
+      for (const auto& conv_hit : conv_hits) {
+        if (conv_hit.Subsystem() == TriggerPrimitive::kGEM) {
+          std::cout << "GEM hit st: " << conv_hit.PC_station() << " ch: " << conv_hit.PC_chamber()
+              << " ph: " << conv_hit.Phi_fp() << " th: " << conv_hit.Theta_fp()
+              << " strip: " << conv_hit.Strip() << " roll: " << conv_hit.Roll() << " cpat: " << conv_hit.Pattern()
+              << " bx: " << conv_hit.BX()
+              << std::endl;
+        }
+      }
+    }
+  }  // end debug
 
   // Perform pattern recognition in each zone
   zone_array<PhiMemoryImage> zone_images;
@@ -275,7 +288,10 @@ bool PatternRecognition::is_zone_empty(
 
     for (; conv_hits_it != conv_hits_end; ++conv_hits_it) {
       if (conv_hits_it->Subsystem() == TriggerPrimitive::kRPC)
-        continue;  // Don't use RPCs for pattern formation
+        continue;  // Don't use RPC hits for pattern formation
+
+      if (conv_hits_it->Subsystem() == TriggerPrimitive::kGEM)
+        continue;  // Don't use GEM hits for pattern formation
 
       if (conv_hits_it->Zone_code() & (1 << izone)) {  // hit belongs to this zone
         num_conv_hits += 1;
@@ -311,7 +327,10 @@ void PatternRecognition::make_zone_image(
 
     for (; conv_hits_it != conv_hits_end; ++conv_hits_it) {
       if (conv_hits_it->Subsystem() == TriggerPrimitive::kRPC)
-        continue;  // Don't use RPCs for pattern formation
+        continue;  // Don't use RPC hits for pattern formation
+
+      if (conv_hits_it->Subsystem() == TriggerPrimitive::kGEM)
+        continue;  // Don't use GEM hits for pattern formation
 
       if (conv_hits_it->Zone_code() & (1 << izone)) {  // hit belongs to this zone
         unsigned int layer = conv_hits_it->Station() - 1;

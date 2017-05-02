@@ -13,11 +13,12 @@ simEmtfDigisMC = cms.EDProducer("L1TMuonEndCapTrackProducer",
     # Input collections
     CSCInput = cms.InputTag('simCscTriggerPrimitiveDigis','MPCSORTED'),
     RPCInput = cms.InputTag('simMuonRPCDigis'),
-    #GEMInput = cms.InputTag('simMuonGEMPadDigis'),
+    GEMInput = cms.InputTag('simMuonGEMPadDigis'),
 
-    # Run with CSC, RPC
+    # Run with CSC, RPC, GEM
     CSCEnable = cms.bool(True),
     RPCEnable = cms.bool(True),
+    GEMEnable = cms.bool(False),
 
     # BX
     MinBX    = cms.int32(-3),
@@ -27,6 +28,7 @@ simEmtfDigisMC = cms.EDProducer("L1TMuonEndCapTrackProducer",
     # CSC LCT BX offset correction
     CSCInputBXShift = cms.int32(-6),
     RPCInputBXShift = cms.int32(0),
+    GEMInputBXShift = cms.int32(0),
 
     # Versioning
     Version      = cms.int32(1),
@@ -104,6 +106,7 @@ simEmtfDigisMC = cms.EDProducer("L1TMuonEndCapTrackProducer",
 simEmtfDigisData = simEmtfDigisMC.clone(
     CSCInput = cms.InputTag('emtfStage2Digis'),
     RPCInput = cms.InputTag('muonRPCDigis'),
+    GEMInput = cms.InputTag('muonGEMPadDigis'),
 )
 
 simEmtfDigis = simEmtfDigisMC.clone()

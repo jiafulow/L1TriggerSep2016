@@ -25,6 +25,7 @@ namespace edm {
   class EventSetup;
 }
 
+class GEMGeometry;
 class RPCGeometry;
 class CSCGeometry;
 class CSCLayer;
@@ -47,6 +48,7 @@ namespace L1TMuonEndCap {
 
     void checkAndUpdateGeometry(const edm::EventSetup&);
 
+    const GEMGeometry& getGEMGeometry() const { return *_geogem; }
     const RPCGeometry& getRPCGeometry() const { return *_georpc; }
     const CSCGeometry& getCSCGeometry() const { return *_geocsc; }
     const DTGeometry&  getDTGeometry()  const { return *_geodt;  }
@@ -56,12 +58,18 @@ namespace L1TMuonEndCap {
   private:
     // pointers to the current geometry records
     unsigned long long _geom_cache_id;
+    edm::ESHandle<GEMGeometry> _geogem;
     edm::ESHandle<RPCGeometry> _georpc;
     edm::ESHandle<CSCGeometry> _geocsc;
     edm::ESHandle<DTGeometry>  _geodt;
 
     unsigned long long _magfield_cache_id;
     edm::ESHandle<MagneticField> _magfield;
+
+    GlobalPoint getGEMSpecificPoint(const TriggerPrimitive&) const;
+    double calcGEMSpecificEta(const TriggerPrimitive&) const;
+    double calcGEMSpecificPhi(const TriggerPrimitive&) const;
+    double calcGEMSpecificBend(const TriggerPrimitive&) const;
 
     GlobalPoint getRPCSpecificPoint(const TriggerPrimitive&) const;
     double calcRPCSpecificEta(const TriggerPrimitive&) const;

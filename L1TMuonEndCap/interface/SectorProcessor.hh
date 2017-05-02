@@ -39,7 +39,7 @@ public:
       const SectorProcessorLUT* lut,
       const PtAssignmentEngine* pt_assign_engine,
       int verbose, int endcap, int sector,
-      int minBX, int maxBX, int bxWindow, int bxShiftCSC, int bxShiftRPC,
+      int minBX, int maxBX, int bxWindow, int bxShiftCSC, int bxShiftRPC, int bxShiftGEM,
       const std::vector<int>& zoneBoundaries, int zoneOverlap, int zoneOverlapRPC,
       bool includeNeighbor, bool duplicateTheta, bool fixZonePhi, bool useNewZones, bool fixME11Edges,
       const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions, bool useSymPatterns,
@@ -81,7 +81,7 @@ private:
 
   int verbose_, endcap_, sector_;
 
-  int minBX_, maxBX_, bxWindow_, bxShiftCSC_, bxShiftRPC_;
+  int minBX_, maxBX_, bxWindow_, bxShiftCSC_, bxShiftRPC_, bxShiftGEM_;
 
   // For primitive conversion
   std::vector<int> zoneBoundaries_;

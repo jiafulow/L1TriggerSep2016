@@ -20,7 +20,7 @@ void SectorProcessor::configure(
     const SectorProcessorLUT* lut,
     const PtAssignmentEngine* pt_assign_engine,
     int verbose, int endcap, int sector,
-    int minBX, int maxBX, int bxWindow, int bxShiftCSC, int bxShiftRPC,
+    int minBX, int maxBX, int bxWindow, int bxShiftCSC, int bxShiftRPC, int bxShiftGEM,
     const std::vector<int>& zoneBoundaries, int zoneOverlap, int zoneOverlapRPC,
     bool includeNeighbor, bool duplicateTheta, bool fixZonePhi, bool useNewZones, bool fixME11Edges,
     const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions, bool useSymPatterns,
@@ -50,6 +50,7 @@ void SectorProcessor::configure(
   bxWindow_    = bxWindow;
   bxShiftCSC_  = bxShiftCSC;
   bxShiftRPC_  = bxShiftRPC;
+  bxShiftGEM_  = bxShiftGEM;
 
   zoneBoundaries_     = zoneBoundaries;
   zoneOverlap_        = zoneOverlap;
@@ -98,6 +99,9 @@ void SectorProcessor::process(
   // Map of pattern detector --> lifetime, tracked across BXs
   std::map<pattern_ref_t, int> patt_lifetime_map;
 
+  // ___________________________________________________________________________
+  // Run each sector processor for every BX, taking into account the BX window
+
   int delayBX = bxWindow_ - 1;
 
   for (int bx = minBX_; bx <= maxBX_ + delayBX; ++bx) {
@@ -143,7 +147,7 @@ void SectorProcessor::process_single_bx(
   PrimitiveSelection prim_sel;
   prim_sel.configure(
       verbose_, endcap_, sector_, bx,
-      bxShiftCSC_, bxShiftRPC_,
+      bxShiftCSC_, bxShiftRPC_, bxShiftGEM_,
       includeNeighbor_, duplicateTheta_,
       bugME11Dupes_
   );
@@ -152,7 +156,7 @@ void SectorProcessor::process_single_bx(
   prim_conv.configure(
       tp_geom_, lut_,
       verbose_, endcap_, sector_, bx,
-      bxShiftCSC_, bxShiftRPC_,
+      bxShiftCSC_, bxShiftRPC_, bxShiftGEM_,
       zoneBoundaries_, zoneOverlap_, zoneOverlapRPC_,
       duplicateTheta_, fixZonePhi_, useNewZones_, fixME11Edges_,
       bugME11Dupes_
@@ -200,29 +204,33 @@ void SectorProcessor::process_single_bx(
 
   std::map<int, TriggerPrimitiveCollection> selected_csc_map;
   std::map<int, TriggerPrimitiveCollection> selected_rpc_map;
+  std::map<int, TriggerPrimitiveCollection> selected_gem_map;
+  std::map<int, TriggerPrimitiveCollection> selected_prim_map;
 
-  EMTFHitCollection conv_hits;
+  EMTFHitCollection conv_hits;  // "converted" hits converted by primitive converter
 
   zone_array<EMTFRoadCollection> zone_roads;  // each zone has its road collection
 
   zone_array<EMTFTrackCollection> zone_tracks;  // each zone has its track collection
 
-  EMTFTrackCollection best_tracks;
+  EMTFTrackCollection best_tracks;  // "best" tracks selected from all the zones
 
   // ___________________________________________________________________________
   // Process
 
   // Select muon primitives that belong to this sector and this BX.
   // Put them into maps with an index that roughly corresponds to
-  // each input link. From src/PrimitiveSelection.cc.
+  // each input link.
+  // From src/PrimitiveSelection.cc
   prim_sel.process(CSCTag(), muon_primitives, selected_csc_map);
   prim_sel.process(RPCTag(), muon_primitives, selected_rpc_map);
+  prim_sel.process(GEMTag(), muon_primitives, selected_gem_map);
+  prim_sel.merge(selected_csc_map, selected_rpc_map, selected_gem_map, selected_prim_map);
 
-  // Convert trigger primitives into "converted hits"
+  // Convert trigger primitives into "converted" hits
   // A converted hit consists of integer representations of phi, theta, and zones
   // From src/PrimitiveConversion.cc
-  prim_conv.process(CSCTag(), selected_csc_map, conv_hits);
-  prim_conv.process(RPCTag(), selected_rpc_map, conv_hits);
+  prim_conv.process(selected_prim_map, conv_hits);
   extended_conv_hits.push_back(conv_hits);
 
   // Detect patterns in all zones, find 3 best roads in each zone
@@ -238,11 +246,11 @@ void SectorProcessor::process_single_bx(
   angle_calc.process(zone_tracks);
   extended_best_track_cands.insert(extended_best_track_cands.begin(), zone_tracks.begin(), zone_tracks.end());  // push_front
 
-  // Identify 3 best tracks
+  // Select 3 "best" tracks from all the zones
   // From src/BestTrackSelection.cc
   btrack_sel.process(extended_best_track_cands, best_tracks);
 
-  // Construct pT address, assign pT
+  // Construct pT address, assign pT, calculate other GMT quantities
   // From src/PtAssignment.cc
   pt_assign.process(best_tracks);
 
