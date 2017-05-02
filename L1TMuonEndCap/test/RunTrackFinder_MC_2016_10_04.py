@@ -204,7 +204,7 @@ outCommands = cms.untracked.vstring(
 process.treeOut = cms.OutputModule("PoolOutputModule", 
                                    # fileName = cms.untracked.string("EMTF_MC_Tree_RelValNuGun_UP15_1k.root"),
                                    # fileName = cms.untracked.string("EMTF_MC_Tree_tau_to_3_mu_RPC_debug.root"),
-                                   fileName = cms.untracked.string("EMTF_MC_Tree_SingleMu_noRPC_10k.root"),
+                                   fileName = cms.untracked.string("EMTF_MC_Tree_SingleMu_noRPC_SingleHit_test.root"),
                                    outputCommands = outCommands
                                    )
 

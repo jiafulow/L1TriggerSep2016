@@ -39,7 +39,7 @@ import FWCore.PythonUtilities.LumiList as LumiList
 
 ## Message Logger and Event range
 process.MessageLogger.cerr.FwkReport.reportEvery = cms.untracked.int32(1000)
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(100000) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )  ## ~10k / 1 minute per file
 process.options = cms.untracked.PSet(wantSummary = cms.untracked.bool(False))
 
 process.options = cms.untracked.PSet(
@@ -76,7 +76,9 @@ process.source = cms.Source(
 eos_cmd = '/afs/cern.ch/project/eos/installation/pro/bin/eos.select'
 
 ## 2017 Cosmics, with RPC!
-in_dir_name = '/store/express/Commissioning2017/ExpressCosmics/FEVT/Express-v1/000/291/622/00000/'
+# in_dir_name = '/store/express/Commissioning2017/ExpressCosmics/FEVT/Express-v1/000/291/781/00000/'
+# in_dir_name = '/store/express/Commissioning2017/ExpressCosmics/FEVT/Express-v1/000/291/891/00000/'
+in_dir_name = '/store/express/Commissioning2017/ExpressCosmics/FEVT/Express-v1/000/292/080/00000/'
 
 # ## ZeroBias, IsolatedBunch data
 # in_dir_name = '/store/data/Run2016H/ZeroBiasIsolatedBunch0/RAW/v1/000/282/650/00000/'
@@ -89,10 +91,13 @@ in_dir_name = '/store/express/Commissioning2017/ExpressCosmics/FEVT/Express-v1/0
 #in_dir_name = in_dir_name+'crab_200-pt-muon-skim_from-zmumu-skim-cmssw-8013__SingleMuon_ZMu-2016C_v2/160710_225057/0001/'
 #in_dir_name = in_dir_name+'crab_200-pt-muon-skim_from-zmumu-skim-cmssw-8013__SingleMuon_ZMu-2016D_v2/160710_225023/0000/'
 
+nFiles = 0
 for in_file_name in subprocess.check_output([eos_cmd, 'ls', in_dir_name]).splitlines():
     if not ('.root' in in_file_name): continue
     #if ( int(in_file_name.split('RECO_')[1].split('.roo')[0]) < 755 ): continue
-    readFiles.extend( cms.untracked.vstring(in_dir_name+in_file_name) )
+    nFiles += 1
+    if (nFiles % 4 != 0): continue ## Only process every 4th file
+    readFiles.extend( cms.untracked.vstring(in_dir_name+in_file_name) )    
 
 # readFiles.extend([
 #         #'file:/afs/cern.ch/work/a/abrinke1/public/EMTF/Run2016G/RAW/279024/52622B4D-B265-E611-8099-FA163E326094.root'
@@ -107,44 +112,10 @@ process.content = cms.EDAnalyzer("EventContentAnalyzer")
 process.dumpED = cms.EDAnalyzer("EventContentAnalyzer")
 process.dumpES = cms.EDAnalyzer("PrintEventSetupContent")
 
-# ## EMTF Emulator
 process.load('EventFilter.L1TRawToDigi.emtfStage2Digis_cfi')
-process.load('L1Trigger.L1TMuonEndCap.simEmtfDigis_cfi')
-
-process.simEmtfDigis.MinBX = cms.int32(-3)
-process.simEmtfDigis.MaxBX = cms.int32(+3)
-
-process.simEmtfDigis.spPCParams16.FixZonePhi     = cms.bool(True)
-process.simEmtfDigis.spPCParams16.UseNewZones    = cms.bool(False)
-process.simEmtfDigis.spPCParams16.ZoneBoundaries = cms.vint32(0,41,49,87,127)
-#process.simEmtfDigis.spPCParams16.ZoneBoundaries = cms.vint32(0,36,54,96,127)
-
-process.simEmtfDigis.spPRParams16.UseSymmetricalPatterns = cms.bool(True)
-
-process.simEmtfDigis.spGCParams16.UseSecondEarliest = cms.bool(True)
-
-process.simEmtfDigis.spPAParams16.FixMode15HighPt = cms.bool(True)
-process.simEmtfDigis.spPAParams16.Bug9BitDPhi     = cms.bool(False)
-process.simEmtfDigis.spPAParams16.BugMode7CLCT    = cms.bool(True)
-process.simEmtfDigis.spPAParams16.BugNegPt        = cms.bool(True)
-
-process.simEmtfDigis.CSCInput        = cms.InputTag('emtfStage2Digis')
-process.simEmtfDigis.RPCInput        = cms.InputTag('muonRPCDigis')
-process.simEmtfDigis.CSCEnable       = cms.bool(True)
-process.simEmtfDigis.RPCEnable       = cms.bool(False)
-process.simEmtfDigis.CSCInputBXShift = cms.int32(-6)
-process.simEmtfDigis.RPCInputBXShift = cms.int32(0)
-process.simEmtfDigis.verbosity       = cms.untracked.int32(0)
-
 
 process.L1TMuonSeq = cms.Sequence(
-    process.muonCSCDigis + ## Unpacked CSC LCTs from TMB
-    process.csctfDigis + ## Necessary for legacy studies, or if you use csctfDigis as input
-    process.muonRPCDigis +
-    ## process.esProd + ## What do we loose by not having this? - AWB 18.04.16
-    process.emtfStage2Digis +
-    process.simEmtfDigis
-    ## process.ntuple
+    process.emtfStage2Digis
     )
 
 process.L1TMuonPath = cms.Path(
@@ -168,11 +139,13 @@ outCommands = cms.untracked.vstring(
 
     )
 
+out_dir = "/afs/cern.ch/work/a/abrinke1/public/EMTF/Commissioning/2017/"
 
 process.out = cms.OutputModule("PoolOutputModule", 
                                # fileName = cms.untracked.string("EMTF_Tree_highPt200MuonSkim_2016D_debug.root"),
                                # fileName = cms.untracked.string("EMTF_Tree_ZeroBias_IsoBunch_282650_SingleHit_test.root"),
-                               fileName = cms.untracked.string("EMTF_Tree_Cosmics_291622_RPC_test.root"),
+                               # fileName = cms.untracked.string(out_dir+"EMTF_Unpacked_Cosmics_291891_RPC_all_files.root"),
+                               fileName = cms.untracked.string(out_dir+"EMTF_Unpacked_Cosmics_292080_RPC_every_4th_file.root"),
                                outputCommands = outCommands
                                )
 
