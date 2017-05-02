@@ -193,6 +193,13 @@ void SectorProcessor::process_single_bx(
       bugSameSectorPt0_
   );
 
+  SingleHitTrack single_hit;
+  single_hit.configure(
+      verbose_, endcap_, sector_, bx,
+      maxTracks_,
+      true 
+  );
+
   PtAssignment pt_assign;
   pt_assign.configure(
       pt_assign_engine_,
@@ -249,6 +256,10 @@ void SectorProcessor::process_single_bx(
   // Select 3 "best" tracks from all the zones
   // From src/BestTrackSelection.cc
   btrack_sel.process(extended_best_track_cands, best_tracks);
+
+  // Insert single LCTs from station 1 as tracks
+  // From src/SingleHitTracks.cc
+  single_hit.process(conv_hits, best_tracks);
 
   // Construct pT address, assign pT, calculate other GMT quantities
   // From src/PtAssignment.cc

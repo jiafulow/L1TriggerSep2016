@@ -21,6 +21,7 @@
 #include "L1Trigger/L1TMuonEndCap/interface/AngleCalculation.hh"
 #include "L1Trigger/L1TMuonEndCap/interface/BestTrackSelection.hh"
 #include "L1Trigger/L1TMuonEndCap/interface/PtAssignment.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/SingleHitTrack.hh"
 
 
 class SectorProcessor {
