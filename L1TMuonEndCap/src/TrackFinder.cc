@@ -49,6 +49,8 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
   const auto& spTBParams16 = config_.getParameter<edm::ParameterSet>("spTBParams16");
   auto thetaWindow        = spTBParams16.getParameter<int>("ThetaWindow");
   auto thetaWindowRPC     = spTBParams16.getParameter<int>("ThetaWindowRPC");
+  auto useSingleHits      = spTBParams16.getParameter<bool>("UseSingleHits");
+  auto bugSt2PhDiff       = spTBParams16.getParameter<bool>("BugSt2PhDiff");
   auto bugME11Dupes       = spTBParams16.getParameter<bool>("BugME11Dupes");
 
   const auto& spGCParams16 = config_.getParameter<edm::ParameterSet>("spGCParams16");
@@ -89,7 +91,7 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
             zoneBoundaries, zoneOverlap, zoneOverlapRPC,
             includeNeighbor, duplicateTheta, fixZonePhi, useNewZones, fixME11Edges,
             pattDefinitions, symPattDefinitions, useSymPatterns,
-            thetaWindow, thetaWindowRPC, bugME11Dupes,
+            thetaWindow, thetaWindowRPC, useSingleHits, bugSt2PhDiff, bugME11Dupes,
             maxRoadsPerZone, maxTracks, useSecondEarliest, bugSameSectorPt0,
             readPtLUTFile, fixMode15HighPt, bug9BitDPhi, bugMode7CLCT, bugNegPt, bugGMTPhi
         );

@@ -12,7 +12,7 @@ namespace {
 void PrimitiveMatching::configure(
     int verbose, int endcap, int sector, int bx,
     bool fixZonePhi, bool useNewZones,
-    bool bugME11Dupes
+    bool bugSt2PhDiff, bool bugME11Dupes
 ) {
   verbose_ = verbose;
   endcap_  = endcap;
@@ -21,6 +21,7 @@ void PrimitiveMatching::configure(
 
   fixZonePhi_      = fixZonePhi;
   useNewZones_     = useNewZones;
+  bugSt2PhDiff_    = bugSt2PhDiff;
   bugME11Dupes_    = bugME11Dupes;
 }
 
@@ -250,9 +251,10 @@ void PrimitiveMatching::process_single_zone_station(
       //bw_ph_diff = 9;
       //invalid_ph_diff = 0x1ff;
     } else if (station == 2) {
-      //max_ph_diff = 16;   // just rounding error for ME2 (pattern must match ME2 hit phi if there was one)
-      //max_ph_diff = 32;   // allow neighbor phi bit
-      max_ph_diff = 240;  // same as ME3,4
+      if (bugSt2PhDiff_)
+        max_ph_diff = 16;   // just rounding error for ME2 (pattern must match ME2 hit phi if there was one)
+      else
+        max_ph_diff = 240;  // same as ME3,4
       //bw_ph_diff = 5;
       //invalid_ph_diff = 0x1f;
     } else {

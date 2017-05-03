@@ -79,6 +79,8 @@ simEmtfDigisMC = cms.EDProducer("L1TMuonEndCapTrackProducer",
     spTBParams16 = cms.PSet(
         ThetaWindow    = cms.int32(8),
         ThetaWindowRPC = cms.int32(8),
+        UseSingleHits  = cms.bool(False),
+        BugSt2PhDiff   = cms.bool(False),
         BugME11Dupes   = cms.bool(False),
     ),
 
