@@ -29,8 +29,6 @@ public:
   explicit SectorProcessor();
   ~SectorProcessor();
 
-  void resetPtAssignment(const PtAssignmentEngine* new_pt_assign_engine);
-
   typedef unsigned long long EventNumber_t;
   typedef PatternRecognition::pattern_ref_t pattern_ref_t;
 
@@ -48,6 +46,8 @@ public:
       int maxRoadsPerZone, int maxTracks, bool useSecondEarliest, bool bugSameSectorPt0,
       bool readPtLUTFile, bool fixMode15HighPt, bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt, bool bugGMTPhi
   );
+
+  void configure_by_fw_version(unsigned fw_version);
 
   void process(
       // Input

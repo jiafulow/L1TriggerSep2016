@@ -9,11 +9,6 @@ SectorProcessor::~SectorProcessor() {
 
 }
 
-void SectorProcessor::resetPtAssignment(const PtAssignmentEngine* new_pt_assign_engine){
-  pt_assign_engine_ = new_pt_assign_engine;
-  readPtLUTFile_ = false;
-}
-
 void SectorProcessor::configure(
     const GeometryTranslator* tp_geom,
     const ConditionHelper* cond,
@@ -82,6 +77,110 @@ void SectorProcessor::configure(
   bugMode7CLCT_       = bugMode7CLCT;
   bugNegPt_           = bugNegPt;
   bugGMTPhi_          = bugGMTPhi;
+}
+
+// Refer to docs/EMTF_FW_LUT_versions_2016_draft2.xlsx
+void SectorProcessor::configure_by_fw_version(unsigned fw_version) {
+  if (fw_version == 0)
+    return;
+
+  // ___________________________________________________________________________
+  // Versions
+
+  // 1st_LCT_BX (E)(U)
+  // FW: Earliest LCT used to assign BX, tracks only cancel within same BX
+  useSecondEarliest_  = (fw_version < 46773) ? false : true;
+
+  // 8_BX_readout (E)
+  // SW: DAQ readout from -3 BX to +4 BX
+  minBX_              = (fw_version < 47109) ? -3 : -3;
+  maxBX_              = (fw_version < 47109) ? +4 : +3;
+
+  // Asymm_patterns (E)
+  // FW: 9 asymmetric patterns for track building
+  useSymPatterns_     = (fw_version < 47214) ? false : true;
+
+  // HiPt_outlier (E)
+  // LUT: High-pT fix puts outlier LCTs in mode 15 tracks back in a straight line
+  fixMode15HighPt_    = (fw_version < 46650) ? false : true;
+
+  // 2nd_LCT_BX (E)(U)
+  // FW: Second-earliest LCT used to assign BX, tracks cancel over 3 BX, improved LCT recovery
+  // - see 1st_LCT_BX (E)(U)
+
+  // 7_BX_readout (E)
+  // SW: DAQ readout from -3 BX to +3 BX
+  // - see 8_BX_readout (E)
+
+  // Symm_patterns (E)
+  // FW: 5 symmetric patterns for track building
+  // - see Asymm_patterns (E)
+
+  // Link_monitor (U)
+  // FW: Added MPC link monitoring
+  // - not applicable
+
+  // ___________________________________________________________________________
+  // Bugs
+
+  // DAQ_ID (U)
+  // FW: DAQ ME with output CSC ID range 0 - 8 instead of 1 - 9; SP output ME2_ID, 3_ID, and 4_ID filled with 4, 5, or 6 when they should have been 7, 8, or 9.
+  // - not applicable
+
+  // ME_ID_FR
+  // FW: Incorrect ME_ID fields in DAQ, wrong FR bits and some dPhi wrap-around in pT LUT address
+  // - not applicable
+
+  // DAQ_miss_LCT
+  // FW: LCTs only output if there was a track in the sector
+  // - not applicable
+
+  // Sector_pT_0 (E)
+  // FW: Only highest-quality track in a sector assigned pT; others assigned pT = 0
+  bugSameSectorPt0_   = (fw_version < 46650) ? true : false;
+
+  // Sector_bad_pT
+  // FW: Tracks sometimes assigned pT of track in previous BX
+  // - not applicable
+
+  // DAQ_BX_3_LCT
+  // SW: LCTs in BX -3 only reported if there was a track in the sector
+  // - not applicable
+
+  // DAQ_BX_23_LCT
+  // SW: LCTs in BX -2 and -3 only reported if there was a track in the sector
+  // - not applicable
+
+  // pT_dPhi_bits (E)
+  // FW: dPhi wrap-around in modes 3, 5, 6, 9, 10, 12
+  bug9BitDPhi_        = (fw_version < 47214) ? true : false;
+
+  // Pattern_phi (E)
+  // FW: Pattern phi slightly offset from true LCT phi; also ME3/4 pattern width off
+  fixZonePhi_         = (fw_version < 47214) ? false : true;
+
+  // ME1_neigh_phi
+  // FW: Pattern phi of neighbor hits in ME1 miscalculated
+  // - see Pattern_phi (E)
+
+  // LCT_station_2 (E)
+  // FW: Reduced LCT matching window in station 2, resulting in demoted tracks and inefficiency
+  bugSt2PhDiff_       = (47109 <= fw_version && fw_version < 47249) ? true : false;
+
+  // LCT_theta_dup (E)
+  // FW: LCTs matched to track may take theta value from other LCT in the same chamber
+  bugME11Dupes_       = (fw_version < 47423) ? true : false;
+
+  // LCT_7_10_neg_pT (E)
+  // LUT: Written with incorrect values for mode 7 CLCT, mode 10 random offset, all modes negative (1/pT) set to 3 instead of 511
+  bugMode7CLCT_       = (fw_version < 47864) ? true : false;
+  bugNegPt_           = (fw_version < 47864) ? true : false;
+
+  // ___________________________________________________________________________
+  // Other settings
+  useNewZones_        = false;
+  fixME11Edges_       = false;
+  bugGMTPhi_          = true;
 }
 
 void SectorProcessor::process(
