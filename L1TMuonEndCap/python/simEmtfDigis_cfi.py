@@ -30,17 +30,13 @@ simEmtfDigisMC = cms.EDProducer("L1TMuonEndCapTrackProducer",
     RPCInputBXShift = cms.int32(0),
     GEMInputBXShift = cms.int32(0),
 
-    # Versioning
-    Version      = cms.int32(1),
-    PtLUTVersion = cms.int32(5),
-
     # Sector processor primitive-conversion parameters
     spPCParams16 = cms.PSet(
         ZoneBoundaries  = cms.vint32(0,41,49,87,127),  # 5 boundaries for 4 zones
         #ZoneBoundaries  = cms.vint32(0,36,54,96,127), # new proposed zone boundaries
         ZoneOverlap     = cms.int32(2),
         ZoneOverlapRPC  = cms.int32(8),
-        CoordLUTDir     = cms.string('ph_lut_v1'),
+        CoordLUTDir     = cms.string('ph_lut_v1'),  # no longer used
         IncludeNeighbor = cms.bool(True),
         DuplicateTheta  = cms.bool(True),
         FixZonePhi      = cms.bool(True),
@@ -79,6 +75,8 @@ simEmtfDigisMC = cms.EDProducer("L1TMuonEndCapTrackProducer",
     spTBParams16 = cms.PSet(
         ThetaWindow    = cms.int32(8),
         ThetaWindowRPC = cms.int32(8),
+        UseSingleHits  = cms.bool(False),
+        BugSt2PhDiff   = cms.bool(False),
         BugME11Dupes   = cms.bool(False),
     ),
 
@@ -92,7 +90,7 @@ simEmtfDigisMC = cms.EDProducer("L1TMuonEndCapTrackProducer",
 
     # Sector processor pt-assignment parameters
     spPAParams16 = cms.PSet(
-        BDTXMLDir       = cms.string('v_16_02_21'),
+        BDTXMLDir       = cms.string('v_16_02_21'),  # no longer used
         ReadPtLUTFile   = cms.bool(False),
         FixMode15HighPt = cms.bool(True),
         Bug9BitDPhi     = cms.bool(False),

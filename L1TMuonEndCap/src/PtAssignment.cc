@@ -40,13 +40,13 @@ void PtAssignment::process(
   for (; best_tracks_it != best_tracks_end; ++best_tracks_it) {
     EMTFTrack& track = *best_tracks_it;  // pass by reference
 
-    address_t address;
-    float     xmlpt;
-    float     pt;
+    address_t address = 0;
+    float     xmlpt   = 0.;
+    float     pt      = 0.;
     if (track.NumHits() == 1) {
       address = 0;
-      xmlpt = 0;
-      pt = 5.5 / cosh( fabs(track.Eta()) );
+      xmlpt   = 0;
+      pt      = 5.5 / std::cosh( std::abs(track.Eta()) );
     } else {
       address = pt_assign_engine_->calculate_address(track);
       xmlpt   = pt_assign_engine_->calculate_pt(address);
@@ -77,7 +77,7 @@ void PtAssignment::process(
       gmt_eta = (gmt_eta < 0) ? ~(-gmt_eta) : gmt_eta;
     }
 
-    int gmt_quality;
+    int gmt_quality = 0;
     if (track.NumHits() == 1)
       gmt_quality = log2( track.Mode() );  // 8 --> 3, 4 --> 2, 2 --> 1, 1 --> 0
     else
@@ -87,14 +87,16 @@ void PtAssignment::process(
     if (track.NumHits() == 1) {
       int CLCT = track.Hits().at(0).Pattern();
       if (CLCT != 10) {
-	if (endcap_ == 1) gmt_charge = std::make_pair( (CLCT % 2) == 0 ? 0 : 1, 1);
-	else              gmt_charge = std::make_pair( (CLCT % 2) == 0 ? 1 : 0, 1);
+        if (endcap_ == 1)
+          gmt_charge = std::make_pair( (CLCT % 2) == 0 ? 0 : 1, 1);
+        else
+          gmt_charge = std::make_pair( (CLCT % 2) == 0 ? 1 : 0, 1);
       }
     } else {
       std::vector<int> phidiffs;
       for (int i = 0; i < NUM_STATION_PAIRS; ++i) {
-	int phidiff = (track.PtLUT().sign_ph[i] == 1) ? track.PtLUT().delta_ph[i] : -track.PtLUT().delta_ph[i];
-	phidiffs.push_back(phidiff);
+        int phidiff = (track.PtLUT().sign_ph[i] == 1) ? track.PtLUT().delta_ph[i] : -track.PtLUT().delta_ph[i];
+        phidiffs.push_back(phidiff);
       }
       gmt_charge = aux().getGMTCharge(track.Mode(), phidiffs);
     }

@@ -27,14 +27,12 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
   auto bxShiftCSC  = iConfig.getParameter<int>("CSCInputBXShift");
   auto bxShiftRPC  = iConfig.getParameter<int>("RPCInputBXShift");
   auto bxShiftGEM  = iConfig.getParameter<int>("GEMInputBXShift");
-  //auto version     = iConfig.getParameter<int>("Version");        // not yet used
-  //auto ptlut_ver   = iConfig.getParameter<int>("PtLUTVersion");   // not yet used
 
   const auto& spPCParams16 = config_.getParameter<edm::ParameterSet>("spPCParams16");
   auto zoneBoundaries     = spPCParams16.getParameter<std::vector<int> >("ZoneBoundaries");
   auto zoneOverlap        = spPCParams16.getParameter<int>("ZoneOverlap");
   auto zoneOverlapRPC     = spPCParams16.getParameter<int>("ZoneOverlapRPC");
-  auto coordLUTDir        = spPCParams16.getParameter<std::string>("CoordLUTDir");
+  //auto coordLUTDir        = spPCParams16.getParameter<std::string>("CoordLUTDir");
   auto includeNeighbor    = spPCParams16.getParameter<bool>("IncludeNeighbor");
   auto duplicateTheta     = spPCParams16.getParameter<bool>("DuplicateTheta");
   auto fixZonePhi         = spPCParams16.getParameter<bool>("FixZonePhi");
@@ -49,6 +47,8 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
   const auto& spTBParams16 = config_.getParameter<edm::ParameterSet>("spTBParams16");
   auto thetaWindow        = spTBParams16.getParameter<int>("ThetaWindow");
   auto thetaWindowRPC     = spTBParams16.getParameter<int>("ThetaWindowRPC");
+  auto useSingleHits      = spTBParams16.getParameter<bool>("UseSingleHits");
+  auto bugSt2PhDiff       = spTBParams16.getParameter<bool>("BugSt2PhDiff");
   auto bugME11Dupes       = spTBParams16.getParameter<bool>("BugME11Dupes");
 
   const auto& spGCParams16 = config_.getParameter<edm::ParameterSet>("spGCParams16");
@@ -58,7 +58,7 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
   auto bugSameSectorPt0   = spGCParams16.getParameter<bool>("BugSameSectorPt0");
 
   const auto& spPAParams16 = config_.getParameter<edm::ParameterSet>("spPAParams16");
-  auto bdtXMLDir          = spPAParams16.getParameter<std::string>("BDTXMLDir");
+  //auto bdtXMLDir          = spPAParams16.getParameter<std::string>("BDTXMLDir");
   auto readPtLUTFile      = spPAParams16.getParameter<bool>("ReadPtLUTFile");
   auto fixMode15HighPt    = spPAParams16.getParameter<bool>("FixMode15HighPt");
   auto bug9BitDPhi        = spPAParams16.getParameter<bool>("Bug9BitDPhi");
@@ -69,7 +69,7 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
 
   try {
     // Configure sector processor LUT
-    sector_processor_lut_.read(coordLUTDir);
+    //sector_processor_lut_.read(coordLUTDir);  // deprecated, load using pc_lut_version from Conditions
 
     // Configure pT assignment engine
     //pt_assign_engine_.read(bdtXMLDir);  // deprecated, load from Conditions
@@ -89,7 +89,7 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
             zoneBoundaries, zoneOverlap, zoneOverlapRPC,
             includeNeighbor, duplicateTheta, fixZonePhi, useNewZones, fixME11Edges,
             pattDefinitions, symPattDefinitions, useSymPatterns,
-            thetaWindow, thetaWindowRPC, bugME11Dupes,
+            thetaWindow, thetaWindowRPC, useSingleHits, bugSt2PhDiff, bugME11Dupes,
             maxRoadsPerZone, maxTracks, useSecondEarliest, bugSameSectorPt0,
             readPtLUTFile, fixMode15HighPt, bug9BitDPhi, bugMode7CLCT, bugNegPt, bugGMTPhi
         );
@@ -118,8 +118,8 @@ void TrackFinder::process(
   // Get the geometry for TP conversions
   geometry_translator_.checkAndUpdateGeometry(iSetup);
 
-  // Get the conditions, reload pT LUT if conditions have changed
-  condition_helper_.checkAndUpdateConditions(iSetup, pt_assign_engine_);
+  // Get the conditions, primarily the firmware version and the BDT forests
+  condition_helper_.checkAndUpdateConditions(iEvent, iSetup);
 
   // ___________________________________________________________________________
   // Extract all trigger primitives
@@ -145,11 +145,23 @@ void TrackFinder::process(
   // ___________________________________________________________________________
   // Run each sector processor
 
+  // Reload primitive conversion LUTs if necessary
+  sector_processor_lut_.read(condition_helper_.get_pc_lut_version());
+
+  // Reload pT LUT if necessary
+  pt_assign_engine_.load(&(condition_helper_.getForest()));
+
   // MIN/MAX ENDCAP and TRIGSECTOR set in interface/Common.hh
   for (int endcap = MIN_ENDCAP; endcap <= MAX_ENDCAP; ++endcap) {
     for (int sector = MIN_TRIGSECTOR; sector <= MAX_TRIGSECTOR; ++sector) {
       const int es = (endcap - MIN_ENDCAP) * (MAX_TRIGSECTOR - MIN_TRIGSECTOR + 1) + (sector - MIN_TRIGSECTOR);
 
+      // Run-dependent configure. This overwrites many of the configurables passed by the python config file.
+      if (iEvent.isRealData()) {
+        sector_processors_.at(es).configure_by_fw_version(condition_helper_.get_fw_version());
+      }
+
+      // Process
       sector_processors_.at(es).process(
           iEvent.id().event(),
           muon_primitives,
