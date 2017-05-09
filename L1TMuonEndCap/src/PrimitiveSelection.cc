@@ -315,8 +315,8 @@ void PrimitiveSelection::process(
       );
 
       // Keep the first two clusters
-      if (tmp_primitives.size() > 8)
-        tmp_primitives.erase(tmp_primitives.begin()+8, tmp_primitives.end());
+      if (tmp_primitives.size() > 2)
+        tmp_primitives.erase(tmp_primitives.begin()+2, tmp_primitives.end());
     }
   }  // end if apply_truncation
 
@@ -861,7 +861,7 @@ int PrimitiveSelection::select_gem(const TriggerPrimitive& muon_primitive) const
     assert(1 <= tp_csc_ID && tp_csc_ID <= 9);
     //assert(tp_data.pad < 192);
     assert((tp_station == 1 && 1 <= tp_pad && tp_pad <= 192) || (tp_station != 1));
-    assert((tp_station == 2 && 1 <= tp_pad && tp_pad <= 192) || (tp_station != 2));
+    assert((tp_station == 2 && 1 <= tp_pad && tp_pad <= 384) || (tp_station != 2));
 
     // Selection
     if (is_in_bx_gem(tp_bx)) {
@@ -882,7 +882,7 @@ bool PrimitiveSelection::is_in_sector_gem(int tp_endcap, int tp_sector) const {
 
 bool PrimitiveSelection::is_in_neighbor_sector_gem(int tp_endcap, int tp_sector, int tp_subsector, int tp_station, int tp_csc_ID) const {
   // Identical to the corresponding CSC function
-  return is_in_neighbor_sector_gem(tp_endcap, tp_sector, tp_subsector, tp_station, tp_csc_ID);
+  return is_in_neighbor_sector_csc(tp_endcap, tp_sector, tp_subsector, tp_station, tp_csc_ID);
 }
 
 bool PrimitiveSelection::is_in_bx_gem(int tp_bx) const {

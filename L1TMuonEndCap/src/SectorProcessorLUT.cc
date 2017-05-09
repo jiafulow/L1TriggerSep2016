@@ -22,8 +22,12 @@ void SectorProcessorLUT::read(unsigned pc_lut_version) {
   if (version_ == pc_lut_version)  return;
 
   std::string coord_lut_dir = "";
-  if (pc_lut_version == 0)
+
+  if (pc_lut_version == 1)
     coord_lut_dir = "ph_lut_v1";
+  else if (pc_lut_version == 2)
+    coord_lut_dir = "ph_lut_v2";
+  assert(coord_lut_dir != "");
 
   //std::string coord_lut_path = "L1Trigger/L1TMuon/data/emtf_luts/" + coord_lut_dir + "/";
   std::string coord_lut_path = "L1Trigger/L1TMuonEndCap/data/emtf_luts/" + coord_lut_dir + "/";

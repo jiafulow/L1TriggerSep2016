@@ -58,5 +58,7 @@ unsigned int ConditionHelper::get_pt_lut_version() const {
 
 unsigned int ConditionHelper::get_pc_lut_version() const {
   //return params_->PrimConvVersion_;  // not yet implemented
-  return 0;
+  unsigned fake_pc_lut_version = 1;
+  //unsigned fake_pc_lut_version = 2;
+  return fake_pc_lut_version;
 }
