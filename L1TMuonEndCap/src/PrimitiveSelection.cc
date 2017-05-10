@@ -275,8 +275,11 @@ void PrimitiveSelection::process(
 ) const {
   // Cluster the GEM digis.
   // Technically this is done before the EMTF.
+  TriggerPrimitiveCollection copad_muon_primitives;
+  make_pairs_gem(muon_primitives, copad_muon_primitives);
+
   TriggerPrimitiveCollection clus_muon_primitives;
-  cluster_gem(muon_primitives, clus_muon_primitives);
+  cluster_gem(copad_muon_primitives, clus_muon_primitives);
 
   TriggerPrimitiveCollection::const_iterator tp_it  = clus_muon_primitives.begin();
   TriggerPrimitiveCollection::const_iterator tp_end = clus_muon_primitives.end();
@@ -704,6 +707,71 @@ int PrimitiveSelection::get_index_rpc(int tp_station, int tp_ring, int tp_subsec
 
 // _____________________________________________________________________________
 // GEM functions
+void PrimitiveSelection::make_pairs_gem(const TriggerPrimitiveCollection& muon_primitives, TriggerPrimitiveCollection& copad_muon_primitives) const {
+  // Use the inner layer (layer 1) hit coordinates as output, and the outer
+  // layer (layer 2) as coincidence
+  // Adapted from: L1Trigger/CSCTriggerPrimitives/src/GEMCoPadProcessor.cc
+
+  const unsigned int maxDeltaBX = 1;
+  const unsigned int maxDeltaPadGE11 = 2;
+  const unsigned int maxDeltaPadGE21 = 2;
+
+  std::map<int, TriggerPrimitiveCollection> in_pads_layer1, in_pads_layer2;
+
+  TriggerPrimitiveCollection::const_iterator tp_it  = muon_primitives.begin();
+  TriggerPrimitiveCollection::const_iterator tp_end = muon_primitives.end();
+
+  for (; tp_it != tp_end; ++tp_it) {
+    const TriggerPrimitive& muon_primitive = *tp_it;
+
+    if (muon_primitive.subsystem() == TriggerPrimitive::kGEM) {
+      const GEMDetId& tp_detId = muon_primitive.detId<GEMDetId>();
+      assert(tp_detId.layer() == 1 || tp_detId.layer() == 2);
+      if (tp_detId.layer() == 1) {
+        in_pads_layer1[tp_detId.rawId()].push_back(muon_primitive);
+      } else {
+        in_pads_layer2[tp_detId.rawId()].push_back(muon_primitive);
+      }
+    }
+  }
+
+  std::map<int, TriggerPrimitiveCollection>::iterator map_tp_it  = in_pads_layer1.begin();
+  std::map<int, TriggerPrimitiveCollection>::iterator map_tp_end = in_pads_layer1.end();
+
+  for (; map_tp_it != map_tp_end; ++map_tp_it) {
+    const GEMDetId& id = map_tp_it->first;
+    const TriggerPrimitiveCollection& pads = map_tp_it->second;
+    assert(id.layer() == 1);
+
+    // find the corresponding id with layer=2 and same roll number
+    const GEMDetId co_id(id.region(), id.ring(), id.station(), 2, id.chamber(), id.roll());
+
+    // empty range = no possible coincidence pads
+    if (in_pads_layer2.find(co_id) == in_pads_layer2.end())  continue;
+
+    const TriggerPrimitiveCollection& co_pads = in_pads_layer2.at(co_id);
+
+    // now let's correlate the pads in two layers of this partition
+    for (TriggerPrimitiveCollection::const_iterator p = pads.begin(); p != pads.end(); ++p) {
+      for (TriggerPrimitiveCollection::const_iterator co_p = co_pads.begin(); co_p != co_pads.end(); ++co_p) {
+        unsigned int deltaPad = std::abs(p->getGEMData().pad - co_p->getGEMData().pad);
+        unsigned int deltaBX = std::abs(p->getGEMData().bx - co_p->getGEMData().bx);
+
+        // check the match in pad
+        if ((id.station() == 1 && deltaPad > maxDeltaPadGE11) || (id.station() == 2 && deltaPad > maxDeltaPadGE21))
+          continue;
+
+        // check the match in BX
+        if (deltaBX > maxDeltaBX)
+          continue;
+
+        // make a new coincidence pad digi
+        copad_muon_primitives.push_back(*p);
+      }
+    }
+  }
+}
+
 void PrimitiveSelection::cluster_gem(const TriggerPrimitiveCollection& muon_primitives, TriggerPrimitiveCollection& clus_muon_primitives) const {
   // Define operator to select GEM digis
   struct {
