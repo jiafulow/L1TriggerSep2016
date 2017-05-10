@@ -22,6 +22,13 @@ public:
     TriggerPrimitiveCollection& out
   );
 
+  // RPC functions
+  void cluster_rpc(const TriggerPrimitiveCollection& muon_primitives, TriggerPrimitiveCollection& clus_muon_primitives) const;
+
+  // GEM functions
+  void make_copad_gem(const TriggerPrimitiveCollection& muon_primitives, TriggerPrimitiveCollection& copad_muon_primitives) const;
+
+  void cluster_gem(const TriggerPrimitiveCollection& muon_primitives, TriggerPrimitiveCollection& clus_muon_primitives) const;
 };
 
 #endif
