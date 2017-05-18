@@ -5,6 +5,9 @@
 #include "DataFormats/MuonDetId/interface/RPCDetId.h"
 #include "DataFormats/MuonDetId/interface/GEMDetId.h"
 
+
+#include "helper.hh"  // merge_map_into_map
+
 #define NUM_CSC_CHAMBERS 6*9   // 18 in ME1; 9 in ME2,3,4; 9 from neighbor sector.
                                // Arranged in FW as 6 stations, 9 chambers per station.
 #define NUM_RPC_CHAMBERS 7*6   // 6 in RE1,2; 12 in RE3,4; 6 from neighbor sector.
@@ -338,7 +341,6 @@ void PrimitiveSelection::merge(
     std::map<int, TriggerPrimitiveCollection>& selected_gem_map,
     std::map<int, TriggerPrimitiveCollection>& selected_prim_map
 ) const {
-
   // First, put CSC hits
   std::map<int, TriggerPrimitiveCollection>::const_iterator map_tp_it  = selected_csc_map.begin();
   std::map<int, TriggerPrimitiveCollection>::const_iterator map_tp_end = selected_csc_map.end();
@@ -401,6 +403,27 @@ void PrimitiveSelection::merge(
       }
     }
   }
+
+  // Finally, clear the input maps to save memory
+  selected_csc_map.clear();
+  selected_rpc_map.clear();
+  selected_gem_map.clear();
+}
+
+void PrimitiveSelection::merge_no_truncate(
+    std::map<int, TriggerPrimitiveCollection>& selected_csc_map,
+    std::map<int, TriggerPrimitiveCollection>& selected_rpc_map,
+    std::map<int, TriggerPrimitiveCollection>& selected_gem_map,
+    std::map<int, TriggerPrimitiveCollection>& selected_prim_map
+) const {
+  // First, put CSC hits
+  std::swap(selected_csc_map, selected_prim_map);
+
+  // Second, insert GEM hits
+  merge_map_into_map(selected_gem_map, selected_prim_map);
+
+  // Third, insert RPC hits
+  merge_map_into_map(selected_rpc_map, selected_prim_map);
 
   // Finally, clear the input maps to save memory
   selected_csc_map.clear();
