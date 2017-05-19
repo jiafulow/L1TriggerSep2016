@@ -97,6 +97,7 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
             pt_assign_engine_.get(),
             verbose_, endcap, sector,
             minBX, maxBX, bxWindow, bxShiftCSC, bxShiftRPC, bxShiftGEM,
+            era_,
             zoneBoundaries, zoneOverlap, zoneOverlapRPC,
             includeNeighbor, duplicateTheta, fixZonePhi, useNewZones, fixME11Edges,
             pattDefinitions, symPattDefinitions, useSymPatterns,
