@@ -487,14 +487,11 @@ void PrimitiveConversion::convert_rpc(
     double glob_theta = emtf::rad_to_deg(gp.theta());
     double glob_eta   = gp.eta();
 
-    int phi_loc_int   = emtf::calc_phi_loc_int(glob_phi, conv_hit.PC_sector());
-    int theta_int     = emtf::calc_theta_int(glob_theta, conv_hit.Endcap());
-
     // Use RPC-specific convention in docs/CPPF-EMTF-format_2016_11_01.docx
-    // Phi precision is (1/15) degrees, 4x larger than CSC precision of (1/60) degrees
-    // Theta precision is (36.5/32) degrees, 4x larger than CSC precision of (36.5/128) degrees
-    int fph = ((phi_loc_int + (1<<1)) >> 2);
-    int th  = ((theta_int + (1<<1)) >> 2);
+    // Phi precision is 1/15 degrees (11 bits), 4x larger than CSC precision of 1/60 degrees (13 bits)
+    // Theta precision is 36.5/32 degrees (5 bits), 4x larger than CSC precision of 36.5/128 degrees (7 bits)
+    int fph = emtf::calc_phi_loc_int_rpc(glob_phi, conv_hit.PC_sector());
+    int th  = emtf::calc_theta_int_rpc(glob_theta, conv_hit.Endcap());
 
     assert(0 <= fph && fph < 1250);
     assert(0 <=  th &&  th < 32);
@@ -721,12 +718,10 @@ void PrimitiveConversion::convert_gem(
     double glob_theta = emtf::rad_to_deg(gp.theta());
     double glob_eta   = gp.eta();
 
-    int phi_loc_int   = emtf::calc_phi_loc_int(glob_phi, conv_hit.PC_sector());
-    int theta_int     = emtf::calc_theta_int(glob_theta, conv_hit.Endcap());
 
     // Use the CSC precision (unconfirmed!)
-    int fph = phi_loc_int;
-    int th  = theta_int;
+    int fph = emtf::calc_phi_loc_int(glob_phi, conv_hit.PC_sector());
+    int th  = emtf::calc_theta_int(glob_theta, conv_hit.Endcap());
     assert(0 <= fph && fph < 5000);
     assert(0 <=  th &&  th < 128);
     th = (th == 0) ? 1 : th;  // protect against invalid value
