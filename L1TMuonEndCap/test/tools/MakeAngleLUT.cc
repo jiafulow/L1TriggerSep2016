@@ -39,7 +39,7 @@ typedef L1TMuonEndCap::GeometryTranslator         GeometryTranslator;
 typedef L1TMuonEndCap::TriggerPrimitive           TriggerPrimitive;
 typedef L1TMuonEndCap::TriggerPrimitiveCollection TriggerPrimitiveCollection;
 
-#include "helper.hh"
+#include "helper.h"
 
 
 class MakeAngleLUT : public edm::EDAnalyzer {

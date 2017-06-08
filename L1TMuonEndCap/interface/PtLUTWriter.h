@@ -1,5 +1,5 @@
-#ifndef L1TMuonEndCap_PtLUTWriter_hh
-#define L1TMuonEndCap_PtLUTWriter_hh
+#ifndef L1TMuonEndCap_PtLUTWriter_h
+#define L1TMuonEndCap_PtLUTWriter_h
 
 #include <cstdint>
 #include <string>
