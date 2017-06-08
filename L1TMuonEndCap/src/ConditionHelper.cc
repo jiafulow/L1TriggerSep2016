@@ -70,5 +70,5 @@ unsigned int ConditionHelper::get_pc_lut_version() const {
   // "PhiMatchWindowSt1" arbitrarily re-mapped to Primitive conversion (PC LUT) version
   // because of rigid CondFormats naming conventions - AWB 02.06.17
   // std::cout << "Getting PC LUT version from ConditionHelper" << std::endl;
-  return params_->PhiMatchWindowSt1_;  
+  return params_->PhiMatchWindowSt1_;
 }

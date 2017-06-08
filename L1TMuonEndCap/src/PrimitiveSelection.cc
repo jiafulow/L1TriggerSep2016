@@ -664,9 +664,9 @@ int PrimitiveSelection::select_rpc(const TriggerPrimitive& muon_primitive) const
     if ( !(MIN_ENDCAP <= tp_endcap && tp_endcap <= MAX_ENDCAP) ) {
       std::cout << "EMTF RPC format error: tp_endcap = "  << tp_endcap  << std::endl; return selected; }
     if ( !(MIN_TRIGSECTOR <= tp_sector && tp_sector <= MAX_TRIGSECTOR) ) {
-      std::cout << "EMTF RPC format error: tp_sector = "  << tp_sector  << std::endl; return selected; } 
+      std::cout << "EMTF RPC format error: tp_sector = "  << tp_sector  << std::endl; return selected; }
     if ( !(1 <= tp_subsector && tp_subsector <= 6) ) {
-      std::cout << "EMTF RPC format error: tp_subsector = "  << tp_subsector  << std::endl; return selected; } 
+      std::cout << "EMTF RPC format error: tp_subsector = "  << tp_subsector  << std::endl; return selected; }
     if ( !(1 <= tp_station && tp_station <= 4) ) {
       std::cout << "EMTF RPC format error: tp_station = " << tp_station << std::endl; return selected; }
     if ( !(2 <= tp_ring && tp_ring <= 3) ) {

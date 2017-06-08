@@ -169,10 +169,10 @@ void TrackFinder::process(
 
       // Run-dependent configure. This overwrites many of the configurables passed by the python config file.
       if (new_conditions) {
-	if (iEvent.isRealData()) {
-	  sector_processors_.at(es).configure_by_fw_version(condition_helper_.get_fw_version());
-	}
-	sector_processors_.at(es).set_pt_lut_version( condition_helper_.get_pt_lut_version() );
+        if (iEvent.isRealData()) {
+          sector_processors_.at(es).configure_by_fw_version(condition_helper_.get_fw_version());
+        }
+        sector_processors_.at(es).set_pt_lut_version( condition_helper_.get_pt_lut_version() );
       }
 
       // Process
