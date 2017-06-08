@@ -98,9 +98,19 @@ void SectorProcessor::configure_by_fw_version(unsigned fw_version) {
   // tm fw_time = gmtime(fw_version);  (See https://linux.die.net/man/3/gmtime)
   if (fw_version >= 50000) {
     // Default settings for 2017
-    fixME11Edges_ = true;
-    bugGMTPhi_    = false;
+    fixME11Edges_   = true;
+    bugGMTPhi_      = false;
+    thetaWindow_    = 8;
+    thetaWindowRPC_ = 8;
     return;
+  }
+
+  if (fw_version < 50000) {
+    // Default settings for 2016
+    fixME11Edges_   = false;
+    bugGMTPhi_      = true;
+    thetaWindow_    = 4;
+    thetaWindowRPC_ = 4;
   }
 
   // ___________________________________________________________________________
@@ -194,16 +204,6 @@ void SectorProcessor::configure_by_fw_version(unsigned fw_version) {
   // LUT: Written with incorrect values for mode 7 CLCT, mode 10 random offset, all modes negative (1/pT) set to 3 instead of 511
   bugMode7CLCT_       = (fw_version < 47864) ? true : false;
   bugNegPt_           = (fw_version < 47864) ? true : false;
-
-  // ___________________________________________________________________________
-  // Other settings
-  if (fw_version < 50000) {
-    // Default settings for 2016
-    useNewZones_   = false;
-    fixME11Edges_  = false;
-    bugGMTPhi_     = true;
-  }
-
 }
 
 void SectorProcessor::process(
