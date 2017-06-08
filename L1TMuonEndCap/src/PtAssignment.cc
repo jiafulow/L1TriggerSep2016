@@ -1,18 +1,17 @@
-#include "L1Trigger/L1TMuonEndCap/interface/PtAssignment.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/PtAssignment.h"
 
-#include "L1Trigger/L1TMuonEndCap/interface/PtAssignmentEngine.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/PtAssignmentEngine.h"
 
 
 void PtAssignment::configure(
     const PtAssignmentEngine* pt_assign_engine,
     int verbose, int endcap, int sector, int bx,
-    bool readPtLUTFile, bool fixMode15HighPt,
+    int ptLUTVersion, bool readPtLUTFile, bool fixMode15HighPt,
     bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt,
     bool bugGMTPhi
 ) {
   assert(pt_assign_engine != nullptr);
 
-  //pt_assign_engine_ = pt_assign_engine;
   pt_assign_engine_ = const_cast<PtAssignmentEngine*>(pt_assign_engine);
 
   verbose_ = verbose;
@@ -22,7 +21,7 @@ void PtAssignment::configure(
 
   pt_assign_engine_->configure(
       verbose_,
-      readPtLUTFile, fixMode15HighPt,
+      ptLUTVersion, readPtLUTFile, fixMode15HighPt,
       bug9BitDPhi, bugMode7CLCT, bugNegPt
   );
 
@@ -50,8 +49,12 @@ void PtAssignment::process(
     } else {
       address = pt_assign_engine_->calculate_address(track);
       xmlpt   = pt_assign_engine_->calculate_pt(address);
-      pt      = (xmlpt < 0.) ? 1. : xmlpt;  // Matt used fabs(-1) when mode is invalid
-      pt *= 1.4;  // multiply by 1.4 to keep efficiency above 90% when the L1 trigger pT cut is applied
+
+      // // Un-comment to check address packing / unpacking
+      // assert( fabs(xmlpt - pt_assign_engine_->calculate_pt(track)) < 0.001 );
+
+      pt  = (xmlpt < 0.) ? 1. : xmlpt;  // Matt used fabs(-1) when mode is invalid
+      pt *= pt_assign_engine_->scale_pt(pt, track.Mode());  // Multiply by some factor to achieve 90% efficiency at threshold
     }
 
     int gmt_pt = aux().getGMTPt(pt);            // Encode integer pT in GMT format

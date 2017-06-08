@@ -8,11 +8,12 @@
 #include "FWCore/Framework/interface/ESHandle.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
-#include "L1Trigger/L1TMuonEndCap/interface/PtAssignmentEngine2016.hh"
-#include "L1Trigger/L1TMuonEndCap/interface/PtLUTWriter.hh"
+// #include "L1Trigger/L1TMuonEndCap/interface/PtAssignmentEngine2016.h"
+#include "L1Trigger/L1TMuonEndCap/interface/PtAssignmentEngine2017.h"
+#include "L1Trigger/L1TMuonEndCap/interface/PtLUTWriter.h"
 
-#include "helper.hh"
-#include "progress_bar.hh"
+#include "helper.h"
+#include "progress_bar.h"
 
 
 class MakePtLUT : public edm::EDAnalyzer {
@@ -41,7 +42,10 @@ private:
   const edm::ParameterSet config_;
 
   int verbose_;
+  int num_;
+  int denom_;
 
+  std::string xml_dir_;
   std::string outfile_;
 
   bool onlyCheck_;
@@ -54,16 +58,19 @@ private:
 #define PTLUT_SIZE (1<<30)
 
 MakePtLUT::MakePtLUT(const edm::ParameterSet& iConfig) :
-    pt_assign_engine_(new PtAssignmentEngine2016()),
+    // pt_assign_engine_(new PtAssignmentEngine2016()),
+    pt_assign_engine_(new PtAssignmentEngine2017()),
     ptlut_writer_(),
     config_(iConfig),
     verbose_(iConfig.getUntrackedParameter<int>("verbosity")),
+    num_(iConfig.getParameter<int>("numerator")),
+    denom_(iConfig.getParameter<int>("denominator")),
     outfile_(iConfig.getParameter<std::string>("outfile")),
     onlyCheck_(iConfig.getParameter<bool>("onlyCheck")),
     addressesToCheck_(iConfig.getParameter<std::vector<unsigned long long> >("addressesToCheck")),
     done_(false)
 {
-  auto ptlut_ver   = iConfig.getParameter<int>("PtLUTVersion");
+  auto ptLUTVersion       = iConfig.getParameter<int>("PtLUTVersion");
 
   const edm::ParameterSet spPAParams16 = config_.getParameter<edm::ParameterSet>("spPAParams16");
   auto bdtXMLDir          = spPAParams16.getParameter<std::string>("BDTXMLDir");
@@ -73,14 +80,15 @@ MakePtLUT::MakePtLUT(const edm::ParameterSet& iConfig) :
   auto bugMode7CLCT       = spPAParams16.getParameter<bool>("BugMode7CLCT");
   auto bugNegPt           = spPAParams16.getParameter<bool>("BugNegPt");
 
-  ptlut_writer_.set_version(ptlut_ver);
+  ptlut_writer_.set_version(ptLUTVersion);
 
-  pt_assign_engine_->read(bdtXMLDir);
   pt_assign_engine_->configure(
     verbose_,
-    readPtLUTFile, fixMode15HighPt,
+    ptLUTVersion, readPtLUTFile, fixMode15HighPt,
     bug9BitDPhi, bugMode7CLCT, bugNegPt
   );
+
+  xml_dir_ = bdtXMLDir;
 }
 
 MakePtLUT::~MakePtLUT() {}
@@ -100,23 +108,30 @@ void MakePtLUT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 }
 
 void MakePtLUT::makeLUT() {
-  std::cout << "Calculating pT for " << PTLUT_SIZE << " addresses, please sit tight..." << std::endl;
 
-  PtLUTWriter::address_t address = 0;
+  // Load XMLs inside function
+  std::cout << "Inside makeLUT() - loading XMLs" << std::endl;
+  pt_assign_engine_->read(xml_dir_);
+
+  std::cout << "Calculating pT for " << PTLUT_SIZE / denom_ << " addresses, please sit tight..." << std::endl;
+
+  if (num_ - 1 < 0) std::cout << "ERROR: tried to fill address < 0.  KILL!!!" << std::endl;
+  PtLUTWriter::address_t address = abs((num_ - 1) * (PTLUT_SIZE / denom_));
 
   float xmlpt = 0.;
   float pt = 0.;
   int gmt_pt = 0;
 
-  for (; address<PTLUT_SIZE; ++address) {
-    show_progress_bar(address, PTLUT_SIZE);
+  for ( ; address < abs(num_ * (PTLUT_SIZE / denom_)); ++address) {
+    if (address % (PTLUT_SIZE / (denom_ * 128)) == 0)
+      show_progress_bar(address, PTLUT_SIZE);
 
     //int mode_inv = (address >> (30-4)) & ((1<<4)-1);
 
     // floats
     xmlpt   = pt_assign_engine_->calculate_pt(address);
     pt      = (xmlpt < 0.) ? 1. : xmlpt;  // Matt used fabs(-1) when mode is invalid
-    pt *= 1.4;  // multiply by 1.4 to keep efficiency above 90% when the L1 trigger pT cut is applied
+    pt *= pt_assign_engine_->scale_pt(pt, 15);  // Multiply by some factor to achieve 90% efficiency at threshold
 
     // integers
     gmt_pt = (pt * 2) + 1;
@@ -128,7 +143,9 @@ void MakePtLUT::makeLUT() {
     ptlut_writer_.push_back(gmt_pt);
   }
 
-  ptlut_writer_.write(outfile_);
+  std::cout << "\nAbout to write file " << outfile_ << " for part " << num_ << "/" << denom_ << std::endl;
+  ptlut_writer_.write(outfile_, num_, denom_);
+  std::cout << "Wrote file! DONE!" << std::endl;
 }
 
 void MakePtLUT::checkAddresses() {

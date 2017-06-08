@@ -1,5 +1,5 @@
-#ifndef L1TMuonEndCap_ConditionHelper_hh
-#define L1TMuonEndCap_ConditionHelper_hh
+#ifndef L1TMuonEndCap_ConditionHelper_h
+#define L1TMuonEndCap_ConditionHelper_h
 
 #include "FWCore/Framework/interface/ESHandle.h"
 
@@ -20,7 +20,7 @@ public:
   ConditionHelper();
   ~ConditionHelper();
 
-  void checkAndUpdateConditions(const edm::Event& iEvent, const edm::EventSetup& iSetup);
+  bool checkAndUpdateConditions(const edm::Event& iEvent, const edm::EventSetup& iSetup);
 
   const L1TMuonEndCapParams& getParams() const { return *params_; }
   const L1TMuonEndCapForest& getForest() const { return *forest_; }

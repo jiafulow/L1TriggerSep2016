@@ -1,11 +1,11 @@
-#include "L1Trigger/L1TMuonEndCap/interface/PrimitiveSelection.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/PrimitiveSelection.h"
 
 #include "DataFormats/MuonDetId/interface/DTChamberId.h"
 #include "DataFormats/MuonDetId/interface/CSCDetId.h"
 #include "DataFormats/MuonDetId/interface/RPCDetId.h"
 #include "DataFormats/MuonDetId/interface/GEMDetId.h"
 
-#include "helper.hh"  // adjacent_cluster
+#include "helper.h"  // adjacent_cluster
 
 #define NUM_CSC_CHAMBERS 6*9   // 18 in ME1; 9 in ME2,3,4; 9 from neighbor sector.
                                // Arranged in FW as 6 stations, 9 chambers per station.
@@ -379,14 +379,14 @@ void PrimitiveSelection::merge(
       // No CSC hits, insert all RPC hits
       selected_prim_map[selected_rpc] = rpc_primitives;
 
-    } else {
-      // If only one CSC hit, insert the first RPC hit
-      TriggerPrimitiveCollection& tmp_primitives = selected_prim_map[selected_rpc];  // pass by reference
+    } // else { // Initial FW in 2017; was disabled on June 7
+    //   // If only one CSC hit, insert the first RPC hit
+    //   TriggerPrimitiveCollection& tmp_primitives = selected_prim_map[selected_rpc];  // pass by reference
 
-      if (tmp_primitives.size() < 2) {
-        tmp_primitives.push_back(rpc_primitives.front());
-      }
-    }
+    //   if (tmp_primitives.size() < 2) {
+    //     tmp_primitives.push_back(rpc_primitives.front());
+    //   }
+    // }
   }
 
   // Third, insert GEM stubs if there is no CSC/RPC hits
@@ -444,7 +444,7 @@ int PrimitiveSelection::select_csc(const TriggerPrimitive& muon_primitive) const
     assert(1 <= tp_station && tp_station <= 4);
     assert(1 <= tp_csc_ID && tp_csc_ID <= 9);
     assert(tp_data.strip < 160);
-    //assert(tp_data.keywire < 112);
+    // assert(tp_data.keywire < 112);
     assert(tp_data.keywire < 128);
     assert(tp_data.valid == true);
     assert(tp_data.pattern <= 10);

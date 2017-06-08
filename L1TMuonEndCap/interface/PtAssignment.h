@@ -1,7 +1,7 @@
-#ifndef L1TMuonEndCap_PtAssignment_hh
-#define L1TMuonEndCap_PtAssignment_hh
+#ifndef L1TMuonEndCap_PtAssignment_h
+#define L1TMuonEndCap_PtAssignment_h
 
-#include "L1Trigger/L1TMuonEndCap/interface/Common.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/Common.h"
 
 
 class PtAssignmentEngine;
@@ -12,7 +12,7 @@ public:
   void configure(
       const PtAssignmentEngine* pt_assign_engine,
       int verbose, int endcap, int sector, int bx,
-      bool readPtLUTFile, bool fixMode15HighPt,
+      int ptLUTVersion, bool readPtLUTFile, bool fixMode15HighPt,
       bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt,
       bool bugGMTPhi
   );

@@ -1,4 +1,4 @@
-#include "L1Trigger/L1TMuonEndCap/interface/SingleHitTrack.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/SingleHitTrack.h"
 
 void SingleHitTrack::configure(
     int verbose, int endcap, int sector, int bx,
@@ -140,8 +140,6 @@ void SingleHitTrack::process(
     new_trk.set_phi_loc      ( conv_hits_it->Phi_loc() );
     new_trk.set_phi_glob     ( conv_hits_it->Phi_glob() );
     new_trk.set_track_num    ( maxTracks_ - 1 );
-    new_trk.set_has_neighbor ( conv_hits_it->Neighbor() );
-    new_trk.set_all_neighbor ( conv_hits_it->Neighbor() );
 
     one_hit_trks.push_back( new_trk );
     if (int(best_tracks.size()) + int(one_hit_trks.size()) >= maxTracks_)

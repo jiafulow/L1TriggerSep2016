@@ -1,5 +1,5 @@
-#include "L1Trigger/L1TMuonEndCap/interface/PtAssignmentEngine2016.hh"
-#include "L1Trigger/L1TMuonEndCap/interface/PtAssignmentEngineAux2016.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/PtAssignmentEngine2016.h"
+#include "L1Trigger/L1TMuonEndCap/interface/PtAssignmentEngineAux2016.h"
 
 #include <cassert>
 #include <iostream>
@@ -9,6 +9,23 @@ const PtAssignmentEngineAux2016& PtAssignmentEngine2016::aux() const {
   static const PtAssignmentEngineAux2016 instance;
   return instance;
 }
+
+float PtAssignmentEngine2016::scale_pt(const float pt, const int mode) const {
+
+  // Scaling to achieve 90% efficency at any given L1 pT threshold
+  // For 2016, was a flat scaling factor of 1.4
+
+  float pt_scale = 1.4;
+
+  return pt_scale;
+}
+
+float PtAssignmentEngine2016::unscale_pt(const float pt, const int mode) const {
+  float pt_unscale = 1. / 1.4;
+  return pt_unscale;
+}
+
+
 
 PtAssignmentEngine::address_t PtAssignmentEngine2016::calculate_address(const EMTFTrack& track) const {
   address_t address = 0;
@@ -67,12 +84,12 @@ PtAssignmentEngine::address_t PtAssignmentEngine2016::calculate_address(const EM
     return (sign == 1) ? (var * 1) : (var * -1);
   };
 
-  dTheta12 = aux().getdTheta(get_signed_int(dTheta12, 1-dTheta12Sign));  // sign reversed
-  dTheta13 = aux().getdTheta(get_signed_int(dTheta13, 1-dTheta13Sign));
-  dTheta14 = aux().getdTheta(get_signed_int(dTheta14, 1-dTheta14Sign));
-  dTheta23 = aux().getdTheta(get_signed_int(dTheta23, 1-dTheta23Sign));
-  dTheta24 = aux().getdTheta(get_signed_int(dTheta24, 1-dTheta24Sign));
-  dTheta34 = aux().getdTheta(get_signed_int(dTheta34, 1-dTheta34Sign));
+  dTheta12 = aux().getdTheta(get_signed_int(dTheta12, dTheta12Sign));
+  dTheta13 = aux().getdTheta(get_signed_int(dTheta13, dTheta13Sign));
+  dTheta14 = aux().getdTheta(get_signed_int(dTheta14, dTheta14Sign));
+  dTheta23 = aux().getdTheta(get_signed_int(dTheta23, dTheta23Sign));
+  dTheta24 = aux().getdTheta(get_signed_int(dTheta24, dTheta24Sign));
+  dTheta34 = aux().getdTheta(get_signed_int(dTheta34, dTheta34Sign));
 
   bool use_FRLUT = true;
   if (use_FRLUT) {
@@ -85,7 +102,6 @@ PtAssignmentEngine::address_t PtAssignmentEngine2016::calculate_address(const EM
     FR4 = aux().getFRLUT(track.Sector(), 4, CSCID4);
   }
 
-  // Can we automate the assigning of addresses?  Would decrease typos, speed future development. - AWB 03.10.16
   switch (mode_inv) {
   case 3:   // 1-2
     if (!bug9BitDPhi_)  dPhi12 = std::min(511, dPhi12);
@@ -275,7 +291,7 @@ PtAssignmentEngine::address_t PtAssignmentEngine2016::calculate_address(const EM
   return address;
 }
 
-float PtAssignmentEngine2016::calculate_pt_xml(const address_t& address) {
+float PtAssignmentEngine2016::calculate_pt_xml(const address_t& address) const {
   float pt = 0.;
 
   if (address == 0)  // invalid address
@@ -515,7 +531,7 @@ float PtAssignmentEngine2016::calculate_pt_xml(const address_t& address) {
   }
 
 
-  // First fix to recover high pT muons with 3 hits in a line and one displaced hit - AWB 28.07.16
+  // First fix to recover high pT muons with 3 hits in a line and one displaced hit
   // Done by re-writing a few addresses in the original LUT, according to the following logic
   // Implemented in FW 26.07.16, as of run 2774278 / fill 5119
   if (fixMode15HighPt_) {
@@ -636,8 +652,6 @@ float PtAssignmentEngine2016::calculate_pt_xml(const address_t& address) {
         assert(v != -999);
       }
       tree_data.push_back(v);
-    } else {
-      tree_data.push_back(0);  // pad with zeroes, somehow BDT tries to access out of bounds
     }
   }
 
@@ -652,7 +666,9 @@ float PtAssignmentEngine2016::calculate_pt_xml(const address_t& address) {
   tree_event->predictedValue = 0;  // must explicitly initialize
   tree_event->data = tree_data;
 
-  forests_.at(mode_inv).predictEvent(tree_event.get(), 64);
+  // forests_.at(mode_inv).predictEvent(tree_event.get(), 64);
+  emtf::Forest &forest = const_cast<emtf::Forest&>(forests_.at(mode_inv));
+  forest.predictEvent(tree_event.get(), 64);
 
   float tmp_pt = tree_event->predictedValue;  // is actually 1/pT
 
@@ -680,3 +696,11 @@ float PtAssignmentEngine2016::calculate_pt_xml(const address_t& address) {
   assert(pt > 0);
   return pt;
 }
+
+
+// Not implemented for 2016
+float PtAssignmentEngine2016::calculate_pt_xml(const EMTFTrack& track) const {
+  float pt = 0.;
+
+  return pt;
+} 
