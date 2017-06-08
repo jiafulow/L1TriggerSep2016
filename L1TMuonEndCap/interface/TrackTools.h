@@ -132,6 +132,13 @@ namespace emtf {
     return theta_int;
   }
 
+  inline int    calc_theta_int_rpc(double theta, int endcap) {  // theta in deg, endcap [-1,+1]
+    theta = (endcap == -1) ? (180. - theta) : theta;
+    theta = (theta - 8.5) * (128./4.)/(45.0-8.5);  // 4x coarser resolution
+    int theta_int = static_cast<int>(std::round(theta));
+    return theta_int;
+  }
+
   // ___________________________________________________________________________
   // phi
   inline double calc_phi_glob_deg(double loc, int sector) {  // loc in deg, sector [1-6]
@@ -175,6 +182,14 @@ namespace emtf {
     double loc = calc_phi_loc_deg_from_glob(glob, sector);
     loc = ((loc + 22.) < 0.) ? loc + 360. : loc;
     loc = (loc + 22.) * 60.;
+    int phi_int = static_cast<int>(std::round(loc));
+    return phi_int;
+  }
+
+  inline int    calc_phi_loc_int_rpc(double glob, int sector) {  // glob in deg, sector [1-6]
+    double loc = calc_phi_loc_deg_from_glob(glob, sector);
+    loc = ((loc + 22.) < 0.) ? loc + 360. : loc;
+    loc = (loc + 22.) * 60./4.;  // 4x coarser resolution
     int phi_int = static_cast<int>(std::round(loc));
     return phi_int;
   }
