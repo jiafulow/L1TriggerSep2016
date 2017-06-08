@@ -413,7 +413,7 @@ void PrimitiveConversion::convert_csc_details(EMTFHit& conv_hit) const {
   conv_hit.set_bt_segment   ( bt_segment );
 
   conv_hit.set_phi_loc  ( emtf::calc_phi_loc_deg(fph) );
-  conv_hit.set_phi_glob ( emtf::calc_phi_glob_deg(conv_hit.Phi_loc(), conv_hit.Sector()) );
+  conv_hit.set_phi_glob ( emtf::calc_phi_glob_deg(conv_hit.Phi_loc(), conv_hit.PC_sector()) );
   conv_hit.set_theta    ( emtf::calc_theta_deg_from_int(th) );
   conv_hit.set_eta      ( emtf::calc_eta_from_theta_deg(conv_hit.Theta(), conv_hit.Endcap()) );
 }
@@ -486,7 +486,7 @@ void PrimitiveConversion::convert_rpc(
     double glob_theta = emtf::rad_to_deg(gp.theta());
     double glob_eta   = gp.eta();
 
-    int phi_loc_int   = emtf::calc_phi_loc_int(glob_phi, conv_hit.Sector());
+    int phi_loc_int   = emtf::calc_phi_loc_int(glob_phi, conv_hit.PC_sector());
     int theta_int     = emtf::calc_theta_int(glob_theta, conv_hit.Endcap());
 
     // Use RPC-specific convention in docs/CPPF-EMTF-format_2016_11_01.docx
@@ -582,7 +582,7 @@ void PrimitiveConversion::convert_rpc_details(EMTFHit& conv_hit) const {
   conv_hit.set_bt_segment   ( bt_segment );
 
   conv_hit.set_phi_loc  ( emtf::calc_phi_loc_deg(fph) );
-  conv_hit.set_phi_glob ( emtf::calc_phi_glob_deg(conv_hit.Phi_loc(), conv_hit.Sector()) );
+  conv_hit.set_phi_glob ( emtf::calc_phi_glob_deg(conv_hit.Phi_loc(), conv_hit.PC_sector()) );
   conv_hit.set_theta    ( emtf::calc_theta_deg_from_int(th) );
   conv_hit.set_eta      ( emtf::calc_eta_from_theta_deg(conv_hit.Theta(), conv_hit.Endcap()) );
 }
@@ -720,7 +720,7 @@ void PrimitiveConversion::convert_gem(
     double glob_theta = emtf::rad_to_deg(gp.theta());
     double glob_eta   = gp.eta();
 
-    int phi_loc_int   = emtf::calc_phi_loc_int(glob_phi, conv_hit.Sector());
+    int phi_loc_int   = emtf::calc_phi_loc_int(glob_phi, conv_hit.PC_sector());
     int theta_int     = emtf::calc_theta_int(glob_theta, conv_hit.Endcap());
 
     // Use the CSC precision (unconfirmed!)
@@ -798,7 +798,7 @@ void PrimitiveConversion::convert_gem_details(EMTFHit& conv_hit) const {
   conv_hit.set_bt_segment   ( bt_segment );
 
   conv_hit.set_phi_loc  ( emtf::calc_phi_loc_deg(fph) );
-  conv_hit.set_phi_glob ( emtf::calc_phi_glob_deg(conv_hit.Phi_loc(), conv_hit.Sector()) );
+  conv_hit.set_phi_glob ( emtf::calc_phi_glob_deg(conv_hit.Phi_loc(), conv_hit.PC_sector()) );
   conv_hit.set_theta    ( emtf::calc_theta_deg_from_int(th) );
   conv_hit.set_eta      ( emtf::calc_eta_from_theta_deg(conv_hit.Theta(), conv_hit.Endcap()) );
 }
