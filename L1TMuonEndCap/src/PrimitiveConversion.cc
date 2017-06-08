@@ -118,39 +118,44 @@ void PrimitiveConversion::convert_csc(
   }
 
   // Set properties
-  conv_hit.SetCSCDetId     ( tp_detId );
+  conv_hit.SetCSCDetId       ( tp_detId );
 
-  conv_hit.set_endcap      ( (tp_endcap == 2) ? -1 : tp_endcap );
-  conv_hit.set_station     ( tp_station );
-  conv_hit.set_ring        ( tp_ring );
-  conv_hit.set_chamber     ( tp_chamber );
-  conv_hit.set_sector      ( tp_sector );
-  conv_hit.set_subsector   ( tp_subsector );
-  conv_hit.set_csc_ID      ( tp_csc_ID );
-  conv_hit.set_csc_nID     ( csc_nID );
-  conv_hit.set_track_num   ( tp_data.trknmb );
-  conv_hit.set_sync_err    ( tp_data.syncErr );
+  conv_hit.set_endcap        ( (tp_endcap == 2) ? -1 : tp_endcap );
+  conv_hit.set_station       ( tp_station );
+  conv_hit.set_ring          ( tp_ring );
+  //conv_hit.set_roll          ( tp_roll );
+  conv_hit.set_chamber       ( tp_chamber );
+  conv_hit.set_sector        ( tp_sector );
+  conv_hit.set_subsector     ( tp_subsector );
+  conv_hit.set_csc_ID        ( tp_csc_ID );
+  conv_hit.set_csc_nID       ( csc_nID );
+  conv_hit.set_track_num     ( tp_data.trknmb );
+  conv_hit.set_sync_err      ( tp_data.syncErr );
+  //conv_hit.set_sector_RPC    ( tp_sector );
+  //conv_hit.set_subsector_RPC ( tp_subsector );
 
-  conv_hit.set_bx          ( tp_bx + bxShiftCSC_ );
-  conv_hit.set_subsystem   ( TriggerPrimitive::kCSC );
-  conv_hit.set_is_CSC      ( true );
-  conv_hit.set_is_RPC      ( false );
-  conv_hit.set_is_GEM      ( false );
+  conv_hit.set_bx            ( tp_bx + bxShiftCSC_ );
+  conv_hit.set_subsystem     ( TriggerPrimitive::kCSC );
+  conv_hit.set_is_CSC        ( true );
+  conv_hit.set_is_RPC        ( false );
+  conv_hit.set_is_GEM        ( false );
 
-  conv_hit.set_pc_sector   ( pc_sector );
-  conv_hit.set_pc_station  ( pc_station );
-  conv_hit.set_pc_chamber  ( pc_chamber );
-  conv_hit.set_pc_segment  ( pc_segment );
+  conv_hit.set_pc_sector     ( pc_sector );
+  conv_hit.set_pc_station    ( pc_station );
+  conv_hit.set_pc_chamber    ( pc_chamber );
+  conv_hit.set_pc_segment    ( pc_segment );
 
-  conv_hit.set_valid       ( tp_data.valid );
-  conv_hit.set_strip       ( tp_data.strip );
-  conv_hit.set_wire        ( tp_data.keywire );
-  conv_hit.set_quality     ( tp_data.quality );
-  conv_hit.set_pattern     ( tp_data.pattern );
-  conv_hit.set_bend        ( tp_data.bend );
+  conv_hit.set_valid         ( tp_data.valid );
+  conv_hit.set_strip         ( tp_data.strip );
+  //conv_hit.set_strip_low     ( tp_data.strip_low );
+  //conv_hit.set_strip_hi      ( tp_data.strip_hi );
+  conv_hit.set_wire          ( tp_data.keywire );
+  conv_hit.set_quality       ( tp_data.quality );
+  conv_hit.set_pattern       ( tp_data.pattern );
+  conv_hit.set_bend          ( tp_data.bend );
 
-  conv_hit.set_neighbor    ( is_neighbor );
-  conv_hit.set_sector_idx  ( (endcap_ == 1) ? sector_ - 1 : sector_ + 5 );
+  conv_hit.set_neighbor      ( is_neighbor );
+  conv_hit.set_sector_idx    ( (endcap_ == 1) ? sector_ - 1 : sector_ + 5 );
 
   convert_csc_details(conv_hit);
 
@@ -387,6 +392,7 @@ void PrimitiveConversion::convert_csc_details(EMTFHit& conv_hit) const {
   // ___________________________________________________________________________
   // Zone codes and other segment IDs
 
+  //int zone_hit     = ((fph + (1<<4)) >> 5);
   int zone_code    = get_zone_code(conv_hit, th);
   int phzvl        = get_phzvl(conv_hit, zone_code);
 
@@ -436,13 +442,18 @@ void PrimitiveConversion::convert_rpc(
   int tp_station   = tp_detId.station();    // 1 - 4
   int tp_ring      = tp_detId.ring();       // 2 - 3 (increasing theta)
   int tp_roll      = tp_detId.roll();       // 1 - 3 (decreasing theta; aka A - C; space between rolls is 9 - 15 in theta_fp)
-  // int tp_layer     = tp_detId.layer();
+  //int tp_layer     = tp_detId.layer();
 
   int tp_bx        = tp_data.bx;
   int tp_strip     = ((tp_data.strip_low + tp_data.strip_hi) / 2);  // in full-strip unit
   int tp_valid     = tp_data.valid;
 
   const bool is_neighbor = (pc_station == 5);
+
+  // CSC-like sector, subsector and chamber numbers
+  int csc_tp_chamber   = (tp_sector - 1)*6 + tp_subsector;
+  int csc_tp_sector    = (tp_subsector > 2) ? tp_sector : ((tp_sector + 4) % 6) + 1;  // Rotate by 20 deg
+  int csc_tp_subsector = ((tp_subsector + 3) % 6) + 1;  // Rotate by 2
 
   // Set properties
   conv_hit.SetRPCDetId       ( tp_detId );
@@ -451,31 +462,38 @@ void PrimitiveConversion::convert_rpc(
   conv_hit.set_station       ( tp_station );
   conv_hit.set_ring          ( tp_ring );
   conv_hit.set_roll          ( tp_roll );
+  conv_hit.set_chamber       ( csc_tp_chamber );
+  conv_hit.set_sector        ( csc_tp_sector );
+  conv_hit.set_subsector     ( csc_tp_subsector );
+  //conv_hit.set_csc_ID        ( tp_csc_ID );
+  //conv_hit.set_csc_nID       ( csc_nID );
+  //conv_hit.set_track_num     ( tp_data.trknmb );
+  //conv_hit.set_sync_err      ( tp_data.syncErr );
   conv_hit.set_sector_RPC    ( tp_sector );  // In RPC convention in CMSSW (RPCDetId.h), sector 1 starts at -5 deg
   conv_hit.set_subsector_RPC ( tp_subsector );
-  conv_hit.set_chamber       ( (tp_sector - 1)*6 + tp_subsector );
-  conv_hit.set_sector        ( tp_subsector > 2 ? tp_sector : ((tp_sector + 4) % 6) + 1 );  // Rotate by 20 deg
-  conv_hit.set_subsector     ( ((tp_subsector + 3) % 6) + 1 );  // Rotate by 2
 
-  conv_hit.set_bx          ( tp_bx + bxShiftRPC_ );
-  conv_hit.set_subsystem   ( TriggerPrimitive::kRPC );
-  conv_hit.set_is_CSC      ( false );
-  conv_hit.set_is_RPC      ( true );
-  conv_hit.set_is_GEM      ( false );
+  conv_hit.set_bx            ( tp_bx + bxShiftRPC_ );
+  conv_hit.set_subsystem     ( TriggerPrimitive::kRPC );
+  conv_hit.set_is_CSC        ( false );
+  conv_hit.set_is_RPC        ( true );
+  conv_hit.set_is_GEM        ( false );
 
-  conv_hit.set_pc_sector   ( pc_sector );
-  conv_hit.set_pc_station  ( pc_station );
-  conv_hit.set_pc_chamber  ( pc_chamber );
-  conv_hit.set_pc_segment  ( pc_segment );
+  conv_hit.set_pc_sector     ( pc_sector );
+  conv_hit.set_pc_station    ( pc_station );
+  conv_hit.set_pc_chamber    ( pc_chamber );
+  conv_hit.set_pc_segment    ( pc_segment );
 
-  conv_hit.set_valid       ( tp_valid );
-  conv_hit.set_strip       ( tp_strip );
-  conv_hit.set_strip_low   ( tp_data.strip_low );
-  conv_hit.set_strip_hi    ( tp_data.strip_hi );
-  conv_hit.set_pattern     ( 0 );  // In firmware, this marks RPC stub
+  conv_hit.set_valid         ( tp_valid );
+  conv_hit.set_strip         ( tp_strip );
+  conv_hit.set_strip_low     ( tp_data.strip_low );
+  conv_hit.set_strip_hi      ( tp_data.strip_hi );
+  //conv_hit.set_wire          ( tp_data.keywire );
+  //conv_hit.set_quality       ( tp_data.quality );
+  conv_hit.set_pattern       ( 0 );  // In firmware, this marks RPC stub
+  //conv_hit.set_bend          ( tp_data.bend );
 
-  conv_hit.set_neighbor    ( is_neighbor );
-  conv_hit.set_sector_idx  ( (endcap_ == 1) ? sector_ - 1 : sector_ + 5 );
+  conv_hit.set_neighbor      ( is_neighbor );
+  conv_hit.set_sector_idx    ( (endcap_ == 1) ? sector_ - 1 : sector_ + 5 );
 
 
   // Get coordinates from fullsim since LUTs do not exist yet
@@ -492,6 +510,7 @@ void PrimitiveConversion::convert_rpc(
     int fph = emtf::calc_phi_loc_int_rpc(glob_phi, conv_hit.PC_sector());
     int th  = emtf::calc_theta_int_rpc(glob_theta, conv_hit.Endcap());
 
+    //assert(0 <= fph && fph < 1024);
     assert(0 <= fph && fph < 1250);
     assert(0 <=  th &&  th < 32);
     assert(th != 0b11111);  // RPC hit valid when data is not all ones
@@ -520,8 +539,8 @@ void PrimitiveConversion::convert_rpc_details(EMTFHit& conv_hit) const {
   const int pc_chamber = conv_hit.PC_chamber();
   const int pc_segment = conv_hit.PC_segment();
 
-  // const int fw_endcap  = (endcap_-1);
-  // const int fw_sector  = (sector_-1);
+  //const int fw_endcap  = (endcap_-1);
+  //const int fw_sector  = (sector_-1);
   const int fw_station = (conv_hit.Station() == 1) ? (is_neighbor ? 0 : pc_station) : conv_hit.Station();
 
   int fw_cscid = pc_chamber;
@@ -544,7 +563,7 @@ void PrimitiveConversion::convert_rpc_details(EMTFHit& conv_hit) const {
     std::cout << "RPC hit pc_station: " << pc_station << " pc_chamber: " << pc_chamber
         << " fw_station: " << fw_station << " fw_cscid: " << fw_cscid
         << " tp_station: " << conv_hit.Station() << " tp_ring: " << conv_hit.Ring()
-        << " tp_sector: " << conv_hit.Sector() << " tp_subsector: " << conv_hit.Subsector()
+        << " tp_sector: " << conv_hit.Sector_RPC() << " tp_subsector: " << conv_hit.Subsector_RPC()
         << " fph: " << fph << " th: " << th
         << std::endl;
   }
@@ -600,7 +619,7 @@ void PrimitiveConversion::convert_gem(
   int tp_station   = tp_detId.station();
   int tp_ring      = tp_detId.ring();
   int tp_roll      = tp_detId.roll();
-  // int tp_layer     = tp_detId.layer();
+  //int tp_layer     = tp_detId.layer();
   int tp_chamber   = tp_detId.chamber();
 
   int tp_bx        = tp_data.bx;
@@ -671,42 +690,44 @@ void PrimitiveConversion::convert_gem(
   }
 
   // Set properties
-  conv_hit.SetGEMDetId     ( tp_detId );
+  conv_hit.SetGEMDetId       ( tp_detId );
 
-  conv_hit.set_endcap      ( (tp_endcap == 2) ? -1 : tp_endcap );
-  conv_hit.set_station     ( tp_station );
-  conv_hit.set_ring        ( tp_ring );
-  conv_hit.set_roll        ( tp_roll );
-  conv_hit.set_chamber     ( tp_chamber );
-  conv_hit.set_sector      ( tp_sector );
-  conv_hit.set_subsector   ( tp_subsector );
-  conv_hit.set_csc_ID      ( tp_csc_ID );
-  conv_hit.set_csc_nID     ( csc_nID );
-  //conv_hit.set_track_num   ( tp_data.trknmb );
-  //conv_hit.set_sync_err    ( tp_data.syncErr );
+  conv_hit.set_endcap        ( (tp_endcap == 2) ? -1 : tp_endcap );
+  conv_hit.set_station       ( tp_station );
+  conv_hit.set_ring          ( tp_ring );
+  conv_hit.set_roll          ( tp_roll );
+  conv_hit.set_chamber       ( tp_chamber );
+  conv_hit.set_sector        ( tp_sector );
+  conv_hit.set_subsector     ( tp_subsector );
+  conv_hit.set_csc_ID        ( tp_csc_ID );
+  conv_hit.set_csc_nID       ( csc_nID );
+  //conv_hit.set_track_num     ( tp_data.trknmb );
+  //conv_hit.set_sync_err      ( tp_data.syncErr );
+  //conv_hit.set_sector_RPC    ( tp_sector );
+  //conv_hit.set_subsector_RPC ( tp_subsector );
 
-  conv_hit.set_bx          ( tp_bx + bxShiftGEM_ );
-  conv_hit.set_subsystem   ( TriggerPrimitive::kGEM );
-  conv_hit.set_is_CSC      ( false );
-  conv_hit.set_is_RPC      ( false );
-  conv_hit.set_is_GEM      ( true  );
+  conv_hit.set_bx            ( tp_bx + bxShiftGEM_ );
+  conv_hit.set_subsystem     ( TriggerPrimitive::kGEM );
+  conv_hit.set_is_CSC        ( false );
+  conv_hit.set_is_RPC        ( false );
+  conv_hit.set_is_GEM        ( true  );
 
-  conv_hit.set_pc_sector   ( pc_sector );
-  conv_hit.set_pc_station  ( pc_station );
-  conv_hit.set_pc_chamber  ( pc_chamber );
-  conv_hit.set_pc_segment  ( pc_segment );
+  conv_hit.set_pc_sector     ( pc_sector );
+  conv_hit.set_pc_station    ( pc_station );
+  conv_hit.set_pc_chamber    ( pc_chamber );
+  conv_hit.set_pc_segment    ( pc_segment );
 
-  conv_hit.set_valid       ( true );
-  conv_hit.set_strip       ( tp_strip );
-  conv_hit.set_strip_low   ( tp_data.pad_low );
-  conv_hit.set_strip_hi    ( tp_data.pad_hi );
-  //conv_hit.set_wire        ( tp_data.keywire );
-  //conv_hit.set_quality     ( tp_data.quality );
-  conv_hit.set_pattern     ( 1 );  // In firmware, this marks GEM stub (unconfirmed!)
-  //conv_hit.set_bend        ( tp_data.bend );
+  conv_hit.set_valid         ( true );
+  conv_hit.set_strip         ( tp_strip );
+  conv_hit.set_strip_low     ( tp_data.pad_low );
+  conv_hit.set_strip_hi      ( tp_data.pad_hi );
+  //conv_hit.set_wire          ( tp_data.keywire );
+  //conv_hit.set_quality       ( tp_data.quality );
+  conv_hit.set_pattern       ( 1 );  // In firmware, this marks GEM stub (unconfirmed!)
+  //conv_hit.set_bend          ( tp_data.bend );
 
-  conv_hit.set_neighbor    ( is_neighbor );
-  conv_hit.set_sector_idx  ( (endcap_ == 1) ? sector_ - 1 : sector_ + 5 );
+  conv_hit.set_neighbor      ( is_neighbor );
+  conv_hit.set_sector_idx    ( (endcap_ == 1) ? sector_ - 1 : sector_ + 5 );
 
 
   // Get coordinates from fullsim since LUTs do not exist yet
