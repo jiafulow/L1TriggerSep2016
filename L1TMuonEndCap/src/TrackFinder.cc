@@ -230,7 +230,7 @@ void TrackFinder::process(
 
             } else if (h.Subsystem() == TriggerPrimitive::kRPC) {
               if (h.Sector_idx() != es)  continue;
-              if (h.BX()+5 != ibx)  continue;  // RPC hits should be supplied 5 BX later relative to CSC hits
+              if (h.BX()+6 != ibx)  continue;  // RPC hits should be supplied 6 BX later relative to CSC hits
 
               // Assign RPC link index. Code taken from src/PrimitiveSelection.cc
               int rpc_sub = -1;
