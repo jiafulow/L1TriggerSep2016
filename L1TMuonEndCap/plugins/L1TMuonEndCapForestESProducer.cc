@@ -9,7 +9,7 @@
 #include "CondFormats/L1TObjects/interface/L1TMuonEndCapForest.h"
 #include "CondFormats/DataRecord/interface/L1TMuonEndCapForestRcd.h"
 
-#include "L1Trigger/L1TMuonEndCap/interface/PtAssignmentEngine2016.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/PtAssignmentEngine2016.h"
 #include "L1Trigger/L1TMuonEndCap/interface/bdt/Node.h"
 #include "L1Trigger/L1TMuonEndCap/interface/bdt/Tree.h"
 #include "L1Trigger/L1TMuonEndCap/interface/bdt/Forest.h"

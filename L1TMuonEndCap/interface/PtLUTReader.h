@@ -1,5 +1,5 @@
-#ifndef L1TMuonEndCap_PtLUTReader_hh
-#define L1TMuonEndCap_PtLUTReader_hh
+#ifndef L1TMuonEndCap_PtLUTReader_h
+#define L1TMuonEndCap_PtLUTReader_h
 
 #include <cstdint>
 #include <string>

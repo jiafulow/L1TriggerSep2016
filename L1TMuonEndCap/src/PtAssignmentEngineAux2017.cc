@@ -1,4 +1,4 @@
-#include "L1Trigger/L1TMuonEndCap/interface/PtAssignmentEngineAux2017.hh"
+#include "L1Trigger/L1TMuonEndCap/interface/PtAssignmentEngineAux2017.h"
 #include <iostream> // KK: couts below will bring David's attention!
 #include <cassert>
 #include <cmath>
