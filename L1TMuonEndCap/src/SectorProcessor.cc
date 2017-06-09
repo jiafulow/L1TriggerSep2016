@@ -360,6 +360,7 @@ void SectorProcessor::process_single_bx(
   prim_sel.process(RPCTag(), muon_primitives, selected_rpc_map);
   prim_sel.process(GEMTag(), muon_primitives, selected_gem_map);
   prim_sel.merge(selected_csc_map, selected_rpc_map, selected_gem_map, selected_prim_map);
+  //prim_sel.merge_no_truncate(selected_csc_map, selected_rpc_map, selected_gem_map, selected_prim_map);
 
   // Convert trigger primitives into "converted" hits
   // A converted hit consists of integer representations of phi, theta, and zones
