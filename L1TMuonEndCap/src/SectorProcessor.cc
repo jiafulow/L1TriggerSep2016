@@ -16,6 +16,7 @@ void SectorProcessor::configure(
     PtAssignmentEngine** pt_assign_engine,
     int verbose, int endcap, int sector,
     int minBX, int maxBX, int bxWindow, int bxShiftCSC, int bxShiftRPC, int bxShiftGEM,
+    std::string era,
     const std::vector<int>& zoneBoundaries, int zoneOverlap, int zoneOverlapRPC,
     bool includeNeighbor, bool duplicateTheta, bool fixZonePhi, bool useNewZones, bool fixME11Edges,
     const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions, bool useSymPatterns,
@@ -46,6 +47,8 @@ void SectorProcessor::configure(
   bxShiftCSC_  = bxShiftCSC;
   bxShiftRPC_  = bxShiftRPC;
   bxShiftGEM_  = bxShiftGEM;
+
+  era_ = era;
 
   zoneBoundaries_     = zoneBoundaries;
   zoneOverlap_        = zoneOverlap;
