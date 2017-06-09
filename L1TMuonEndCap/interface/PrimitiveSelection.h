@@ -65,6 +65,8 @@ public:
   int get_index_rpc(int tp_station, int tp_ring, int tp_subsector, bool is_neighbor) const;
 
   // GEM functions
+  void make_pairs_gem(const TriggerPrimitiveCollection& muon_primitives, TriggerPrimitiveCollection& copad_muon_primitives) const;
+
   void cluster_gem(const TriggerPrimitiveCollection& muon_primitives, TriggerPrimitiveCollection& clus_muon_primitives) const;
 
   int select_gem(const TriggerPrimitive& muon_primitive) const;
