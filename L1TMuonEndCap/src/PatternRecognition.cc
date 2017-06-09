@@ -191,7 +191,7 @@ void PatternRecognition::process(
     for (const auto& conv_hits : extended_conv_hits) {
       for (const auto& conv_hit : conv_hits) {
         if (conv_hit.Subsystem() == TriggerPrimitive::kCSC) {
-          std::cout << "st: " << conv_hit.PC_station() << " ch: " << conv_hit.PC_chamber()
+          std::cout << "CSC hit st: " << conv_hit.PC_station() << " ch: " << conv_hit.PC_chamber()
               << " ph: " << conv_hit.Phi_fp() << " th: " << conv_hit.Theta_fp()
               << " ph_hit: " << (1ul<<conv_hit.Ph_hit()) << " phzvl: " << conv_hit.Phzvl()
               << " strip: " << conv_hit.Strip() << " wire: " << conv_hit.Wire() << " cpat: " << conv_hit.Pattern()
