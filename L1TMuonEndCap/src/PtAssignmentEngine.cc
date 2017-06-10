@@ -24,8 +24,8 @@ void PtAssignmentEngine::read(const std::string& xml_dir) {
 
   std::string xml_dir_full = "L1Trigger/L1TMuonEndCap/data/pt_xmls/" + xml_dir;
   unsigned xml_nTrees = 64; // 2016 XMLs
-  if (ptLUTVersion_ >= 6)
-    xml_nTrees = 400;       // First 2017 XMLs
+  //if (ptLUTVersion_ >= 6)
+  //  xml_nTrees = 400;       // First 2017 XMLs
 
   std::cout << "EMTF emulator: attempting to read pT LUT XMLs from local directory" << std::endl;
   std::cout << xml_dir_full << std::endl;
