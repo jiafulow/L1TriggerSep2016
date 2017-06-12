@@ -243,8 +243,24 @@ void MakeAngleLUT::generateLUTs() {
     const GEMDetId& gemDetId = roll->id();
     if (gemDetId.region() == 0)  // skip barrel
       continue;
-    //double zpos = roll->surface().position().z();  // [cm]
-    //std::cout << "GEM: " << gemDetId.region() << " " << gemDetId.ring() << " " << gemDetId.station() << " " << gemDetId.layer() << " " << gemDetId.chamber() << " " << gemDetId.roll() << " " << zpos << std::endl;
+    double zpos = roll->surface().position().z();  // [cm]
+    //std::cout << "GEM: " << gemDetId.region() << " " << gemDetId.station() << " " << gemDetId.ring() << " " << gemDetId.layer() << " " << gemDetId.chamber() << " " << gemDetId.roll() << " " << zpos << std::endl;
+
+    if (gemDetId.region() == 1 && gemDetId.layer() == 1 && gemDetId.roll() == 1 && (gemDetId.chamber() == 1 || gemDetId.chamber() == 2)) {
+      if (gemDetId.station() == 1 && gemDetId.ring() == 1) {
+        if        (gemDetId.chamber() == 2) {  // front
+          z_positions[22] = zpos;
+        } else if (gemDetId.chamber() == 1) {  // rear
+          z_positions[23] = zpos;
+        }
+      } else if (gemDetId.station() == 2 && gemDetId.ring() == 1) {
+        if        (gemDetId.chamber() == 2) {  // front
+          z_positions[24] = zpos;
+        } else if (gemDetId.chamber() == 1) {  // rear
+          z_positions[25] = zpos;
+        }
+      }
+    }
   }  // end loop over GEM detUnits
 
 
