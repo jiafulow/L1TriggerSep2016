@@ -169,7 +169,7 @@ void EMTFSubsystemCollector::cluster_rpc(const TriggerPrimitiveCollection& muon_
   std::copy_if(muon_primitives.begin(), muon_primitives.end(), std::back_inserter(clus_muon_primitives), rpc_digi_select);
 
   // 2. Sort
-  std::sort(clus_muon_primitives.begin(), clus_muon_primitives.end(), rpc_digi_less);
+  std::stable_sort(clus_muon_primitives.begin(), clus_muon_primitives.end(), rpc_digi_less);
 
   // 3. Remove duplicates
   clus_muon_primitives.erase(
@@ -317,7 +317,7 @@ void EMTFSubsystemCollector::cluster_gem(const TriggerPrimitiveCollection& muon_
   std::copy_if(muon_primitives.begin(), muon_primitives.end(), std::back_inserter(clus_muon_primitives), gem_digi_select);
 
   // 2. Sort
-  std::sort(clus_muon_primitives.begin(), clus_muon_primitives.end(), gem_digi_less);
+  std::stable_sort(clus_muon_primitives.begin(), clus_muon_primitives.end(), gem_digi_less);
 
   // 3. Remove duplicates
   clus_muon_primitives.erase(
