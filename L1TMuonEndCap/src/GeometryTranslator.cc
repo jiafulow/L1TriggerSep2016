@@ -136,7 +136,9 @@ GlobalPoint
 GeometryTranslator::getGEMSpecificPoint(const TriggerPrimitive& tp) const {
   const GEMDetId id(tp.detId<GEMDetId>());
   const GEMEtaPartition * roll = _geogem->etaPartition(id);
-  const uint16_t pad = tp.getGEMData().pad;
+  //const uint16_t pad = tp.getGEMData().pad;
+  // Use half-strip precision, - 0.5 at the end to get the center of the strip
+  const float pad = (0.5 * static_cast<float>(tp.getGEMData().pad_low + tp.getGEMData().pad_hi)) - 0.5;
   const LocalPoint lp = roll->centreOfPad(pad);
   const GlobalPoint gp = roll->toGlobal(lp);
 
