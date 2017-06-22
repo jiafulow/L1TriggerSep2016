@@ -305,9 +305,9 @@ void PrimitiveSelection::process(
           tmp_primitives.end()
       );
 
-      // Keep the first two clusters
-      if (tmp_primitives.size() > 2)
-        tmp_primitives.erase(tmp_primitives.begin()+2, tmp_primitives.end());
+      // Keep the first 8 clusters
+      if (tmp_primitives.size() > 8)
+        tmp_primitives.erase(tmp_primitives.begin()+8, tmp_primitives.end());
     }
   }  // end if apply_truncation
 
@@ -362,7 +362,7 @@ void PrimitiveSelection::merge(
     int selected_gem = map_tp_it->first;
     const TriggerPrimitiveCollection& gem_primitives = map_tp_it->second;
     if (gem_primitives.empty())  continue;
-    assert(gem_primitives.size() <= 2);  // at most 2 hits
+    assert(gem_primitives.size() <= 8);  // at most 8 hits
 
     bool found = (selected_prim_map.find(selected_gem) != selected_prim_map.end());
     if (!found) {
@@ -370,13 +370,7 @@ void PrimitiveSelection::merge(
       selected_prim_map[selected_gem] = gem_primitives;
 
     } else {
-      // Initial FW in 2017; was disabled on June 7.
-      // If only one CSC hit, insert the first GEM hit
-      //TriggerPrimitiveCollection& tmp_primitives = selected_prim_map[selected_gem];  // pass by reference
 
-      //if (tmp_primitives.size() < 2) {
-      //  tmp_primitives.push_back(gem_primitives.front());
-      //}
     }
   }
 
