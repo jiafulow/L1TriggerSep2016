@@ -305,9 +305,9 @@ void PrimitiveSelection::process(
           tmp_primitives.end()
       );
 
-      // Keep the first two clusters
-      if (tmp_primitives.size() > 2)
-        tmp_primitives.erase(tmp_primitives.begin()+2, tmp_primitives.end());
+      // Keep the first 8 clusters
+      if (tmp_primitives.size() > 8)
+        tmp_primitives.erase(tmp_primitives.begin()+8, tmp_primitives.end());
     }
   }  // end if apply_truncation
 
