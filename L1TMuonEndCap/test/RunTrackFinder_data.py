@@ -75,7 +75,7 @@ eos_cmd = '/afs/cern.ch/project/eos/installation/pro/bin/eos.select'
 # in_dir_name = '/eos/cms/tier0/store/data/Run2017A/ZeroBias1/RAW/v1/000/295/128/00000/'
 # in_dir_name = '/eos/cms/tier0/store/data/Run2017A/Commissioning1/RAW/v1/000/295/317/00000/'
 # in_dir_name = '/eos/cms/tier0/store/data/Run2017A/ZeroBias1/RAW/v1/000/295/603/00000/'
-in_dir_name = '/eos/cms/tier0/store/data/Run2017A/Commissioning1/RAW/v1/000/295/655/00000/'
+in_dir_name = '/eos/cms/tier0/store/data/Run2017A/ZeroBias/RAW/v1/000/296/677/00000/'
 
 # ## 2017 Cosmics, with RPC!
 # in_dir_name = '/store/express/Commissioning2017/ExpressCosmics/FEVT/Express-v1/000/291/622/00000/'
@@ -95,7 +95,7 @@ iFile = 0
 for in_file_name in subprocess.check_output([eos_cmd, 'ls', in_dir_name]).splitlines():
     if not ('.root' in in_file_name): continue
     iFile += 1
-    if iFile < 10: continue  ## Skip earliest files in run
+    # if iFile < 10: continue  ## Skip earliest files in run
     # readFiles.extend( cms.untracked.vstring(in_dir_name+in_file_name) )
     in_dir_name_T0 = in_dir_name.replace('/eos/cms/tier0/', 'root://cms-xrd-tzero.cern.ch//')
     readFiles.extend( cms.untracked.vstring(in_dir_name_T0+in_file_name) )
@@ -126,24 +126,24 @@ process.simEmtfDigis.RPCInput  = cms.InputTag('muonRPCDigis')
 ###  Settings for 2016 vs. 2017 emulation  ###
 ##############################################
 
-## *** 2016 ***
-## From python/fakeEmtfParams_cff.py
-process.emtfParams.PtAssignVersion = cms.int32(5)
-process.emtfParams.FirmwareVersion = cms.int32(49999) ## Settings as of end-of-year 2016
-process.emtfParams.PrimConvVersion = cms.int32(0)
-process.emtfForestsDB.toGet = cms.VPSet(
-    cms.PSet(
-        record = cms.string("L1TMuonEndCapForestRcd"),
-        tag = cms.string("L1TMuonEndCapForest_static_2016_mc")
-        )
-    )
+# ## *** 2016 ***
+# ## From python/fakeEmtfParams_cff.py
+# process.emtfParams.PtAssignVersion = cms.int32(5)
+# process.emtfParams.FirmwareVersion = cms.int32(49999) ## Settings as of end-of-year 2016
+# process.emtfParams.PrimConvVersion = cms.int32(0)
+# process.emtfForestsDB.toGet = cms.VPSet(
+#     cms.PSet(
+#         record = cms.string("L1TMuonEndCapForestRcd"),
+#         tag = cms.string("L1TMuonEndCapForest_static_2016_mc")
+#         )
+#     )
 
-## From python/simEmtfDigis_cfi.py
-process.simEmtfDigis.RPCEnable                 = cms.bool(False)
-process.simEmtfDigis.spTBParams16.ThetaWindow  = cms.int32(4)
-process.simEmtfDigis.spPCParams16.FixME11Edges = cms.bool(False)
-process.simEmtfDigis.spPAParams16.PtLUTVersion = cms.int32(5)
-process.simEmtfDigis.spPAParams16.BugGMTPhi    = cms.bool(True)
+# ## From python/simEmtfDigis_cfi.py
+# process.simEmtfDigis.RPCEnable                 = cms.bool(False)
+# process.simEmtfDigis.spTBParams16.ThetaWindow  = cms.int32(4)
+# process.simEmtfDigis.spPCParams16.FixME11Edges = cms.bool(False)
+# process.simEmtfDigis.spPAParams16.PtLUTVersion = cms.int32(5)
+# process.simEmtfDigis.spPAParams16.BugGMTPhi    = cms.bool(True)
 
 # ## *** 2017 ***
 # ## From python/fakeEmtfParams_cff.py
@@ -202,10 +202,10 @@ out_dir = "/afs/cern.ch/work/a/abrinke1/public/EMTF/Commissioning/2017/"
 
 process.out = cms.OutputModule("PoolOutputModule",
                                # fileName = cms.untracked.string("EMTF_Tree_highPt200MuonSkim_2016D_emu16_noGT_10k.root"),
-                               # fileName = cms.untracked.string(out_dir+"EMTF_Tree_ZeroBias_IsoBunch_282650_emul17_GT_10k.root"),
+                               # fileName = cms.untracked.string(out_dir+"EMTF_Tree_ZeroBias_IsoBunch_282650_emul16_noGT_10k.root"),
                                # fileName = cms.untracked.string("EMTF_Tree_Cosmics_291622_RPC_test.root"),
                                # fileName = cms.untracked.string(out_dir+"EMTF_Tree_Collisions_295665_exact_emul_500k.root"),
-                               fileName = cms.untracked.string(out_dir+"EMTF_Tree_Collisions_295665_emul16_noGT_10k.root"),
+                               fileName = cms.untracked.string(out_dir+"EMTF_Tree_Collisions_296677_emul17_noGT_10k.root"),
                                outputCommands = outCommands
                                )
 
