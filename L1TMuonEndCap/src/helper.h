@@ -2,6 +2,19 @@
 #include <string>
 #include <sstream>
 
+
+// Need a safe assertion function
+#ifdef NDEBUG
+# define assert_no_abort(expr) ((void)0)
+#else
+# define assert_no_abort(expr) ((void)((expr) || (__assert_no_abort(#expr, __FILE__, __LINE__, __PRETTY_FUNCTION__),0)))
+template<typename T=void>
+void __assert_no_abort(const char *assertion, const char *file, unsigned int line, const char * function) {
+  std::cout << file << ":" << line << ": " << function << ": Assertion `" << assertion << "' failed. (no abort)" << std::endl;
+}
+#endif
+
+
 namespace {
 
   // Return an integer as a hex string

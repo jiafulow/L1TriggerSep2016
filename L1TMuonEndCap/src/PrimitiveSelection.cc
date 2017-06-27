@@ -439,16 +439,16 @@ int PrimitiveSelection::select_csc(const TriggerPrimitive& muon_primitive) const
     int tp_bx        = tp_data.bx;
     int tp_csc_ID    = tp_data.cscID;
 
-    assert(MIN_ENDCAP <= tp_endcap && tp_endcap <= MAX_ENDCAP);
-    assert(MIN_TRIGSECTOR <= tp_sector && tp_sector <= MAX_TRIGSECTOR);
-    assert(1 <= tp_station && tp_station <= 4);
-    assert(1 <= tp_csc_ID && tp_csc_ID <= 9);
-    assert(tp_data.strip < 160);
-    // assert(tp_data.keywire < 112);
-    assert(tp_data.keywire < 128);
-    assert(tp_data.valid == true);
-    assert(tp_data.pattern <= 10);
-    assert(tp_data.quality > 0);
+    assert_no_abort(MIN_ENDCAP <= tp_endcap && tp_endcap <= MAX_ENDCAP);
+    assert_no_abort(MIN_TRIGSECTOR <= tp_sector && tp_sector <= MAX_TRIGSECTOR);
+    assert_no_abort(1 <= tp_station && tp_station <= 4);
+    assert_no_abort(1 <= tp_csc_ID && tp_csc_ID <= 9);
+    assert_no_abort(tp_data.strip < 160);
+    //assert_no_abort(tp_data.keywire < 112);
+    assert_no_abort(tp_data.keywire < 128);
+    assert_no_abort(tp_data.valid == true);
+    assert_no_abort(tp_data.pattern <= 10);
+    assert_no_abort(tp_data.quality > 0);
 
     // Check using ME1/1a --> ring 4 convention
     if (tp_station == 1 && tp_ring == 1) {
@@ -627,15 +627,15 @@ int PrimitiveSelection::select_rpc(const TriggerPrimitive& muon_primitive) const
     int tp_bx        = tp_data.bx;
     int tp_strip     = tp_data.strip;
 
-    assert(tp_region != 0);
-    assert(MIN_ENDCAP <= tp_endcap && tp_endcap <= MAX_ENDCAP);
-    assert(MIN_TRIGSECTOR <= tp_sector && tp_sector <= MAX_TRIGSECTOR);
-    assert(1 <= tp_subsector && tp_subsector <= 6);
-    assert(1 <= tp_station && tp_station <= 4);
-    assert(2 <= tp_ring && tp_ring <= 3);
-    assert(1 <= tp_roll && tp_roll <= 3);
-    assert(1 <= tp_strip && tp_strip <= 32);
-    assert(tp_station > 2 || tp_ring != 3);  // stations 1 and 2 do not receive RPCs from ring 3
+    assert_no_abort(tp_region != 0);
+    assert_no_abort(MIN_ENDCAP <= tp_endcap && tp_endcap <= MAX_ENDCAP);
+    assert_no_abort(MIN_TRIGSECTOR <= tp_sector && tp_sector <= MAX_TRIGSECTOR);
+    assert_no_abort(1 <= tp_subsector && tp_subsector <= 6);
+    assert_no_abort(1 <= tp_station && tp_station <= 4);
+    assert_no_abort(2 <= tp_ring && tp_ring <= 3);
+    assert_no_abort(1 <= tp_roll && tp_roll <= 3);
+    assert_no_abort(1 <= tp_strip && tp_strip <= 32);
+    assert_no_abort(tp_station > 2 || tp_ring != 3);  // stations 1 and 2 do not receive RPCs from ring 3
 
     // Selection
     if (is_in_bx_rpc(tp_bx)) {
@@ -850,18 +850,18 @@ int PrimitiveSelection::select_gem(const TriggerPrimitive& muon_primitive) const
     // station 2,3,4 --> subsector 0
     int tp_subsector = (tp_station != 1) ? 0 : ((tp_chamber%6 > 2) ? 1 : 2);
 
-    assert(MIN_ENDCAP <= tp_endcap && tp_endcap <= MAX_ENDCAP);
-    assert(MIN_TRIGSECTOR <= tp_sector && tp_sector <= MAX_TRIGSECTOR);
-    assert(1 <= tp_station && tp_station <= 2);
-    assert(1 <= tp_ring && tp_ring <= 1);
-    //assert(1 <= tp_roll && tp_roll <= 12);
-    assert((tp_station == 1 && 1 <= tp_roll && tp_roll <= 8) || (tp_station != 1));
-    assert((tp_station == 2 && 1 <= tp_roll && tp_roll <= 12) || (tp_station != 2));
-    assert(1 <= tp_layer && tp_layer <= 2);
-    assert(1 <= tp_csc_ID && tp_csc_ID <= 9);
-    //assert(tp_data.pad < 192);
-    assert((tp_station == 1 && 1 <= tp_pad && tp_pad <= 192) || (tp_station != 1));
-    assert((tp_station == 2 && 1 <= tp_pad && tp_pad <= 192) || (tp_station != 2));
+    assert_no_abort(MIN_ENDCAP <= tp_endcap && tp_endcap <= MAX_ENDCAP);
+    assert_no_abort(MIN_TRIGSECTOR <= tp_sector && tp_sector <= MAX_TRIGSECTOR);
+    assert_no_abort(1 <= tp_station && tp_station <= 2);
+    assert_no_abort(1 <= tp_ring && tp_ring <= 1);
+    //assert_no_abort(1 <= tp_roll && tp_roll <= 12);
+    assert_no_abort((tp_station == 1 && 1 <= tp_roll && tp_roll <= 8) || (tp_station != 1));
+    assert_no_abort((tp_station == 2 && 1 <= tp_roll && tp_roll <= 12) || (tp_station != 2));
+    assert_no_abort(1 <= tp_layer && tp_layer <= 2);
+    assert_no_abort(1 <= tp_csc_ID && tp_csc_ID <= 9);
+    //assert_no_abort(tp_data.pad < 192);
+    assert_no_abort((tp_station == 1 && 1 <= tp_pad && tp_pad <= 192) || (tp_station != 1));
+    assert_no_abort((tp_station == 2 && 1 <= tp_pad && tp_pad <= 192) || (tp_station != 2));
 
     // Selection
     if (is_in_bx_gem(tp_bx)) {
