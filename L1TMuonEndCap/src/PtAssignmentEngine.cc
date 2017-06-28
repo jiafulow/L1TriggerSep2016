@@ -8,7 +8,8 @@
 PtAssignmentEngine::PtAssignmentEngine() :
     allowedModes_({3,5,9,6,10,12,7,11,13,14,15}),
     forests_(),
-    ptlut_reader_()
+    ptlut_reader_(),
+    ptLUTVersion_(0xFFFFFFFF)
 {
 
 }
@@ -41,10 +42,8 @@ void PtAssignmentEngine::read(const std::string& xml_dir) {
   return;
 }
 
-void PtAssignmentEngine::load(const L1TMuonEndCapForest *payload) {
-  // unsigned pt_lut_version = payload->version_;  // Why is payload->version_ always 0? - AWB 02.06.17
-  // std::cout << "ptLUTVersion_ from configuration = " << ptLUTVersion_ << ", payload->version_ = " << payload->version_ << std::endl;
-  // assert(pt_lut_version == unsigned(ptLUTVersion_));
+void PtAssignmentEngine::load(int pt_lut_version, const L1TMuonEndCapForest *payload) {
+  if (ptLUTVersion_ == pt_lut_version)  return;
 
   for (unsigned i = 0; i < allowedModes_.size(); ++i) {
     int mode = allowedModes_.at(i);
@@ -72,17 +71,19 @@ void PtAssignmentEngine::load(const L1TMuonEndCapForest *payload) {
 
   }
 
+  ptLUTVersion_ = pt_lut_version;
   return;
 }
 
 void PtAssignmentEngine::configure(
     int verbose,
-    int ptLUTVersion, bool readPtLUTFile, bool fixMode15HighPt,
+    int ptLUTVersion,
+    bool readPtLUTFile, bool fixMode15HighPt,
     bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt
 ) {
   verbose_ = verbose;
 
-  ptLUTVersion_    = ptLUTVersion;
+  //ptLUTVersion_    = ptLUTVersion;  // this is actually ignored. only the pT LUT version from Conditions is being used.
   readPtLUTFile_   = readPtLUTFile;
   fixMode15HighPt_ = fixMode15HighPt;
   bug9BitDPhi_     = bug9BitDPhi;

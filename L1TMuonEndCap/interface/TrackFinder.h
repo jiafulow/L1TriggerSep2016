@@ -34,9 +34,7 @@ private:
 
   SectorProcessorLUT sector_processor_lut_;
 
-  PtAssignmentEngine* pt_assign_engine_;
-  std::unique_ptr<PtAssignmentEngine> pt_assign_engine_2016_;
-  std::unique_ptr<PtAssignmentEngine> pt_assign_engine_2017_;
+  std::unique_ptr<PtAssignmentEngine> pt_assign_engine_;
 
   sector_array<SectorProcessor> sector_processors_;
 
