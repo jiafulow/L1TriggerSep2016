@@ -205,16 +205,16 @@ namespace L1TMuonEndCap {
     // Translate to 'global' position information at the level of 60
     // degree sectors. Use CSC sectors as a template
     void calculateDTGlobalSector(const DTChamberId& chid,
-                                 unsigned& global_sector,
+                                 unsigned& globalsector,
                                  unsigned& subsector );
     void calculateCSCGlobalSector(const CSCDetId& chid,
-                                  unsigned& global_sector,
+                                  unsigned& globalsector,
                                   unsigned& subsector );
     void calculateRPCGlobalSector(const RPCDetId& chid,
-                                  unsigned& global_sector,
+                                  unsigned& globalsector,
                                   unsigned& subsector );
     void calculateGEMGlobalSector(const GEMDetId& chid,
-                                  unsigned& global_sector,
+                                  unsigned& globalsector,
                                   unsigned& subsector );
 
     DTData  _dt;
