@@ -288,37 +288,37 @@ const int TriggerPrimitive::getPattern() const {
 }
 
 void TriggerPrimitive::calculateDTGlobalSector(const DTChamberId& chid,
-                                               unsigned& global_sector,
+                                               unsigned& globalsector,
                                                unsigned& subsector ) {
-  global_sector = 0;
+  globalsector = 0;
   subsector = 0;
 }
 
 void TriggerPrimitive::calculateCSCGlobalSector(const CSCDetId& chid,
-                                                unsigned& global_sector,
+                                                unsigned& globalsector,
                                                 unsigned& subsector ) {
-  global_sector = 0;
+  globalsector = 0;
   subsector = 0;
 }
 
 void TriggerPrimitive::calculateRPCGlobalSector(const RPCDetId& chid,
-                                                unsigned& global_sector,
+                                                unsigned& globalsector,
                                                 unsigned& subsector ) {
-  global_sector = 0;
+  globalsector = 0;
   subsector = 0;
 }
 
 void TriggerPrimitive::calculateGEMGlobalSector(const GEMDetId& chid,
-                                                unsigned& global_sector,
+                                                unsigned& globalsector,
                                                 unsigned& subsector ) {
-  global_sector = 0;
+  globalsector = 0;
   subsector = 0;
 }
 
 void TriggerPrimitive::print(std::ostream& out) const {
   unsigned idx = (unsigned) _subsystem;
   out << subsystem_names[idx] << " Trigger Primitive" << std::endl;
-  out << "eta: " << _eta << " phi: " << _phi
+  out << "eta: " << _eta << " phi: " << _phi << " rho: " << _rho
       << " bend: " << _theta << std::endl;
   switch(_subsystem) {
   case kDT:
