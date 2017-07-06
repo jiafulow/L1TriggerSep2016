@@ -14,8 +14,6 @@
 #include "FWCore/ParameterSet/interface/FileInPath.h"
 #include "TXMLEngine.h"
 
-#include "L1Trigger/L1TMuonEndCap/interface/Tree.h"
-
 using namespace std;
 
 // Class declaration
