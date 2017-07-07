@@ -94,7 +94,8 @@ void TTPrimitiveConversion::convert_tt(
   conv_hit.set_wire        ( static_cast<int>(tp_data.col_f) );
   //conv_hit.set_quality     ( tp_data.quality );
   //conv_hit.set_pattern     ( tp_data.pattern );
-  //conv_hit.set_bend        ( tp_data.bend );
+  conv_hit.set_bend        ( tp_data.bend );
+  //conv_hit.set_time        ( tp_data.time );
 
   conv_hit.set_neighbor    ( is_neighbor );
   conv_hit.set_sector_idx  ( (endcap_ == 1) ? sector_ - 1 : sector_ + 5 );

@@ -27,6 +27,11 @@ namespace emtf {
     typedef GEMPadDigiCollection digi_collection;
   };
 
+  struct IRPCTag {
+    typedef RPCDigi           digi_type;
+    typedef RPCDigiCollection digi_collection;
+  };
+
   struct TTTag {
     typedef Ref_Phase2TrackerDigi_            digi_ref;
     typedef TTStub<digi_ref>                  digi_type;
