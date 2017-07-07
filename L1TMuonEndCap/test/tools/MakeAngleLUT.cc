@@ -119,7 +119,7 @@ void MakeAngleLUT::generateLUTs() {
   // from RecoMuon/DetLayers/src/MuonCSCDetLayerGeometryBuilder.cc
   //      RecoMuon/DetLayers/src/MuonRPCDetLayerGeometryBuilder.cc
   //      RecoMuon/DetLayers/src/MuonGEMDetLayerGeometryBuilder.cc
-  auto isFront = [](int subsystem, int station, int ring, int chamber, int subsector) {
+  auto isFront_detail = [](int subsystem, int station, int ring, int chamber, int subsector) {
     bool result = false;
 
     if (subsystem == TriggerPrimitive::kCSC) {
@@ -133,20 +133,28 @@ void MakeAngleLUT::generateLUTs() {
         result = (station < 3) ? isEven : !isEven;
       }
     } else if (subsystem == TriggerPrimitive::kRPC) {
-      // 10 degree rings have odd subsectors in front
-      result = (subsector % 2 == 0);
+      // 10 degree rings have even subsectors in front
+      // 20 degree rings have odd subsectors in front
+      bool is_10degree = !((station == 3 || station == 4) && (ring == 1));
+      bool isEven = (subsector % 2 == 0);
+      result = (is_10degree) ? isEven : !isEven;
     } else if (subsystem == TriggerPrimitive::kGEM) {
       //
       result = (chamber % 2 == 0);
     }
     return result;
   };
-  if (isFront) {}  // get around GCC unused-but-set-variable error
+
+  //auto isFront = [](const auto& hit) {
+  //  return isFront_detail(hit.Subsystem(), hit.Station(), hit.Ring(), hit.Chamber(), (hit.Subsystem() == TriggerPrimitive::kRPC ? hit.Subsector_RPC() : hit.Subsector()));
+  //};
+
+  if (isFront_detail) {}  // get around GCC unused-but-set-variable error
 
   // Save z positions for ME1/1, ME1/2, ME1/3, ME2/2, ME3/2, ME4/2,
   //                      RE1/2, RE1/3, RE2/2, RE3/2, RE4/2,
-  //                      GE1/1, GE1/2,
-  std::vector<double> z_positions(13*2, 0.);
+  //                      GE1/1, GE1/2, RE3/1, RE4/1
+  std::vector<double> z_positions(15*2, 0.);
 
 
   // ___________________________________________________________________________
@@ -160,7 +168,7 @@ void MakeAngleLUT::generateLUTs() {
     const CSCDetId& cscDetId = chamber->id();
     //double zpos = chamber->surface().position().z();  // [cm]
     double zpos = chamber->layer(CSCConstants::KEY_ALCT_LAYER)->surface().position().z();  // [cm]
-    //std::cout << "CSC: " << cscDetId.endcap() << " " << cscDetId.station() << " " << cscDetId.ring() << " " << cscDetId.chamber() << " " << cscDetId.layer() << " " << zpos << std::endl;
+    //std::cout << "CSC: " << cscDetId.endcap() << " " << cscDetId.station() << " " << cscDetId.ring() << " " << cscDetId.chamber() << " " << layer->geometry()->numberOfStrips() << " " << layer->geometry()->numberOfWires() << " " << cscDetId.layer() << " " << zpos << std::endl;
 
     // Save the numbers
     if (cscDetId.endcap() == 1 && (cscDetId.chamber() == 1 || cscDetId.chamber() == 2)) {
@@ -219,7 +227,7 @@ void MakeAngleLUT::generateLUTs() {
     //if (rpcDetId.region() == 0 || (rpcDetId.station() <= 2 && rpcDetId.ring() == 3))  // skip barrel, RE1/3, RE2/3
     //  continue;
     double zpos = roll->surface().position().z();  // [cm]
-    //std::cout << "RPC: " << rpcDetId.region() << " " << rpcDetId.ring() << " " << rpcDetId.station() << " " << rpcDetId.sector() << " " << rpcDetId.layer() << " " << rpcDetId.subsector() << " " << rpcDetId.roll() << " " << zpos << std::endl;
+    //std::cout << "RPC: " << rpcDetId.region() << " " << rpcDetId.ring() << " " << rpcDetId.station() << " " << rpcDetId.sector() << " " << rpcDetId.layer() << " " << rpcDetId.subsector() << " " << rpcDetId.roll() << " " << roll->nstrips() << " " << zpos << std::endl;
 
     // Save the numbers
     if (rpcDetId.region() == 1 && rpcDetId.sector() == 1 && rpcDetId.roll() == 1 && (rpcDetId.subsector() == 1 || rpcDetId.subsector() == 2)) {
@@ -253,6 +261,18 @@ void MakeAngleLUT::generateLUTs() {
         } else if (rpcDetId.subsector() == 1) {  // rear
           z_positions[21] = zpos;
         }
+      } else if (rpcDetId.station() == 3 && rpcDetId.ring() == 1) {
+        if        (rpcDetId.subsector() == 1) {  // front
+          z_positions[26] = zpos;
+        } else if (rpcDetId.subsector() == 2) {  // rear
+          z_positions[27] = zpos;
+        }
+      } else if (rpcDetId.station() == 4 && rpcDetId.ring() == 1) {
+        if        (rpcDetId.subsector() == 1) {  // front
+          z_positions[28] = zpos;
+        } else if (rpcDetId.subsector() == 2) {  // rear
+          z_positions[29] = zpos;
+        }
       }
     }
   }  // end loop over RPC detUnits
@@ -270,7 +290,7 @@ void MakeAngleLUT::generateLUTs() {
     if (gemDetId.region() == 0)  // skip barrel
       continue;
     double zpos = roll->surface().position().z();  // [cm]
-    //std::cout << "GEM: " << gemDetId.region() << " " << gemDetId.station() << " " << gemDetId.ring() << " " << gemDetId.layer() << " " << gemDetId.chamber() << " " << gemDetId.roll() << " " << zpos << std::endl;
+    //std::cout << "GEM: " << gemDetId.region() << " " << gemDetId.station() << " " << gemDetId.ring() << " " << gemDetId.layer() << " " << gemDetId.chamber() << " " << gemDetId.roll() << " " << roll->nstrips() << " " << zpos << std::endl;
 
     if (gemDetId.region() == 1 && gemDetId.layer() == 1 && gemDetId.roll() == 1 && (gemDetId.chamber() == 1 || gemDetId.chamber() == 2)) {
       if (gemDetId.station() == 1 && gemDetId.ring() == 1) {
