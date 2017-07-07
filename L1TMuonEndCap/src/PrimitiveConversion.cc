@@ -76,7 +76,11 @@ void PrimitiveConversion::process(
       conv_hits.push_back(conv_hit);
       pc_segment += 1;
     }
+#ifdef PHASE_TWO_TRIGGER
+    // No assert
+#else
     assert(pc_segment <= 4);  // With 2 unique LCTs, 4 possible strip/wire combinations
+#endif
   }
 }
 
