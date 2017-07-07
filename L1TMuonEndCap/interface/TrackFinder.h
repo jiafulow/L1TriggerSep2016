@@ -30,6 +30,8 @@ public:
 private:
   GeometryTranslator geometry_translator_;
 
+  TTGeometryTranslator ttgeometry_translator_;
+
   ConditionHelper condition_helper_;
 
   SectorProcessorLUT sector_processor_lut_;
@@ -40,11 +42,11 @@ private:
 
   const edm::ParameterSet config_;
 
-  const edm::EDGetToken tokenCSC_, tokenRPC_, tokenGEM_;
+  const edm::EDGetToken tokenCSC_, tokenRPC_, tokenGEM_, tokenTT_;
 
   int verbose_;
 
-  bool useCSC_, useRPC_, useGEM_;
+  bool useCSC_, useRPC_, useGEM_, useTT_;
 
   std::string era_;
 };
