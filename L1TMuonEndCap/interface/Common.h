@@ -40,10 +40,11 @@ typedef TriggerPrimitive::RPCData   RPCData;
 typedef TriggerPrimitive::GEMData   GEMData;
 typedef TTTriggerPrimitive::TTData  TTData;
 
-typedef emtf::CSCTag CSCTag;
-typedef emtf::RPCTag RPCTag;
-typedef emtf::GEMTag GEMTag;
-typedef emtf::TTTag  TTTag;
+typedef emtf::CSCTag  CSCTag;
+typedef emtf::RPCTag  RPCTag;
+typedef emtf::GEMTag  GEMTag;
+typedef emtf::IRPCTag IRPCTag;
+typedef emtf::TTTag   TTTag;
 
 namespace emtf {
 
