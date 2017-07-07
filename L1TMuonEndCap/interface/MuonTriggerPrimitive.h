@@ -36,7 +36,7 @@ class CSCCorrelatedLCTDigi;
 class CSCDetId;
 
 // RPC digi types
-class RPCDigiL1Link;
+class RPCDigi;
 class RPCDetId;
 
 // GEM digi types
@@ -56,13 +56,14 @@ namespace L1TMuonEndCap {
     // within a subsystem
     // for RPCs you have to unroll the digi-link and raw det-id
     struct RPCData {
-      RPCData() : strip(0), strip_low(0), strip_hi(0), layer(0), bx(0), valid(0) {}
+      RPCData() : strip(0), strip_low(0), strip_hi(0), layer(0), bx(0), valid(0), time(0.) {}
       uint16_t strip;
       uint16_t strip_low; // for use in clustering
       uint16_t strip_hi;  // for use in clustering
       uint16_t layer;
       int16_t bx;
       uint16_t valid;
+      double time;  // why double?
     };
 
     struct CSCData {
@@ -137,6 +138,8 @@ namespace L1TMuonEndCap {
                      const CSCCorrelatedLCTDigi&);
     //RPC
     TriggerPrimitive(const RPCDetId& detid,
+                     const RPCDigi& digi);
+    TriggerPrimitive(const RPCDetId& detid,  // keep this version for backward compatibility
                      const unsigned strip,
                      const unsigned layer,
                      const int bx);
