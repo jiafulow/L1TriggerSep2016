@@ -4,7 +4,7 @@
 #include "DataFormats/CSCDigi/interface/CSCCorrelatedLCTDigi.h"
 #include "DataFormats/L1DTTrackFinder/interface/L1MuDTChambPhDigi.h"
 #include "DataFormats/L1DTTrackFinder/interface/L1MuDTChambThDigi.h"
-#include "DataFormats/RPCDigi/interface/RPCDigiL1Link.h"
+#include "DataFormats/RPCDigi/interface/RPCDigi.h"
 #include "DataFormats/GEMDigi/interface/GEMPadDigi.h"
 
 // detector ID types
@@ -118,6 +118,20 @@ TriggerPrimitive::TriggerPrimitive(const CSCDetId& detid,
 
 // constructor from RPC data
 TriggerPrimitive::TriggerPrimitive(const RPCDetId& detid,
+                                   const RPCDigi& digi):
+  _id(detid),
+  _subsystem(TriggerPrimitive::kRPC) {
+  calculateRPCGlobalSector(detid,_globalsector,_subsector);
+  _rpc.strip = digi.strip();
+  _rpc.strip_low = digi.strip();
+  _rpc.strip_hi = digi.strip();
+  _rpc.layer = detid.layer();
+  _rpc.bx = digi.bx();
+  _rpc.valid = 1;
+  _rpc.time = digi.time();
+}
+
+TriggerPrimitive::TriggerPrimitive(const RPCDetId& detid,
                                    const unsigned strip,
                                    const unsigned layer,
                                    const int bx):
@@ -130,7 +144,9 @@ TriggerPrimitive::TriggerPrimitive(const RPCDetId& detid,
   _rpc.layer = layer;
   _rpc.bx = bx;
   _rpc.valid = 1;
+  _rpc.time = -999999.;
 }
+
 
 // constructor from GEM data
 TriggerPrimitive::TriggerPrimitive(const GEMDetId& detid,
@@ -207,6 +223,7 @@ bool TriggerPrimitive::operator==(const TriggerPrimitive& tp) const {
            this->_rpc.layer == tp._rpc.layer &&
            this->_rpc.bx == tp._rpc.bx &&
            this->_rpc.valid == tp._rpc.valid &&
+           //this->_rpc.time == tp._rpc.time &&
            this->_gem.pad == tp._gem.pad &&
            this->_gem.pad_low == tp._gem.pad_low &&
            this->_gem.pad_hi == tp._gem.pad_hi &&
@@ -359,6 +376,7 @@ void TriggerPrimitive::print(std::ostream& out) const {
     out << "Strip High    : " << _rpc.strip_hi << std::endl;
     out << "Layer         : " << _rpc.layer << std::endl;
     out << "Valid         : " << _rpc.valid << std::endl;
+    out << "Time          : " << _rpc.time << std::endl;
     break;
   case kGEM:
     out << detId<GEMDetId>() << std::endl;
