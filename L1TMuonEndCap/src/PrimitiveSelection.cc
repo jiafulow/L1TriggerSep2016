@@ -6,12 +6,12 @@
 #include "DataFormats/MuonDetId/interface/GEMDetId.h"
 
 
-#include "helper.h"  // merge_map_into_map
+#include "helper.h"  // merge_map_into_map, assert_no_abort
 
-#define NUM_CSC_CHAMBERS 6*9   // 18 in ME1; 9 in ME2,3,4; 9 from neighbor sector.
+#define NUM_CSC_CHAMBERS 6*9   // 18 in ME1; 9x3 in ME2,3,4; 9 from neighbor sector.
                                // Arranged in FW as 6 stations, 9 chambers per station.
-#define NUM_RPC_CHAMBERS 7*6   // 6 in RE1,2; 12 in RE3,4; 6 from neighbor sector.
-                               // Arranged in FW as 7 stations, 6 chambers per station.
+#define NUM_RPC_CHAMBERS 7*8   // 6x2 in RE1,2; 12x2 in RE3,4; 6 from neighbor sector.
+                               // Arranged in FW as 7 stations, 6 chambers per station. (8 with iRPC)
 #define NUM_GEM_CHAMBERS 6*9   // 6 in GE1/1; 3 in GE2/1; 2 from neighbor sector.
                                // Arranged in FW as 6 stations, 9 chambers per station, mimicking CSC. (unconfirmed!)
 
@@ -163,6 +163,13 @@ void PrimitiveSelection::process(
       typedef TriggerPrimitive value_type;
       bool operator()(const value_type& x) const {
         int sz = x.getRPCData().strip_hi - x.getRPCData().strip_low + 1;
+
+        const RPCDetId& tp_detId = x.detId<RPCDetId>();
+        int tp_station     = tp_detId.station();
+        int tp_ring        = tp_detId.ring();
+        const bool is_iRPC = (tp_station == 3 || tp_station == 4) && (tp_ring == 1);
+        if (is_iRPC)  sz /= 3;  // iRPC strip pitch is 3 times smaller than traditional RPC
+
         return sz > 3;
       }
     } cluster_size_cut;
@@ -199,8 +206,8 @@ void PrimitiveSelection::process(
       int selected = map_tp_it->first;
       TriggerPrimitiveCollection& tmp_primitives = map_tp_it->second;  // pass by reference
 
-      int rpc_sub = selected / 6;
-      int rpc_chm = selected % 6;
+      int rpc_sub = selected / 8;
+      int rpc_chm = selected % 8;
 
       int pc_station = -1;
       int pc_chamber = -1;
@@ -223,19 +230,29 @@ void PrimitiveSelection::process(
         } else if (4 <= rpc_chm && rpc_chm <= 5) {  // RE4/2, RE4/3
            pc_station = 4;
            pc_chamber = 3 + rpc_sub;
+        } else if (rpc_chm == 6) {  // RE3/1
+          pc_station = 3;
+          pc_chamber = rpc_sub;
+        } else if (rpc_chm == 7) {  // RE4/1
+          pc_station = 4;
+          pc_chamber = rpc_sub;
         }
 
       } else {  // neighbor
-         pc_station = 5;
-         if (rpc_chm == 0) {  // RE1/2
-           pc_chamber = 1;
-         } else if (rpc_chm == 1) {  // RE2/2
-           pc_chamber = 4;
-         } else if (2 <= rpc_chm && rpc_chm <= 3) {  // RE3/2, RE3/3
-           pc_chamber = 6;
-         } else if (4 <= rpc_chm && rpc_chm <= 5) {  // RE4/2, RE4/3
-           pc_chamber = 8;
-         }
+        pc_station = 5;
+        if (rpc_chm == 0) {  // RE1/2
+          pc_chamber = 1;
+        } else if (rpc_chm == 1) {  // RE2/2
+          pc_chamber = 4;
+        } else if (2 <= rpc_chm && rpc_chm <= 3) {  // RE3/2, RE3/3
+          pc_chamber = 6;
+        } else if (4 <= rpc_chm && rpc_chm <= 5) {  // RE4/2, RE4/3
+          pc_chamber = 8;
+        } else if (rpc_chm == 6) {  // RE3/1
+          pc_chamber = 5;
+        } else if (rpc_chm == 7) {  // RE4/1
+          pc_chamber = 7;
+        }
       }
 
       assert(pc_station != -1 && pc_chamber != -1);
@@ -243,9 +260,9 @@ void PrimitiveSelection::process(
       selected = (pc_station * 9) + pc_chamber;
 
       bool ignore_this_rpc_chm = false;
-      if (rpc_chm == 3 || rpc_chm == 5) { // special case of RE34/2 and RE34/3 chambers
-        // if RE34/2 exists, ignore RE34/3. In C++, this assumes that the loop
-        // over selected_rpc_map will always find RE34/2 before RE34/3
+      if (rpc_chm == 3 || rpc_chm == 5) { // special case of RE3,4/2 and RE3,4/3 chambers
+        // if RE3,4/2 exists, ignore RE3,4/3. In C++, this assumes that the loop
+        // over selected_rpc_map will always find RE3,4/2 before RE3,4/3
         if (tmp_selected_rpc_map.find(selected) != tmp_selected_rpc_map.end())
           ignore_this_rpc_chm = true;
       }
@@ -287,7 +304,7 @@ void PrimitiveSelection::process(
     struct {
       typedef TriggerPrimitive value_type;
       bool operator()(const value_type& x) const {
-        int sz = x.getRPCData().strip_hi - x.getRPCData().strip_low + 1;
+        int sz = x.getGEMData().pad_hi - x.getGEMData().pad_low + 1;
         return sz > 8;
       }
     } cluster_size_cut;
@@ -310,8 +327,6 @@ void PrimitiveSelection::process(
         tmp_primitives.erase(tmp_primitives.begin()+8, tmp_primitives.end());
     }
   }  // end if apply_truncation
-
-  //FIXME: What to do about the two layers?
 }
 
 
@@ -545,21 +560,29 @@ int PrimitiveSelection::select_rpc(const TriggerPrimitive& muon_primitive) const
     int tp_bx        = tp_data.bx;
     int tp_strip     = tp_data.strip;
 
+    const bool is_iRPC = (tp_station == 3 || tp_station == 4) && (tp_ring == 1);
+
     assert_no_abort(tp_region != 0);
     assert_no_abort(MIN_ENDCAP <= tp_endcap && tp_endcap <= MAX_ENDCAP);
     assert_no_abort(MIN_TRIGSECTOR <= tp_sector && tp_sector <= MAX_TRIGSECTOR);
     assert_no_abort(1 <= tp_subsector && tp_subsector <= 6);
     assert_no_abort(1 <= tp_station && tp_station <= 4);
+#ifdef PHASE_TWO_TRIGGER
+    assert_no_abort((!is_iRPC && 2 <= tp_ring && tp_ring <= 3) || (is_iRPC && 1 <= tp_ring && tp_ring <= 3));
+    assert_no_abort((!is_iRPC && 1 <= tp_roll && tp_roll <= 3) || (is_iRPC && 1 <= tp_roll && tp_roll <= 5));
+    assert_no_abort((!is_iRPC && 1 <= tp_strip && tp_strip <= 32) || (is_iRPC && 1 <= tp_strip && tp_strip <= 192));
+#else
     assert_no_abort(2 <= tp_ring && tp_ring <= 3);
     assert_no_abort(1 <= tp_roll && tp_roll <= 3);
     assert_no_abort(1 <= tp_strip && tp_strip <= 32);
+#endif
     assert_no_abort(tp_station > 2 || tp_ring != 3);  // stations 1 and 2 do not receive RPCs from ring 3
 
     // Selection
     if (is_in_bx_rpc(tp_bx)) {
-      if (is_in_sector_rpc(tp_endcap, tp_sector, tp_subsector)) {
+      if (is_in_sector_rpc(tp_endcap, tp_station, tp_ring, tp_sector, tp_subsector)) {
         selected = get_index_rpc(tp_station, tp_ring, tp_subsector, false);
-      } else if (is_in_neighbor_sector_rpc(tp_endcap, tp_sector, tp_subsector)) {
+      } else if (is_in_neighbor_sector_rpc(tp_endcap, tp_station, tp_ring, tp_sector, tp_subsector)) {
         selected = get_index_rpc(tp_station, tp_ring, tp_subsector, true);
       }
     }
@@ -567,18 +590,36 @@ int PrimitiveSelection::select_rpc(const TriggerPrimitive& muon_primitive) const
   return selected;
 }
 
-bool PrimitiveSelection::is_in_sector_rpc(int tp_endcap, int tp_sector, int tp_subsector) const {
+bool PrimitiveSelection::is_in_sector_rpc(int tp_endcap, int tp_station, int tp_ring, int tp_sector, int tp_subsector) const {
   // RPC sector X, subsectors 1-2 corresponds to CSC sector X-1
   // RPC sector X, subsectors 3-6 corresponds to CSC sector X
-  auto get_real_sector = [](int sector, int subsector) {
-    int corr = (subsector < 3) ? (sector == 1 ? +5 : -1) : 0;
-    return sector + corr;
+  auto get_csc_sector = [](int tp_station, int tp_ring, int tp_sector, int tp_subsector) {
+    const bool is_iRPC = (tp_station == 3 || tp_station == 4) && (tp_ring == 1);
+    if (is_iRPC) {
+      // 20 degree chamber
+      int corr = (tp_subsector < 2) ? (tp_sector == 1 ? +5 : -1) : 0;
+      return tp_sector + corr;
+    } else {
+      // 10 degree chamber
+      int corr = (tp_subsector < 3) ? (tp_sector == 1 ? +5 : -1) : 0;
+      return tp_sector + corr;
+    }
   };
-  return ((endcap_ == tp_endcap) && (sector_ == get_real_sector(tp_sector, tp_subsector)));
+  return ((endcap_ == tp_endcap) && (sector_ == get_csc_sector(tp_station, tp_ring, tp_sector, tp_subsector)));
 }
 
-bool PrimitiveSelection::is_in_neighbor_sector_rpc(int tp_endcap, int tp_sector, int tp_subsector) const {
-  return (includeNeighbor_ && (endcap_ == tp_endcap) && (sector_ == tp_sector) && (tp_subsector == 2));
+bool PrimitiveSelection::is_in_neighbor_sector_rpc(int tp_endcap, int tp_station, int tp_ring, int tp_sector, int tp_subsector) const {
+  auto get_csc_neighbor_subsector = [](int tp_station, int tp_ring) {
+    const bool is_iRPC = (tp_station == 3 || tp_station == 4) && (tp_ring == 1);
+    if (is_iRPC) {
+      // 20 degree chamber
+      return 1;
+    } else {
+      // 10 degree chamber
+      return 2;
+    }
+  };
+  return (includeNeighbor_ && (endcap_ == tp_endcap) && (sector_ == tp_sector) && (tp_subsector == get_csc_neighbor_subsector(tp_station, tp_ring)));
 }
 
 bool PrimitiveSelection::is_in_bx_rpc(int tp_bx) const {
@@ -613,9 +654,25 @@ int PrimitiveSelection::get_index_rpc(int tp_station, int tp_ring, int tp_subsec
     rpc_chm = 2 + (tp_station - 3)*2 + (tp_ring - 2);
   }
 
+  // Numbering for iRPC (20 degree chambers)
+  const bool is_iRPC = (tp_station == 3 || tp_station == 4) && (tp_ring == 1);
+  if (is_iRPC) {
+    if (!is_neighbor) {
+      rpc_sub = ((tp_subsector + 1) % 3);
+    } else {
+      rpc_sub = 6;
+    }
+
+    if (tp_station == 3) {
+      rpc_chm = 6;
+    } else if (tp_station == 4) {
+      rpc_chm = 7;
+    }
+  }
+
   assert(rpc_sub != -1 && rpc_chm != -1);
 
-  selected = (rpc_sub * 6) + rpc_chm;
+  selected = (rpc_sub * 8) + rpc_chm;
   return selected;
 }
 

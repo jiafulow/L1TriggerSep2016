@@ -54,9 +54,9 @@ public:
   // RPC functions
   int select_rpc(const TriggerPrimitive& muon_primitive) const;
 
-  bool is_in_sector_rpc(int tp_endcap, int tp_sector, int tp_subsector) const;
+  bool is_in_sector_rpc(int tp_endcap, int tp_station, int tp_ring, int tp_sector, int tp_subsector) const;
 
-  bool is_in_neighbor_sector_rpc(int tp_endcap, int tp_sector, int tp_subsector) const;
+  bool is_in_neighbor_sector_rpc(int tp_endcap, int tp_station, int tp_ring, int tp_sector, int tp_subsector) const;
 
   bool is_in_bx_rpc(int tp_bx) const;
 

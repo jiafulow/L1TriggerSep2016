@@ -154,6 +154,7 @@ void PrimitiveConversion::convert_csc(
   conv_hit.set_quality       ( tp_data.quality );
   conv_hit.set_pattern       ( tp_data.pattern );
   conv_hit.set_bend          ( tp_data.bend );
+  //conv_hit.set_time          ( tp_data.time );
 
   conv_hit.set_neighbor      ( is_neighbor );
   conv_hit.set_sector_idx    ( (endcap_ == 1) ? sector_ - 1 : sector_ + 5 );
@@ -491,6 +492,7 @@ void PrimitiveConversion::convert_rpc(
   //conv_hit.set_quality       ( tp_data.quality );
   conv_hit.set_pattern       ( 0 );  // In firmware, this marks RPC stub
   //conv_hit.set_bend          ( tp_data.bend );
+  conv_hit.set_time          ( tp_data.time );
 
   conv_hit.set_neighbor      ( is_neighbor );
   conv_hit.set_sector_idx    ( (endcap_ == 1) ? sector_ - 1 : sector_ + 5 );
@@ -725,6 +727,7 @@ void PrimitiveConversion::convert_gem(
   //conv_hit.set_quality       ( tp_data.quality );
   conv_hit.set_pattern       ( 1 );  // In firmware, this marks GEM stub (unconfirmed!)
   //conv_hit.set_bend          ( tp_data.bend );
+  //conv_hit.set_time          ( tp_data.time );
 
   conv_hit.set_neighbor      ( is_neighbor );
   conv_hit.set_sector_idx    ( (endcap_ == 1) ? sector_ - 1 : sector_ + 5 );
@@ -913,7 +916,11 @@ int PrimitiveConversion::get_fs_segment(const EMTFHit& conv_hit, int fw_station,
     fs_chamber = is_neighbor ? 0 : 1+n;
   }
 
+#ifdef PHASE_TWO_TRIGGER
+  // No assert
+#else
   assert(fs_history == 0 && (0 <= fs_chamber && fs_chamber < 7) && (0 <= fs_segment && fs_segment < 2));
+#endif
   // fs_segment is a 6-bit word, HHCCCS, encoding the segment number S in the chamber (1 or 2),
   // the chamber number CCC ("j" above: uniquely identifies chamber within station and ring),
   // and the history HH (0 for current BX, 1 for previous BX, 2 for BX before that)
@@ -945,6 +952,11 @@ int PrimitiveConversion::get_bt_segment(const EMTFHit& conv_hit, int fw_station,
   if (fw_station == 0 && bt_chamber >= 13)  // ME1 neighbor chambers 13,14,15 -> 10,11,12
     bt_chamber -= 3;
 
+#ifdef PHASE_TWO_TRIGGER
+  // No assert
+#else
+  assert(bt_history == 0 && (0 <= bt_chamber && bt_chamber < 13) && (0 <= bt_segment && bt_segment < 2));
+#endif
   // bt_segment is a 7-bit word, HHCCCCS, encoding the segment number S in the chamber (1 or 2),
   // the chamber number CCCC ("j" above: uniquely identifies chamber within station and ring),
   // and the history HH (0 for current BX, 1 for previous BX, 2 for BX before that)

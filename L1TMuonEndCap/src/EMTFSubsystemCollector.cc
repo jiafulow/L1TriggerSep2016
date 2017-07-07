@@ -53,7 +53,7 @@ void EMTFSubsystemCollector::extractPrimitives(
         if ((*chamber).first.station() <= 2 && (*chamber).first.ring() == 3)  continue;  // do not include RE1/3, RE2/3
         if ((*chamber).first.station() >= 3 && (*chamber).first.ring() == 1)  continue;  // do not include RE3/1, RE4/1
 
-        muon_primitives.emplace_back((*chamber).first,digi->strip(),(*chamber).first.layer(),digi->bx());
+        muon_primitives.emplace_back((*chamber).first,*digi);
       }
     }
   }
@@ -96,6 +96,42 @@ void EMTFSubsystemCollector::extractPrimitives(
 
   TriggerPrimitiveCollection clus_muon_primitives;
   cluster_gem(copad_muon_primitives, clus_muon_primitives);
+
+  // Output
+  std::copy(clus_muon_primitives.begin(), clus_muon_primitives.end(), std::back_inserter(out));
+  return;
+}
+
+// Specialized for IRPC
+template<>
+void EMTFSubsystemCollector::extractPrimitives(
+    IRPCTag tag, // Defined in interface/EMTFSubsystemTag.h, maps to RPCDigi
+    const edm::Event& iEvent,
+    const edm::EDGetToken& token,
+    TriggerPrimitiveCollection& out
+) {
+  edm::Handle<IRPCTag::digi_collection> rpcDigis;
+  iEvent.getByToken(token, rpcDigis);
+
+  TriggerPrimitiveCollection muon_primitives;
+
+  auto chamber = rpcDigis->begin();
+  auto chend   = rpcDigis->end();
+  for( ; chamber != chend; ++chamber ) {
+    auto digi = (*chamber).second.first;
+    auto dend = (*chamber).second.second;
+    for( ; digi != dend; ++digi ) {
+      if ((*chamber).first.region() != 0) {  // 0 is barrel
+        if ((*chamber).first.station() >= 3 && (*chamber).first.ring() == 1) {  // only RE3/1, RE4/1
+          muon_primitives.emplace_back((*chamber).first,*digi);
+        }
+      }
+    }
+  }
+
+  // Cluster the RPC digis
+  TriggerPrimitiveCollection clus_muon_primitives;
+  cluster_rpc(muon_primitives, clus_muon_primitives);
 
   // Output
   std::copy(clus_muon_primitives.begin(), clus_muon_primitives.end(), std::back_inserter(out));
