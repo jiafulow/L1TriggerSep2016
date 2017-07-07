@@ -11,6 +11,7 @@ SectorProcessor::~SectorProcessor() {
 
 void SectorProcessor::configure(
     const GeometryTranslator* tp_geom,
+    const TTGeometryTranslator* tp_ttgeom,
     const ConditionHelper* cond,
     const SectorProcessorLUT* lut,
     PtAssignmentEngine* pt_assign_engine,
@@ -28,11 +29,13 @@ void SectorProcessor::configure(
   assert(MIN_TRIGSECTOR <= sector && sector <= MAX_TRIGSECTOR);
 
   assert(tp_geom != nullptr);
+  assert(tp_ttgeom != nullptr);
   assert(cond != nullptr);
   assert(lut != nullptr);
   assert(pt_assign_engine != nullptr);
 
   tp_geom_          = tp_geom;
+  tp_ttgeom_        = tp_ttgeom;
   cond_             = cond;
   lut_              = lut;
   pt_assign_engine_ = pt_assign_engine;
@@ -244,6 +247,7 @@ void SectorProcessor::configure_by_fw_version(unsigned fw_version) {
 void SectorProcessor::process(
     EventNumber_t ievent,
     const TriggerPrimitiveCollection& muon_primitives,
+    const TTTriggerPrimitiveCollection& ttmuon_primitives,
     EMTFHitCollection& out_hits,
     EMTFTrackCollection& out_tracks
 ) const {
@@ -271,6 +275,7 @@ void SectorProcessor::process(
     process_single_bx(
         bx,
         muon_primitives,
+        ttmuon_primitives,
         out_hits,
         out_tracks,
         extended_conv_hits,
@@ -293,6 +298,7 @@ void SectorProcessor::process(
 void SectorProcessor::process_single_bx(
     int bx,
     const TriggerPrimitiveCollection& muon_primitives,
+    const TTTriggerPrimitiveCollection& ttmuon_primitives,
     EMTFHitCollection& out_hits,
     EMTFTrackCollection& out_tracks,
     std::deque<EMTFHitCollection>& extended_conv_hits,
@@ -319,6 +325,12 @@ void SectorProcessor::process_single_bx(
       zoneBoundaries_, zoneOverlap_,
       duplicateTheta_, fixZonePhi_, useNewZones_, fixME11Edges_,
       bugME11Dupes_
+  );
+
+  TTPrimitiveConversion ttprim_conv;
+  ttprim_conv.configure(
+      tp_ttgeom_, lut_,
+      verbose_, endcap_, sector_, bx
   );
 
   PatternRecognition patt_recog;
@@ -398,8 +410,15 @@ void SectorProcessor::process_single_bx(
   // Convert trigger primitives into "converted" hits
   // A converted hit consists of integer representations of phi, theta, and zones
   // From src/PrimitiveConversion.cc
+#ifdef PHASE_TWO_TRIGGER
+  prim_conv.process(selected_prim_map, conv_hits);
+  auto tmp_conv_hits = conv_hits;
+  tmp_conv_hits.erase(std::remove_if(tmp_conv_hits.begin(), tmp_conv_hits.end(), [](const auto& h){ return !h.Is_CSC(); }), tmp_conv_hits.end());
+  extended_conv_hits.push_back(tmp_conv_hits);
+#else
   prim_conv.process(selected_prim_map, conv_hits);
   extended_conv_hits.push_back(conv_hits);
+#endif
 
   {
     // Keep all the converted hits for the use of data-emulator comparisons.
@@ -411,6 +430,11 @@ void SectorProcessor::process_single_bx(
     selected_csc_map.clear();
     selected_rpc_map.clear();
     selected_gem_map.clear();
+
+#ifdef PHASE_TWO_TRIGGER
+    // Convert tracker trigger primitives into "converted" hits
+    ttprim_conv.process_no_prim_sel(ttmuon_primitives, inclusive_conv_hits);
+#endif
   }
 
   // Detect patterns in all zones, find 3 best roads in each zone
@@ -432,7 +456,11 @@ void SectorProcessor::process_single_bx(
 
   // Insert single LCTs from station 1 as tracks
   // From src/SingleHitTracks.cc
+#ifdef PHASE_TWO_TRIGGER
+  // Do not make single-hit tracks
+#else
   single_hit.process(conv_hits, best_tracks);
+#endif
 
   // Construct pT address, assign pT, calculate other GMT quantities
   // From src/PtAssignment.cc
