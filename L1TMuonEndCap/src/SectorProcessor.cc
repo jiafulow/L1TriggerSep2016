@@ -412,8 +412,12 @@ void SectorProcessor::process_single_bx(
   // From src/PrimitiveConversion.cc
 #ifdef PHASE_TWO_TRIGGER
   prim_conv.process(selected_prim_map, conv_hits);
-  auto tmp_conv_hits = conv_hits;
-  tmp_conv_hits.erase(std::remove_if(tmp_conv_hits.begin(), tmp_conv_hits.end(), [](const auto& h){ return !h.Is_CSC(); }), tmp_conv_hits.end());
+  EMTFHitCollection tmp_conv_hits;
+  for (const auto& conv_hit : conv_hits) {
+    if (prim_conv.is_valid_for_run2(conv_hit)) {
+      tmp_conv_hits.push_back(conv_hit);
+    }
+  }
   extended_conv_hits.push_back(tmp_conv_hits);
 #else
   prim_conv.process(selected_prim_map, conv_hits);
