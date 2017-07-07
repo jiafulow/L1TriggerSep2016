@@ -8,6 +8,7 @@
 
 TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollector&& iConsumes) :
     geometry_translator_(),
+    ttgeometry_translator_(),
     condition_helper_(),
     sector_processor_lut_(),
     pt_assign_engine_(),
@@ -16,10 +17,12 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
     tokenCSC_(iConsumes.consumes<CSCTag::digi_collection>(iConfig.getParameter<edm::InputTag>("CSCInput"))),
     tokenRPC_(iConsumes.consumes<RPCTag::digi_collection>(iConfig.getParameter<edm::InputTag>("RPCInput"))),
     tokenGEM_(iConsumes.consumes<GEMTag::digi_collection>(iConfig.getParameter<edm::InputTag>("GEMInput"))),
+    tokenTT_(iConsumes.consumes<TTTag::digi_collection>(edm::InputTag("TTStubsFromPhase2TrackerDigis", "StubAccepted"))),  //FIXME: read from config
     verbose_(iConfig.getUntrackedParameter<int>("verbosity")),
     useCSC_(iConfig.getParameter<bool>("CSCEnable")),
     useRPC_(iConfig.getParameter<bool>("RPCEnable")),
     useGEM_(iConfig.getParameter<bool>("GEMEnable")),
+    useTT_(true),  //FIXME: read from config
     era_(iConfig.getParameter<std::string>("Era"))
 {
 
@@ -86,6 +89,7 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
 
         sector_processors_.at(es).configure(
             &geometry_translator_,
+            &ttgeometry_translator_,
             &condition_helper_,
             &sector_processor_lut_,
             pt_assign_engine_.get(),
@@ -105,6 +109,11 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
   } catch (...) {
     throw;
   }
+
+#ifdef PHASE_TWO_TRIGGER
+  // This flag is defined in BuildFile.xml
+  std::cout << "The EMTF emulator has been customized with flag PHASE_TWO_TRIGGER." << std::endl;
+#endif
 }
 
 TrackFinder::~TrackFinder() {
@@ -123,6 +132,7 @@ void TrackFinder::process(
 
   // Get the geometry for TP conversions
   geometry_translator_.checkAndUpdateGeometry(iSetup);
+  ttgeometry_translator_.checkAndUpdateGeometry(iSetup);
 
   // Get the conditions, primarily the firmware version and the BDT forests
   condition_helper_.checkAndUpdateConditions(iEvent, iSetup);
@@ -131,6 +141,7 @@ void TrackFinder::process(
   // Extract all trigger primitives
 
   TriggerPrimitiveCollection muon_primitives;
+  TTTriggerPrimitiveCollection ttmuon_primitives;
 
   EMTFSubsystemCollector collector;
   if (useCSC_)
@@ -139,6 +150,9 @@ void TrackFinder::process(
     collector.extractPrimitives(RPCTag(), iEvent, tokenRPC_, muon_primitives);
   if (useGEM_)
     collector.extractPrimitives(GEMTag(), iEvent, tokenGEM_, muon_primitives);
+  if (useTT_)
+    collector.extractTTPrimitives(TTTag(), iEvent, tokenTT_, ttmuon_primitives);
+
 
   // Check trigger primitives
   if (verbose_ > 2) {  // debug
@@ -174,6 +188,7 @@ void TrackFinder::process(
       sector_processors_.at(es).process(
           iEvent.id().event(),
           muon_primitives,
+          ttmuon_primitives,
           out_hits,
           out_tracks
       );
