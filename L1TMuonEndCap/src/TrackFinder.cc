@@ -17,12 +17,14 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
     tokenCSC_(iConsumes.consumes<CSCTag::digi_collection>(iConfig.getParameter<edm::InputTag>("CSCInput"))),
     tokenRPC_(iConsumes.consumes<RPCTag::digi_collection>(iConfig.getParameter<edm::InputTag>("RPCInput"))),
     tokenGEM_(iConsumes.consumes<GEMTag::digi_collection>(iConfig.getParameter<edm::InputTag>("GEMInput"))),
-    tokenTT_(iConsumes.consumes<TTTag::digi_collection>(edm::InputTag("TTStubsFromPhase2TrackerDigis", "StubAccepted"))),  //FIXME: read from config
+    tokenIRPC_(iConsumes.consumes<IRPCTag::digi_collection>(iConfig.getParameter<edm::InputTag>("IRPCInput"))),
+    tokenTT_(iConsumes.consumes<TTTag::digi_collection>(iConfig.getParameter<edm::InputTag>("TTInput"))),
     verbose_(iConfig.getUntrackedParameter<int>("verbosity")),
     useCSC_(iConfig.getParameter<bool>("CSCEnable")),
     useRPC_(iConfig.getParameter<bool>("RPCEnable")),
     useGEM_(iConfig.getParameter<bool>("GEMEnable")),
-    useTT_(true),  //FIXME: read from config
+    useIRPC_(iConfig.getParameter<bool>("IRPCEnable")),
+    useTT_(iConfig.getParameter<bool>("TTEnable")),
     era_(iConfig.getParameter<std::string>("Era"))
 {
 
@@ -150,6 +152,8 @@ void TrackFinder::process(
     collector.extractPrimitives(RPCTag(), iEvent, tokenRPC_, muon_primitives);
   if (useGEM_)
     collector.extractPrimitives(GEMTag(), iEvent, tokenGEM_, muon_primitives);
+  if (useIRPC_)
+    collector.extractPrimitives(IRPCTag(), iEvent, tokenIRPC_, muon_primitives);
   if (useTT_)
     collector.extractTTPrimitives(TTTag(), iEvent, tokenTT_, ttmuon_primitives);
 

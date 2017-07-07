@@ -8,6 +8,8 @@ def customise(process):
         process.simEmtfDigis.spPCParams16.UseNewZones    = True
         process.simEmtfDigis.RPCEnable                   = True
         process.simEmtfDigis.GEMEnable                   = True
+        process.simEmtfDigis.IRPCEnable                  = True
+        process.simEmtfDigis.TTEnable                    = False
         process.simEmtfDigis.Era                         = cms.string('Phase2C2')
         process.simEmtfDigis.spPAParams16.PtLUTVersion   = cms.int32(7)
 
