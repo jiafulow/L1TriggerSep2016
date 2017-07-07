@@ -9,6 +9,9 @@
 #include "L1Trigger/L1TMuonEndCap/interface/MuonTriggerPrimitive.h"
 #include "L1Trigger/L1TMuonEndCap/interface/MuonTriggerPrimitiveFwd.h"
 
+#include "L1Trigger/L1TMuonEndCap/interface/TTGeometryTranslator.h"
+#include "L1Trigger/L1TMuonEndCap/interface/TTMuonTriggerPrimitive.h"
+
 #include "L1Trigger/L1TMuonEndCap/interface/EMTFSubsystemTag.h"
 
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
@@ -28,18 +31,21 @@ typedef L1TMuonEndCap::GeometryTranslator         GeometryTranslator;
 typedef L1TMuonEndCap::TriggerPrimitive           TriggerPrimitive;
 typedef L1TMuonEndCap::TriggerPrimitiveCollection TriggerPrimitiveCollection;
 
-typedef TriggerPrimitive::CSCData CSCData;
-typedef TriggerPrimitive::RPCData RPCData;
-typedef TriggerPrimitive::GEMData GEMData;
+typedef L1TMuonEndCap::TTGeometryTranslator         TTGeometryTranslator;
+typedef L1TMuonEndCap::TTTriggerPrimitive           TTTriggerPrimitive;
+typedef L1TMuonEndCap::TTTriggerPrimitiveCollection TTTriggerPrimitiveCollection;
+
+typedef TriggerPrimitive::CSCData   CSCData;
+typedef TriggerPrimitive::RPCData   RPCData;
+typedef TriggerPrimitive::GEMData   GEMData;
+typedef TTTriggerPrimitive::TTData  TTData;
 
 typedef emtf::CSCTag CSCTag;
 typedef emtf::RPCTag RPCTag;
 typedef emtf::GEMTag GEMTag;
+typedef emtf::TTTag  TTTag;
 
 // Constants
-
-// Phase 2 Geometry a.k.a. HL-LHC
-#define PHASE_TWO_GEOMETRY 0
 
 // from DataFormats/MuonDetId/interface/CSCDetId.h
 #define MIN_ENDCAP 1
