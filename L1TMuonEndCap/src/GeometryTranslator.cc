@@ -140,7 +140,7 @@ GeometryTranslator::getGEMSpecificPoint(const TriggerPrimitive& tp) const {
   // Use half-strip precision, - 0.5 at the end to get the center of the strip
   const float pad = (0.5 * static_cast<float>(tp.getGEMData().pad_low + tp.getGEMData().pad_hi)) - 0.5;
   const LocalPoint lp = roll->centreOfPad(pad);
-  const GlobalPoint gp = roll->toGlobal(lp);
+  const GlobalPoint gp = roll->surface().toGlobal(lp);
 
   //roll.release();
 
@@ -173,7 +173,7 @@ GeometryTranslator::getRPCSpecificPoint(const TriggerPrimitive& tp) const {
   // Use half-strip precision, - 0.5 at the end to get the center of the strip
   const float strip = (0.5 * static_cast<float>(tp.getRPCData().strip_low + tp.getRPCData().strip_hi)) - 0.5;
   const LocalPoint lp = roll->centreOfStrip(strip);
-  const GlobalPoint gp = roll->toGlobal(lp);
+  const GlobalPoint gp = roll->surface().toGlobal(lp);
 
   //roll.release();
 
