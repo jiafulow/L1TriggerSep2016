@@ -22,6 +22,14 @@ public:
     TriggerPrimitiveCollection& out
   );
 
+  template<typename T>
+  void extractTTPrimitives(
+    T tag,
+    const edm::Event& iEvent,
+    const edm::EDGetToken& token,
+    TTTriggerPrimitiveCollection& out
+  );
+
   // RPC functions
   void cluster_rpc(const TriggerPrimitiveCollection& muon_primitives, TriggerPrimitiveCollection& clus_muon_primitives) const;
 
