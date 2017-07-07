@@ -102,6 +102,28 @@ void EMTFSubsystemCollector::extractPrimitives(
   return;
 }
 
+// Specialized for TT
+template<>
+void EMTFSubsystemCollector::extractTTPrimitives(
+    TTTag tag, // Defined in interface/EMTFSubsystemTag.h, maps to TTStub<T>
+    const edm::Event& iEvent,
+    const edm::EDGetToken& token,
+    TTTriggerPrimitiveCollection& out
+) {
+  edm::Handle<TTTag::digi_collection> ttDigis;
+  iEvent.getByToken(token, ttDigis);
+
+  auto chamber = ttDigis->begin();
+  auto chend   = ttDigis->end();
+  for ( ; chamber != chend; ++chamber ) {
+    auto digi = chamber->begin();
+    auto dend = chamber->end();
+    for( ; digi != dend; ++digi ) {
+      out.emplace_back(chamber->detId(),*digi);
+    }
+  }
+}
+
 
 // _____________________________________________________________________________
 // RPC functions
