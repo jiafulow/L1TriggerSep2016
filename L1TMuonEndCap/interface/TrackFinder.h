@@ -42,11 +42,11 @@ private:
 
   const edm::ParameterSet config_;
 
-  const edm::EDGetToken tokenCSC_, tokenRPC_, tokenGEM_, tokenTT_;
+  const edm::EDGetToken tokenCSC_, tokenRPC_, tokenGEM_, tokenIRPC_, tokenTT_;
 
   int verbose_;
 
-  bool useCSC_, useRPC_, useGEM_, useTT_;
+  bool useCSC_, useRPC_, useGEM_, useIRPC_, useTT_;
 
   std::string era_;
 };
