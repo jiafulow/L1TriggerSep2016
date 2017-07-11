@@ -31,11 +31,12 @@ namespace L1TMuonEndCap {
     ~TTGeometryTranslator();
 
     // Things you have to do to just get simple det id info...
-    bool isBarrel(const TTTriggerPrimitive&) const;
+    bool isBarrel  (const TTTriggerPrimitive&) const;
     bool isPSModule(const TTTriggerPrimitive&) const;
-    int region(const TTTriggerPrimitive&) const;  // 0 for Barrel, +/-1 for +/- Endcap
-    int layer(const TTTriggerPrimitive&) const;
-    int ring(const TTTriggerPrimitive&) const;
+    int  region    (const TTTriggerPrimitive&) const;  // 0 for Barrel, +/-1 for +/- Endcap
+    int  layer     (const TTTriggerPrimitive&) const;
+    int  ring      (const TTTriggerPrimitive&) const;
+    int  module    (const TTTriggerPrimitive&) const;
 
     // The translations
     double calculateGlobalEta(const TTTriggerPrimitive&) const;

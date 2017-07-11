@@ -155,7 +155,7 @@ void EMTFSubsystemCollector::extractTTPrimitives(
     auto digi = chamber->begin();
     auto dend = chamber->end();
     for( ; digi != dend; ++digi ) {
-      out.emplace_back(chamber->detId(),*digi);
+      out.emplace_back(digi->getDetId(),*digi);
     }
   }
 }

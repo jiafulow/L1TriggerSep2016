@@ -76,11 +76,23 @@ int TTGeometryTranslator::ring(const TTTriggerPrimitive& tp) const {
 
   const DetId detId = tp.detId();
   if (detId.subdetId() == StripSubdetector::TOB) {  // barrel
-    // Do nothing
+    ring = static_cast<int>(_topo->tobRod(detId));
   } else if (detId.subdetId() == StripSubdetector::TID) {  // endcap
     ring = static_cast<int>(_topo->tidRing(detId));
   }
   return ring;
+}
+
+int TTGeometryTranslator::module(const TTTriggerPrimitive& tp) const {
+  int module = 0;
+
+  const DetId detId = tp.detId();
+  if (detId.subdetId() == StripSubdetector::TOB) {  // barrel
+    module = static_cast<int>(_topo->module(detId));
+  } else if (detId.subdetId() == StripSubdetector::TID) {  // endcap
+    module = static_cast<int>(_topo->module(detId));
+  }
+  return module;
 }
 
 double
@@ -157,8 +169,10 @@ void TTGeometryTranslator::checkAndUpdateGeometry(const edm::EventSetup& es) {
 
 GlobalPoint
 TTGeometryTranslator::getTTSpecificPoint(const TTTriggerPrimitive& tp) const {
+  // Check L1Trigger/TrackTrigger/src/TTStubAlgorithm_official.cc
   const DetId detId = tp.detId();
-  const GeomDetUnit* geoUnit = _geom->idToDetUnit(detId);
+  const GeomDetUnit* geoUnit = _geom->idToDetUnit(detId+1);  // det0
+  //const GeomDetUnit* geoUnit = _geom->idToDetUnit(detId+2);  // det1
   const Phase2TrackerGeomDetUnit* ph2TkGeoUnit = dynamic_cast<const Phase2TrackerGeomDetUnit*>(geoUnit);
   const MeasurementPoint mp(tp.getTTData().row_f, tp.getTTData().col_f);
   const GlobalPoint gp = ph2TkGeoUnit->surface().toGlobal(ph2TkGeoUnit->specificTopology().localPosition(mp));

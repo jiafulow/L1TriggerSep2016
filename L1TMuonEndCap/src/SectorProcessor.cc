@@ -352,8 +352,6 @@ void SectorProcessor::process_single_bx(
   std::map<int, TriggerPrimitiveCollection> selected_gem_map;
   std::map<int, TriggerPrimitiveCollection> selected_prim_map;
 
-  std::map<int, TTTriggerPrimitiveCollection> selected_ttprim_map;
-
   EMTFHitCollection conv_hits;  // "converted" hits converted by primitive converter
 
   zone_array<EMTFRoadCollection> zone_roads;  // each zone has its road collection
@@ -392,7 +390,7 @@ void SectorProcessor::process_single_bx(
 
   // Convert tracker trigger primitives into "converted" hits
 #ifdef PHASE_TWO_TRIGGER
-  ttprim_conv.process(selected_ttprim_map, conv_hits);
+  ttprim_conv.process_no_prim_sel(ttmuon_primitives, conv_hits);
 #endif
 
   // Detect patterns in all zones, find 3 best roads in each zone

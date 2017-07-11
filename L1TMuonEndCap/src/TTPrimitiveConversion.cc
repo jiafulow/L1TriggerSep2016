@@ -33,10 +33,25 @@ void TTPrimitiveConversion::process(
     TTTriggerPrimitiveCollection::const_iterator tp_end = map_tp_it->second.end();
 
     for (; tp_it != tp_end; ++tp_it) {
-      if (endcap_ == 1 && sector_ == 1) {  //FIXME: stupidly put everything into sector +1, to be fixed.
-        EMTFHit conv_hit;
-        convert_tt(*tp_it, conv_hit);
-      }
+      EMTFHit conv_hit;
+      convert_tt(*tp_it, conv_hit);
+      conv_hits.push_back(conv_hit);
+    }
+  }
+}
+
+void TTPrimitiveConversion::process_no_prim_sel(
+    const TTTriggerPrimitiveCollection& ttmuon_primitives,
+    EMTFHitCollection& conv_hits
+) const {
+  TTTriggerPrimitiveCollection::const_iterator tp_it  = ttmuon_primitives.begin();
+  TTTriggerPrimitiveCollection::const_iterator tp_end = ttmuon_primitives.end();
+
+  for (; tp_it != tp_end; ++tp_it) {
+    if (endcap_ == 1 && sector_ == 1 && bx_ == tp_it->getTTData().bx) {  //FIXME: stupidly put everything into sector +1, to be fixed.
+      EMTFHit conv_hit;
+      convert_tt(*tp_it, conv_hit);
+      conv_hits.push_back(conv_hit);
     }
   }
 }
@@ -55,7 +70,7 @@ void TTPrimitiveConversion::convert_tt(
   int tp_endcap    = (tp_region == -1) ? 2 : tp_region;
   int tp_station   = tp_ttgeom_->layer(ttmuon_primitive);
   int tp_ring      = tp_ttgeom_->ring(ttmuon_primitive);
-  int tp_chamber   = 1;  //FIXME
+  int tp_chamber   = tp_ttgeom_->module(ttmuon_primitive);
   int tp_sector    = 1;  //FIXME
   int tp_subsector = 0;  //FIXME
 
