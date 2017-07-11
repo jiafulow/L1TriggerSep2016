@@ -353,8 +353,6 @@ void SectorProcessor::process_single_bx(
   std::map<int, TriggerPrimitiveCollection> selected_prim_map;
   std::map<int, TriggerPrimitiveCollection> inclusive_selected_prim_map;
 
-  std::map<int, TTTriggerPrimitiveCollection> selected_ttprim_map;
-
   EMTFHitCollection conv_hits;  // "converted" hits converted by primitive converter
   EMTFHitCollection inclusive_conv_hits;
 

@@ -19,6 +19,11 @@ public:
       EMTFHitCollection& conv_hits
   ) const;
 
+  void process_no_prim_sel(
+      const TTTriggerPrimitiveCollection& ttmuon_primitives,
+      EMTFHitCollection& conv_hits
+  ) const;
+
   const SectorProcessorLUT& lut() const { return *lut_; }
 
   // TT functions
