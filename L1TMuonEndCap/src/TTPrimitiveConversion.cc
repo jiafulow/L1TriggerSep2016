@@ -121,9 +121,13 @@ void TTPrimitiveConversion::convert_tt(
     double glob_phi   = emtf::rad_to_deg(gp.phi().value());
     double glob_theta = emtf::rad_to_deg(gp.theta());
     double glob_eta   = gp.eta();
+    double glob_rho   = gp.perp();
+    double glob_z     = gp.z();
 
     conv_hit.set_phi_sim   ( glob_phi );
     conv_hit.set_theta_sim ( glob_theta );
     conv_hit.set_eta_sim   ( glob_eta );
+    conv_hit.set_rho_sim   ( glob_rho );
+    conv_hit.set_z_sim     ( glob_z );
   }
 }
