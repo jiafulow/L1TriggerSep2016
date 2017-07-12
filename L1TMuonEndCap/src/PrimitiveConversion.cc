@@ -172,10 +172,14 @@ void PrimitiveConversion::convert_csc(
     double glob_phi   = emtf::rad_to_deg(gp.phi().value());
     double glob_theta = emtf::rad_to_deg(gp.theta());
     double glob_eta   = gp.eta();
+    double glob_rho   = gp.perp();
+    double glob_z     = gp.z();
 
     conv_hit.set_phi_sim   ( glob_phi );
     conv_hit.set_theta_sim ( glob_theta );
     conv_hit.set_eta_sim   ( glob_eta );
+    conv_hit.set_rho_sim   ( glob_rho );
+    conv_hit.set_z_sim     ( glob_z );
   }
 }
 
@@ -510,6 +514,8 @@ void PrimitiveConversion::convert_rpc(
     double glob_phi   = emtf::rad_to_deg(gp.phi().value());
     double glob_theta = emtf::rad_to_deg(gp.theta());
     double glob_eta   = gp.eta();
+    double glob_rho   = gp.perp();
+    double glob_z     = gp.z();
 
     // Use RPC-specific convention in docs/CPPF-EMTF-format_2016_11_01.docx
     // Phi precision is 1/15 degrees (11 bits), 4x larger than CSC precision of 1/60 degrees (13 bits)
@@ -531,6 +537,8 @@ void PrimitiveConversion::convert_rpc(
     conv_hit.set_phi_sim   ( glob_phi );
     conv_hit.set_theta_sim ( glob_theta );
     conv_hit.set_eta_sim   ( glob_eta );
+    conv_hit.set_rho_sim   ( glob_rho );
+    conv_hit.set_z_sim     ( glob_z );
 
     conv_hit.set_phi_fp    ( fph ); // Full-precision integer phi
     conv_hit.set_theta_fp  ( th );  // Full-precision integer theta
@@ -745,6 +753,8 @@ void PrimitiveConversion::convert_gem(
     double glob_phi   = emtf::rad_to_deg(gp.phi().value());
     double glob_theta = emtf::rad_to_deg(gp.theta());
     double glob_eta   = gp.eta();
+    double glob_rho   = gp.perp();
+    double glob_z     = gp.z();
 
 
     // Use the CSC precision (unconfirmed!)
@@ -760,6 +770,8 @@ void PrimitiveConversion::convert_gem(
     conv_hit.set_phi_sim   ( glob_phi );
     conv_hit.set_theta_sim ( glob_theta );
     conv_hit.set_eta_sim   ( glob_eta );
+    conv_hit.set_rho_sim   ( glob_rho );
+    conv_hit.set_z_sim     ( glob_z );
 
     conv_hit.set_phi_fp    ( fph ); // Full-precision integer phi
     conv_hit.set_theta_fp  ( th );  // Full-precision integer theta
