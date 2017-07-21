@@ -818,9 +818,8 @@ int PrimitiveConversion::get_zone_code(const EMTFHit& conv_hit, int th) const {
 
       int ph_zone_bnd1 = no_use_bnd1 ? zoneBoundaries_.at(0) : zoneBoundaries_.at(izone);
       int ph_zone_bnd2 = no_use_bnd2 ? zoneBoundaries_.at(NUM_ZONES) : zoneBoundaries_.at(izone+1);
-      int zone_overlap = is_csc ? zoneOverlap_ : zoneOverlapRPC_;
 
-      if ((th > (ph_zone_bnd1 - zone_overlap)) && (th <= (ph_zone_bnd2 + zone_overlap))) {
+      if ((th > (ph_zone_bnd1 - zoneOverlap_)) && (th <= (ph_zone_bnd2 + zoneOverlap_))) {
         zone_code |= (1<<izone);
       }
     }

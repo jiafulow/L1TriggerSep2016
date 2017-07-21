@@ -57,7 +57,7 @@ public:
 
   int get_phzvl(const EMTFHit& conv_hit, int zone_code) const;
 
-  int get_fs_zone_code(const EMTFHit& conv_hit, const bool forPatterns) const;
+  int get_fs_zone_code(const EMTFHit& conv_hit) const;
 
   int get_fs_segment(const EMTFHit& conv_hit, int fw_station, int fw_cscid, int pc_segment) const;
 
