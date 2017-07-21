@@ -14,7 +14,7 @@ void PrimitiveConversion::configure(
     const SectorProcessorLUT* lut,
     int verbose, int endcap, int sector, int bx,
     int bxShiftCSC, int bxShiftRPC, int bxShiftGEM,
-    const std::vector<int>& zoneBoundaries, int zoneOverlap, int zoneOverlapRPC,
+    const std::vector<int>& zoneBoundaries, int zoneOverlap,
     bool duplicateTheta, bool fixZonePhi, bool useNewZones, bool fixME11Edges,
     bool bugME11Dupes
 ) {
@@ -35,7 +35,6 @@ void PrimitiveConversion::configure(
 
   zoneBoundaries_  = zoneBoundaries;
   zoneOverlap_     = zoneOverlap;
-  zoneOverlapRPC_  = zoneOverlapRPC;
   duplicateTheta_  = duplicateTheta;
   fixZonePhi_      = fixZonePhi;
   useNewZones_     = useNewZones;
@@ -442,6 +441,7 @@ void PrimitiveConversion::convert_rpc(
 
   int tp_bx        = tp_data.bx;
   int tp_strip     = ((tp_data.strip_low + tp_data.strip_hi) / 2);  // in full-strip unit
+  int tp_valid     = tp_data.valid;
 
   const bool is_neighbor = (pc_station == 5);
 
@@ -469,7 +469,7 @@ void PrimitiveConversion::convert_rpc(
   conv_hit.set_pc_chamber  ( pc_chamber );
   conv_hit.set_pc_segment  ( pc_segment );
 
-  conv_hit.set_valid       ( true );
+  conv_hit.set_valid       ( tp_valid );
   conv_hit.set_strip       ( tp_strip );
   conv_hit.set_strip_low   ( tp_data.strip_low );
   conv_hit.set_strip_hi    ( tp_data.strip_hi );
