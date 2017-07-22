@@ -18,13 +18,17 @@ def customise(process):
         process.emtfParams.PrimConvVersion = cms.int32(0)
 
     if hasattr(process, 'emtfForestsDB'):
-        process.emtfForestsDB.toGet = cms.VPSet(
-            cms.PSet(
-                ## https://cms-conddb.cern.ch/cmsDbBrowser/search/Prod/L1TMuonEndCapForest
-                record = cms.string("L1TMuonEndCapForestRcd"),
-                ## v5 EMTF pT LUTs from ~August 2016
-                tag = cms.string("L1TMuonEndCapForest_static_2016_mc")
-                )
+        process.emtfForestsDB = cms.ESSource(
+            "EmptyESSource",
+            recordName = cms.string('L1TMuonEndCapForestRcd'),
+            iovIsRunNotTime = cms.bool(True),
+            firstValid = cms.vuint32(1)
+            )
+
+        process.emtfForests = cms.ESProducer(
+            "L1TMuonEndCapForestESProducer",
+            PtAssignVersion = cms.int32(5),
+            bdtXMLDir = cms.string("v_16_02_21")  # corresponding to pT LUT v5
             )
 
     return process
