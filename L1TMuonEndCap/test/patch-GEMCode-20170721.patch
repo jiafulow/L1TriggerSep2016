@@ -1,0 +1,167 @@
+From 35f2539da8a8ed39aa6491994e0269d6b3064a73 Mon Sep 17 00:00:00 2001
+From: Jia Fu Low <jia.fu.low@cern.ch>
+Date: Fri, 21 Jul 2017 20:16:43 -0400
+Subject: [PATCH] Patch GEMCode repo to use the new EMTF emulator
+
+---
+ GEMValidation/interface/TFTrack.h                    |  2 ++
+ GEMValidation/interface/UpgradeL1TrackMatcher.h      |  1 +
+ .../src/DisplacedMuonTriggerPtassignment.cc          |  8 ++++----
+ GEMValidation/src/TFTrack.cc                         | 20 +++++++++++---------
+ GEMValidation/src/UpgradeL1TrackMatcher.cc           |  4 ++--
+ SimMuL1/plugins/BuildFile.xml                        |  2 +-
+ 6 files changed, 21 insertions(+), 16 deletions(-)
+
+diff --git a/GEMValidation/interface/TFTrack.h b/GEMValidation/interface/TFTrack.h
+index 8433460..d39a7d0 100644
+--- a/GEMValidation/interface/TFTrack.h
++++ b/GEMValidation/interface/TFTrack.h
+@@ -22,6 +22,7 @@
+ /* #include "DataFormats/L1CSCTrackFinder/interface/L1CSCTrackCollection.h" */
+ #include "DataFormats/L1TMuon/interface/EMTFTrack.h"
+ #include "DataFormats/L1TMuon/interface/EMTFHit.h"
++#include "L1Trigger/L1TMuonEndCap/interface/TrackTools.h"
+ 
+ #include "DataFormats/CSCDigi/interface/CSCCorrelatedLCTDigiCollection.h"
+ 
+@@ -123,6 +124,7 @@ class TFTrack
+   int trackType_;
+   const l1t::EMTFTrack* l1track_;
+   std::vector<const CSCCorrelatedLCTDigi*> triggerDigis_;
++  l1t::EMTFHitCollection trackHits_copy_;
+   const l1t::EMTFHitCollection * trackHits_; //similar to triggerDigis_ + triggerDigis_
+   std::vector<CSCDetId> triggerIds_;
+   std::vector<std::pair<float, float>> triggerEtaPhis_;
+diff --git a/GEMValidation/interface/UpgradeL1TrackMatcher.h b/GEMValidation/interface/UpgradeL1TrackMatcher.h
+index a20780f..c98aaf3 100644
+--- a/GEMValidation/interface/UpgradeL1TrackMatcher.h
++++ b/GEMValidation/interface/UpgradeL1TrackMatcher.h
+@@ -14,6 +14,7 @@
+ #include "DataFormats/L1TMuon/interface/RegionalMuonCand.h"
+ #include "DataFormats/L1TMuon/interface/EMTFTrack.h"
+ #include "DataFormats/L1TMuon/interface/EMTFHit.h"
++#include "L1Trigger/L1TMuonEndCap/interface/TrackTools.h"
+ #include "DataFormats/L1Trigger/interface/Muon.h"
+ 
+ class UpgradeL1TrackMatcher : public BaseMatcher
+diff --git a/GEMValidation/src/DisplacedMuonTriggerPtassignment.cc b/GEMValidation/src/DisplacedMuonTriggerPtassignment.cc
+index 6e1ff05..f3a7746 100644
+--- a/GEMValidation/src/DisplacedMuonTriggerPtassignment.cc
++++ b/GEMValidation/src/DisplacedMuonTriggerPtassignment.cc
+@@ -189,9 +189,9 @@ DisplacedMuonTriggerPtassignment::DisplacedMuonTriggerPtassignment(const l1t::EM
+ 
+   // first step: collect all stubs associated to the CSC TF Track
+   std::map<unsigned int, CSCCorrelatedLCTDigiContainer> chamberid_lct;
+-  auto stubCollection = *tftrack.PtrHits();
++  auto stubCollection = tftrack.Hits();
+   for (const auto& hit: stubCollection) {
+-    if (not hit.Is_CSC_hit()) continue;
++    if (not hit.Is_CSC()) continue;
+     const CSCDetId& ch_id = hit.CSC_DetId()();
+     // empty vector for stubs
+     CSCCorrelatedLCTDigiContainer v;
+@@ -1194,8 +1194,8 @@ DisplacedMuonTriggerPtassignment::stubInCSCTFTracks(const CSCCorrelatedLCTDigi&
+ {
+   bool isMatched = false;
+   for (const auto& tftrack: l1Tracks){
+-    for (const l1t::EMTFHit& hit : *tftrack.PtrHits()){
+-      if (hit.Is_CSC_hit()) continue;
++    for (const l1t::EMTFHit& hit : tftrack.Hits()){
++      if (hit.Is_CSC()) continue;
+       CSCCorrelatedLCTDigi csc_hit = hit.CSC_LCTDigi();
+       if (csc_hit == candidateStub) {
+         isMatched = true;
+diff --git a/GEMValidation/src/TFTrack.cc b/GEMValidation/src/TFTrack.cc
+index 7917382..98d7da4 100644
+--- a/GEMValidation/src/TFTrack.cc
++++ b/GEMValidation/src/TFTrack.cc
+@@ -28,23 +28,24 @@ TFTrack::TFTrack(const l1t::EMTFTrack *t)
+ {
+ 
+   trackType_ = EMTF_Track;
+-  trackHits_ = t->PtrHits();
++  trackHits_copy_ = t->Hits(); // do a copy
++  trackHits_ = &trackHits_copy_;  // hold the address of the above copy
+   l1track_ = t;
+   pt_ = t->Pt();
+   eta_ = t->Eta();
+-  phi_ = t->Phi_glob_rad();
+-  phi_local_ = t->Phi_loc_rad();
++  phi_ = emtf::deg_to_rad(t->Phi_glob());
++  phi_local_ = emtf::deg_to_rad(t->Phi_loc());
+   charge_ = t->Charge();
+   if (charge_>0) chargesign_ = 1;
+   else chargesign_ = 0;
+-  dPhi12_ = (unsigned)t->DPhi_12();
+-  dPhi23_ = (unsigned)t->DPhi_23();
+-  quality_ = t->Quality();
++  //dPhi12_ = (unsigned)t->DPhi_12();  //FIXME
++  //dPhi23_ = (unsigned)t->DPhi_23();  //FIXME
++  quality_ = t->GMT_quality();
+   bx_ = t->BX();
+   nstubs = 0;
+   dr_ = 10.0;
+   for (auto hit : *trackHits_)
+-      if (hit.Is_CSC_hit()) nstubs++;
++      if (hit.Is_CSC()) nstubs++;
+ 
+ }
+ 
+@@ -60,6 +61,7 @@ TFTrack::~TFTrack()
+   // triggerStubs_.clear();
+   mplcts_.clear();
+   ids_.clear(); // chamber ids_
++  trackHits_copy_.clear();
+   trackHits_ = NULL;
+ 
+ }
+@@ -106,7 +108,7 @@ TFTrack::hasStubEndcap(int st) const
+ {
+   if (trackType_ == EMTF_Track){
+     for (auto stub : *trackHits_)
+-      if (stub.Is_CSC_hit() and stub.Station() == st) return true;
++      if (stub.Is_CSC() and stub.Station() == st) return true;
+   }
+   return false;
+ }
+@@ -222,7 +224,7 @@ unsigned int TFTrack::digiInME(int st, int ring) const
+   }else if (trackType_ == EMTF_Track){
+       unsigned int i =0;
+       for (auto hit : *trackHits_){
+-     	if (hit.Station() == st and hit.Ring() == ring and hit.Is_CSC_hit())
++     	if (hit.Station() == st and hit.Ring() == ring and hit.Is_CSC())
+ 	    return i;
+ 	i++;
+       }
+diff --git a/GEMValidation/src/UpgradeL1TrackMatcher.cc b/GEMValidation/src/UpgradeL1TrackMatcher.cc
+index d6cd0aa..ed5d2ef 100644
+--- a/GEMValidation/src/UpgradeL1TrackMatcher.cc
++++ b/GEMValidation/src/UpgradeL1TrackMatcher.cc
+@@ -77,10 +77,10 @@ UpgradeL1TrackMatcher::matchEmtfTrackToSimTrack(const l1t::EMTFTrackCollection&
+       std::cout <<"propaget position to st2 eta "<< float(gp_st2.eta()) <<" phi "<< float(gp_st2.phi()) << std::endl;
+   for (const auto& trk : tracks) {
+     if (verboseEMTFTrack_)
+-	std::cout <<"track BX "<< trk.BX() <<  " pt "<< trk.Pt() <<" eta "<< trk.Eta() <<" phi "<< trk.Phi_glob_rad()<<" phi_local "<< trk.Phi_loc_rad() << std::endl;
++	std::cout <<"track BX "<< trk.BX() <<  " pt "<< trk.Pt() <<" eta "<< trk.Eta() <<" phi "<< emtf::deg_to_rad(trk.Phi_glob())<<" phi_local "<< emtf::deg_to_rad(trk.Phi_loc()) << std::endl;
+     if (trk.BX() < minBXEMTFTrack_ or trk.BX() > maxBXEMTFTrack_) continue;
+     float dR = 10.0;
+-    dR = deltaR(float(gp_st2.eta()), float(gp_st2.phi()), trk.Eta(), trk.Phi_glob_rad());
++    dR = deltaR(float(gp_st2.eta()), float(gp_st2.phi()), trk.Eta(), emtf::deg_to_rad(trk.Phi_glob()));
+     if (verboseEMTFTrack_)
+ 	std::cout <<"dR (track, sim) "<< dR <<" deltaREMTFTrack_ "<< deltaREMTFTrack_ << std::endl;
+     if (dR < deltaREMTFTrack_){
+diff --git a/SimMuL1/plugins/BuildFile.xml b/SimMuL1/plugins/BuildFile.xml
+index 2777bf8..23e8fff 100644
+--- a/SimMuL1/plugins/BuildFile.xml
++++ b/SimMuL1/plugins/BuildFile.xml
+@@ -27,6 +27,6 @@
+   <use name="GEMCode/GEMValidation"/>
+   <use name="GEMCode/SimMuL1"/>
+ 
+-<library name="GEMCodeSimMuL1_plugins">
++<library name="GEMCodeSimMuL1_plugins" file="*.cc">
+   <flags EDM_PLUGIN="1" />
+ </library>
+-- 
+1.8.3.1
+
