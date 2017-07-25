@@ -378,22 +378,15 @@ void PrimitiveSelection::merge(
     if (!found) {
       // No CSC hits, insert all RPC hits
       selected_prim_map[selected_rpc] = rpc_primitives;
-    } else {
-      TriggerPrimitiveCollection& tmp_primitives = selected_prim_map[selected_rpc];  // pass by reference
 
-      // As of June 7th, no longer use RPC hits in track-building if there is a CSC LCT in the corresponding chamber
-      tmp_primitives.push_back(rpc_primitives.front());
-      RPCData tmp1 = tmp_primitives.back().getRPCData();
-      tmp1.valid = 0;  // Before June 7th 2017, comment this line out to allow one RPC hit even with one CSC LCT
-      tmp_primitives.back().setRPCData(tmp1);
+    } // else { // Initial FW in 2017; was disabled on June 7
+    //   // If only one CSC hit, insert the first RPC hit
+    //   TriggerPrimitiveCollection& tmp_primitives = selected_prim_map[selected_rpc];  // pass by reference
 
-      if (rpc_primitives.size() == 2) {
-	tmp_primitives.push_back(rpc_primitives.back());
-	RPCData tmp2 = tmp_primitives.back().getRPCData();
-	tmp2.valid = 0;
-	tmp_primitives.back().setRPCData(tmp2);
-      }
-    }
+    //   if (tmp_primitives.size() < 2) {
+    //     tmp_primitives.push_back(rpc_primitives.front());
+    //   }
+    // }
   }
 
   // Third, insert GEM stubs if there is no CSC/RPC hits
@@ -420,11 +413,22 @@ void PrimitiveSelection::merge(
       }
     }
   }
+}
 
-  // Finally, clear the input maps to save memory
-  selected_csc_map.clear();
-  selected_rpc_map.clear();
-  selected_gem_map.clear();
+void PrimitiveSelection::merge_no_truncate(
+    std::map<int, TriggerPrimitiveCollection>& selected_csc_map,
+    std::map<int, TriggerPrimitiveCollection>& selected_rpc_map,
+    std::map<int, TriggerPrimitiveCollection>& selected_gem_map,
+    std::map<int, TriggerPrimitiveCollection>& selected_prim_map
+) const {
+  // First, put CSC hits
+  merge_map_into_map(selected_csc_map, selected_prim_map);
+
+  // Second, insert GEM hits
+  merge_map_into_map(selected_gem_map, selected_prim_map);
+
+  // Third, insert RPC hits
+  merge_map_into_map(selected_rpc_map, selected_prim_map);
 }
 
 

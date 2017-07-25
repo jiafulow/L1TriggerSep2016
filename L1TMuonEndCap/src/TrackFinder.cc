@@ -119,6 +119,8 @@ void TrackFinder::process(
   // ___________________________________________________________________________
   // Get the conditions: firmware version, PC LUT version, pT BDT forests
   bool new_conditions = condition_helper_.checkAndUpdateConditions(iEvent, iSetup);
+  std::cout << "\nnew_conditions = " << new_conditions << std::endl;
+  std::cout << "  * Before changes, fw_version_ = " << fw_version_ << ", pt_lut_version_ = " << pt_lut_version_ << ", pc_lut_version_ = " << pc_lut_version_ << std::endl;
 
   if (new_conditions) {
 
@@ -147,6 +149,8 @@ void TrackFinder::process(
     // Reload pT LUT if necessary
     pt_assign_engine_->load( &(condition_helper_.getForest()) );
   }
+
+  std::cout << "  * After changes, fw_version_ = " << fw_version_ << ", pt_lut_version_ = " << pt_lut_version_ << ", pc_lut_version_ = " << pc_lut_version_ << std::endl;
 
   // ___________________________________________________________________________
   // Extract all trigger primitives
