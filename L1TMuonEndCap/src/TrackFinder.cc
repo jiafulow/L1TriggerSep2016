@@ -70,6 +70,10 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
   pt_assign_engine_2016_.reset(new PtAssignmentEngine2016());
   pt_assign_engine_2017_.reset(new PtAssignmentEngine2017());
 
+  fw_version_     = 999999;
+  pt_lut_version_ = 888888;
+  pc_lut_version_ = 777777;
+
   try {
 
     // Configure sector processors
@@ -119,8 +123,8 @@ void TrackFinder::process(
   // ___________________________________________________________________________
   // Get the conditions: firmware version, PC LUT version, pT BDT forests
   bool new_conditions = condition_helper_.checkAndUpdateConditions(iEvent, iSetup);
-  std::cout << "\nnew_conditions = " << new_conditions << std::endl;
-  std::cout << "  * Before changes, fw_version_ = " << fw_version_ << ", pt_lut_version_ = " << pt_lut_version_ << ", pc_lut_version_ = " << pc_lut_version_ << std::endl;
+  std::cout << "\nDo we have new conditions? Yes (1) or no (0)? -- " << new_conditions << std::endl;
+  std::cout << "  * Before updating conditions, fw_version_ = " << fw_version_ << ", pt_lut_version_ = " << pt_lut_version_ << ", pc_lut_version_ = " << pc_lut_version_ << std::endl;
 
   if (new_conditions) {
 

@@ -429,6 +429,11 @@ void PrimitiveSelection::merge_no_truncate(
 
   // Third, insert RPC hits
   merge_map_into_map(selected_rpc_map, selected_prim_map);
+
+  // Finally, clear the input maps to save memory
+  selected_csc_map.clear();
+  selected_rpc_map.clear();
+  selected_gem_map.clear();
 }
 
 

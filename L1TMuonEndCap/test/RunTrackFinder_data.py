@@ -39,7 +39,7 @@ import FWCore.PythonUtilities.LumiList as LumiList
 
 ## Message Logger and Event range
 process.MessageLogger.cerr.FwkReport.reportEvery = cms.untracked.int32(1)
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(100) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(1000) )
 process.options = cms.untracked.PSet(wantSummary = cms.untracked.bool(False))
 
 process.options = cms.untracked.PSet(
@@ -51,11 +51,13 @@ from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:run2_data', '')
 
 ## Default parameters for firmware version, pT LUT XMLs, and coordinate conversion LUTs
-process.load('L1Trigger.L1TMuonEndCap.fakeEmtfParams_cff') 
+# process.load('L1Trigger.L1TMuonEndCap.fakeEmtfParams_cff') 
+process.load('L1Trigger.L1TMuonEndCap.fakeEmtfParams_2016_data_cff') 
 
-## Un-comment out this line to choose the GlobalTag settings rather than fakeEmtfParams settings
-## Comment out this line to use default FW version rather than true FW version in data
-process.es_prefer_GlobalTag = cms.ESPrefer("PoolDBESSource","GlobalTag")
+# ## Un-comment out this line to choose the GlobalTag settings rather than fakeEmtfParams settings
+# ## Comment out this line to use default FW version rather than true FW version in data
+# process.es_prefer_GlobalTag = cms.ESPrefer("PoolDBESSource","GlobalTag")
+process.es_prefer_GlobalTag = cms.ESPrefer("PoolDBESSource","emtfParamsSource")
 
 
 readFiles = cms.untracked.vstring()
@@ -67,29 +69,30 @@ process.source = cms.Source(
     #, eventsToProcess = cms.untracked.VEventRange('201196:265380261')
     )
 
-eos_cmd = '/afs/cern.ch/project/eos/installation/scripts/bin/eos.select'
+eos_cmd = '/afs/cern.ch/project/eos/installation/ams/bin/eos.select'
 
 # ## 2017 Collisions, with RPC!
 # # in_dir_name = '/eos/cms/tier0/store/data/Commissioning2017/L1Accept/RAW/v1/000/293/765/00000/'
-# in_dir_name = '/eos/cms/tier0/store/data/Commissioning2017/MinimumBias/RAW/v1/000/293/765/00000/'
-# in_dir_name = '/eos/cms/tier0/store/data/Run2017A/ZeroBias1/RAW/v1/000/295/128/00000/'
-# in_dir_name = '/eos/cms/tier0/store/data/Run2017A/Commissioning1/RAW/v1/000/295/317/00000/'
-# in_dir_name = '/eos/cms/tier0/store/data/Run2017A/ZeroBias1/RAW/v1/000/295/603/00000/'
-# in_dir_name = '/eos/cms/tier0/store/data/Run2017A/ZeroBias/RAW/v1/000/296/677/00000/'
+# # in_dir_name = '/eos/cms/tier0/store/data/Commissioning2017/MinimumBias/RAW/v1/000/293/765/00000/'
+# # in_dir_name = '/eos/cms/tier0/store/data/Run2017A/ZeroBias1/RAW/v1/000/295/128/00000/'
+# # in_dir_name = '/eos/cms/tier0/store/data/Run2017A/Commissioning1/RAW/v1/000/295/317/00000/'
+# # in_dir_name = '/eos/cms/tier0/store/data/Run2017A/ZeroBias1/RAW/v1/000/295/603/00000/'
+# # in_dir_name = '/eos/cms/tier0/store/data/Run2017A/ZeroBias/RAW/v1/000/296/677/00000/'
+# in_dir_name = '/eos/cms/tier0/store/data/Run2017B/DoubleMuon/RAW/v1/000/299/329/00000/'
 
 # ## 2017 Cosmics, with RPC!
-# in_dir_name = '/store/express/Commissioning2017/ExpressCosmics/FEVT/Express-v1/000/291/622/00000/'
+# in_dir_name = '/store/express/Commissioning2017/ExpressCosmics/FEVT/Express-v1/000/291/622/ 00000/'
 
 ## ZeroBias, IsolatedBunch data
 in_dir_name = '/store/data/Run2016H/ZeroBiasIsolatedBunch0/RAW/v1/000/282/650/00000/'
 
 # ## SingleMu, Z-->mumu, high pT RECO muon
 # in_dir_name = '/store/group/dpg_trigger/comm_trigger/L1Trigger/Data/Collisions/SingleMuon/Skims/200-pt-muon-skim_from-zmumu-skim-cmssw-8013/SingleMuon/'
-# # in_dir_name = in_dir_name+'crab_200-pt-muon-skim_from-zmumu-skim-cmssw-8013__SingleMuon_ZMu-2016B_v1/160710_225040/0000/'
+# in_dir_name = in_dir_name+'crab_200-pt-muon-skim_from-zmumu-skim-cmssw-8013__SingleMuon_ZMu-2016B_v1/160710_225040/0000/'
 # # in_dir_name = in_dir_name+'crab_200-pt-muon-skim_from-zmumu-skim-cmssw-8013__SingleMuon_ZMu-2016B_v2/160710_225006/0000/'
 # # in_dir_name = in_dir_name+'crab_200-pt-muon-skim_from-zmumu-skim-cmssw-8013__SingleMuon_ZMu-2016C_v2/160710_225057/0000/'
 # # in_dir_name = in_dir_name+'crab_200-pt-muon-skim_from-zmumu-skim-cmssw-8013__SingleMuon_ZMu-2016C_v2/160710_225057/0001/'
-# in_dir_name = in_dir_name+'crab_200-pt-muon-skim_from-zmumu-skim-cmssw-8013__SingleMuon_ZMu-2016D_v2/160710_225023/0000/'
+# # in_dir_name = in_dir_name+'crab_200-pt-muon-skim_from-zmumu-skim-cmssw-8013__SingleMuon_ZMu-2016D_v2/160710_225023/0000/'
 
 iFile = 0
 for in_file_name in subprocess.check_output([eos_cmd, 'ls', in_dir_name]).splitlines():
