@@ -55,7 +55,7 @@ void PrimitiveSelection::process(
     // It should be 0-10, see: L1Trigger/CSCTriggerPrimitives/src/CSCMotherboard.cc
     bool patchPattern = true;
     if (patchPattern) {
-      if (new_tp.getCSCData().pattern == 11 || new_tp.getCSCData().pattern == 12) {  // 11, 12 -> 10
+      if (new_tp.getCSCData().pattern == 11 || new_tp.getCSCData().pattern == 12 || new_tp.getCSCData().pattern == 13) {  // 11,12,13 -> 10
         new_tp.accessCSCData().pattern = 10;
       }
     }
