@@ -87,7 +87,13 @@ void PrimitiveSelection::process(
     for (; map_tp_it != map_tp_end; ++map_tp_it) {
       int selected = map_tp_it->first;
       TriggerPrimitiveCollection& tmp_primitives = map_tp_it->second;  // pass by reference
-      assert(tmp_primitives.size() <= 2);  // at most 2 hits
+      assert_no_abort(tmp_primitives.size() <= 2);  // at most 2 hits
+
+      if (tmp_primitives.size() == 4) {  // how come?
+        tmp_primitives.erase(tmp_primitives.begin() + 2);  // erase 3rd element
+        tmp_primitives.erase(tmp_primitives.begin() + 1);  // erase 2nd element
+        assert(tmp_primitives.size() == 2);
+      }
 
       if (tmp_primitives.size() == 2) {
         if (
