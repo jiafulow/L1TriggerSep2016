@@ -66,6 +66,7 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
   auto bugMode7CLCT       = spPAParams16.getParameter<bool>("BugMode7CLCT");
   auto bugNegPt           = spPAParams16.getParameter<bool>("BugNegPt");
   auto bugGMTPhi          = spPAParams16.getParameter<bool>("BugGMTPhi");
+  auto promoteMode7       = spPAParams16.getParameter<bool>("PromoteMode7");
 
   pt_assign_engine_2016_.reset(new PtAssignmentEngine2016());
   pt_assign_engine_2017_.reset(new PtAssignmentEngine2017());
@@ -93,7 +94,7 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
             pattDefinitions, symPattDefinitions, useSymPatterns,
             thetaWindow, thetaWindowRPC, useSingleHits, bugSt2PhDiff, bugME11Dupes,
             maxRoadsPerZone, maxTracks, useSecondEarliest, bugSameSectorPt0,
-            ptLUTVersion, readPtLUTFile, fixMode15HighPt, bug9BitDPhi, bugMode7CLCT, bugNegPt, bugGMTPhi
+            ptLUTVersion, readPtLUTFile, fixMode15HighPt, bug9BitDPhi, bugMode7CLCT, bugNegPt, bugGMTPhi, promoteMode7
         );
       }
     }

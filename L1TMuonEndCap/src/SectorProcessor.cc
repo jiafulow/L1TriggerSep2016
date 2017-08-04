@@ -21,7 +21,7 @@ void SectorProcessor::configure(
     const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions, bool useSymPatterns,
     int thetaWindow, int thetaWindowRPC, bool useSingleHits, bool bugSt2PhDiff, bool bugME11Dupes,
     int maxRoadsPerZone, int maxTracks, bool useSecondEarliest, bool bugSameSectorPt0,
-    int ptLUTVersion, bool readPtLUTFile, bool fixMode15HighPt, bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt, bool bugGMTPhi
+    int ptLUTVersion, bool readPtLUTFile, bool fixMode15HighPt, bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt, bool bugGMTPhi, bool promoteMode7
 ) {
   assert(MIN_ENDCAP <= endcap && endcap <= MAX_ENDCAP);
   assert(MIN_TRIGSECTOR <= sector && sector <= MAX_TRIGSECTOR);
@@ -77,6 +77,7 @@ void SectorProcessor::configure(
   bugMode7CLCT_       = bugMode7CLCT;
   bugNegPt_           = bugNegPt;
   bugGMTPhi_          = bugGMTPhi;
+  promoteMode7_       = promoteMode7;
 }
 
 void SectorProcessor::set_pt_lut_version(unsigned pt_lut_version) {
@@ -96,9 +97,25 @@ void SectorProcessor::configure_by_fw_version(unsigned fw_version) {
   // Beggining in late 2016, "fw_version" in O2O populated with timestamp, rather than FW version
   // tm fw_time = gmtime(fw_version);  (See https://linux.die.net/man/3/gmtime)
 
-  // Default settings for 2017 (just use settings in simEmtfDigis_cfi.py)
-  if (fw_version >= 50000)
+  // Settings for 2017 (by default just use settings in simEmtfDigis_cfi.py)
+  if (fw_version >= 50000) {
+
+    // ___________________________________________________________________________
+    // Versions in 2017 - no full documentation, can refer to https://twiki.cern.ch/twiki/bin/viewauth/CMS/L1KnownIssues
+    
+    // Before July 9th (runs < 298653), all mode 7 tracks (station 2-3-4) assigned quality 11
+    // July 9th - 29th (runs 298653 - 300087), mode 7 tracks with |eta| > 1.6 in sector -6 assigned quality 12
+    // After July 29th (runs >= 300088), mode 7 track promotion applied in all sectors
+    // For some reason, the FW version in the database is 1496792995, at least for runs >= 299368 (July 18),
+    //   which is the start of run 2017C (could not check earlier runs).  This corresponds to the date "June 6th",
+    //   which is a month earlier than the first firmware update to apply this promotion.  So something's screwey.
+    // Since July 18 is in the middle of the single-sector-fix period, would like to use a firmware version with
+    //   roughly that date.  But this may require an intervention in the database. - AWB 04.08.17
+    if (fw_version < 1496792995)
+      promoteMode7_ = false;
+
     return;
+  }
 
   // Settings for all of 2016 (following order in simEmtfDigis_cfi.py)
   else {
@@ -136,6 +153,7 @@ void SectorProcessor::configure_by_fw_version(unsigned fw_version) {
     maxTracks_       = 3;
 
     bugGMTPhi_ = true;
+    promoteMode7_ = false;
   } // End default settings for 2016
 			    
 
@@ -350,7 +368,7 @@ void SectorProcessor::process_single_bx(
       verbose_, endcap_, sector_, bx,
       ptLUTVersion_, readPtLUTFile_, fixMode15HighPt_,
       bug9BitDPhi_, bugMode7CLCT_, bugNegPt_,
-      bugGMTPhi_
+      bugGMTPhi_, promoteMode7_
   );
 
   std::map<int, TriggerPrimitiveCollection> selected_csc_map;
