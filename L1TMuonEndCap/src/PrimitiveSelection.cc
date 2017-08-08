@@ -277,6 +277,10 @@ void PrimitiveSelection::process(
         assert(tmp_selected_rpc_map.find(selected) == tmp_selected_rpc_map.end());  // make sure it does not exist
         tmp_selected_rpc_map[selected] = tmp_primitives;
       }
+      else { // If both RE34/2 and RE34/3 exist, keep both for now - remove ring 3 hits in PrimitiveSelection::merge()
+	tmp_selected_rpc_map[selected].insert(tmp_selected_rpc_map[selected].end(), tmp_primitives.begin(), tmp_primitives.end());
+      }
+
     }  // end loop over selected_rpc_map
 
     std::swap(selected_rpc_map, tmp_selected_rpc_map);  // replace the original map
@@ -391,14 +395,45 @@ void PrimitiveSelection::merge(
     int selected_rpc = map_tp_it->first;
     const TriggerPrimitiveCollection& rpc_primitives = map_tp_it->second;
     if (rpc_primitives.empty())  continue;
-    assert(rpc_primitives.size() <= 2);  // at most 2 hits
+    assert(rpc_primitives.size() <= 4);  // at most 4 hits
 
     bool found = (selected_prim_map.find(selected_rpc) != selected_prim_map.end());
     if (!found) {
-      // No CSC hits, insert all RPC hits
-      selected_prim_map[selected_rpc] = rpc_primitives;
 
-    } // else { // Initial FW in 2017; was disabled on June 7
+      int pc_station = selected_rpc / 9;
+      int pc_chamber = selected_rpc % 9;
+      int station    = std::max(1, (pc_station < 5 ? pc_station : pc_chamber / 2));
+
+      // For station 1 and 2 RPC chambers, insert all RPC hits
+      if ( station <= 2 )
+	selected_prim_map[selected_rpc] = rpc_primitives;
+      // Special case of RE34/2 and RE34/3 chambers: if RE34/2 exists, ignore RE34/3
+      else {
+	bool RPC_in_ring_2 = false; // >= 1 RPC hit found in ring 2
+	bool RPC_in_ring_3 = false; // >= 1 RPC hit found in ring 3
+	
+	for (TriggerPrimitiveCollection::const_iterator tp_it = rpc_primitives.begin(); tp_it != rpc_primitives.end(); ++tp_it) {
+	  if (tp_it->detId<RPCDetId>().ring() == 2) RPC_in_ring_2 = true;
+	  if (tp_it->detId<RPCDetId>().ring() == 3) RPC_in_ring_3 = true;
+	}
+
+	if (!RPC_in_ring_2 || !RPC_in_ring_3) // RPCs not found in both rings
+	  selected_prim_map[selected_rpc] = rpc_primitives;
+	else {
+	  TriggerPrimitiveCollection rpc_primitives_ring_2;  // RPC hits in ring 2
+	  for (TriggerPrimitiveCollection::const_iterator tp_it = rpc_primitives.begin(); tp_it != rpc_primitives.end(); ++tp_it) {
+	    if (tp_it->detId<RPCDetId>().ring() == 2) {
+	      rpc_primitives_ring_2.push_back(*tp_it);
+	    }
+	  }
+	  selected_prim_map[selected_rpc] = rpc_primitives_ring_2;
+	}
+      }
+
+      assert(selected_prim_map[selected_rpc].size() <= 2);  // at most 2 hits
+
+    } // End conditional: if (!found)
+    // else { // Initial FW in 2017; was disabled on June 7
     //   // If only one CSC hit, insert the first RPC hit
     //   TriggerPrimitiveCollection& tmp_primitives = selected_prim_map[selected_rpc];  // pass by reference
 
