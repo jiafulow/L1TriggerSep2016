@@ -42,8 +42,8 @@ void SingleHitTrack::process(
     if (conv_hits_it->Is_CSC() != 1)
       continue;
 
-    // Only consider hits in station 1
-    if (conv_hits_it->Station() != 1)
+    // Only consider hits in station 1, ring 1
+    if (conv_hits_it->Station() != 1 || (conv_hits_it->Ring() % 3) != 1)
       continue;
 
     // Check if a hit has already been used in a track
@@ -101,19 +101,6 @@ void SingleHitTrack::process(
       assert(zone > 0);
     }
 
-    // Set "mode" using CLCT bend
-    int mode = -1;
-    int CLCT = conv_hits_it->Pattern();
-    if      (CLCT >= 8) mode = 8;
-    else if (CLCT >= 6) mode = 4;
-    else if (CLCT >= 4) mode = 2;
-    else if (CLCT >= 2) mode = 1;
-    else {
-      std::cout << "\n\n EMTF SingleHitTrack.cc - bizzare case where CLCT = " << CLCT << std::endl;
-      assert(mode > 0);
-    }
-
-
     EMTFTrack new_trk;
     new_trk.push_Hit ( *conv_hits_it );
 
@@ -123,7 +110,7 @@ void SingleHitTrack::process(
     new_trk.set_endcap       ( conv_hits_it->Endcap()     );
     new_trk.set_sector       ( conv_hits_it->Sector()     );
     new_trk.set_sector_idx   ( conv_hits_it->Sector_idx() );
-    new_trk.set_mode         ( mode );
+    new_trk.set_mode         ( 1 ); // Set "mode" to 1
     new_trk.set_mode_inv     ( 0 );
     new_trk.set_rank         ( 0b0100000 );  // Station 1 hit, straightness 0 (see "rank" in AngleCalculation.cc)
     new_trk.set_winner       ( maxTracks_ - 1 );  // Always set to the last / lowest track
