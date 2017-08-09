@@ -87,6 +87,10 @@ int PtAssignmentEngineAux::getGMTQuality(int mode, int theta, bool promoteMode7)
   if (promoteMode7 && mode == 7 && theta <= 50)
     quality = 12;
 
+  // Special quality for single-hit tracks from ME1/1
+  if (mode == 1)
+    quality = 0;
+
   return quality;
 }
 

@@ -106,8 +106,8 @@ void SectorProcessor::configure_by_fw_version(unsigned fw_version) {
     // Before July 9th (runs < 298653), all mode 7 tracks (station 2-3-4) assigned quality 11
     // July 9th - 29th (runs 298653 - 300087), mode 7 tracks with |eta| > 1.6 in sector -6 assigned quality 12
     // After July 29th (runs >= 300088), mode 7 track promotion applied in all sectors
-    // For some reason, the FW version in the database is 1496792995, at least for runs >= 299368 (July 18),
-    //   which is the start of run 2017C (could not check earlier runs).  This corresponds to the date "June 6th",
+    // For some reason, the FW version in the database is 1496792995, at least for runs >= 298034 (July 4),
+    //   which is towards the end of run 2017B (could not check earlier runs).  This corresponds to the date "June 6th",
     //   which is a month earlier than the first firmware update to apply this promotion.  So something's screwey.
     // Since July 18 is in the middle of the single-sector-fix period, would like to use a firmware version with
     //   roughly that date.  But this may require an intervention in the database. - AWB 04.08.17

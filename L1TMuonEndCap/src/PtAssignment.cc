@@ -43,11 +43,8 @@ void PtAssignment::process(
     address_t address = 0;
     float     xmlpt   = 0.;
     float     pt      = 0.;
-    if (track.NumHits() == 1) {
-      address = 0;
-      xmlpt   = 0;
-      pt      = 5.5 / std::cosh( std::abs(track.Eta()) );
-    } else {
+    int       gmt_pt  = 0;
+    if (track.Mode() != 1) {
       address = pt_assign_engine_->calculate_address(track);
       xmlpt   = pt_assign_engine_->calculate_pt(address);
 
@@ -56,9 +53,13 @@ void PtAssignment::process(
 
       pt  = (xmlpt < 0.) ? 1. : xmlpt;  // Matt used fabs(-1) when mode is invalid
       pt *= pt_assign_engine_->scale_pt(pt, track.Mode());  // Multiply by some factor to achieve 90% efficiency at threshold
+
+      gmt_pt = aux().getGMTPt(pt);  // Encode integer pT in GMT format
+    } // End if (track.Mode() != 1)
+    else {
+      gmt_pt = 3 + (track.Theta_fp() / 16);
     }
 
-    int gmt_pt = aux().getGMTPt(pt);            // Encode integer pT in GMT format
     pt = (gmt_pt <= 0) ?  0 : (gmt_pt-1) * 0.5; // Decode integer pT (result is in 0.5 GeV step)
 
     int gmt_phi = aux().getGMTPhi(track.Phi_fp());
@@ -82,13 +83,10 @@ void PtAssignment::process(
     }
 
     int gmt_quality = 0;
-    if (track.NumHits() == 1)
-      gmt_quality = log2( track.Mode() );  // 8 --> 3, 4 --> 2, 2 --> 1, 1 --> 0
-    else
-      gmt_quality = aux().getGMTQuality(track.Mode(), track.Theta_fp(), promoteMode7_);
+    gmt_quality = aux().getGMTQuality(track.Mode(), track.Theta_fp(), promoteMode7_);
 
     std::pair<int, int> gmt_charge = std::make_pair(0, 0);
-    if (track.NumHits() == 1) {
+    if (track.Mode() == 1) {
       int CLCT = track.Hits().at(0).Pattern();
       if (CLCT != 10) {
         if (endcap_ == 1)
