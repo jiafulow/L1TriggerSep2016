@@ -55,7 +55,7 @@ void PrimitiveSelection::process(
     bool patchPattern = true;
     if (patchPattern) {
       if (new_tp.getCSCData().pattern == 11 || new_tp.getCSCData().pattern == 12) {  // 11, 12 -> 10
-	std::cout << "\nEMTF emulator patching corrupt CSC LCT pattern: changing " << new_tp.getCSCData().pattern << " to 10" << std::endl;
+	edm::LogWarning("L1T") << "\nEMTF emulator patching corrupt CSC LCT pattern: changing " << new_tp.getCSCData().pattern << " to 10\n";
         new_tp.accessCSCData().pattern = 10;
       }
     }
@@ -65,7 +65,7 @@ void PrimitiveSelection::process(
     bool patchQuality = true;
     if (patchQuality) {
       if (new_tp.subsystem() == TriggerPrimitive::kCSC && new_tp.getCSCData().quality == 0) {  // 0 -> 1
-	std::cout << "\nEMTF emulator patching corrupt CSC LCT quality: changing " << new_tp.getCSCData().quality << " to 1" << std::endl;
+	edm::LogWarning("L1T") << "\nEMTF emulator patching corrupt CSC LCT quality: changing " << new_tp.getCSCData().quality << " to 1\n";
         new_tp.accessCSCData().quality = 1;
       }
     }
@@ -79,17 +79,17 @@ void PrimitiveSelection::process(
 	selected_csc_map[selected_csc].push_back(new_tp);
       }
       else {
-	std::cout << "\n\n******************* EMTF EMULATOR: SUPER-BIZZARE CASE *******************" << std::endl;
-	std::cout << "Found 3 CSC trigger primitives in the same chamber" << std::endl;
+	edm::LogWarning("L1T") << "\n******************* EMTF EMULATOR: SUPER-BIZZARE CASE *******************";
+	edm::LogWarning("L1T") << "Found 3 CSC trigger primitives in the same chamber";
 	for (int ii = 0; ii < 3; ii++) {
 	  TriggerPrimitive tp_err = (ii < 2 ? selected_csc_map[selected_csc].at(ii) : new_tp);
-	  std::cout << "LCT #" << ii+1 << ": BX " << tp_err.getBX() 
+	  edm::LogWarning("L1T") << "LCT #" << ii+1 << ": BX " << tp_err.getBX() 
 		    << ", endcap " << tp_err.detId<CSCDetId>().endcap() << ", sector " << tp_err.detId<CSCDetId>().triggerSector()
 		    << ", station " << tp_err.detId<CSCDetId>().station() << ", ring " << tp_err.detId<CSCDetId>().ring()
 		    << ", chamber " << tp_err.detId<CSCDetId>().chamber() << ", CSC ID " << tp_err.getCSCData().cscID
-		    << ": strip " << tp_err.getStrip() << ", wire " << tp_err.getWire() << std::endl;
+		    << ": strip " << tp_err.getStrip() << ", wire " << tp_err.getWire();
 	}
-	std::cout << "************************* ONLY KEEP FIRST TWO *************************\n\n" << std::endl;
+	edm::LogWarning("L1T") << "************************* ONLY KEEP FIRST TWO *************************\n\n";
       }
 
     } // End conditional: if (selected_csc >= 0)
@@ -411,19 +411,19 @@ void PrimitiveSelection::merge(
       else {
 	bool RPC_in_ring_2 = false; // >= 1 RPC hit found in ring 2
 	bool RPC_in_ring_3 = false; // >= 1 RPC hit found in ring 3
-	
-	for (TriggerPrimitiveCollection::const_iterator tp_it = rpc_primitives.begin(); tp_it != rpc_primitives.end(); ++tp_it) {
-	  if (tp_it->detId<RPCDetId>().ring() == 2) RPC_in_ring_2 = true;
-	  if (tp_it->detId<RPCDetId>().ring() == 3) RPC_in_ring_3 = true;
+
+	for (const auto& tp_it : rpc_primitives) {
+	  if (tp_it.detId<RPCDetId>().ring() == 2) RPC_in_ring_2 = true;
+	  if (tp_it.detId<RPCDetId>().ring() == 3) RPC_in_ring_3 = true;
 	}
 
 	if (!RPC_in_ring_2 || !RPC_in_ring_3) // RPCs not found in both rings
 	  selected_prim_map[selected_rpc] = rpc_primitives;
 	else {
 	  TriggerPrimitiveCollection rpc_primitives_ring_2;  // RPC hits in ring 2
-	  for (TriggerPrimitiveCollection::const_iterator tp_it = rpc_primitives.begin(); tp_it != rpc_primitives.end(); ++tp_it) {
-	    if (tp_it->detId<RPCDetId>().ring() == 2) {
-	      rpc_primitives_ring_2.push_back(*tp_it);
+	  for (const auto& tp_it : rpc_primitives) {
+	    if (tp_it.detId<RPCDetId>().ring() == 2) {
+	      rpc_primitives_ring_2.push_back(tp_it);
 	    }
 	  }
 	  selected_prim_map[selected_rpc] = rpc_primitives_ring_2;
@@ -522,24 +522,24 @@ int PrimitiveSelection::select_csc(const TriggerPrimitive& muon_primitive) const
 
 
     if ( !(MIN_ENDCAP <= tp_endcap && tp_endcap <= MAX_ENDCAP) ) {
-      std::cout << "EMTF CSC format error: tp_endcap = "  << tp_endcap  << std::endl; return selected; }
+      edm::LogWarning("L1T") << "EMTF CSC format error: tp_endcap = "  << tp_endcap; return selected; }
     if ( !(MIN_TRIGSECTOR <= tp_sector && tp_sector <= MAX_TRIGSECTOR) ) {
-      std::cout << "EMTF CSC format error: tp_sector = "  << tp_sector  << std::endl; return selected; }
+      edm::LogWarning("L1T") << "EMTF CSC format error: tp_sector = "  << tp_sector; return selected; }
     if ( !(1 <= tp_station && tp_station <= 4) ) {
-      std::cout << "EMTF CSC format error: tp_station = " << tp_station << std::endl; return selected; }
+      edm::LogWarning("L1T") << "EMTF CSC format error: tp_station = " << tp_station; return selected; }
     if ( !(1 <= tp_csc_ID && tp_csc_ID <= 9) ) {
-      std::cout << "EMTF CSC format error: tp_csc_ID = "  << tp_csc_ID  << std::endl; return selected; }
+      edm::LogWarning("L1T") << "EMTF CSC format error: tp_csc_ID = "  << tp_csc_ID; return selected; }
     if ( !(tp_data.strip < 160) ) {
-      std::cout << "EMTF CSC format error: tp_data.strip = "   << tp_data.strip   << std::endl; return selected; }
+      edm::LogWarning("L1T") << "EMTF CSC format error: tp_data.strip = "   << tp_data.strip ; return selected; }
     // if ( !(tp_data.keywire < 112) ) {
     if ( !(tp_data.keywire < 128) ) {
-      std::cout << "EMTF CSC format error: tp_data.keywire = " << tp_data.keywire << std::endl; return selected; }
+      edm::LogWarning("L1T") << "EMTF CSC format error: tp_data.keywire = " << tp_data.keywire; return selected; }
     if ( !(tp_data.valid == true) ) {
-      std::cout << "EMTF CSC format error: tp_data.valid = "   << tp_data.valid   << std::endl; return selected; }
+      edm::LogWarning("L1T") << "EMTF CSC format error: tp_data.valid = "   << tp_data.valid ; return selected; }
     if ( !(tp_data.pattern <= 10) ) {
-      std::cout << "EMTF CSC format error: tp_data.pattern = " << tp_data.pattern << std::endl; return selected; }
+      edm::LogWarning("L1T") << "EMTF CSC format error: tp_data.pattern = " << tp_data.pattern; return selected; }
     if ( !(tp_data.quality > 0) ) {
-      std::cout << "EMTF CSC format error: tp_data.quality = " << tp_data.quality << std::endl; return selected; }
+      edm::LogWarning("L1T") << "EMTF CSC format error: tp_data.quality = " << tp_data.quality; return selected; }
 
 
     // Check using ME1/1a --> ring 4 convention
@@ -729,24 +729,25 @@ int PrimitiveSelection::select_rpc(const TriggerPrimitive& muon_primitive) const
     // assert(1 <= tp_strip && tp_strip <= 32);
     // assert(tp_station > 2 || tp_ring != 3);  // stations 1 and 2 do not receive RPCs from ring 3
 
+
     if ( !(tp_region != 0) ) {
-      std::cout << "EMTF RPC format error: tp_region = "  << tp_region  << std::endl; return selected; }
+      edm::LogWarning("L1T") << "EMTF RPC format error: tp_region = "  << tp_region; return selected; }
     if ( !(MIN_ENDCAP <= tp_endcap && tp_endcap <= MAX_ENDCAP) ) {
-      std::cout << "EMTF RPC format error: tp_endcap = "  << tp_endcap  << std::endl; return selected; }
+      edm::LogWarning("L1T") << "EMTF RPC format error: tp_endcap = "  << tp_endcap; return selected; }
     if ( !(MIN_TRIGSECTOR <= tp_sector && tp_sector <= MAX_TRIGSECTOR) ) {
-      std::cout << "EMTF RPC format error: tp_sector = "  << tp_sector  << std::endl; return selected; } 
+      edm::LogWarning("L1T") << "EMTF RPC format error: tp_sector = "  << tp_sector; return selected; } 
     if ( !(1 <= tp_subsector && tp_subsector <= 6) ) {
-      std::cout << "EMTF RPC format error: tp_subsector = "  << tp_subsector  << std::endl; return selected; } 
+      edm::LogWarning("L1T") << "EMTF RPC format error: tp_subsector = "  << tp_subsector; return selected; } 
     if ( !(1 <= tp_station && tp_station <= 4) ) {
-      std::cout << "EMTF RPC format error: tp_station = " << tp_station << std::endl; return selected; }
+      edm::LogWarning("L1T") << "EMTF RPC format error: tp_station = " << tp_station; return selected; }
     if ( !(2 <= tp_ring && tp_ring <= 3) ) {
-      std::cout << "EMTF RPC format error: tp_ring = " << tp_ring << std::endl; return selected; }
+      edm::LogWarning("L1T") << "EMTF RPC format error: tp_ring = " << tp_ring; return selected; }
     if ( !(1 <= tp_roll && tp_roll <= 3) ) {
-      std::cout << "EMTF RPC format error: tp_roll = "  << tp_roll  << std::endl; return selected; }
+      edm::LogWarning("L1T") << "EMTF RPC format error: tp_roll = "  << tp_roll; return selected; }
     if ( !(1 <= tp_strip && tp_strip <= 32) ) {
-      std::cout << "EMTF RPC format error: tp_data.strip = "   << tp_data.strip   << std::endl; return selected; }
+      edm::LogWarning("L1T") << "EMTF RPC format error: tp_data.strip = "   << tp_data.strip; return selected; }
     if ( !(tp_station > 2 || tp_ring != 3) ) {
-      std::cout << "EMTF RPC format error: tp_station = " << tp_station << ", tp_ring = " << tp_ring << std::endl; return selected; }
+      edm::LogWarning("L1T") << "EMTF RPC format error: tp_station = " << tp_station << ", tp_ring = " << tp_ring; return selected; }
 
 
     // Selection

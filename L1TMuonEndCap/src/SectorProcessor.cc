@@ -112,21 +112,21 @@ void SectorProcessor::configure_by_fw_version(unsigned fw_version) {
     // Since July 18 is in the middle of the single-sector-fix period, would like to use a firmware version with
     //   roughly that date.  But this may require an intervention in the database. - AWB 04.08.17
     if (fw_version < 1496792995)
-      promoteMode7_ = false;
+      promoteMode7_ = false;  // Assign station 2-3-4 tracks with |eta| > 1.6 SingleMu quality
 
     return;
   }
 
   // Settings for all of 2016 (following order in simEmtfDigis_cfi.py)
   else {
-    minBX_      = -3;
-    bxWindow_   =  3;
-    bxShiftCSC_ = -6;
+    minBX_      = -3;  // Minimum BX considered
+    bxWindow_   =  3;  // Number of BX whose primitives can be included in the same track
+    bxShiftCSC_ = -6;  // Shift applied to input CSC LCT primitives, to center at BX = 0
 
-    zoneBoundaries_  = {0,41,49,87,127};
-    zoneOverlap_     =  2;
-    includeNeighbor_ = true;
-    duplicateTheta_  = true;
+    zoneBoundaries_  = {0,41,49,87,127};  // Vertical boundaries of track-building zones, in integer theta
+    zoneOverlap_     =  2;                // Overlap between zones
+    includeNeighbor_ = true;              // Include primitives from neighbor chambers in track-building
+    duplicateTheta_  = true;              // Use up to 4 theta/phi positions for two LCTs in the same chamber
     useNewZones_     = false;
     fixME11Edges_    = false;
 
@@ -146,14 +146,14 @@ void SectorProcessor::configure_by_fw_version(unsigned fw_version) {
 			    "1,22:19:11:8,7:7:7:7,14:7:7:0,14:7:7:0",
 			    "0,30:23:7:0,7:7:7:7,14:7:7:0,14:7:7:0" };
 
-    thetaWindow_   = 4;
-    useSingleHits_ = false;
+    thetaWindow_   = 4;      // Maximum dTheta between primitives in the same track
+    useSingleHits_ = false;  // Build "tracks" from single LCTs in ME1/1
 
-    maxRoadsPerZone_ = 3;
-    maxTracks_       = 3;
+    maxRoadsPerZone_ = 3;  // Number of patterns that can be built per theta zone
+    maxTracks_       = 3;  // Number of tracks that can be sent from each sector
 
     bugGMTPhi_ = true;
-    promoteMode7_ = false;
+    promoteMode7_ = false;  // Assign station 2-3-4 tracks with |eta| > 1.6 SingleMu quality
   } // End default settings for 2016
 			    
 

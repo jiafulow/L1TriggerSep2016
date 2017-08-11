@@ -105,9 +105,7 @@ namespace {
           Container* container1 = &(first->second);
           Container* container2 = &(ins.first->second);
           container2->insert(container2->end(), container1->begin(), container1->end());
-        } else {
-          // do nothing
-        }
+        } // else do nothing
       }
     }
   }
