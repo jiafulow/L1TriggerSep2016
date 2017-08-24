@@ -13,7 +13,7 @@ void EMTFSubsystemCollector::extractPrimitives(
     const edm::Event& iEvent,
     const edm::EDGetToken& token,
     TriggerPrimitiveCollection& out
-) {
+) const {
   edm::Handle<CSCTag::digi_collection> cscDigis;
   iEvent.getByToken(token, cscDigis);
 
@@ -37,7 +37,7 @@ void EMTFSubsystemCollector::extractPrimitives(
     const edm::Event& iEvent,
     const edm::EDGetToken& token,
     TriggerPrimitiveCollection& out
-) {
+) const {
   edm::Handle<RPCTag::digi_collection> rpcDigis;
   iEvent.getByToken(token, rpcDigis);
 
@@ -74,7 +74,7 @@ void EMTFSubsystemCollector::extractPrimitives(
     const edm::Event& iEvent,
     const edm::EDGetToken& token,
     TriggerPrimitiveCollection& out
-) {
+) const {
   edm::Handle<GEMTag::digi_collection> gemDigis;
   iEvent.getByToken(token, gemDigis);
 
@@ -102,21 +102,21 @@ void EMTFSubsystemCollector::extractPrimitives(
   return;
 }
 
-// Specialized for IRPC
+// Specialized for iRPC
 template<>
 void EMTFSubsystemCollector::extractPrimitives(
     IRPCTag tag, // Defined in interface/EMTFSubsystemTag.h, maps to RPCDigi
     const edm::Event& iEvent,
     const edm::EDGetToken& token,
     TriggerPrimitiveCollection& out
-) {
-  edm::Handle<IRPCTag::digi_collection> rpcDigis;
-  iEvent.getByToken(token, rpcDigis);
+) const {
+  edm::Handle<IRPCTag::digi_collection> irpcDigis;
+  iEvent.getByToken(token, irpcDigis);
 
   TriggerPrimitiveCollection muon_primitives;
 
-  auto chamber = rpcDigis->begin();
-  auto chend   = rpcDigis->end();
+  auto chamber = irpcDigis->begin();
+  auto chend   = irpcDigis->end();
   for( ; chamber != chend; ++chamber ) {
     auto digi = (*chamber).second.first;
     auto dend = (*chamber).second.second;
@@ -129,12 +129,35 @@ void EMTFSubsystemCollector::extractPrimitives(
     }
   }
 
-  // Cluster the RPC digis
+  // Cluster the iRPC digis
   TriggerPrimitiveCollection clus_muon_primitives;
   cluster_rpc(muon_primitives, clus_muon_primitives);
 
   // Output
   std::copy(clus_muon_primitives.begin(), clus_muon_primitives.end(), std::back_inserter(out));
+  return;
+}
+
+// Specialized for ME0
+template<>
+void EMTFSubsystemCollector::extractPrimitives(
+    ME0Tag tag, // Defined in interface/EMTFSubsystemTag.h, maps to ME0PadDigi
+    const edm::Event& iEvent,
+    const edm::EDGetToken& token,
+    TriggerPrimitiveCollection& out
+) const {
+  edm::Handle<ME0Tag::digi_collection> me0Digis;
+  iEvent.getByToken(token, me0Digis);
+
+  auto chamber = me0Digis->begin();
+  auto chend   = me0Digis->end();
+  for( ; chamber != chend; ++chamber ) {
+    auto digi = (*chamber).second.first;
+    auto dend = (*chamber).second.second;
+    for( ; digi != dend; ++digi ) {
+      out.emplace_back((*chamber).first,*digi);
+    }
+  }
   return;
 }
 
@@ -145,7 +168,7 @@ void EMTFSubsystemCollector::extractTTPrimitives(
     const edm::Event& iEvent,
     const edm::EDGetToken& token,
     TTTriggerPrimitiveCollection& out
-) {
+) const {
   edm::Handle<TTTag::digi_collection> ttDigis;
   iEvent.getByToken(token, ttDigis);
 

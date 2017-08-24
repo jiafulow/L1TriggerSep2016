@@ -42,6 +42,7 @@ typedef emtf::CSCTag  CSCTag;
 typedef emtf::RPCTag  RPCTag;
 typedef emtf::GEMTag  GEMTag;
 typedef emtf::IRPCTag IRPCTag;
+typedef emtf::ME0Tag  ME0Tag;
 typedef emtf::TTTag   TTTag;
 
 // Constants

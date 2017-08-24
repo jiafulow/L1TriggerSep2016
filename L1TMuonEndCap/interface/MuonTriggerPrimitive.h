@@ -43,6 +43,10 @@ class RPCDetId;
 class GEMPadDigi;
 class GEMDetId;
 
+// ME0 digi types
+class ME0PadDigi;
+class ME0DetId;
+
 
 namespace L1TMuonEndCap {
 
@@ -111,11 +115,13 @@ namespace L1TMuonEndCap {
     };
 
     struct GEMData {
-      GEMData() : pad(0), pad_low(0), pad_hi(0), bx(0) {}
+      GEMData() : pad(0), pad_low(0), pad_hi(0), bx(0), bend(0), isME0(false) {}
       uint16_t pad;
       uint16_t pad_low; // for use in clustering
       uint16_t pad_hi;  // for use in clustering
       int16_t bx;
+      int16_t bend;
+      bool isME0;
     };
 
     //Persistency
@@ -146,6 +152,8 @@ namespace L1TMuonEndCap {
     // GEM
     TriggerPrimitive(const GEMDetId& detid,
                      const GEMPadDigi& digi);
+    TriggerPrimitive(const ME0DetId& detid,
+                     const ME0PadDigi& digi);
 
     //copy
     TriggerPrimitive(const TriggerPrimitive&);
@@ -207,18 +215,14 @@ namespace L1TMuonEndCap {
   private:
     // Translate to 'global' position information at the level of 60
     // degree sectors. Use CSC sectors as a template
-    void calculateDTGlobalSector(const DTChamberId& chid,
+    template<typename IDType>
+      void calculateGlobalSector(const IDType& chid,
                                  unsigned& globalsector,
-                                 unsigned& subsector );
-    void calculateCSCGlobalSector(const CSCDetId& chid,
-                                  unsigned& globalsector,
-                                  unsigned& subsector );
-    void calculateRPCGlobalSector(const RPCDetId& chid,
-                                  unsigned& globalsector,
-                                  unsigned& subsector );
-    void calculateGEMGlobalSector(const GEMDetId& chid,
-                                  unsigned& globalsector,
-                                  unsigned& subsector );
+                                 unsigned& subsector ) {
+        // Not sure if this is ever going to get implemented
+        globalsector = 0;
+        subsector = 0;
+      }
 
     DTData  _dt;
     CSCData _csc;

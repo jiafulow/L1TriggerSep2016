@@ -6,12 +6,14 @@
 #include "DataFormats/L1DTTrackFinder/interface/L1MuDTChambThDigi.h"
 #include "DataFormats/RPCDigi/interface/RPCDigi.h"
 #include "DataFormats/GEMDigi/interface/GEMPadDigi.h"
+#include "DataFormats/GEMDigi/interface/ME0PadDigi.h"
 
 // detector ID types
 #include "DataFormats/MuonDetId/interface/DTChamberId.h"
 #include "DataFormats/MuonDetId/interface/CSCDetId.h"
 #include "DataFormats/MuonDetId/interface/RPCDetId.h"
 #include "DataFormats/MuonDetId/interface/GEMDetId.h"
+#include "DataFormats/MuonDetId/interface/ME0DetId.h"
 
 using namespace L1TMuonEndCap;
 
@@ -25,7 +27,7 @@ TriggerPrimitive::TriggerPrimitive(const DTChamberId& detid,
                                    const int segment_number):
   _id(detid),
   _subsystem(TriggerPrimitive::kDT) {
-  calculateDTGlobalSector(detid,_globalsector,_subsector);
+  calculateGlobalSector(detid,_globalsector,_subsector);
   // fill in information from theta trigger
   _dt.theta_bti_group = -1;
   _dt.segment_number = segment_number;
@@ -48,7 +50,7 @@ TriggerPrimitive::TriggerPrimitive(const DTChamberId& detid,
                                    const int theta_bti_group):
   _id(detid),
   _subsystem(TriggerPrimitive::kDT) {
-  calculateDTGlobalSector(detid,_globalsector,_subsector);
+  calculateGlobalSector(detid,_globalsector,_subsector);
   // fill in information from theta trigger
   _dt.theta_bti_group = theta_bti_group;
   _dt.segment_number = digi_th.position(theta_bti_group);
@@ -72,7 +74,7 @@ TriggerPrimitive::TriggerPrimitive(const DTChamberId& detid,
                                    const int theta_bti_group):
   _id(detid),
   _subsystem(TriggerPrimitive::kDT) {
-  calculateDTGlobalSector(detid,_globalsector,_subsector);
+  calculateGlobalSector(detid,_globalsector,_subsector);
   // fill in information from theta trigger
   _dt.theta_bti_group = theta_bti_group;
   _dt.segment_number = digi_th.position(theta_bti_group);
@@ -95,7 +97,7 @@ TriggerPrimitive::TriggerPrimitive(const CSCDetId& detid,
                                    const CSCCorrelatedLCTDigi& digi):
   _id(detid),
   _subsystem(TriggerPrimitive::kCSC) {
-  calculateCSCGlobalSector(detid,_globalsector,_subsector);
+  calculateGlobalSector(detid,_globalsector,_subsector);
   _csc.trknmb  = digi.getTrknmb();
   _csc.valid   = digi.isValid();
   _csc.quality = digi.getQuality();
@@ -121,7 +123,7 @@ TriggerPrimitive::TriggerPrimitive(const RPCDetId& detid,
                                    const RPCDigi& digi):
   _id(detid),
   _subsystem(TriggerPrimitive::kRPC) {
-  calculateRPCGlobalSector(detid,_globalsector,_subsector);
+  calculateGlobalSector(detid,_globalsector,_subsector);
   _rpc.strip = digi.strip();
   _rpc.strip_low = digi.strip();
   _rpc.strip_hi = digi.strip();
@@ -136,7 +138,7 @@ TriggerPrimitive::TriggerPrimitive(const RPCDetId& detid,
                                    const int bx):
   _id(detid),
   _subsystem(TriggerPrimitive::kRPC) {
-  calculateRPCGlobalSector(detid,_globalsector,_subsector);
+  calculateGlobalSector(detid,_globalsector,_subsector);
   _rpc.strip = strip;
   _rpc.strip_low = strip;
   _rpc.strip_hi = strip;
@@ -151,11 +153,26 @@ TriggerPrimitive::TriggerPrimitive(const GEMDetId& detid,
                                    const GEMPadDigi& digi):
   _id(detid),
   _subsystem(TriggerPrimitive::kGEM) {
-  calculateGEMGlobalSector(detid,_globalsector,_subsector);
+  calculateGlobalSector(detid,_globalsector,_subsector);
   _gem.pad = digi.pad();
   _gem.pad_low = digi.pad();
   _gem.pad_hi = digi.pad();
   _gem.bx = digi.bx();
+  _gem.bend = 0;
+  _gem.isME0 = false;
+}
+
+TriggerPrimitive::TriggerPrimitive(const ME0DetId& detid,
+                                   const ME0PadDigi& digi):
+  _id(detid),
+  _subsystem(TriggerPrimitive::kGEM) {
+  calculateGlobalSector(detid,_globalsector,_subsector);
+  _gem.pad = digi.pad();
+  _gem.pad_low = digi.pad();
+  _gem.pad_hi = digi.pad();
+  _gem.bx = digi.bx();
+  _gem.bend = 0;
+  _gem.isME0 = true;
 }
 
 TriggerPrimitive::TriggerPrimitive(const TriggerPrimitive& tp):
@@ -225,6 +242,8 @@ bool TriggerPrimitive::operator==(const TriggerPrimitive& tp) const {
            this->_gem.pad_low == tp._gem.pad_low &&
            this->_gem.pad_hi == tp._gem.pad_hi &&
            this->_gem.bx == tp._gem.bx &&
+           this->_gem.bend == tp._gem.bend &&
+           this->_gem.isME0 == tp._gem.isME0 &&
            this->_id == tp._id &&
            this->_subsystem == tp._subsystem &&
            this->_globalsector == tp._globalsector &&
@@ -303,39 +322,11 @@ const int TriggerPrimitive::getPattern() const {
   return -1;
 }
 
-void TriggerPrimitive::calculateDTGlobalSector(const DTChamberId& chid,
-                                               unsigned& globalsector,
-                                               unsigned& subsector ) {
-  globalsector = 0;
-  subsector = 0;
-}
-
-void TriggerPrimitive::calculateCSCGlobalSector(const CSCDetId& chid,
-                                                unsigned& globalsector,
-                                                unsigned& subsector ) {
-  globalsector = 0;
-  subsector = 0;
-}
-
-void TriggerPrimitive::calculateRPCGlobalSector(const RPCDetId& chid,
-                                                unsigned& globalsector,
-                                                unsigned& subsector ) {
-  globalsector = 0;
-  subsector = 0;
-}
-
-void TriggerPrimitive::calculateGEMGlobalSector(const GEMDetId& chid,
-                                                unsigned& globalsector,
-                                                unsigned& subsector ) {
-  globalsector = 0;
-  subsector = 0;
-}
-
 void TriggerPrimitive::print(std::ostream& out) const {
   unsigned idx = (unsigned) _subsystem;
   out << subsystem_names[idx] << " Trigger Primitive" << std::endl;
   out << "eta: " << _eta << " phi: " << _phi << " rho: " << _rho
-      << " bend: " << _theta << std::endl;
+      << " theta: " << _theta << std::endl;
   switch(_subsystem) {
   case kDT:
     out << detId<DTChamberId>() << std::endl;
@@ -375,11 +366,16 @@ void TriggerPrimitive::print(std::ostream& out) const {
     out << "Time          : " << _rpc.time << std::endl;
     break;
   case kGEM:
-    out << detId<GEMDetId>() << std::endl;
+    if (!_gem.isME0)
+      out << detId<GEMDetId>() << std::endl;
+    else
+      out << detId<ME0DetId>() << std::endl;
     out << "Local BX      : " << _gem.bx << std::endl;
     out << "Pad           : " << _gem.pad << std::endl;
     out << "Pad Low       : " << _gem.pad_low << std::endl;
     out << "Pad High      : " << _gem.pad_hi << std::endl;
+    out << "Packed Bend   : " << _gem.bend << std::endl;
+    out << "Is ME0        : " << _gem.isME0 << std::endl;
     break;
   default:
     throw cms::Exception("Invalid Subsytem")

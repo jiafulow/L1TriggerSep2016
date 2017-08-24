@@ -25,6 +25,7 @@ namespace edm {
   class EventSetup;
 }
 
+class ME0Geometry;
 class GEMGeometry;
 class RPCGeometry;
 class CSCGeometry;
@@ -48,6 +49,7 @@ namespace L1TMuonEndCap {
 
     void checkAndUpdateGeometry(const edm::EventSetup&);
 
+    const ME0Geometry& getME0Geometry() const { return *_geome0; }
     const GEMGeometry& getGEMGeometry() const { return *_geogem; }
     const RPCGeometry& getRPCGeometry() const { return *_georpc; }
     const CSCGeometry& getCSCGeometry() const { return *_geocsc; }
@@ -58,6 +60,7 @@ namespace L1TMuonEndCap {
   private:
     // pointers to the current geometry records
     unsigned long long _geom_cache_id;
+    edm::ESHandle<ME0Geometry> _geome0;
     edm::ESHandle<GEMGeometry> _geogem;
     edm::ESHandle<RPCGeometry> _georpc;
     edm::ESHandle<CSCGeometry> _geocsc;
