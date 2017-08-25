@@ -18,12 +18,14 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
     tokenRPC_(iConsumes.consumes<RPCTag::digi_collection>(iConfig.getParameter<edm::InputTag>("RPCInput"))),
     tokenGEM_(iConsumes.consumes<GEMTag::digi_collection>(iConfig.getParameter<edm::InputTag>("GEMInput"))),
     tokenIRPC_(iConsumes.consumes<IRPCTag::digi_collection>(iConfig.getParameter<edm::InputTag>("IRPCInput"))),
+    tokenME0_(iConsumes.consumes<ME0Tag::digi_collection>(iConfig.getParameter<edm::InputTag>("ME0Input"))),
     tokenTT_(iConsumes.consumes<TTTag::digi_collection>(iConfig.getParameter<edm::InputTag>("TTInput"))),
     verbose_(iConfig.getUntrackedParameter<int>("verbosity")),
     useCSC_(iConfig.getParameter<bool>("CSCEnable")),
     useRPC_(iConfig.getParameter<bool>("RPCEnable")),
     useGEM_(iConfig.getParameter<bool>("GEMEnable")),
     useIRPC_(iConfig.getParameter<bool>("IRPCEnable")),
+    useME0_(iConfig.getParameter<bool>("ME0Enable")),
     useTT_(iConfig.getParameter<bool>("TTEnable")),
     era_(iConfig.getParameter<std::string>("Era"))
 {
@@ -154,6 +156,8 @@ void TrackFinder::process(
     collector.extractPrimitives(GEMTag(), iEvent, tokenGEM_, muon_primitives);
   if (useIRPC_)
     collector.extractPrimitives(IRPCTag(), iEvent, tokenIRPC_, muon_primitives);
+  if (useME0_)
+    collector.extractPrimitives(ME0Tag(), iEvent, tokenME0_, muon_primitives);
   if (useTT_)
     collector.extractTTPrimitives(TTTag(), iEvent, tokenTT_, ttmuon_primitives);
 
