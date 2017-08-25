@@ -9,7 +9,9 @@ def customise(process):
         process.simEmtfDigis.RPCEnable                   = True
         process.simEmtfDigis.GEMEnable                   = True
         process.simEmtfDigis.IRPCEnable                  = True
+        process.simEmtfDigis.ME0Enable                   = True
         process.simEmtfDigis.TTEnable                    = False
+        process.simEmtfDigis.ME0Input                    = cms.InputTag('fakeSimMuonME0PadDigis')
         process.simEmtfDigis.Era                         = cms.string('Phase2C2')
         process.simEmtfDigis.spPAParams16.PtLUTVersion   = cms.int32(7)
 
