@@ -4,6 +4,8 @@
 #include "DataFormats/MuonDetId/interface/CSCDetId.h"
 #include "DataFormats/MuonDetId/interface/RPCDetId.h"
 #include "DataFormats/MuonDetId/interface/GEMDetId.h"
+#include "L1Trigger/L1TMuonEndCap/interface/EMTFGEMDetId.h"
+#include "L1Trigger/L1TMuonEndCap/interface/EMTFGEMDetIdImpl.h"
 
 
 #include "helper.h"  // merge_map_into_map, assert_no_abort
@@ -710,8 +712,8 @@ int PrimitiveSelection::select_gem(const TriggerPrimitive& muon_primitive) const
   int selected = -1;
 
   if (muon_primitive.subsystem() == TriggerPrimitive::kGEM) {
-    const GEMDetId& tp_detId = muon_primitive.detId<GEMDetId>();
-    const GEMData&  tp_data  = muon_primitive.getGEMData();
+    const EMTFGEMDetId& tp_detId = emtf::construct_EMTFGEMDetId(muon_primitive);
+    const GEMData&      tp_data  = muon_primitive.getGEMData();
 
     int tp_region    = tp_detId.region();     // 0 for Barrel, +/-1 for +/- Endcap
     int tp_endcap    = (tp_region == -1) ? 2 : tp_region;
@@ -724,6 +726,8 @@ int PrimitiveSelection::select_gem(const TriggerPrimitive& muon_primitive) const
     int tp_bx        = tp_data.bx;
     int tp_pad       = tp_data.pad;
 
+    const bool is_me0 = tp_data.isME0;
+
     // Use CSC trigger sector definitions
     // Code copied from DataFormats/MuonDetId/src/CSCDetId.cc
     auto get_trigger_sector = [](int ring, int station, int chamber) {
@@ -731,9 +735,11 @@ int PrimitiveSelection::select_gem(const TriggerPrimitive& muon_primitive) const
       if( station > 1 && ring > 1 ) {
         result = ((static_cast<unsigned>(chamber-3) & 0x7f) / 6) + 1; // ch 3-8->1, 9-14->2, ... 1,2 -> 6
       }
+      else if( station == 1 && ring != 4 ) {
+        result = ((static_cast<unsigned>(chamber-3) & 0x7f) / 6) + 1; // ch 3-8->1, 9-14->2, ... 1,2 -> 6
+      }
       else {
-        result =  (station != 1) ? ((static_cast<unsigned>(chamber-2) & 0x1f) / 3) + 1 : // ch 2-4-> 1, 5-7->2, ...
-                               ((static_cast<unsigned>(chamber-3) & 0x7f) / 6) + 1;
+        result = ((static_cast<unsigned>(chamber-2) & 0x1f) / 3) + 1; // ch 2-4-> 1, 5-7->2, ...
       }
       return (result <= 6) ? result : 6; // max sector is 6, some calculations give a value greater than six but this is expected.
     };
@@ -752,6 +758,9 @@ int PrimitiveSelection::select_gem(const TriggerPrimitive& muon_primitive) const
           break;
         case 3:
           result += 6; // 7,8,9
+          break;
+        case 4:  // ME0
+          result = (chamber+1) % 3 + 1; // 1,2,3
           break;
         }
       }
@@ -772,15 +781,14 @@ int PrimitiveSelection::select_gem(const TriggerPrimitive& muon_primitive) const
     // station 1 --> subsector 1 or 2
     // station 2,3,4 --> subsector 0
     int tp_subsector = (tp_station != 1) ? 0 : ((tp_chamber%6 > 2) ? 1 : 2);
+    if (is_me0)  tp_subsector = 2;
 
     assert_no_abort(emtf::MIN_ENDCAP <= tp_endcap && tp_endcap <= emtf::MAX_ENDCAP);
     assert_no_abort(emtf::MIN_TRIGSECTOR <= tp_sector && tp_sector <= emtf::MAX_TRIGSECTOR);
     assert_no_abort(1 <= tp_station && tp_station <= 2);
-    assert_no_abort(1 <= tp_ring && tp_ring <= 1);
-    //assert_no_abort(1 <= tp_roll && tp_roll <= 12);
-    assert_no_abort((tp_station == 1 && 1 <= tp_roll && tp_roll <= 8) || (tp_station != 1));
-    assert_no_abort((tp_station == 2 && 1 <= tp_roll && tp_roll <= 12) || (tp_station != 2));
-    assert_no_abort(1 <= tp_layer && tp_layer <= 2);
+    assert_no_abort(tp_ring == 1 || tp_ring == 4);
+    assert_no_abort(1 <= tp_roll && tp_roll <= 8);
+    assert_no_abort((!is_me0 && 1 <= tp_layer && tp_layer <= 2) || (is_me0 && 1 <= tp_layer && tp_layer <= 6));
     assert_no_abort(1 <= tp_csc_ID && tp_csc_ID <= 9);
     //assert_no_abort(tp_data.pad < 192);
     assert_no_abort((tp_station == 1 && 1 <= tp_pad && tp_pad <= 192) || (tp_station != 1));
