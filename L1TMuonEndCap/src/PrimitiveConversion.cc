@@ -4,6 +4,8 @@
 #include "DataFormats/MuonDetId/interface/CSCDetId.h"
 #include "DataFormats/MuonDetId/interface/RPCDetId.h"
 #include "DataFormats/MuonDetId/interface/GEMDetId.h"
+#include "L1Trigger/L1TMuonEndCap/interface/EMTFGEMDetId.h"
+#include "L1Trigger/L1TMuonEndCap/interface/EMTFGEMDetIdImpl.h"
 
 #include "L1Trigger/L1TMuonEndCap/interface/SectorProcessorLUT.h"
 #include "L1Trigger/L1TMuonEndCap/interface/TrackTools.h"
@@ -621,8 +623,8 @@ void PrimitiveConversion::convert_gem(
     const TriggerPrimitive& muon_primitive,
     EMTFHit& conv_hit
 ) const {
-  const GEMDetId& tp_detId = muon_primitive.detId<GEMDetId>();
-  const GEMData&  tp_data  = muon_primitive.getGEMData();
+  const EMTFGEMDetId& tp_detId = emtf::construct_EMTFGEMDetId(muon_primitive);
+  const GEMData&      tp_data  = muon_primitive.getGEMData();
 
   int tp_region    = tp_detId.region();     // 0 for Barrel, +/-1 for +/- Endcap
   int tp_endcap    = (tp_region == -1) ? 2 : tp_region;
@@ -634,6 +636,8 @@ void PrimitiveConversion::convert_gem(
 
   int tp_bx        = tp_data.bx;
   int tp_strip     = ((tp_data.pad_low + tp_data.pad_hi) / 2);  // in full-strip unit
+
+  const bool is_me0 = tp_data.isME0;
 
   // Use CSC trigger sector definitions
   // Code copied from DataFormats/MuonDetId/src/CSCDetId.cc
@@ -683,6 +687,7 @@ void PrimitiveConversion::convert_gem(
   // station 1 --> subsector 1 or 2
   // station 2,3,4 --> subsector 0
   int tp_subsector = (tp_station != 1) ? 0 : ((tp_chamber%6 > 2) ? 1 : 2);
+  if (is_me0)  tp_subsector = 2;
 
   const bool is_neighbor = (pc_station == 5);
 
@@ -700,7 +705,7 @@ void PrimitiveConversion::convert_gem(
   }
 
   // Set properties
-  conv_hit.SetGEMDetId       ( tp_detId );
+  //conv_hit.SetGEMDetId       ( tp_detId );  //FIXME
 
   conv_hit.set_endcap        ( (tp_endcap == 2) ? -1 : tp_endcap );
   conv_hit.set_station       ( tp_station );
@@ -734,7 +739,7 @@ void PrimitiveConversion::convert_gem(
   //conv_hit.set_wire          ( tp_data.keywire );
   //conv_hit.set_quality       ( tp_data.quality );
   conv_hit.set_pattern       ( 1 );  // In firmware, this marks GEM stub (unconfirmed!)
-  //conv_hit.set_bend          ( tp_data.bend );
+  conv_hit.set_bend          ( tp_data.bend );
   //conv_hit.set_time          ( tp_data.time );
 
   conv_hit.set_neighbor      ( is_neighbor );
@@ -755,6 +760,26 @@ void PrimitiveConversion::convert_gem(
     // Use the CSC precision (unconfirmed!)
     int fph = emtf::calc_phi_loc_int(glob_phi, conv_hit.PC_sector());
     int th  = emtf::calc_theta_int(glob_theta, conv_hit.Endcap());
+
+    if (is_me0) {
+      // The ME0 chamber 1 starts at -10 deg. The CSC chamber 1 starts at -5 deg.
+      // This 5 deg difference unfortunately causes the local phi coord to go
+      // out of bound. This is because the local phi 0 is set to the CSC chamber
+      // edge minus 22 deg to accommodate for the neighbor chamber. However, it
+      // is possible for the ME0 neighbor chamber to go to as far as the CSC
+      // chamber edge minus 25 deg.
+      double loc = emtf::calc_phi_loc_deg_from_glob(glob_phi, conv_hit.PC_sector());
+      if ((loc + 22.) < 0.&& (loc + 27.) > 0.)
+        fph = 0;
+      else if ((loc + 360. + 22.) < 0.&& (loc + 360. + 27.) > 0.)
+        fph = 0;
+
+      // The ME0 extends to eta of 2.8 or theta of 7.0 deg. But integer theta
+      // starts from theta of 8.5 deg.
+      if (th < 0)
+        th = 0;
+    }
+
     assert(0 <= fph && fph < 5000);
     assert(0 <=  th &&  th < 128);
     th = (th == 0) ? 1 : th;  // protect against invalid value
