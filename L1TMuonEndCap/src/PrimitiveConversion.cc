@@ -413,7 +413,7 @@ void PrimitiveConversion::convert_csc_details(EMTFHit& conv_hit) const {
   conv_hit.set_bt_segment   ( bt_segment );
 
   conv_hit.set_phi_loc  ( emtf::calc_phi_loc_deg(fph) );
-  conv_hit.set_phi_glob ( emtf::calc_phi_glob_deg(conv_hit.Phi_loc(), sector_) );
+  conv_hit.set_phi_glob ( emtf::calc_phi_glob_deg(conv_hit.Phi_loc(), conv_hit.Sector()) );
   conv_hit.set_theta    ( emtf::calc_theta_deg_from_int(th) );
   conv_hit.set_eta      ( emtf::calc_eta_from_theta_deg(conv_hit.Theta(), conv_hit.Endcap()) );
 }
@@ -486,11 +486,14 @@ void PrimitiveConversion::convert_rpc(
     double glob_theta = emtf::rad_to_deg(gp.theta());
     double glob_eta   = gp.eta();
 
+    int phi_loc_int   = emtf::calc_phi_loc_int(glob_phi, conv_hit.Sector());
+    int theta_int     = emtf::calc_theta_int(glob_theta, conv_hit.Endcap());
+
     // Use RPC-specific convention in docs/CPPF-EMTF-format_2016_11_01.docx
-    // Phi precision is 1/15 degrees (11 bits), 4x larger than CSC precision of 1/60 degrees (13 bits)
-    // Theta precision is 36.5/32 degrees (5 bits), 4x larger than CSC precision of 36.5/128 degrees (7 bits)
-    int fph = emtf::calc_phi_loc_int(glob_phi, sector_, 11);
-    int th  = emtf::calc_theta_int(glob_theta, conv_hit.Endcap(), 5);
+    // Phi precision is (1/15) degrees, 4x larger than CSC precision of (1/60) degrees
+    // Theta precision is (36.5/32) degrees, 4x larger than CSC precision of (36.5/128) degrees
+    int fph = ((phi_loc_int + (1<<1)) >> 2);
+    int th  = ((theta_int + (1<<1)) >> 2);
 
     assert(0 <= fph && fph < 1250);
     assert(0 <=  th &&  th < 32);
@@ -579,7 +582,7 @@ void PrimitiveConversion::convert_rpc_details(EMTFHit& conv_hit) const {
   conv_hit.set_bt_segment   ( bt_segment );
 
   conv_hit.set_phi_loc  ( emtf::calc_phi_loc_deg(fph) );
-  conv_hit.set_phi_glob ( emtf::calc_phi_glob_deg(conv_hit.Phi_loc(), sector_) );
+  conv_hit.set_phi_glob ( emtf::calc_phi_glob_deg(conv_hit.Phi_loc(), conv_hit.Sector()) );
   conv_hit.set_theta    ( emtf::calc_theta_deg_from_int(th) );
   conv_hit.set_eta      ( emtf::calc_eta_from_theta_deg(conv_hit.Theta(), conv_hit.Endcap()) );
 }
@@ -717,10 +720,12 @@ void PrimitiveConversion::convert_gem(
     double glob_theta = emtf::rad_to_deg(gp.theta());
     double glob_eta   = gp.eta();
 
-    // Use the CSC precision (unconfirmed!)
-    int fph = emtf::calc_phi_loc_int(glob_phi, sector_, 13);
-    int th  = emtf::calc_theta_int(glob_theta, conv_hit.Endcap(), 7);
+    int phi_loc_int   = emtf::calc_phi_loc_int(glob_phi, conv_hit.Sector());
+    int theta_int     = emtf::calc_theta_int(glob_theta, conv_hit.Endcap());
 
+    // Use the CSC precision (unconfirmed!)
+    int fph = phi_loc_int;
+    int th  = theta_int;
     assert(0 <= fph && fph < 5000);
     assert(0 <=  th &&  th < 128);
     th = (th == 0) ? 1 : th;  // protect against invalid value
@@ -793,7 +798,7 @@ void PrimitiveConversion::convert_gem_details(EMTFHit& conv_hit) const {
   conv_hit.set_bt_segment   ( bt_segment );
 
   conv_hit.set_phi_loc  ( emtf::calc_phi_loc_deg(fph) );
-  conv_hit.set_phi_glob ( emtf::calc_phi_glob_deg(conv_hit.Phi_loc(), sector_) );
+  conv_hit.set_phi_glob ( emtf::calc_phi_glob_deg(conv_hit.Phi_loc(), conv_hit.Sector()) );
   conv_hit.set_theta    ( emtf::calc_theta_deg_from_int(th) );
   conv_hit.set_eta      ( emtf::calc_eta_from_theta_deg(conv_hit.Theta(), conv_hit.Endcap()) );
 }
