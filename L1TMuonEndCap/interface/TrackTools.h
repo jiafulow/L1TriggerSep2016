@@ -2,7 +2,6 @@
 #define L1TMuonEndCap_TrackTools_h
 
 #include <cmath>
-#include <cassert>
 
 #include "DataFormats/L1TMuon/interface/EMTFTrack.h"
 #include "DataFormats/L1TMuon/interface/EMTFTrack.h"
@@ -126,10 +125,9 @@ namespace emtf {
     return rad_to_deg(calc_theta_rad(eta));
   }
 
-  inline int    calc_theta_int(double theta, int endcap, int bits) {  // theta in deg, endcap [-1,+1]
-    assert(bits == 5 || bits == 7); // 5 for RPC hits from CPPF, 7 for CSC LCTs
+  inline int    calc_theta_int(double theta, int endcap) {  // theta in deg, endcap [-1,+1]
     theta = (endcap == -1) ? (180. - theta) : theta;
-    theta = (theta - 8.5) * pow(2, bits) / (45.0-8.5);
+    theta = (theta - 8.5) * 128./(45.0-8.5);
     int theta_int = static_cast<int>(std::round(theta));
     return theta_int;
   }
@@ -173,11 +171,10 @@ namespace emtf {
     return loc;
   }
 
-  inline int    calc_phi_loc_int(double glob, int sector, int bits) {  // glob in deg, sector [1-6]
-    assert(bits == 11 || bits == 13);  // 11 for RPCs from CPPF, 13 for CSC LCTs
+  inline int    calc_phi_loc_int(double glob, int sector) {  // glob in deg, sector [1-6]
     double loc = calc_phi_loc_deg_from_glob(glob, sector);
     loc = ((loc + 22.) < 0.) ? loc + 360. : loc;
-    loc = (loc + 22.) * 15. * pow(2, bits - 11);
+    loc = (loc + 22.) * 60.;
     int phi_int = static_cast<int>(std::round(loc));
     return phi_int;
   }
