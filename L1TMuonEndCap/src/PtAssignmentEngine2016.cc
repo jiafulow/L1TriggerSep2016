@@ -703,4 +703,4 @@ float PtAssignmentEngine2016::calculate_pt_xml(const EMTFTrack& track) const {
   float pt = 0.;
 
   return pt;
-} 
+}

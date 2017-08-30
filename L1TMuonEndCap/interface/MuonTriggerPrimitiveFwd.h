@@ -10,7 +10,7 @@ namespace L1TMuonEndCap {
   class TriggerPrimitive;
 
   typedef std::vector<TriggerPrimitive> TriggerPrimitiveCollection;
-  
+
   //typedef edm::Ref<TriggerPrimitiveCollection> TriggerPrimitiveRef;
   //typedef std::vector<TriggerPrimitiveRef> TriggerPrimitiveList;
   //typedef edm::Ptr<TriggerPrimitive> TriggerPrimitivePtr;
