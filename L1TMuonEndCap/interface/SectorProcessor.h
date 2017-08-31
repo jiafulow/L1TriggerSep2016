@@ -36,7 +36,7 @@ public:
       const GeometryTranslator* tp_geom,
       const ConditionHelper* cond,
       const SectorProcessorLUT* lut,
-      PtAssignmentEngine** pt_assign_engine,
+      const PtAssignmentEngine* pt_assign_engine,
       int verbose, int endcap, int sector,
       int minBX, int maxBX, int bxWindow, int bxShiftCSC, int bxShiftRPC, int bxShiftGEM,
       std::string era,
@@ -80,7 +80,7 @@ private:
 
   const SectorProcessorLUT* lut_;
 
-  PtAssignmentEngine** pt_assign_engine_;
+  const PtAssignmentEngine* pt_assign_engine_;
 
   int verbose_, endcap_, sector_;
 

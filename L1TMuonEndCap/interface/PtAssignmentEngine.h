@@ -48,9 +48,6 @@ public:
   virtual float calculate_pt_xml(const address_t& address) const { return 0.; }
   virtual float calculate_pt_xml(const EMTFTrack& track) const { return 0.; }
 
-  inline int  readPtLUTFile() { return readPtLUTFile_; }
-  inline void set_ptLUTVersion( int ptLUTVersion ) { ptLUTVersion_ = ptLUTVersion; }
-
 protected:
   std::vector<int> allowedModes_;
   std::array<emtf::Forest, 16> forests_;
@@ -58,7 +55,7 @@ protected:
 
   int verbose_;
 
-  int ptLUTVersion_;
+  int ptLUTVersion_;  // init: 0xFFFFFFFF
   bool readPtLUTFile_, fixMode15HighPt_;
   bool bug9BitDPhi_, bugMode7CLCT_, bugNegPt_;
 };

@@ -13,7 +13,7 @@ void SectorProcessor::configure(
     const GeometryTranslator* tp_geom,
     const ConditionHelper* cond,
     const SectorProcessorLUT* lut,
-    PtAssignmentEngine** pt_assign_engine,
+    const PtAssignmentEngine* pt_assign_engine,
     int verbose, int endcap, int sector,
     int minBX, int maxBX, int bxWindow, int bxShiftCSC, int bxShiftRPC, int bxShiftGEM,
     std::string era,
@@ -366,7 +366,7 @@ void SectorProcessor::process_single_bx(
 
   PtAssignment pt_assign;
   pt_assign.configure(
-      *pt_assign_engine_,
+      pt_assign_engine_,
       verbose_, endcap_, sector_, bx,
       ptLUTVersion_, readPtLUTFile_, fixMode15HighPt_,
       bug9BitDPhi_, bugMode7CLCT_, bugNegPt_,

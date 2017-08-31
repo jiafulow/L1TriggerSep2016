@@ -8,7 +8,8 @@
 PtAssignmentEngine::PtAssignmentEngine() :
     allowedModes_({3,5,9,6,10,12,7,11,13,14,15}),
     forests_(),
-    ptlut_reader_()
+    ptlut_reader_(),
+    ptLUTVersion_(0xFFFFFFFF)
 {
 
 }
@@ -42,9 +43,8 @@ void PtAssignmentEngine::read(const std::string& xml_dir) {
 }
 
 void PtAssignmentEngine::load(const L1TMuonEndCapForest *payload) {
-  // unsigned pt_lut_version = payload->version_;  // Why is payload->version_ always 0? - AWB 02.06.17
-  // std::cout << "ptLUTVersion_ from configuration = " << ptLUTVersion_ << ", payload->version_ = " << payload->version_ << std::endl;
-  // assert(pt_lut_version == unsigned(ptLUTVersion_));
+  int pt_lut_version = payload->version_;
+  if (ptLUTVersion_ == pt_lut_version)  return;
 
   for (unsigned i = 0; i < allowedModes_.size(); ++i) {
     int mode = allowedModes_.at(i);
@@ -72,6 +72,7 @@ void PtAssignmentEngine::load(const L1TMuonEndCapForest *payload) {
 
   }
 
+  ptLUTVersion_ = pt_lut_version;
   return;
 }
 
