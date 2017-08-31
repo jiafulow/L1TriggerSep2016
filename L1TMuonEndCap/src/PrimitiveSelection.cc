@@ -53,9 +53,9 @@ void PrimitiveSelection::process(
     // Patch the CLCT pattern number
     // It should be 0-10, see: L1Trigger/CSCTriggerPrimitives/src/CSCMotherboard.cc
     bool patchPattern = true;
-    if (patchPattern) {
-      if (new_tp.getCSCData().pattern == 11 || new_tp.getCSCData().pattern == 12) {  // 11, 12 -> 10
-        edm::LogWarning("L1T") << "\nEMTF emulator patching corrupt CSC LCT pattern: changing " << new_tp.getCSCData().pattern << " to 10\n";
+    if (patchPattern && new_tp.subsystem() == TriggerPrimitive::kCSC) {
+      if (new_tp.getCSCData().pattern == 11 || new_tp.getCSCData().pattern == 12 || new_tp.getCSCData().pattern == 13 || new_tp.getCSCData().pattern == 14) {  // 11, 12, 13, 14 -> 10
+        edm::LogWarning("L1T") << "EMTF patching corrupt CSC LCT pattern: changing " << new_tp.getCSCData().pattern << " to 10";
         new_tp.accessCSCData().pattern = 10;
       }
     }
@@ -63,9 +63,9 @@ void PrimitiveSelection::process(
     // Patch the LCT quality number
     // It should be 1-15, see: L1Trigger/CSCTriggerPrimitives/src/CSCMotherboard.cc
     bool patchQuality = true;
-    if (patchQuality) {
-      if (new_tp.subsystem() == TriggerPrimitive::kCSC && new_tp.getCSCData().quality == 0) {  // 0 -> 1
-        edm::LogWarning("L1T") << "\nEMTF emulator patching corrupt CSC LCT quality: changing " << new_tp.getCSCData().quality << " to 1\n";
+    if (patchQuality && new_tp.subsystem() == TriggerPrimitive::kCSC) {
+      if (new_tp.getCSCData().quality == 0) {  // 0 -> 1
+        edm::LogWarning("L1T") << "EMTF patching corrupt CSC LCT quality: changing " << new_tp.getCSCData().quality << " to 1";
         new_tp.accessCSCData().quality = 1;
       }
     }
@@ -74,26 +74,9 @@ void PrimitiveSelection::process(
 
     if (selected_csc >= 0) {
       assert(selected_csc < NUM_CSC_CHAMBERS);
-
-      if (selected_csc_map[selected_csc].size() < 2) {
-        selected_csc_map[selected_csc].push_back(new_tp);
-      }
-      else {
-        edm::LogWarning("L1T") << "\n******************* EMTF EMULATOR: SUPER-BIZZARE CASE *******************";
-        edm::LogWarning("L1T") << "Found 3 CSC trigger primitives in the same chamber";
-        for (int ii = 0; ii < 3; ii++) {
-          TriggerPrimitive tp_err = (ii < 2 ? selected_csc_map[selected_csc].at(ii) : new_tp);
-          edm::LogWarning("L1T") << "LCT #" << ii+1 << ": BX " << tp_err.getBX()
-                    << ", endcap " << tp_err.detId<CSCDetId>().endcap() << ", sector " << tp_err.detId<CSCDetId>().triggerSector()
-                    << ", station " << tp_err.detId<CSCDetId>().station() << ", ring " << tp_err.detId<CSCDetId>().ring()
-                    << ", chamber " << tp_err.detId<CSCDetId>().chamber() << ", CSC ID " << tp_err.getCSCData().cscID
-                    << ": strip " << tp_err.getStrip() << ", wire " << tp_err.getWire();
-        }
-        edm::LogWarning("L1T") << "************************* ONLY KEEP FIRST TWO *************************\n\n";
-      }
-
-    } // End conditional: if (selected_csc >= 0)
-  } // End loop: for (; tp_it != tp_end; ++tp_it)
+      selected_csc_map[selected_csc].push_back(new_tp);
+    }
+  }
 
   // Duplicate CSC muon primitives
   // If there are 2 LCTs in the same chamber with (strip, wire) = (s1, w1) and (s2, w2)
@@ -105,6 +88,16 @@ void PrimitiveSelection::process(
     for (; map_tp_it != map_tp_end; ++map_tp_it) {
       int selected = map_tp_it->first;
       TriggerPrimitiveCollection& tmp_primitives = map_tp_it->second;  // pass by reference
+
+      if (tmp_primitives.size() >= 4) {
+        edm::LogWarning("L1T") << "EMTF found 4 or more CSC LCTs in one chamber: keeping only two";
+        tmp_primitives.erase(tmp_primitives.begin() + 4, tmp_primitives.end());  // erase 5th element++
+        tmp_primitives.erase(tmp_primitives.begin() + 2);  // erase 3rd element
+        tmp_primitives.erase(tmp_primitives.begin() + 1);  // erase 2nd element
+      } else if (tmp_primitives.size() == 3) {
+        edm::LogWarning("L1T") << "EMTF found 3 CSC LCTs in one chamber: keeping only two";
+        tmp_primitives.erase(tmp_primitives.begin() + 2);  // erase 3rd element
+      }
       assert(tmp_primitives.size() <= 2);  // at most 2 hits
 
       if (tmp_primitives.size() == 2) {
