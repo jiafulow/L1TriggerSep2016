@@ -13,7 +13,7 @@ void SectorProcessor::configure(
     const GeometryTranslator* tp_geom,
     const ConditionHelper* cond,
     const SectorProcessorLUT* lut,
-    const PtAssignmentEngine* pt_assign_engine,
+    PtAssignmentEngine* pt_assign_engine,
     int verbose, int endcap, int sector,
     int minBX, int maxBX, int bxWindow, int bxShiftCSC, int bxShiftRPC, int bxShiftGEM,
     std::string era,
@@ -72,7 +72,7 @@ void SectorProcessor::configure(
   useSecondEarliest_  = useSecondEarliest;
   bugSameSectorPt0_   = bugSameSectorPt0;
 
-  ptLUTVersion_       = ptLUTVersion;
+  ptLUTVersion_       = ptLUTVersion;  // this is actually ignored. only the pT LUT version from Conditions is being used.
   readPtLUTFile_      = readPtLUTFile;
   fixMode15HighPt_    = fixMode15HighPt;
   bug9BitDPhi_        = bug9BitDPhi;
@@ -83,14 +83,18 @@ void SectorProcessor::configure(
 }
 
 void SectorProcessor::set_pt_lut_version(unsigned pt_lut_version) {
-  ptLUTVersion_ = pt_lut_version;
-  // std::cout << "  * In endcap " << endcap_ << ", sector " << sector_ << ", set ptLUTVersion_ to " << ptLUTVersion_ << std::endl;
+  if (verbose_ > 0) {
+    std::cout << "Setting SectorProcessor with pt_lut_version: " << pt_lut_version << std::endl;
+  }
+
+  ptLUTVersion_       = pt_lut_version;
 }
 
 // Refer to docs/EMTF_FW_LUT_versions_2016_draft2.xlsx
 void SectorProcessor::configure_by_fw_version(unsigned fw_version) {
-
-  // std::cout << "Running configure_by_fw_version with version " << fw_version << std::endl;
+  if (verbose_ > 0) {
+    std::cout << "Configure SectorProcessor with fw_version: " << fw_version << std::endl;
+  }
 
   if (fw_version == 0 || fw_version == 123456)  // fw_version '123456' is from the fake conditions
     return;
@@ -368,7 +372,8 @@ void SectorProcessor::process_single_bx(
   pt_assign.configure(
       pt_assign_engine_,
       verbose_, endcap_, sector_, bx,
-      ptLUTVersion_, readPtLUTFile_, fixMode15HighPt_,
+      ptLUTVersion_,
+      readPtLUTFile_, fixMode15HighPt_,
       bug9BitDPhi_, bugMode7CLCT_, bugNegPt_,
       bugGMTPhi_, promoteMode7_
   );

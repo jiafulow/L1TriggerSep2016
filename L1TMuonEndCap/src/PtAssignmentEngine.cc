@@ -42,9 +42,11 @@ void PtAssignmentEngine::read(const std::string& xml_dir) {
   return;
 }
 
-void PtAssignmentEngine::load(const L1TMuonEndCapForest *payload) {
-  int pt_lut_version = payload->version_;
+void PtAssignmentEngine::load(int pt_lut_version, const L1TMuonEndCapForest *payload) {
   if (ptLUTVersion_ == pt_lut_version)  return;
+  ptLUTVersion_ = pt_lut_version;
+
+  edm::LogInfo("L1T") << "EMTF using pt_lut_ver: " << pt_lut_version;
 
   for (unsigned i = 0; i < allowedModes_.size(); ++i) {
     int mode = allowedModes_.at(i);
@@ -59,7 +61,7 @@ void PtAssignmentEngine::load(const L1TMuonEndCapForest *payload) {
     // std::cout << "  * ptLUTVersion_ = " << ptLUTVersion_ << std::endl;
     forests_.at(mode).getTree(0)->setBoostWeight( boostWeight_ );
 
-    assert(boostWeight_ == 0 || ptLUTVersion_ >= 6);  // Check that XMLs and pT LUT version are consistent
+    //assert(boostWeight_ == 0 || ptLUTVersion_ >= 6);  // Check that XMLs and pT LUT version are consistent
     // Will catch user trying to run with Global Tag settings on 2017 data, rather than fakeEmtfParams. - AWB 08.06.17
 
     // // Code below can be used to save out trees in XML format
@@ -72,18 +74,18 @@ void PtAssignmentEngine::load(const L1TMuonEndCapForest *payload) {
 
   }
 
-  ptLUTVersion_ = pt_lut_version;
   return;
 }
 
 void PtAssignmentEngine::configure(
     int verbose,
-    int ptLUTVersion, bool readPtLUTFile, bool fixMode15HighPt,
+    int ptLUTVersion,
+    bool readPtLUTFile, bool fixMode15HighPt,
     bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt
 ) {
   verbose_ = verbose;
 
-  ptLUTVersion_    = ptLUTVersion;
+  //ptLUTVersion_    = ptLUTVersion;  // this is actually ignored. only the pT LUT version from Conditions is being used.
   readPtLUTFile_   = readPtLUTFile;
   fixMode15HighPt_ = fixMode15HighPt;
   bug9BitDPhi_     = bug9BitDPhi;

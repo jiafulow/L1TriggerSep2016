@@ -1,6 +1,4 @@
 #include "L1Trigger/L1TMuonEndCap/interface/TrackFinder.h"
-#include "L1Trigger/L1TMuonEndCap/interface/PtAssignmentEngine2016.h"
-#include "L1Trigger/L1TMuonEndCap/interface/PtAssignmentEngine2017.h"
 
 #include <iostream>
 #include <sstream>
@@ -28,6 +26,8 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
   if (era_ == "Run2_2016") {
     pt_assign_engine_.reset(new PtAssignmentEngine2016());
   } else if (era_ == "Run2_2017") {
+    pt_assign_engine_.reset(new PtAssignmentEngine2017());
+  } else if (era_ == "Phase2C2") {
     pt_assign_engine_.reset(new PtAssignmentEngine2017());
   } else {
     assert(false && "Cannot recognize the era option");
@@ -67,7 +67,7 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
   auto bugSameSectorPt0   = spGCParams16.getParameter<bool>("BugSameSectorPt0");
 
   const auto& spPAParams16 = config_.getParameter<edm::ParameterSet>("spPAParams16");
-  auto ptLUTVersion       = spPAParams16.getParameter<int>("PtLUTVersion");
+  auto ptLUTVersion       = spPAParams16.getParameter<int>("PtLUTVersion");  // this is actually ignored. only the pT LUT version from Conditions is being used.
   auto readPtLUTFile      = spPAParams16.getParameter<bool>("ReadPtLUTFile");
   auto fixMode15HighPt    = spPAParams16.getParameter<bool>("FixMode15HighPt");
   auto bug9BitDPhi        = spPAParams16.getParameter<bool>("Bug9BitDPhi");
@@ -154,12 +154,15 @@ void TrackFinder::process(
   sector_processor_lut_.read(condition_helper_.get_pc_lut_version());
 
   // Reload pT LUT if necessary
-  pt_assign_engine_->load(&(condition_helper_.getForest()));
+  pt_assign_engine_->load(condition_helper_.get_pt_lut_version(), &(condition_helper_.getForest()));
 
   // MIN/MAX ENDCAP and TRIGSECTOR set in interface/Common.h
   for (int endcap = MIN_ENDCAP; endcap <= MAX_ENDCAP; ++endcap) {
     for (int sector = MIN_TRIGSECTOR; sector <= MAX_TRIGSECTOR; ++sector) {
       const int es = (endcap - MIN_ENDCAP) * (MAX_TRIGSECTOR - MIN_TRIGSECTOR + 1) + (sector - MIN_TRIGSECTOR);
+
+      // Set pT LUT version using the actual version being loaded in PtAssignmentEngine
+      sector_processors_.at(es).set_pt_lut_version(pt_assign_engine_->get_pt_lut_version());
 
       // Run-dependent configure. This overwrites many of the configurables passed by the python config file.
       if (iEvent.isRealData()) {
@@ -182,6 +185,10 @@ void TrackFinder::process(
   // for comparison with the firmware simulator.
 
   if (verbose_ > 0) {  // debug
+    std::cout << "Run number: " << iEvent.id().run() << " pc_lut_ver: " << condition_helper_.get_pc_lut_version()
+        << " pt_lut_ver #1: " << condition_helper_.get_pt_lut_version() << " #2: " << pt_assign_engine_->get_pt_lut_version()
+        << " fw_ver: " << condition_helper_.get_fw_version()
+        << std::endl;
 
     for (int endcap = MIN_ENDCAP; endcap <= MAX_ENDCAP; ++endcap) {
       for (int sector = MIN_TRIGSECTOR; sector <= MAX_TRIGSECTOR; ++sector) {

@@ -22,13 +22,16 @@ public:
   typedef uint64_t address_t;
 
   void read(const std::string& xml_dir);
-  void load(const L1TMuonEndCapForest *payload);
+  void load(int pt_lut_version, const L1TMuonEndCapForest *payload);
   const std::array<emtf::Forest, 16>& getForests(void) const { return forests_; }
   const std::vector<int>& getAllowedModes(void) const { return allowedModes_; }
 
+  int get_pt_lut_version() const { return ptLUTVersion_; }
+
   void configure(
       int verbose,
-      int ptLUTVersion, bool readPtLUTFile, bool fixMode15HighPt,
+      int ptLUTVersion,
+      bool readPtLUTFile, bool fixMode15HighPt,
       bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt
   );
 
