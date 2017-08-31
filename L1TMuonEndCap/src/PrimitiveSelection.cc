@@ -474,37 +474,16 @@ int PrimitiveSelection::select_csc(const TriggerPrimitive& muon_primitive) const
     int tp_bx        = tp_data.bx;
     int tp_csc_ID    = tp_data.cscID;
 
-    // assert(MIN_ENDCAP <= tp_endcap && tp_endcap <= MAX_ENDCAP);
-    // assert(MIN_TRIGSECTOR <= tp_sector && tp_sector <= MAX_TRIGSECTOR);
-    // assert(1 <= tp_station && tp_station <= 4);
-    // assert(1 <= tp_csc_ID && tp_csc_ID <= 9);
-    // assert(tp_data.strip < 160);
-    // // assert(tp_data.keywire < 112);
-    // assert(tp_data.keywire < 128);
-    // assert(tp_data.valid == true);
-    // assert(tp_data.pattern <= 10);
-    // assert(tp_data.quality > 0);
-
-
-    if ( !(MIN_ENDCAP <= tp_endcap && tp_endcap <= MAX_ENDCAP) ) {
-      edm::LogWarning("L1T") << "EMTF CSC format error: tp_endcap = "  << tp_endcap; return selected; }
-    if ( !(MIN_TRIGSECTOR <= tp_sector && tp_sector <= MAX_TRIGSECTOR) ) {
-      edm::LogWarning("L1T") << "EMTF CSC format error: tp_sector = "  << tp_sector; return selected; }
-    if ( !(1 <= tp_station && tp_station <= 4) ) {
-      edm::LogWarning("L1T") << "EMTF CSC format error: tp_station = " << tp_station; return selected; }
-    if ( !(1 <= tp_csc_ID && tp_csc_ID <= 9) ) {
-      edm::LogWarning("L1T") << "EMTF CSC format error: tp_csc_ID = "  << tp_csc_ID; return selected; }
-    if ( !(tp_data.strip < 160) ) {
-      edm::LogWarning("L1T") << "EMTF CSC format error: tp_data.strip = "   << tp_data.strip ; return selected; }
-    // if ( !(tp_data.keywire < 112) ) {
-    if ( !(tp_data.keywire < 128) ) {
-      edm::LogWarning("L1T") << "EMTF CSC format error: tp_data.keywire = " << tp_data.keywire; return selected; }
-    if ( !(tp_data.valid == true) ) {
-      edm::LogWarning("L1T") << "EMTF CSC format error: tp_data.valid = "   << tp_data.valid ; return selected; }
-    if ( !(tp_data.pattern <= 10) ) {
-      edm::LogWarning("L1T") << "EMTF CSC format error: tp_data.pattern = " << tp_data.pattern; return selected; }
-    if ( !(tp_data.quality > 0) ) {
-      edm::LogWarning("L1T") << "EMTF CSC format error: tp_data.quality = " << tp_data.quality; return selected; }
+    assert_no_abort(MIN_ENDCAP <= tp_endcap && tp_endcap <= MAX_ENDCAP);
+    assert_no_abort(MIN_TRIGSECTOR <= tp_sector && tp_sector <= MAX_TRIGSECTOR);
+    assert_no_abort(1 <= tp_station && tp_station <= 4);
+    assert_no_abort(1 <= tp_csc_ID && tp_csc_ID <= 9);
+    assert_no_abort(tp_data.strip < 160);
+    //assert_no_abort(tp_data.keywire < 112);
+    assert_no_abort(tp_data.keywire < 128);
+    assert_no_abort(tp_data.valid == true);
+    assert_no_abort(tp_data.pattern <= 10);
+    assert_no_abort(tp_data.quality > 0);
 
 
     // Check using ME1/1a --> ring 4 convention
@@ -684,35 +663,15 @@ int PrimitiveSelection::select_rpc(const TriggerPrimitive& muon_primitive) const
     int tp_bx        = tp_data.bx;
     int tp_strip     = tp_data.strip;
 
-    // assert(tp_region != 0);
-    // assert(MIN_ENDCAP <= tp_endcap && tp_endcap <= MAX_ENDCAP);
-    // assert(MIN_TRIGSECTOR <= tp_sector && tp_sector <= MAX_TRIGSECTOR);
-    // assert(1 <= tp_subsector && tp_subsector <= 6);
-    // assert(1 <= tp_station && tp_station <= 4);
-    // assert(2 <= tp_ring && tp_ring <= 3);
-    // assert(1 <= tp_roll && tp_roll <= 3);
-    // assert(1 <= tp_strip && tp_strip <= 32);
-    // assert(tp_station > 2 || tp_ring != 3);  // stations 1 and 2 do not receive RPCs from ring 3
-
-
-    if ( !(tp_region != 0) ) {
-      edm::LogWarning("L1T") << "EMTF RPC format error: tp_region = "  << tp_region; return selected; }
-    if ( !(MIN_ENDCAP <= tp_endcap && tp_endcap <= MAX_ENDCAP) ) {
-      edm::LogWarning("L1T") << "EMTF RPC format error: tp_endcap = "  << tp_endcap; return selected; }
-    if ( !(MIN_TRIGSECTOR <= tp_sector && tp_sector <= MAX_TRIGSECTOR) ) {
-      edm::LogWarning("L1T") << "EMTF RPC format error: tp_sector = "  << tp_sector; return selected; }
-    if ( !(1 <= tp_subsector && tp_subsector <= 6) ) {
-      edm::LogWarning("L1T") << "EMTF RPC format error: tp_subsector = "  << tp_subsector; return selected; }
-    if ( !(1 <= tp_station && tp_station <= 4) ) {
-      edm::LogWarning("L1T") << "EMTF RPC format error: tp_station = " << tp_station; return selected; }
-    if ( !(2 <= tp_ring && tp_ring <= 3) ) {
-      edm::LogWarning("L1T") << "EMTF RPC format error: tp_ring = " << tp_ring; return selected; }
-    if ( !(1 <= tp_roll && tp_roll <= 3) ) {
-      edm::LogWarning("L1T") << "EMTF RPC format error: tp_roll = "  << tp_roll; return selected; }
-    if ( !(1 <= tp_strip && tp_strip <= 32) ) {
-      edm::LogWarning("L1T") << "EMTF RPC format error: tp_data.strip = "   << tp_data.strip; return selected; }
-    if ( !(tp_station > 2 || tp_ring != 3) ) {
-      edm::LogWarning("L1T") << "EMTF RPC format error: tp_station = " << tp_station << ", tp_ring = " << tp_ring; return selected; }
+    assert_no_abort(tp_region != 0);
+    assert_no_abort(MIN_ENDCAP <= tp_endcap && tp_endcap <= MAX_ENDCAP);
+    assert_no_abort(MIN_TRIGSECTOR <= tp_sector && tp_sector <= MAX_TRIGSECTOR);
+    assert_no_abort(1 <= tp_subsector && tp_subsector <= 6);
+    assert_no_abort(1 <= tp_station && tp_station <= 4);
+    assert_no_abort(2 <= tp_ring && tp_ring <= 3);
+    assert_no_abort(1 <= tp_roll && tp_roll <= 3);
+    assert_no_abort(1 <= tp_strip && tp_strip <= 32);
+    assert_no_abort(tp_station > 2 || tp_ring != 3);  // stations 1 and 2 do not receive RPCs from ring 3
 
 
     // Selection
@@ -928,18 +887,19 @@ int PrimitiveSelection::select_gem(const TriggerPrimitive& muon_primitive) const
     // station 2,3,4 --> subsector 0
     int tp_subsector = (tp_station != 1) ? 0 : ((tp_chamber%6 > 2) ? 1 : 2);
 
-    assert(MIN_ENDCAP <= tp_endcap && tp_endcap <= MAX_ENDCAP);
-    assert(MIN_TRIGSECTOR <= tp_sector && tp_sector <= MAX_TRIGSECTOR);
-    assert(1 <= tp_station && tp_station <= 2);
-    assert(1 <= tp_ring && tp_ring <= 1);
-    //assert(1 <= tp_roll && tp_roll <= 12);
-    assert((tp_station == 1 && 1 <= tp_roll && tp_roll <= 8) || (tp_station != 1));
-    assert((tp_station == 2 && 1 <= tp_roll && tp_roll <= 12) || (tp_station != 2));
-    assert(1 <= tp_layer && tp_layer <= 2);
-    assert(1 <= tp_csc_ID && tp_csc_ID <= 9);
-    //assert(tp_data.pad < 192);
-    assert((tp_station == 1 && 1 <= tp_pad && tp_pad <= 192) || (tp_station != 1));
-    assert((tp_station == 2 && 1 <= tp_pad && tp_pad <= 192) || (tp_station != 2));
+    assert_no_abort(MIN_ENDCAP <= tp_endcap && tp_endcap <= MAX_ENDCAP);
+    assert_no_abort(MIN_TRIGSECTOR <= tp_sector && tp_sector <= MAX_TRIGSECTOR);
+    assert_no_abort(1 <= tp_station && tp_station <= 2);
+    assert_no_abort(1 <= tp_ring && tp_ring <= 1);
+    //assert_no_abort(1 <= tp_roll && tp_roll <= 12);
+    assert_no_abort((tp_station == 1 && 1 <= tp_roll && tp_roll <= 8) || (tp_station != 1));
+    assert_no_abort((tp_station == 2 && 1 <= tp_roll && tp_roll <= 12) || (tp_station != 2));
+    assert_no_abort(1 <= tp_layer && tp_layer <= 2);
+    assert_no_abort(1 <= tp_csc_ID && tp_csc_ID <= 9);
+    //assert_no_abort(tp_data.pad < 192);
+    assert_no_abort((tp_station == 1 && 1 <= tp_pad && tp_pad <= 192) || (tp_station != 1));
+    assert_no_abort((tp_station == 2 && 1 <= tp_pad && tp_pad <= 192) || (tp_station != 2));
+
 
     // Selection
     if (is_in_bx_gem(tp_bx)) {
