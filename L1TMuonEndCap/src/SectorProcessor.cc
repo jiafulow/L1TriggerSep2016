@@ -19,7 +19,7 @@ void SectorProcessor::configure(
     const std::vector<int>& zoneBoundaries, int zoneOverlap,
     bool includeNeighbor, bool duplicateTheta, bool fixZonePhi, bool useNewZones, bool fixME11Edges,
     const std::vector<std::string>& pattDefinitions, const std::vector<std::string>& symPattDefinitions, bool useSymPatterns,
-    int thetaWindow, int thetaWindowRPC, bool useSingleHits, bool bugSt2PhDiff, bool bugME11Dupes,
+    int thetaWindow, bool useSingleHits, bool bugSt2PhDiff, bool bugME11Dupes,
     int maxRoadsPerZone, int maxTracks, bool useSecondEarliest, bool bugSameSectorPt0,
     int ptLUTVersion, bool readPtLUTFile, bool fixMode15HighPt, bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt, bool bugGMTPhi, bool promoteMode7
 ) {
@@ -60,7 +60,6 @@ void SectorProcessor::configure(
   useSymPatterns_     = useSymPatterns;
 
   thetaWindow_        = thetaWindow;
-  thetaWindowRPC_     = thetaWindowRPC;
   useSingleHits_      = useSingleHits;
   bugSt2PhDiff_       = bugSt2PhDiff;
   bugME11Dupes_       = bugME11Dupes;
@@ -343,7 +342,7 @@ void SectorProcessor::process_single_bx(
   angle_calc.configure(
       verbose_, endcap_, sector_, bx,
       bxWindow_,
-      thetaWindow_, thetaWindowRPC_,
+      thetaWindow_,
       bugME11Dupes_
   );
 
