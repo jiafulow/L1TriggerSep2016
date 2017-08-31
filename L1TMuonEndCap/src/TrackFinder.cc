@@ -21,7 +21,8 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
     verbose_(iConfig.getUntrackedParameter<int>("verbosity")),
     useCSC_(iConfig.getParameter<bool>("CSCEnable")),
     useRPC_(iConfig.getParameter<bool>("RPCEnable")),
-    useGEM_(iConfig.getParameter<bool>("GEMEnable"))
+    useGEM_(iConfig.getParameter<bool>("GEMEnable")),
+    era_(iConfig.getParameter<std::string>("Era"))
 {
 
   auto minBX       = iConfig.getParameter<int>("MinBX");
@@ -82,6 +83,7 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
           &pt_assign_engine_,
           verbose_, endcap, sector,
           minBX, maxBX, bxWindow, bxShiftCSC, bxShiftRPC, bxShiftGEM,
+          era_,
           zoneBoundaries, zoneOverlap,
           includeNeighbor, duplicateTheta, fixZonePhi, useNewZones, fixME11Edges,
           pattDefinitions, symPattDefinitions, useSymPatterns,

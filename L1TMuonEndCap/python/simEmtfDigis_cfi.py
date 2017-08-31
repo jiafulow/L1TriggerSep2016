@@ -22,6 +22,9 @@ simEmtfDigisMC = cms.EDProducer("L1TMuonEndCapTrackProducer",
     RPCEnable = cms.bool(True),
     GEMEnable = cms.bool(False),
 
+    # Era (options: 'Run2_2016', 'Run2_2017')
+    Era = cms.string('Run2_2017'),
+
     # BX
     MinBX    = cms.int32(-3),
     MaxBX    = cms.int32(+3),
@@ -108,3 +111,12 @@ simEmtfDigisData = simEmtfDigisMC.clone(
 )
 
 simEmtfDigis = simEmtfDigisMC.clone()
+
+
+## Era: Run2_2016
+#from Configuration.Eras.Modifier_stage2L1Trigger_cff import stage2L1Trigger
+#stage2L1Trigger.toModify(simEmtfDigis, RPCEnable = cms.bool(False), Era = cms.string('Run2_2016'))
+
+## Era: Run2_2017
+#from Configuration.Eras.Modifier_stage2L1Trigger_2017_cff import stage2L1Trigger_2017
+#stage2L1Trigger_2017.toModify(simEmtfDigis, RPCEnable = cms.bool(True), Era = cms.string('Run2_2017'))
