@@ -266,9 +266,17 @@ void PrimitiveSelection::process(
           ignore_this_rpc_chm = true;
       }
 
-      if (!ignore_this_rpc_chm) {
-        assert(tmp_selected_rpc_map.find(selected) == tmp_selected_rpc_map.end());  // make sure it does not exist
+      if (ignore_this_rpc_chm) {
+        // Set RPC stubs as invalid
+        for (auto&& tp : tmp_primitives) {
+          tp.accessRPCData().valid = 0;
+        }
+      }
+
+      if (tmp_selected_rpc_map.find(selected) == tmp_selected_rpc_map.end()) {
         tmp_selected_rpc_map[selected] = tmp_primitives;
+      } else {
+        tmp_selected_rpc_map[selected].insert(tmp_selected_rpc_map[selected].end(), tmp_primitives.begin(), tmp_primitives.end());
       }
     }  // end loop over selected_rpc_map
 
@@ -401,12 +409,22 @@ void PrimitiveSelection::merge(
     int selected_rpc = map_tp_it->first;
     const TriggerPrimitiveCollection& rpc_primitives = map_tp_it->second;
     if (rpc_primitives.empty())  continue;
-    assert(rpc_primitives.size() <= 2);  // at most 2 hits
+    assert(rpc_primitives.size() <= 4);  // at most 4 hits
 
     bool found = (selected_prim_map.find(selected_rpc) != selected_prim_map.end());
     if (!found) {
       // No CSC/GEM hits, insert all RPC hits
-      selected_prim_map[selected_rpc] = rpc_primitives;
+      //selected_prim_map[selected_rpc] = rpc_primitives;
+
+      // No CSC/GEM hits, insert the valid RPC hits
+      TriggerPrimitiveCollection tmp_rpc_primitives;
+      for (const auto& tp : rpc_primitives) {
+        if (tp.getRPCData().valid != 0) {
+          tmp_rpc_primitives.push_back(tp);
+        }
+      }
+      assert(tmp_rpc_primitives.size() <= 2);  // at most 2 hits
+      selected_prim_map[selected_rpc] = tmp_rpc_primitives;
 
     } else {
       // Initial FW in 2017; was disabled on June 7.
@@ -653,6 +671,7 @@ int PrimitiveSelection::select_rpc(const TriggerPrimitive& muon_primitive) const
     assert_no_abort(1 <= tp_roll && tp_roll <= 3);
     assert_no_abort(1 <= tp_strip && tp_strip <= 32);
     assert_no_abort(tp_station > 2 || tp_ring != 3);  // stations 1 and 2 do not receive RPCs from ring 3
+    assert_no_abort(tp_data.valid == true);
 
 
     // Selection
