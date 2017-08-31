@@ -14,7 +14,7 @@ namespace {
 void AngleCalculation::configure(
     int verbose, int endcap, int sector, int bx,
     int bxWindow,
-    int thetaWindow, int thetaWindowRPC,
+    int thetaWindow,
     bool bugME11Dupes
 ) {
   verbose_ = verbose;
@@ -24,7 +24,6 @@ void AngleCalculation::configure(
 
   bxWindow_        = bxWindow;
   thetaWindow_     = thetaWindow;
-  thetaWindowRPC_  = thetaWindowRPC;
   bugME11Dupes_    = bugME11Dupes;
 }
 
@@ -191,10 +190,7 @@ void AngleCalculation::calculate_angles(EMTFTrack& track) const {
   std::array<bool, emtf::NUM_STATION_PAIRS> best_dtheta_valid_arr_1;
 
   for (int ipair = 0; ipair < emtf::NUM_STATION_PAIRS; ++ipair) {
-    if (best_has_rpc_arr.at(ipair))
-      best_dtheta_valid_arr_1.at(ipair) = best_dtheta_valid_arr.at(ipair) && (best_dtheta_arr.at(ipair) <= thetaWindowRPC_);
-    else
-      best_dtheta_valid_arr_1.at(ipair) = best_dtheta_valid_arr.at(ipair) && (best_dtheta_arr.at(ipair) <= thetaWindow_);
+    best_dtheta_valid_arr_1.at(ipair) = best_dtheta_valid_arr.at(ipair) && (best_dtheta_arr.at(ipair) <= thetaWindow_);
   }
 
   // Find valid segments
