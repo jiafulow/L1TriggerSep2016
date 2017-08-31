@@ -355,12 +355,11 @@ void PrimitiveSelection::process(
 // supplemental source of stubs for CSCs.
 
 void PrimitiveSelection::merge(
-    std::map<int, TriggerPrimitiveCollection>& selected_csc_map,
-    std::map<int, TriggerPrimitiveCollection>& selected_rpc_map,
-    std::map<int, TriggerPrimitiveCollection>& selected_gem_map,
+    const std::map<int, TriggerPrimitiveCollection>& selected_csc_map,
+    const std::map<int, TriggerPrimitiveCollection>& selected_rpc_map,
+    const std::map<int, TriggerPrimitiveCollection>& selected_gem_map,
     std::map<int, TriggerPrimitiveCollection>& selected_prim_map
 ) const {
-
   // First, put CSC hits
   std::map<int, TriggerPrimitiveCollection>::const_iterator map_tp_it  = selected_csc_map.begin();
   std::map<int, TriggerPrimitiveCollection>::const_iterator map_tp_end = selected_csc_map.end();
@@ -374,32 +373,7 @@ void PrimitiveSelection::merge(
     selected_prim_map[selected_csc] = csc_primitives;
   }
 
-  // Second, insert RPC stubs if there is no CSC hits
-  map_tp_it  = selected_rpc_map.begin();
-  map_tp_end = selected_rpc_map.end();
-
-  for (; map_tp_it != map_tp_end; ++map_tp_it) {
-    int selected_rpc = map_tp_it->first;
-    const TriggerPrimitiveCollection& rpc_primitives = map_tp_it->second;
-    if (rpc_primitives.empty())  continue;
-    assert(rpc_primitives.size() <= 2);  // at most 2 hits
-
-    bool found = (selected_prim_map.find(selected_rpc) != selected_prim_map.end());
-    if (!found) {
-      // No CSC hits, insert all RPC hits
-      selected_prim_map[selected_rpc] = rpc_primitives;
-
-    } // else { // Initial FW in 2017; was disabled on June 7
-    //   // If only one CSC hit, insert the first RPC hit
-    //   TriggerPrimitiveCollection& tmp_primitives = selected_prim_map[selected_rpc];  // pass by reference
-
-    //   if (tmp_primitives.size() < 2) {
-    //     tmp_primitives.push_back(rpc_primitives.front());
-    //   }
-    // }
-  }
-
-  // Third, insert GEM stubs if there is no CSC/RPC hits
+  // Second, insert GEM stubs if there is no CSC hits
   map_tp_it  = selected_gem_map.begin();
   map_tp_end = selected_gem_map.end();
 
@@ -411,19 +385,45 @@ void PrimitiveSelection::merge(
 
     bool found = (selected_prim_map.find(selected_gem) != selected_prim_map.end());
     if (!found) {
-      // No CSC/RPC hits, insert all GEM hits
+      // No CSC hits, insert all GEM hits
       selected_prim_map[selected_gem] = gem_primitives;
 
     } else {
       // Do nothing
     }
   }
+
+  // Third, insert RPC stubs if there is no CSC/GEM hits
+  map_tp_it  = selected_rpc_map.begin();
+  map_tp_end = selected_rpc_map.end();
+
+  for (; map_tp_it != map_tp_end; ++map_tp_it) {
+    int selected_rpc = map_tp_it->first;
+    const TriggerPrimitiveCollection& rpc_primitives = map_tp_it->second;
+    if (rpc_primitives.empty())  continue;
+    assert(rpc_primitives.size() <= 2);  // at most 2 hits
+
+    bool found = (selected_prim_map.find(selected_rpc) != selected_prim_map.end());
+    if (!found) {
+      // No CSC/GEM hits, insert all RPC hits
+      selected_prim_map[selected_rpc] = rpc_primitives;
+
+    } else {
+      // Initial FW in 2017; was disabled on June 7.
+      // If only one CSC/GEM hit, insert the first RPC hit
+      //TriggerPrimitiveCollection& tmp_primitives = selected_prim_map[selected_rpc];  // pass by reference
+
+      //if (tmp_primitives.size() < 2) {
+      //  tmp_primitives.push_back(rpc_primitives.front());
+      //}
+    }
+  }
 }
 
 void PrimitiveSelection::merge_no_truncate(
-    std::map<int, TriggerPrimitiveCollection>& selected_csc_map,
-    std::map<int, TriggerPrimitiveCollection>& selected_rpc_map,
-    std::map<int, TriggerPrimitiveCollection>& selected_gem_map,
+    const std::map<int, TriggerPrimitiveCollection>& selected_csc_map,
+    const std::map<int, TriggerPrimitiveCollection>& selected_rpc_map,
+    const std::map<int, TriggerPrimitiveCollection>& selected_gem_map,
     std::map<int, TriggerPrimitiveCollection>& selected_prim_map
 ) const {
   // First, put CSC hits
@@ -434,11 +434,6 @@ void PrimitiveSelection::merge_no_truncate(
 
   // Third, insert RPC hits
   merge_map_into_map(selected_rpc_map, selected_prim_map);
-
-  // Finally, clear the input maps to save memory
-  selected_csc_map.clear();
-  selected_rpc_map.clear();
-  selected_gem_map.clear();
 }
 
 

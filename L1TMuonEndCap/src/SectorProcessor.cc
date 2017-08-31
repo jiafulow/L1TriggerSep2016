@@ -409,6 +409,11 @@ void SectorProcessor::process_single_bx(
     // They include the extra ones that are not used in track building and the subsequent steps.
     prim_sel.merge_no_truncate(selected_csc_map, selected_rpc_map, selected_gem_map, inclusive_selected_prim_map);
     prim_conv.process(inclusive_selected_prim_map, inclusive_conv_hits);
+
+    // Clear the input maps to save memory
+    selected_csc_map.clear();
+    selected_rpc_map.clear();
+    selected_gem_map.clear();
   }
 
   // Detect patterns in all zones, find 3 best roads in each zone

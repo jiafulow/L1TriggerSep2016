@@ -22,17 +22,17 @@ public:
 
   // Put the hits from CSC, RPC, GEM together in one collection
   void merge(
-      std::map<int, TriggerPrimitiveCollection>& selected_csc_map,
-      std::map<int, TriggerPrimitiveCollection>& selected_rpc_map,
-      std::map<int, TriggerPrimitiveCollection>& selected_gem_map,
+      const std::map<int, TriggerPrimitiveCollection>& selected_csc_map,
+      const std::map<int, TriggerPrimitiveCollection>& selected_rpc_map,
+      const std::map<int, TriggerPrimitiveCollection>& selected_gem_map,
       std::map<int, TriggerPrimitiveCollection>& selected_prim_map
   ) const;
 
   // Like merge(), but keep all the hits
   void merge_no_truncate(
-      std::map<int, TriggerPrimitiveCollection>& selected_csc_map,
-      std::map<int, TriggerPrimitiveCollection>& selected_rpc_map,
-      std::map<int, TriggerPrimitiveCollection>& selected_gem_map,
+      const std::map<int, TriggerPrimitiveCollection>& selected_csc_map,
+      const std::map<int, TriggerPrimitiveCollection>& selected_rpc_map,
+      const std::map<int, TriggerPrimitiveCollection>& selected_gem_map,
       std::map<int, TriggerPrimitiveCollection>& selected_prim_map
   ) const;
 
