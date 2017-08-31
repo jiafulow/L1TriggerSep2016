@@ -308,7 +308,7 @@ void PrimitiveSelection::process(
     struct {
       typedef TriggerPrimitive value_type;
       bool operator()(const value_type& x) const {
-        int sz = x.getRPCData().strip_hi - x.getRPCData().strip_low + 1;
+        int sz = x.getGEMData().pad_hi - x.getGEMData().pad_low + 1;
         return sz > 8;
       }
     } cluster_size_cut;
@@ -326,13 +326,11 @@ void PrimitiveSelection::process(
           tmp_primitives.end()
       );
 
-      // Keep the first two clusters
+      // Keep the first 8 clusters
       if (tmp_primitives.size() > 8)
         tmp_primitives.erase(tmp_primitives.begin()+8, tmp_primitives.end());
     }
   }  // end if apply_truncation
-
-  //FIXME: What to do about the two layers?
 }
 
 
@@ -409,7 +407,7 @@ void PrimitiveSelection::merge(
     int selected_gem = map_tp_it->first;
     const TriggerPrimitiveCollection& gem_primitives = map_tp_it->second;
     if (gem_primitives.empty())  continue;
-    assert(gem_primitives.size() <= 2);  // at most 2 hits
+    assert(gem_primitives.size() <= 8);  // at most 8 hits
 
     bool found = (selected_prim_map.find(selected_gem) != selected_prim_map.end());
     if (!found) {
@@ -417,12 +415,7 @@ void PrimitiveSelection::merge(
       selected_prim_map[selected_gem] = gem_primitives;
 
     } else {
-      // If only one CSC/RPC hit, insert the first GEM hit
-      TriggerPrimitiveCollection& tmp_primitives = selected_prim_map[selected_gem];  // pass by reference
-
-      if (tmp_primitives.size() < 2) {
-        tmp_primitives.push_back(gem_primitives.front());
-      }
+      // Do nothing
     }
   }
 }
@@ -891,7 +884,7 @@ int PrimitiveSelection::select_gem(const TriggerPrimitive& muon_primitive) const
     assert_no_abort(1 <= tp_csc_ID && tp_csc_ID <= 9);
     //assert_no_abort(tp_data.pad < 192);
     assert_no_abort((tp_station == 1 && 1 <= tp_pad && tp_pad <= 192) || (tp_station != 1));
-    assert_no_abort((tp_station == 2 && 1 <= tp_pad && tp_pad <= 192) || (tp_station != 2));
+    assert_no_abort((tp_station == 2 && 1 <= tp_pad && tp_pad <= 384) || (tp_station != 2));
 
 
     // Selection
@@ -913,7 +906,7 @@ bool PrimitiveSelection::is_in_sector_gem(int tp_endcap, int tp_sector) const {
 
 bool PrimitiveSelection::is_in_neighbor_sector_gem(int tp_endcap, int tp_sector, int tp_subsector, int tp_station, int tp_csc_ID) const {
   // Identical to the corresponding CSC function
-  return is_in_neighbor_sector_gem(tp_endcap, tp_sector, tp_subsector, tp_station, tp_csc_ID);
+  return is_in_neighbor_sector_csc(tp_endcap, tp_sector, tp_subsector, tp_station, tp_csc_ID);
 }
 
 bool PrimitiveSelection::is_in_bx_gem(int tp_bx) const {
