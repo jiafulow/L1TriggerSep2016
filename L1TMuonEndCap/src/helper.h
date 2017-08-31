@@ -105,18 +105,16 @@ namespace {
 
   // Merge a map of vectors (map1) into another map of vectors (map2)
   template<typename Map>
-  void merge_map_into_map(Map& map1, Map& map2) {
+  void merge_map_into_map(const Map& map1, Map& map2) {
     // This is customized for maps of containers.
     typedef typename Map::iterator Iterator;
     typedef typename Map::mapped_type Container;
 
-    Iterator first = map1.begin();
-    Iterator last = map1.end();
-    for (; first != last; ++first) {
-      std::pair<Iterator,bool> ins = map2.insert(*first);
+    for (auto& kv1 : map1) {
+      std::pair<Iterator,bool> ins = map2.insert(kv1);
       if (!ins.second) {  // if insertion into map2 was not successful
         if (is_map_of_vectors<Map>::value) {  // special case for map of vectors
-          Container* container1 = &(first->second);
+          const Container* container1 = &(kv1.second);
           Container* container2 = &(ins.first->second);
           container2->insert(container2->end(), container1->begin(), container1->end());
         } // else do nothing
