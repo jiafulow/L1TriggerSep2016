@@ -18,7 +18,6 @@ public:
   virtual float calculate_pt_xml(const EMTFTrack& track) const;
 
 private:
-  int version_;
 };
 
 #endif

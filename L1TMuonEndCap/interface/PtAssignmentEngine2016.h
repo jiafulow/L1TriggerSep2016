@@ -7,7 +7,7 @@
 class PtAssignmentEngine2016: public PtAssignmentEngine {
 public:
   explicit PtAssignmentEngine2016(): PtAssignmentEngine(){}
-  ~PtAssignmentEngine2016() {}
+  ~PtAssignmentEngine2016(){}
 
   const PtAssignmentEngineAux2016& aux() const;
 
@@ -18,7 +18,6 @@ public:
   virtual float calculate_pt_xml(const EMTFTrack& track) const;
 
 private:
-  int version_;
 };
 
 #endif

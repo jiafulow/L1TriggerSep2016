@@ -25,6 +25,14 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
     era_(iConfig.getParameter<std::string>("Era"))
 {
 
+  if (era_ == "Run2_2016") {
+    pt_assign_engine_.reset(new PtAssignmentEngine2016());
+  } else if (era_ == "Run2_2017") {
+    pt_assign_engine_.reset(new PtAssignmentEngine2017());
+  } else {
+    assert(false && "Cannot recognize the era option");
+  }
+
   auto minBX       = iConfig.getParameter<int>("MinBX");
   auto maxBX       = iConfig.getParameter<int>("MaxBX");
   auto bxWindow    = iConfig.getParameter<int>("BXWindow");
@@ -59,7 +67,6 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
   auto bugSameSectorPt0   = spGCParams16.getParameter<bool>("BugSameSectorPt0");
 
   const auto& spPAParams16 = config_.getParameter<edm::ParameterSet>("spPAParams16");
-  auto ptLUTVersion       = spPAParams16.getParameter<int>("PtLUTVersion");
   auto readPtLUTFile      = spPAParams16.getParameter<bool>("ReadPtLUTFile");
   auto fixMode15HighPt    = spPAParams16.getParameter<bool>("FixMode15HighPt");
   auto bug9BitDPhi        = spPAParams16.getParameter<bool>("Bug9BitDPhi");
@@ -67,9 +74,6 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
   auto bugNegPt           = spPAParams16.getParameter<bool>("BugNegPt");
   auto bugGMTPhi          = spPAParams16.getParameter<bool>("BugGMTPhi");
   auto promoteMode7       = spPAParams16.getParameter<bool>("PromoteMode7");
-
-  pt_assign_engine_2016_.reset(new PtAssignmentEngine2016());
-  pt_assign_engine_2017_.reset(new PtAssignmentEngine2017());
 
   try {
 
@@ -82,7 +86,7 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
             &geometry_translator_,
             &condition_helper_,
             &sector_processor_lut_,
-            &pt_assign_engine_,
+            pt_assign_engine_.get(),
             verbose_, endcap, sector,
             minBX, maxBX, bxWindow, bxShiftCSC, bxShiftRPC, bxShiftGEM,
             era_,
@@ -91,7 +95,7 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
             pattDefinitions, symPattDefinitions, useSymPatterns,
             thetaWindow, useSingleHits, bugSt2PhDiff, bugME11Dupes,
             maxRoadsPerZone, maxTracks, useSecondEarliest, bugSameSectorPt0,
-            ptLUTVersion, readPtLUTFile, fixMode15HighPt, bug9BitDPhi, bugMode7CLCT, bugNegPt, bugGMTPhi, promoteMode7
+            readPtLUTFile, fixMode15HighPt, bug9BitDPhi, bugMode7CLCT, bugNegPt, bugGMTPhi, promoteMode7
         );
       }
     }
@@ -119,7 +123,7 @@ void TrackFinder::process(
   geometry_translator_.checkAndUpdateGeometry(iSetup);
 
   // Get the conditions, primarily the firmware version and the BDT forests
-  bool new_conditions = condition_helper_.checkAndUpdateConditions(iEvent, iSetup);
+  condition_helper_.checkAndUpdateConditions(iEvent, iSetup);
 
   // ___________________________________________________________________________
   // Extract all trigger primitives
@@ -145,23 +149,11 @@ void TrackFinder::process(
   // ___________________________________________________________________________
   // Run each sector processor
 
-  if (new_conditions) {
-    // Reload primitive conversion LUTs if necessary
-    // std::cout << "Configured with condition_helper_.get_pc_lut_version() = " << condition_helper_.get_pc_lut_version() << std::endl;
-    sector_processor_lut_.read(condition_helper_.get_pc_lut_version());
+  // Reload primitive conversion LUTs if necessary
+  sector_processor_lut_.read(condition_helper_.get_pc_lut_version());
 
-    // std::cout << "Configured with condition_helper_.get_pt_lut_version() = " << condition_helper_.get_pt_lut_version() << std::endl;
-    if ( condition_helper_.get_pt_lut_version() <= 5 ) {
-      pt_assign_engine_ = pt_assign_engine_2016_.get();
-      pt_assign_engine_->set_ptLUTVersion( condition_helper_.get_pt_lut_version() );
-    } else {
-      pt_assign_engine_ = pt_assign_engine_2017_.get();
-      pt_assign_engine_->set_ptLUTVersion( condition_helper_.get_pt_lut_version() );
-    }
-
-    // Reload pT LUT if necessary
-    pt_assign_engine_->load(&(condition_helper_.getForest()));
-  }
+  // Reload pT LUT if necessary
+  pt_assign_engine_->load(&(condition_helper_.getForest()));
 
   // MIN/MAX ENDCAP and TRIGSECTOR set in interface/Common.h
   for (int endcap = MIN_ENDCAP; endcap <= MAX_ENDCAP; ++endcap) {
@@ -169,11 +161,8 @@ void TrackFinder::process(
       const int es = (endcap - MIN_ENDCAP) * (MAX_TRIGSECTOR - MIN_TRIGSECTOR + 1) + (sector - MIN_TRIGSECTOR);
 
       // Run-dependent configure. This overwrites many of the configurables passed by the python config file.
-      if (new_conditions) {
-        if (iEvent.isRealData()) {
-          sector_processors_.at(es).configure_by_fw_version(condition_helper_.get_fw_version());
-        }
-        sector_processors_.at(es).set_pt_lut_version( condition_helper_.get_pt_lut_version() );
+      if (iEvent.isRealData()) {
+        sector_processors_.at(es).configure_by_fw_version(condition_helper_.get_fw_version());
       }
 
       // Process
