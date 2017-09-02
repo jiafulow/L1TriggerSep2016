@@ -117,3 +117,12 @@ simEmtfDigisData = simEmtfDigisMC.clone(
 )
 
 simEmtfDigis = simEmtfDigisMC.clone()
+
+
+## Era: Run2_2016
+#from Configuration.Eras.Modifier_stage2L1Trigger_cff import stage2L1Trigger
+#stage2L1Trigger.toModify(simEmtfDigis, RPCEnable = cms.bool(False), Era = cms.string('Run2_2016'))
+
+## Era: Run2_2017
+#from Configuration.Eras.Modifier_stage2L1Trigger_2017_cff import stage2L1Trigger_2017
+#stage2L1Trigger_2017.toModify(simEmtfDigis, RPCEnable = cms.bool(True), Era = cms.string('Run2_2017'))
