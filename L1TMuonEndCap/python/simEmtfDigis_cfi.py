@@ -92,7 +92,6 @@ simEmtfDigisMC = cms.EDProducer("L1TMuonEndCapTrackProducer",
 
     # Sector processor pt-assignment parameters
     spPAParams16 = cms.PSet(
-        PtLUTVersion    = cms.int32(7),  ## v5 for 2016, v6 for early 2017, v7 starting ~June 5 - AWB 02.06.17
         ReadPtLUTFile   = cms.bool(False),
         FixMode15HighPt = cms.bool(True),
         Bug9BitDPhi     = cms.bool(False),

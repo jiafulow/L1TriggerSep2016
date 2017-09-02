@@ -17,11 +17,7 @@ ConditionHelper::ConditionHelper():
 ConditionHelper::~ConditionHelper() {
 }
 
-bool ConditionHelper::checkAndUpdateConditions(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
-
-  bool new_params = false;
-  bool new_forests = false;
-
+void ConditionHelper::checkAndUpdateConditions(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
   // Pull configuration from the EventSetup
   auto& params_setup = iSetup.get<L1TMuonEndCapParamsRcd>();
   if (params_setup.cacheIdentifier() != params_cache_id_) {
@@ -32,7 +28,6 @@ bool ConditionHelper::checkAndUpdateConditions(const edm::Event& iEvent, const e
 
     // reset cache id
     params_cache_id_ = params_setup.cacheIdentifier();
-    new_params = true;
   }
 
   // Pull pt LUT from the EventSetup
@@ -45,15 +40,12 @@ bool ConditionHelper::checkAndUpdateConditions(const edm::Event& iEvent, const e
 
     // reset cache id
     forest_cache_id_ = forest_setup.cacheIdentifier();
-    new_forests = true;
   }
 
   // // Debug
   // std::cout << "Run number: " << iEvent.id().run() << " fw_version: " << get_fw_version()
   //    << " pt_lut_version: " << get_pt_lut_version() << " pc_lut_version: " << get_pc_lut_version()
   //    << std::endl;
-
-  return (new_params || new_forests);
 }
 
 unsigned int ConditionHelper::get_fw_version() const {

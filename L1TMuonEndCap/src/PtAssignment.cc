@@ -6,7 +6,7 @@
 void PtAssignment::configure(
     const PtAssignmentEngine* pt_assign_engine,
     int verbose, int endcap, int sector, int bx,
-    int ptLUTVersion, bool readPtLUTFile, bool fixMode15HighPt,
+    bool readPtLUTFile, bool fixMode15HighPt,
     bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt,
     bool bugGMTPhi, bool promoteMode7
 ) {
@@ -21,7 +21,7 @@ void PtAssignment::configure(
 
   pt_assign_engine_->configure(
       verbose_,
-      ptLUTVersion, readPtLUTFile, fixMode15HighPt,
+      readPtLUTFile, fixMode15HighPt,
       bug9BitDPhi, bugMode7CLCT, bugNegPt
   );
 
