@@ -21,11 +21,11 @@ PtAssignmentEngine::~PtAssignmentEngine() {
 // Called by "produce" in plugins/L1TMuonEndCapForestESProducer.cc
 // Runs over local XMLs if we are not running from the database
 // void PtAssignmentEngine::read(const std::string& xml_dir, const unsigned xml_nTrees) {
-void PtAssignmentEngine::read(const std::string& xml_dir) {
+void PtAssignmentEngine::read(int pt_lut_version, const std::string& xml_dir) {
 
   std::string xml_dir_full = "L1Trigger/L1TMuonEndCap/data/pt_xmls/" + xml_dir;
   unsigned xml_nTrees = 64; // 2016 XMLs
-  if (ptLUTVersion_ >= 6)
+  if (pt_lut_version >= 6)
     xml_nTrees = 400;       // First 2017 XMLs
 
   std::cout << "EMTF emulator: attempting to read " << xml_nTrees << " pT LUT XMLs from local directory" << std::endl;

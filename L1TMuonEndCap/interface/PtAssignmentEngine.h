@@ -21,7 +21,7 @@ public:
 
   typedef uint64_t address_t;
 
-  void read(const std::string& xml_dir);
+  void read(int pt_lut_version, const std::string& xml_dir);
   void load(int pt_lut_version, const L1TMuonEndCapForest *payload);
   const std::array<emtf::Forest, 16>& getForests(void) const { return forests_; }
   const std::vector<int>& getAllowedModes(void) const { return allowedModes_; }

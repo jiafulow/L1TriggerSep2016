@@ -66,6 +66,8 @@ unsigned int ConditionHelper::get_fw_version() const {
 unsigned int ConditionHelper::get_pt_lut_version() const {
   // std::cout << "    - Getting pT LUT version from ConditionHelper: version = " << (params_->PtAssignVersion_ & 0xff);
   // std::cout << " (lowest bits of " << params_->PtAssignVersion_ << ")" << std::endl;
+  if (params_->firmwareVersion_ < 50000)  // for 2016
+    return 5;
   return (params_->PtAssignVersion_ & 0xff);  // Version indicated by first two bytes
 }
 
@@ -77,5 +79,7 @@ unsigned int ConditionHelper::get_pc_lut_version() const {
 
   // Hack until we figure out why the database is returning "0" for 2017 data - AWB 04.08.17
   // std::cout << "    - Getting PC LUT version from ConditionHelper: version = " << (params_->firmwareVersion_ >= 50000) << std::endl;
-  return (params_->firmwareVersion_ >= 50000);
+  if (params_->firmwareVersion_ < 50000)  // for 2016
+    return 0;
+  return 1;
 }

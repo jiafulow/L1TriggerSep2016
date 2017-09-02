@@ -211,7 +211,7 @@ void TrackFinder::process(
 
   if (verbose_ > 0) {  // debug
     std::cout << "Run number: " << iEvent.id().run() << " pc_lut_ver: " << condition_helper_.get_pc_lut_version()
-        << " pt_lut_ver #1: " << condition_helper_.get_pt_lut_version() << " #2: " << pt_assign_engine_->get_pt_lut_version()
+        << " pt_lut_ver: " << condition_helper_.get_pt_lut_version() << ", " << pt_assign_engine_->get_pt_lut_version()
         << " fw_ver: " << condition_helper_.get_fw_version()
         << std::endl;
 
