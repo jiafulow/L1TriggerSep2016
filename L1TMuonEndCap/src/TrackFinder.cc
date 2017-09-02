@@ -1,6 +1,4 @@
 #include "L1Trigger/L1TMuonEndCap/interface/TrackFinder.h"
-#include "L1Trigger/L1TMuonEndCap/interface/PtAssignmentEngine2016.h"
-#include "L1Trigger/L1TMuonEndCap/interface/PtAssignmentEngine2017.h"
 
 #include <iostream>
 #include <sstream>
@@ -28,6 +26,8 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
   if (era_ == "Run2_2016") {
     pt_assign_engine_.reset(new PtAssignmentEngine2016());
   } else if (era_ == "Run2_2017") {
+    pt_assign_engine_.reset(new PtAssignmentEngine2017());
+  } else if (era_ == "Phase2C2") {
     pt_assign_engine_.reset(new PtAssignmentEngine2017());
   } else {
     assert(false && "Cannot recognize the era option");
@@ -148,7 +148,7 @@ void TrackFinder::process(
   sector_processor_lut_.read(condition_helper_.get_pc_lut_version());
 
   // Reload pT LUT if necessary
-  pt_assign_engine_->load(&(condition_helper_.getForest()));
+  pt_assign_engine_->load(condition_helper_.get_pt_lut_version(), &(condition_helper_.getForest()));
 
   // MIN/MAX ENDCAP and TRIGSECTOR set in interface/Common.h
   for (int endcap = emtf::MIN_ENDCAP; endcap <= emtf::MAX_ENDCAP; ++endcap) {
@@ -176,6 +176,10 @@ void TrackFinder::process(
   // for comparison with the firmware simulator.
 
   if (verbose_ > 0) {  // debug
+    std::cout << "Run number: " << iEvent.id().run() << " pc_lut_ver: " << condition_helper_.get_pc_lut_version()
+        << " pt_lut_ver: " << condition_helper_.get_pt_lut_version() << ", " << pt_assign_engine_->get_pt_lut_version()
+        << " fw_ver: " << condition_helper_.get_fw_version()
+        << std::endl;
 
     for (int endcap = emtf::MIN_ENDCAP; endcap <= emtf::MAX_ENDCAP; ++endcap) {
       for (int sector = emtf::MIN_TRIGSECTOR; sector <= emtf::MAX_TRIGSECTOR; ++sector) {

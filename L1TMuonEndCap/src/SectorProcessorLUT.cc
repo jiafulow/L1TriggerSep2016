@@ -6,6 +6,7 @@
 
 #include "FWCore/ParameterSet/interface/FileInPath.h"
 #include "FWCore/Utilities/interface/Exception.h"
+#include "FWCore/MessageLogger/interface/MessageLogger.h"
 
 
 SectorProcessorLUT::SectorProcessorLUT() :
@@ -21,6 +22,8 @@ SectorProcessorLUT::~SectorProcessorLUT() {
 void SectorProcessorLUT::read(unsigned pc_lut_version) {
   if (version_ == pc_lut_version)  return;
 
+  edm::LogInfo("L1T") << "EMTF using pc_lut_ver: " << pc_lut_version;
+
   std::string coord_lut_dir = "";
   if      (pc_lut_version == 0)
     coord_lut_dir = "ph_lut_v1";  // All year 2016
@@ -32,8 +35,6 @@ void SectorProcessorLUT::read(unsigned pc_lut_version) {
   // Will catch user trying to run with Global Tag settings on 2016 data, rather than fakeEmtfParams. - AWB 08.06.17
 
   std::string coord_lut_path = "L1Trigger/L1TMuonEndCap/data/emtf_luts/" + coord_lut_dir + "/";
-
-  // std::cout << "coord_lut_path = " << coord_lut_path << std::endl;
 
   read_file(coord_lut_path+"ph_init_neighbor.txt",     ph_init_neighbor_);
   read_file(coord_lut_path+"ph_disp_neighbor.txt",     ph_disp_neighbor_);

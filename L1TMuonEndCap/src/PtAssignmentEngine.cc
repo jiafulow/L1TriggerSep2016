@@ -9,7 +9,7 @@ PtAssignmentEngine::PtAssignmentEngine() :
     allowedModes_({3,5,9,6,10,12,7,11,13,14,15}),
     forests_(),
     ptlut_reader_(),
-    version_(0xFFFFFFFF)
+    ptLUTVersion_(0xFFFFFFFF)
 {
 
 }
@@ -21,11 +21,11 @@ PtAssignmentEngine::~PtAssignmentEngine() {
 // Called by "produce" in plugins/L1TMuonEndCapForestESProducer.cc
 // Runs over local XMLs if we are not running from the database
 // void PtAssignmentEngine::read(const std::string& xml_dir, const unsigned xml_nTrees) {
-void PtAssignmentEngine::read(const std::string& xml_dir) {
+void PtAssignmentEngine::read(int pt_lut_version, const std::string& xml_dir) {
 
   std::string xml_dir_full = "L1Trigger/L1TMuonEndCap/data/pt_xmls/" + xml_dir;
   unsigned xml_nTrees = 64; // 2016 XMLs
-  if (ptLUTVersion_ >= 6)
+  if (pt_lut_version >= 6)
     xml_nTrees = 400;       // First 2017 XMLs
 
   std::cout << "EMTF emulator: attempting to read " << xml_nTrees << " pT LUT XMLs from local directory" << std::endl;
@@ -42,9 +42,11 @@ void PtAssignmentEngine::read(const std::string& xml_dir) {
   return;
 }
 
-void PtAssignmentEngine::load(const L1TMuonEndCapForest *payload) {
-  unsigned pt_lut_version = payload->version_;
-  if (version_ == pt_lut_version)  return;
+void PtAssignmentEngine::load(int pt_lut_version, const L1TMuonEndCapForest *payload) {
+  if (ptLUTVersion_ == pt_lut_version)  return;
+  ptLUTVersion_ = pt_lut_version;
+
+  edm::LogInfo("L1T") << "EMTF using pt_lut_ver: " << pt_lut_version;
 
   for (unsigned i = 0; i < allowedModes_.size(); ++i) {
     int mode = allowedModes_.at(i);
@@ -59,7 +61,7 @@ void PtAssignmentEngine::load(const L1TMuonEndCapForest *payload) {
     // std::cout << "  * ptLUTVersion_ = " << ptLUTVersion_ << std::endl;
     forests_.at(mode).getTree(0)->setBoostWeight( boostWeight_ );
 
-    assert(boostWeight_ == 0 || ptLUTVersion_ >= 6);  // Check that XMLs and pT LUT version are consistent
+    //assert(boostWeight_ == 0 || ptLUTVersion_ >= 6);  // Check that XMLs and pT LUT version are consistent
     // Will catch user trying to run with Global Tag settings on 2017 data, rather than fakeEmtfParams. - AWB 08.06.17
 
     // // Code below can be used to save out trees in XML format
@@ -72,7 +74,6 @@ void PtAssignmentEngine::load(const L1TMuonEndCapForest *payload) {
 
   }
 
-  version_ = pt_lut_version;
   return;
 }
 

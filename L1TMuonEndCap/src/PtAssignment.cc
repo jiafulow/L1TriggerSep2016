@@ -4,7 +4,7 @@
 
 
 void PtAssignment::configure(
-    const PtAssignmentEngine* pt_assign_engine,
+    PtAssignmentEngine* pt_assign_engine,
     int verbose, int endcap, int sector, int bx,
     bool readPtLUTFile, bool fixMode15HighPt,
     bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt,
@@ -12,7 +12,7 @@ void PtAssignment::configure(
 ) {
   assert(pt_assign_engine != nullptr);
 
-  pt_assign_engine_ = const_cast<PtAssignmentEngine*>(pt_assign_engine);
+  pt_assign_engine_ = pt_assign_engine;
 
   verbose_ = verbose;
   endcap_  = endcap;
