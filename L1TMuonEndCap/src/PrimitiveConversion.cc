@@ -517,6 +517,10 @@ void PrimitiveConversion::convert_rpc(
     // Use RPC-specific convention in docs/CPPF-EMTF-format_2016_11_01.docx
     // Phi precision is 1/15 degrees (11 bits), 4x larger than CSC precision of 1/60 degrees (13 bits)
     // Theta precision is 36.5/32 degrees (5 bits), 4x larger than CSC precision of 36.5/128 degrees (7 bits)
+    //
+    // NOTE: fph and th are recalculated using CPPF LUTs in the convert_rpc_details() function,
+    //       this part is still kept because it is needed for Phase 2 iRPC hits.
+    //
     int fph = emtf::calc_phi_loc_int_rpc(glob_phi, conv_hit.PC_sector());
     int th  = emtf::calc_theta_int_rpc(glob_theta, conv_hit.Endcap());
 
@@ -570,6 +574,27 @@ void PrimitiveConversion::convert_rpc_details(EMTFHit& conv_hit) const {
 
   int fph = conv_hit.Phi_fp();
   int th  = conv_hit.Theta_fp();
+
+  bool use_cppf_coords = true;
+  if (use_cppf_coords && is_valid_for_run2(conv_hit)) {
+    int halfstrip = (conv_hit.Strip_low() + conv_hit.Strip_hi() - 1);
+    assert(1 <= halfstrip && halfstrip <= 64);
+
+    int fph2 = lut().get_cppf_ph_lut(conv_hit.Endcap(), conv_hit.Sector_RPC(), conv_hit.Station(), conv_hit.Ring(), conv_hit.Subsector_RPC(), conv_hit.Roll(), halfstrip, is_neighbor);
+    int th2  = lut().get_cppf_th_lut(conv_hit.Endcap(), conv_hit.Sector_RPC(), conv_hit.Station(), conv_hit.Ring(), conv_hit.Subsector_RPC(), conv_hit.Roll());
+    //assert(abs((fph>>2) - fph2) <= 4); // arbitrary tolerance
+    //assert(abs((th>>2) - th2) <= 1);   // arbitrary tolerance
+    fph = fph2;
+    th = th2;
+
+    //assert(0 <= fph && fph < 1024);
+    assert(0 <= fph && fph < 1250);
+    assert(0 <=  th &&  th < 32);
+    assert(th != 0b11111);  // RPC hit valid when data is not all ones
+    fph <<= 2;  // upgrade to full CSC precision by adding 2 zeros
+    th <<= 2;   // upgrade to full CSC precision by adding 2 zeros
+    th = (th == 0) ? 1 : th;  // protect against invalid value
+  }
 
   if (verbose_ > 1) {  // debug
     std::cout << "RPC hit pc_station: " << pc_station << " pc_chamber: " << pc_chamber
