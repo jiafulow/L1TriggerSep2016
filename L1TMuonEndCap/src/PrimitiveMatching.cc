@@ -82,7 +82,6 @@ void PrimitiveMatching::process(
     EMTFHitCollection::const_iterator conv_hits_end = ext_conv_hits_it->end();
 
     for (; conv_hits_it != conv_hits_end; ++conv_hits_it) {
-
       int istation = conv_hits_it->Station()-1;
       int zone_code = conv_hits_it->Zone_code();  // decide based on original zone code
       if (use_fs_zone_code)
@@ -455,7 +454,7 @@ void PrimitiveMatching::insert_hits(
       (conv_hit_i.BX()         == conv_hit_j.BX()) &&
       (conv_hit_i.Strip_low()  == conv_hit_j.Strip_low()) && // For RPC clusters
       (conv_hit_i.Strip_hi()   == conv_hit_j.Strip_hi()) &&  // For RPC clusters
-      //(conv_hit_i.Roll()       == conv_hit_j.Roll()) &&
+      (conv_hit_i.Roll()       == conv_hit_j.Roll()) &&      // For RPC clusters
       true
     ) {
       // All duplicates with the same strip but different wire must have same phi_fp
@@ -475,7 +474,7 @@ void PrimitiveMatching::insert_hits(
       (conv_hit_i.BX()         == conv_hit_j.BX()) &&
       //(conv_hit_i.Strip_low()  == conv_hit_j.Strip_low()) && // For RPC clusters
       //(conv_hit_i.Strip_hi()   == conv_hit_j.Strip_hi()) &&  // For RPC clusters
-      //(conv_hit_i.Roll()       == conv_hit_j.Roll()) &&
+      //(conv_hit_i.Roll()       == conv_hit_j.Roll()) &&      // For RPC clusters
       true
     ) {
       // All duplicates with the same strip but different wire must have same phi_fp
