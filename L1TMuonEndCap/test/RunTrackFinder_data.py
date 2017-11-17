@@ -9,6 +9,8 @@ from Configuration.StandardSequences.Eras import eras
 
 process = cms.Process('L1TMuonEmulation')
 
+process.add_(cms.Service("PrintLoadingPlugins"))
+
 ## Import standard configurations
 process.load('Configuration.StandardSequences.Services_cff')
 process.load('SimGeneral.HepPDTESSource.pythiapdt_cfi')

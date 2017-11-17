@@ -8,7 +8,7 @@ CondDB.connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS")
 ## Fills firmware, pT LUT, and PC LUT versions manually 
 emtfParamsSource = cms.ESSource(
     "EmptyESSource",
-    recordName = cms.string('L1TMuonEndcapParamsRcd'),
+    recordName = cms.string('L1TMuonEndCapParamsRcd'),
     iovIsRunNotTime = cms.bool(True),
     firstValid = cms.vuint32(1)
     )
