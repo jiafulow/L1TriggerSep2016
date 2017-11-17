@@ -130,6 +130,34 @@ void PtAssignment::process(
     track.set_gmt_charge_valid ( gmt_charge.second );
   }
 
+  // Remove worst track if it addresses the same bank as one of two best tracks
+  bool disable_worst_track_in_same_bank = true;
+  if (disable_worst_track_in_same_bank) {
+    // FW macro for detecting same bank address
+    // bank and chip must match, and valid flags must be set
+    // a and b are indexes 0,1,2
+    // `define sb(a,b) (ptlut_addr[a][29:26] == ptlut_addr[b][29:26] && ptlut_addr[a][5:2] == ptlut_addr[b][5:2] && ptlut_addr_val[a] && ptlut_addr_val[b])
+    auto is_in_same_bank = [](const EMTFTrack& lhs, const EMTFTrack& rhs) {
+      unsigned lhs_addr = lhs.PtLUT().address;
+      unsigned rhs_addr = rhs.PtLUT().address;
+      unsigned lhs_addr_1 = (lhs_addr >> 26) & 0xF;
+      unsigned rhs_addr_1 = (rhs_addr >> 26) & 0xF;
+      unsigned lhs_addr_2 = (lhs_addr >> 2) & 0xF;
+      unsigned rhs_addr_2 = (rhs_addr >> 2) & 0xF;
+      return (lhs_addr_1 == rhs_addr_1) && (lhs_addr_2 == rhs_addr_2);
+    };
+
+    assert(best_tracks.size() <= 3);
+    if (best_tracks.size() == 3) {
+      bool same_bank = is_in_same_bank(best_tracks.at(0), best_tracks.at(2)) || is_in_same_bank(best_tracks.at(1), best_tracks.at(2));
+      if (same_bank) {
+        // Set worst track pT to zero
+        best_tracks.at(2).set_pt(0);
+        best_tracks.at(2).set_gmt_pt(0);
+      }
+    }
+  }
+
   if (verbose_ > 0) {  // debug
     for (const auto& track: best_tracks) {
       std::cout << "track: " << track.Winner() << " pt address: " << track.PtLUT().address
