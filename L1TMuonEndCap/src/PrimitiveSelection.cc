@@ -55,7 +55,7 @@ void PrimitiveSelection::process(
     bool patchPattern = true;
     if (patchPattern) {
       if (new_tp.getCSCData().pattern == 11 || new_tp.getCSCData().pattern == 12) {  // 11, 12 -> 10
-	edm::LogWarning("L1T") << "\nEMTF emulator patching corrupt CSC LCT pattern: changing " << new_tp.getCSCData().pattern << " to 10\n";
+        edm::LogWarning("L1T") << "\nEMTF emulator patching corrupt CSC LCT pattern: changing " << new_tp.getCSCData().pattern << " to 10\n";
         new_tp.accessCSCData().pattern = 10;
       }
     }
@@ -65,7 +65,7 @@ void PrimitiveSelection::process(
     bool patchQuality = true;
     if (patchQuality) {
       if (new_tp.subsystem() == TriggerPrimitive::kCSC && new_tp.getCSCData().quality == 0) {  // 0 -> 1
-	edm::LogWarning("L1T") << "\nEMTF emulator patching corrupt CSC LCT quality: changing " << new_tp.getCSCData().quality << " to 1\n";
+        edm::LogWarning("L1T") << "\nEMTF emulator patching corrupt CSC LCT quality: changing " << new_tp.getCSCData().quality << " to 1\n";
         new_tp.accessCSCData().quality = 1;
       }
     }
@@ -74,22 +74,22 @@ void PrimitiveSelection::process(
 
     if (selected_csc >= 0) {
       assert(selected_csc < NUM_CSC_CHAMBERS);
-      
+
       if (selected_csc_map[selected_csc].size() < 2) {
-	selected_csc_map[selected_csc].push_back(new_tp);
+        selected_csc_map[selected_csc].push_back(new_tp);
       }
       else {
-	edm::LogWarning("L1T") << "\n******************* EMTF EMULATOR: SUPER-BIZZARE CASE *******************";
-	edm::LogWarning("L1T") << "Found 3 CSC trigger primitives in the same chamber";
-	for (int ii = 0; ii < 3; ii++) {
-	  TriggerPrimitive tp_err = (ii < 2 ? selected_csc_map[selected_csc].at(ii) : new_tp);
-	  edm::LogWarning("L1T") << "LCT #" << ii+1 << ": BX " << tp_err.getBX() 
-		    << ", endcap " << tp_err.detId<CSCDetId>().endcap() << ", sector " << tp_err.detId<CSCDetId>().triggerSector()
-		    << ", station " << tp_err.detId<CSCDetId>().station() << ", ring " << tp_err.detId<CSCDetId>().ring()
-		    << ", chamber " << tp_err.detId<CSCDetId>().chamber() << ", CSC ID " << tp_err.getCSCData().cscID
-		    << ": strip " << tp_err.getStrip() << ", wire " << tp_err.getWire();
-	}
-	edm::LogWarning("L1T") << "************************* ONLY KEEP FIRST TWO *************************\n\n";
+        edm::LogWarning("L1T") << "\n******************* EMTF EMULATOR: SUPER-BIZZARE CASE *******************";
+        edm::LogWarning("L1T") << "Found 3 CSC trigger primitives in the same chamber";
+        for (int ii = 0; ii < 3; ii++) {
+          TriggerPrimitive tp_err = (ii < 2 ? selected_csc_map[selected_csc].at(ii) : new_tp);
+          edm::LogWarning("L1T") << "LCT #" << ii+1 << ": BX " << tp_err.getBX()
+                    << ", endcap " << tp_err.detId<CSCDetId>().endcap() << ", sector " << tp_err.detId<CSCDetId>().triggerSector()
+                    << ", station " << tp_err.detId<CSCDetId>().station() << ", ring " << tp_err.detId<CSCDetId>().ring()
+                    << ", chamber " << tp_err.detId<CSCDetId>().chamber() << ", CSC ID " << tp_err.getCSCData().cscID
+                    << ": strip " << tp_err.getStrip() << ", wire " << tp_err.getWire();
+        }
+        edm::LogWarning("L1T") << "************************* ONLY KEEP FIRST TWO *************************\n\n";
       }
 
     } // End conditional: if (selected_csc >= 0)
@@ -699,9 +699,9 @@ int PrimitiveSelection::select_rpc(const TriggerPrimitive& muon_primitive) const
     if ( !(emtf::MIN_ENDCAP <= tp_endcap && tp_endcap <= emtf::MAX_ENDCAP) ) {
       edm::LogWarning("L1T") << "EMTF RPC format error: tp_endcap = "  << tp_endcap; return selected; }
     if ( !(emtf::MIN_TRIGSECTOR <= tp_sector && tp_sector <= emtf::MAX_TRIGSECTOR) ) {
-      edm::LogWarning("L1T") << "EMTF RPC format error: tp_sector = "  << tp_sector; return selected; } 
+      edm::LogWarning("L1T") << "EMTF RPC format error: tp_sector = "  << tp_sector; return selected; }
     if ( !(1 <= tp_subsector && tp_subsector <= 6) ) {
-      edm::LogWarning("L1T") << "EMTF RPC format error: tp_subsector = "  << tp_subsector; return selected; } 
+      edm::LogWarning("L1T") << "EMTF RPC format error: tp_subsector = "  << tp_subsector; return selected; }
     if ( !(1 <= tp_station && tp_station <= 4) ) {
       edm::LogWarning("L1T") << "EMTF RPC format error: tp_station = " << tp_station; return selected; }
     if ( !(2 <= tp_ring && tp_ring <= 3) ) {
