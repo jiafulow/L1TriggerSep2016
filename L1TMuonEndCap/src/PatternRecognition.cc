@@ -38,8 +38,7 @@ void PatternRecognition::configure_details() {
     // Normal patterns
     for (const auto& s: pattDefinitions_) {
       const std::vector<std::string>& tokens = split_string(s, ',', ':');  // split by comma or colon
-      if (not(tokens.size() == 9))  // want to find 9 numbers
-	{ edm::LogError("L1T") << "tokens.size() = " << tokens.size(); return; }
+      assert(tokens.size() == 9);  // want to find 9 numbers
 
       std::vector<std::string>::const_iterator tokens_it = tokens.begin();
 
@@ -57,9 +56,7 @@ void PatternRecognition::configure_details() {
 
       // There can only be one zone hit in the key station in the pattern
       // and it has to be this magic number
-      if (not(st2_max == padding_w_st3 && st2_min == padding_w_st3))
-	{ edm::LogError("L1T") << "st2_max = " << st2_max << ", padding_w_st3 = " << padding_w_st3
-			       << ", st2_min = " << st2_min << ", padding_w_st3 = " << padding_w_st3; return; }
+      assert(st2_max == padding_w_st3 && st2_min == padding_w_st3);
 
       // There is extra "padding" in st1 w.r.t st2,3,4
       // Add the extra padding to st2,3,4
@@ -88,16 +85,13 @@ void PatternRecognition::configure_details() {
       pattern.rotr(padding_extra_w_st1);
       patterns_.push_back(pattern);
     }
-    if (not(patterns_.size() == pattDefinitions_.size()))
-      { edm::LogError("L1T") << "patterns_.size() = " << patterns_.size() 
-			     << ", pattDefinitions_.size() = " << pattDefinitions_.size(); return; }
+    assert(patterns_.size() == pattDefinitions_.size());
 
   } else {
     // Symmetrical patterns
     for (const auto& s: symPattDefinitions_) {
       const std::vector<std::string>& tokens = split_string(s, ',', ':');  // split by comma or colon
-      if (not(tokens.size() == 17))  // want to find 17 numbers
-	{ edm::LogError("L1T") << "tokens.size() = " << tokens.size(); return; }
+      assert(tokens.size() == 17);  // want to find 17 numbers
 
       std::vector<std::string>::const_iterator tokens_it = tokens.begin();
 
@@ -123,12 +117,8 @@ void PatternRecognition::configure_details() {
 
       // There can only be one zone hit in the key station in the pattern
       // and it has to be this magic number
-      if (not(st2_max1 == padding_w_st3 && st2_min1 == padding_w_st3))
-	{ edm::LogError("L1T") << "st2_max1 = " << st2_max1 << ", padding_w_st3 = " << padding_w_st3
-			       << ", st2_min1 = " << st2_min1 << ", padding_w_st3 = " << padding_w_st3; return; }
-      if (not(st2_max2 == padding_w_st3 && st2_min2 == padding_w_st3))
-	{ edm::LogError("L1T") << "st2_max2 = " << st2_max2 << ", padding_w_st3 = " << padding_w_st3
-			       << ", st2_min2 = " << st2_min2 << ", padding_w_st3 = " << padding_w_st3; return; }
+      assert(st2_max1 == padding_w_st3 && st2_min1 == padding_w_st3);
+      assert(st2_max2 == padding_w_st3 && st2_min2 == padding_w_st3);
 
       // There is extra "padding" in st1 w.r.t st2,3,4
       // Add the extra padding to st2,3,4
@@ -171,9 +161,7 @@ void PatternRecognition::configure_details() {
       pattern.rotr(padding_extra_w_st1);
       patterns_.push_back(pattern);
     }
-    if (not(patterns_.size() == symPattDefinitions_.size()))
-      { edm::LogError("L1T") << "patterns_.size() = " << patterns_.size() 
-			     << ", symPattDefinitions_.size() = " << symPattDefinitions_.size(); return; }
+    assert(patterns_.size() == symPattDefinitions_.size());
   }
 
   if (verbose_ > 2) {  // debug
@@ -299,8 +287,7 @@ bool PatternRecognition::is_zone_empty(
     EMTFHitCollection::const_iterator conv_hits_end = ext_conv_hits_it->end();
 
     for (; conv_hits_it != conv_hits_end; ++conv_hits_it) {
-      if (not(conv_hits_it->PC_segment() <= 4))  // With 2 unique LCTs per chamber, 4 possible strip/wire combinations
-	{ edm::LogError("L1T") << "conv_hits_it->PC_segment() = " << conv_hits_it->PC_segment(); return true; }
+      assert(conv_hits_it->PC_segment() <= 4);  // With 2 unique LCTs per chamber, 4 possible strip/wire combinations
       
       if (conv_hits_it->Subsystem() == TriggerPrimitive::kRPC)
         continue;  // Don't use RPC hits for pattern formation
@@ -551,8 +538,7 @@ void PatternRecognition::sort_single_zone(EMTFRoadCollection& roads) const {
   if (roads.size() > n) {
     roads.erase(roads.begin() + n, roads.end());
   }
-  if (not(roads.size() <= n))
-    { edm::LogError("L1T") << "roads.size() = " << roads.size() << ", n = " << n; return; }
+  assert(roads.size() <= n);
 
   // Assign the winner variable
   for (unsigned iroad = 0; iroad < roads.size(); ++iroad) {
