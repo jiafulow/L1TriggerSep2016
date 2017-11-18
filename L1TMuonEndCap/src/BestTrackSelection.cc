@@ -54,7 +54,7 @@ void BestTrackSelection::process(
           << " cpat: " << array_as_string(track.PtLUT().cpattern)
           << " bx: " << track.BX()
           << std::endl;
-      for (int i = 0; i < NUM_STATIONS+1; ++i) {  // stations 0-4
+      for (int i = 0; i < emtf::NUM_STATIONS+1; ++i) {  // stations 0-4
         if (track.PtLUT().bt_vi[i] != 0)
           std::cout << ".. track segments: st: " << i
               << " v: " << track.PtLUT().bt_vi[i]
@@ -72,10 +72,11 @@ void BestTrackSelection::cancel_one_bx(
     const std::deque<EMTFTrackCollection>& extended_best_track_cands,
     EMTFTrackCollection& best_tracks
 ) const {
-  const int max_z = NUM_ZONES;        // = 4 zones
+  const int max_z = emtf::NUM_ZONES;        // = 4 zones
   const int max_n = maxRoadsPerZone_; // = 3 candidates per zone
   const int max_zn = max_z * max_n;   // = 12 total candidates
-  assert(maxTracks_ <= max_zn);
+  if (not (maxTracks_ <= max_zn))
+    { edm::LogError("L1T") << "maxTracks_ = " << maxTracks_ << ", max_zn = " << max_zn; return; }
 
   // Emulate the arrays used in firmware
   typedef std::array<int, 3> segment_ref_t;
@@ -93,7 +94,8 @@ void BestTrackSelection::cancel_one_bx(
   for (int z = 0; z < max_z; ++z) {
     const EMTFTrackCollection& tracks = extended_best_track_cands.at(z);
     const int ntracks = tracks.size();
-    assert(ntracks <= max_n);
+    if (not (ntracks <= max_n))
+      { edm::LogError("L1T") << "ntracks = " << ntracks << ", max_n = " << max_n; return; }
 
     for (int n = 0; n < ntracks; ++n) {
       const int zn = (n * max_z) + z;  // for (i = 0; i < 12; i = i+1) rank[i%4][i/4]
@@ -102,7 +104,8 @@ void BestTrackSelection::cancel_one_bx(
       rank.at(zn) = track.Rank();
 
       for (const auto& conv_hit : track.Hits()) {
-        assert(conv_hit.Valid());
+        if (not (conv_hit.Valid()))
+	  { edm::LogError("L1T") << "conv_hit.Valid() = " << conv_hit.Valid(); return; }
 
         // A segment identifier (chamber, strip, bx)
         const segment_ref_t segment = {{conv_hit.PC_station()*9 + conv_hit.PC_chamber(), conv_hit.Strip(), 0}};  // FW doesn't check whether a segment is CSC or RPC
@@ -120,9 +123,9 @@ void BestTrackSelection::cancel_one_bx(
 
   for (i = 0; i < max_zn; ++i) {
     for (j = 0; j < max_zn; ++j) {
-      larger[i][j] = 0;
+      larger[i][j] = false;
     }
-    larger[i][i] = 1; // result of comparison with itself
+    larger[i][i] = true; // result of comparison with itself
     //ri = rank[i%4][i/4]; // first index loops zone, second loops candidate. Zone loops faster, so we give equal priority to zones
     ri = rank[i];
 
@@ -135,7 +138,7 @@ void BestTrackSelection::cancel_one_bx(
       gt = ri > rj;
       eq = ri == rj;
       if ((i < j && (gt || eq)) || (i > j && gt))
-        larger[i][j] = 1;
+        larger[i][j] = true;
     }
     // "larger" array shows the result of comparison for each rank
 
@@ -160,9 +163,9 @@ void BestTrackSelection::cancel_one_bx(
       if (shared_segs > 0) {  // a single shared segment means it's ghost
         // kill candidate that has lower rank
         if (larger[i][j])
-          killed[j] = 1;
+          killed[j] = true;
         else
-          killed[i] = 1;
+          killed[i] = true;
       }
     }
   }
@@ -185,7 +188,7 @@ void BestTrackSelection::cancel_one_bx(
       if (exists[i])
         larger[i][j] = larger[i][j] | (!exists[j]);
       else
-        larger[i][j] = 0;
+        larger[i][j] = false;
     }
   }
 
@@ -256,11 +259,12 @@ void BestTrackSelection::cancel_multi_bx(
     EMTFTrackCollection& best_tracks
 ) const {
   const int max_h = bxWindow_;        // = 3 bx history
-  const int max_z = NUM_ZONES;        // = 4 zones
+  const int max_z = emtf::NUM_ZONES;        // = 4 zones
   const int max_n = maxRoadsPerZone_; // = 3 candidates per zone
   const int max_zn = max_z * max_n;   // = 12 total candidates
   const int max_hzn = max_h * max_zn; // = 36 total candidates
-  assert(maxTracks_ <= max_hzn);
+  if (not (maxTracks_ <= max_hzn))
+    { edm::LogError("L1T") << "maxTracks_ = " << maxTracks_ << ", max_hzn = " << max_hzn; return; }
 
   const int delayBX = bxWindow_ - 1;
   const int num_h = extended_best_track_cands.size() / max_z;  // num of bx history so far
@@ -286,7 +290,8 @@ void BestTrackSelection::cancel_multi_bx(
     for (int z = 0; z < max_z; ++z) {
       const EMTFTrackCollection& tracks = extended_best_track_cands.at(h*max_z + z);
       const int ntracks = tracks.size();
-      assert(ntracks <= max_n);
+      if (not (ntracks <= max_n))
+	{ edm::LogError("L1T") << "ntracks = " << ntracks << ", max_n = " << max_n; return; }
 
       for (int n = 0; n < ntracks; ++n) {
         const int hzn = (h * max_z * max_n) + (n * max_z) + z;  // for (i = 0; i < 12; i = i+1) rank[i%4][i/4]
@@ -299,7 +304,8 @@ void BestTrackSelection::cancel_multi_bx(
           good_bx.at(hzn) = 1;  // kill this rank if it's not the right BX
 
         for (const auto& conv_hit : track.Hits()) {
-          assert(conv_hit.Valid());
+          if (not (conv_hit.Valid()))
+	    { edm::LogError("L1T") << "conv_hit.Valid() = " << conv_hit.Valid(); return; }
 
           // Notes from Alex (2017-03-16):
           //
@@ -330,7 +336,7 @@ void BestTrackSelection::cancel_multi_bx(
     //for (j = 0; j < max_hzn; ++j) {
     //  larger[i][j] = 0;
     //}
-    larger[i][i] = 1; // result of comparison with itself
+    larger[i][i] = true; // result of comparison with itself
     //ri = rank[i%4][i/4]; // first index loops zone, second loops candidate. Zone loops faster, so we give equal priority to zones
     ri = rank[i];
 
@@ -339,9 +345,9 @@ void BestTrackSelection::cancel_multi_bx(
       //rj = rank[j%4][j/4];
       rj = rank[j];
       if (ri >= rj)
-        larger[i][j] = 1;
+        larger[i][j] = true;
       else
-        larger[j][i] = 1;
+        larger[j][i] = true;
     }
     // "larger" array shows the result of comparison for each rank
 
@@ -366,9 +372,9 @@ void BestTrackSelection::cancel_multi_bx(
       if (shared_segs > 0) {  // a single shared segment means it's ghost
         // kill candidate that has lower rank
         if (larger[i][j])
-          killed[j] = 1;
+          killed[j] = true;
         else
-          killed[i] = 1;
+          killed[i] = true;
       }
     }
   }
@@ -397,7 +403,7 @@ void BestTrackSelection::cancel_multi_bx(
       if (exists[i])
         larger[i][j] = larger[i][j] | (!exists[j]);
       else
-        larger[i][j] = 0;
+        larger[i][j] = false;
     }
   }
 

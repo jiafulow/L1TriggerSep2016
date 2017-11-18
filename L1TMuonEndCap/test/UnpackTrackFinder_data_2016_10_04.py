@@ -56,9 +56,9 @@ process.load('L1Trigger.L1TMuonEndCap.fakeEmtfParams_cff') ## Why does this file
                                                            ## for the data we should rely on the global tag mechanism - KK 2016.04.28
 process.esProd = cms.EDAnalyzer("EventSetupRecordDataGetter",
                                 toGet = cms.VPSet(
-        ## Apparently L1TMuonEndcapParamsRcd doesn't exist in CondFormats/DataRecord/src/ (Important? - AWB 18.04.16)
-        cms.PSet(record = cms.string('L1TMuonEndcapParamsRcd'),
-                 data = cms.vstring('L1TMuonEndcapParams'))
+        ## Apparently L1TMuonEndCapParamsRcd doesn't exist in CondFormats/DataRecord/src/ (Important? - AWB 18.04.16)
+        cms.PSet(record = cms.string('L1TMuonEndCapParamsRcd'),
+                 data = cms.vstring('L1TMuonEndCapParams'))
         ),
                                 verbose = cms.untracked.bool(True)
                                 )

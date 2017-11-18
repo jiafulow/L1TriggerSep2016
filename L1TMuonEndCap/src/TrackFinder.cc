@@ -75,34 +75,29 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
   pt_lut_version_ = 888888;
   pc_lut_version_ = 777777;
 
-  try {
-
-    // Configure sector processors
-    for (int endcap = MIN_ENDCAP; endcap <= MAX_ENDCAP; ++endcap) {
-      for (int sector = MIN_TRIGSECTOR; sector <= MAX_TRIGSECTOR; ++sector) {
-        const int es = (endcap - MIN_ENDCAP) * (MAX_TRIGSECTOR - MIN_TRIGSECTOR + 1) + (sector - MIN_TRIGSECTOR);
-
-        sector_processors_.at(es).configure(
-            &geometry_translator_,
-            &condition_helper_,
-            &sector_processor_lut_,
-            &pt_assign_engine_,
-            verbose_, endcap, sector,
-            minBX, maxBX, bxWindow, bxShiftCSC, bxShiftRPC, bxShiftGEM,
-            zoneBoundaries, zoneOverlap,
-            includeNeighbor, duplicateTheta, fixZonePhi, useNewZones, fixME11Edges,
-            pattDefinitions, symPattDefinitions, useSymPatterns,
-            thetaWindow, thetaWindowRPC, useSingleHits, bugSt2PhDiff, bugME11Dupes,
-            maxRoadsPerZone, maxTracks, useSecondEarliest, bugSameSectorPt0,
-            ptLUTVersion, readPtLUTFile, fixMode15HighPt, bug9BitDPhi, bugMode7CLCT, bugNegPt, bugGMTPhi, promoteMode7
-        );
-      }
+  // Configure sector processors
+  for (int endcap = emtf::MIN_ENDCAP; endcap <= emtf::MAX_ENDCAP; ++endcap) {
+    for (int sector = emtf::MIN_TRIGSECTOR; sector <= emtf::MAX_TRIGSECTOR; ++sector) {
+      const int es = (endcap - emtf::MIN_ENDCAP) * (emtf::MAX_TRIGSECTOR - emtf::MIN_TRIGSECTOR + 1) + (sector - emtf::MIN_TRIGSECTOR);
+      
+      sector_processors_.at(es).configure(
+          &geometry_translator_,
+          &condition_helper_,
+          &sector_processor_lut_,
+          &pt_assign_engine_,
+          verbose_, endcap, sector,
+          minBX, maxBX, bxWindow, bxShiftCSC, bxShiftRPC, bxShiftGEM,
+          zoneBoundaries, zoneOverlap,
+          includeNeighbor, duplicateTheta, fixZonePhi, useNewZones, fixME11Edges,
+          pattDefinitions, symPattDefinitions, useSymPatterns,
+          thetaWindow, thetaWindowRPC, useSingleHits, bugSt2PhDiff, bugME11Dupes,
+          maxRoadsPerZone, maxTracks, useSecondEarliest, bugSameSectorPt0,
+          ptLUTVersion, readPtLUTFile, fixMode15HighPt, bug9BitDPhi, bugMode7CLCT, bugNegPt, bugGMTPhi, promoteMode7
+      );
     }
-
-  } catch (...) {
-    throw;
   }
-}
+
+} // End constructor: TrackFinder::TrackFinder()
 
 TrackFinder::~TrackFinder() {
 
@@ -132,8 +127,8 @@ void TrackFinder::process(
     fw_version_ = condition_helper_.get_fw_version();
     // No RPC or GEM hits in 2016
     if (fw_version_ != 0 && fw_version_ < 50000) {
-      useRPC_ = 0;
-      useGEM_ = 0;
+      useRPC_ = false;
+      useGEM_ = false;
     }
 
     pt_lut_version_ = condition_helper_.get_pt_lut_version();
@@ -182,9 +177,9 @@ void TrackFinder::process(
   // Run each sector processor
 
   // MIN/MAX ENDCAP and TRIGSECTOR set in interface/Common.h
-  for (int endcap = MIN_ENDCAP; endcap <= MAX_ENDCAP; ++endcap) {
-    for (int sector = MIN_TRIGSECTOR; sector <= MAX_TRIGSECTOR; ++sector) {
-      const int es = (endcap - MIN_ENDCAP) * (MAX_TRIGSECTOR - MIN_TRIGSECTOR + 1) + (sector - MIN_TRIGSECTOR);
+  for (int endcap = emtf::MIN_ENDCAP; endcap <= emtf::MAX_ENDCAP; ++endcap) {
+    for (int sector = emtf::MIN_TRIGSECTOR; sector <= emtf::MAX_TRIGSECTOR; ++sector) {
+      const int es = (endcap - emtf::MIN_ENDCAP) * (emtf::MAX_TRIGSECTOR - emtf::MIN_TRIGSECTOR + 1) + (sector - emtf::MIN_TRIGSECTOR);
 
       // Run-dependent configure. This overwrites many of the configurables passed by the python config file.
       if (new_conditions) {
@@ -211,9 +206,9 @@ void TrackFinder::process(
 
   if (verbose_ > 0) {  // debug
 
-    for (int endcap = MIN_ENDCAP; endcap <= MAX_ENDCAP; ++endcap) {
-      for (int sector = MIN_TRIGSECTOR; sector <= MAX_TRIGSECTOR; ++sector) {
-        const int es = (endcap - MIN_ENDCAP) * (MAX_TRIGSECTOR - MIN_TRIGSECTOR + 1) + (sector - MIN_TRIGSECTOR);
+    for (int endcap = emtf::MIN_ENDCAP; endcap <= emtf::MAX_ENDCAP; ++endcap) {
+      for (int sector = emtf::MIN_TRIGSECTOR; sector <= emtf::MAX_TRIGSECTOR; ++sector) {
+        const int es = (endcap - emtf::MIN_ENDCAP) * (emtf::MAX_TRIGSECTOR - emtf::MIN_TRIGSECTOR + 1) + (sector - emtf::MIN_TRIGSECTOR);
 
         // _____________________________________________________________________
         // This prints the hits as raw text input to the firmware simulator

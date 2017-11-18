@@ -116,32 +116,6 @@ void MakeAngleLUT::generateLUTs() {
     return 0.5 * (x + y);
   };
 
-  // from RecoMuon/DetLayers/src/MuonCSCDetLayerGeometryBuilder.cc
-  //      RecoMuon/DetLayers/src/MuonRPCDetLayerGeometryBuilder.cc
-  //      RecoMuon/DetLayers/src/MuonGEMDetLayerGeometryBuilder.cc
-  auto isFront = [](int subsystem, int station, int ring, int chamber, int subsector) {
-    bool result = false;
-
-    if (subsystem == TriggerPrimitive::kCSC) {
-      bool isOverlapping = !(station == 1 && ring == 3);
-      // not overlapping means back
-      if(isOverlapping)
-      {
-        bool isEven = (chamber % 2 == 0);
-        // odd chambers are bolted to the iron, which faces
-        // forward in 1&2, backward in 3&4, so...
-        result = (station < 3) ? isEven : !isEven;
-      }
-    } else if (subsystem == TriggerPrimitive::kRPC) {
-      // 10 degree rings have odd subsectors in front
-      result = (subsector % 2 == 0);
-    } else if (subsystem == TriggerPrimitive::kGEM) {
-      //
-      result = (chamber % 2 == 0);
-    }
-    return result;
-  };
-  if (isFront) {}  // get around GCC unused-but-set-variable error
 
   // Save z positions for ME1/1, ME1/2, ME1/3, ME2/2, ME3/2, ME4/2,
   //                      RE1/2, RE1/3, RE2/2, RE3/2, RE4/2,
@@ -152,8 +126,8 @@ void MakeAngleLUT::generateLUTs() {
   // ___________________________________________________________________________
   // CSC
 
-  for (CSCGeometry::DetUnitContainer::const_iterator it = geocsc.detUnits().begin(); it != geocsc.detUnits().end(); ++it) {
-    const CSCLayer* layer = dynamic_cast<const CSCLayer*>(*it);  // like GeomDetUnit
+  for (const auto & it : geocsc.detUnits() ) {
+    const CSCLayer* layer = dynamic_cast<const CSCLayer*>(it);  // like GeomDetUnit
     assert(layer != nullptr);
     const CSCChamber* chamber = layer->chamber();  // like GeomDet
     assert(chamber != nullptr);
@@ -208,8 +182,8 @@ void MakeAngleLUT::generateLUTs() {
   // ___________________________________________________________________________
   // RPC
 
-  for (RPCGeometry::DetUnitContainer::const_iterator it = georpc.detUnits().begin(); it != georpc.detUnits().end(); ++it) {
-    const RPCRoll* roll = dynamic_cast<const RPCRoll*>(*it);  // like GeomDetUnit
+  for (const auto & it : georpc.detUnits() ) {
+    const RPCRoll* roll = dynamic_cast<const RPCRoll*>(it);  // like GeomDetUnit
     assert(roll != nullptr);
     //const RPCChamber* chamber = roll->chamber();  // like GeomDet
     //assert(chamber != nullptr);
@@ -261,8 +235,8 @@ void MakeAngleLUT::generateLUTs() {
   // ___________________________________________________________________________
   // GEM
 
-  for (GEMGeometry::DetUnitContainer::const_iterator it = geogem.detUnits().begin(); it != geogem.detUnits().end(); ++it) {
-    const GEMEtaPartition* roll = dynamic_cast<const GEMEtaPartition*>(*it);  // like GeomDetUnit
+  for (const auto & it : geogem.detUnits() ) {
+    const GEMEtaPartition* roll = dynamic_cast<const GEMEtaPartition*>(it);  // like GeomDetUnit
     assert(roll != nullptr);
     //const GEMChamber* chamber = roll->chamber();  // like GeomDet
     //assert(chamber != nullptr);

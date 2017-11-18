@@ -36,8 +36,8 @@ process.load("RecoMuon.TrackingTools.MuonServiceProxy_cff")
 process.load("RecoMuon.TrackingTools.MuonTrackLoader_cff")
 
 ## Message Logger and Event range
-process.MessageLogger.cerr.FwkReport.reportEvery = cms.untracked.int32(1000)
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
+process.MessageLogger.cerr.FwkReport.reportEvery = cms.untracked.int32(1)
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(1000) )
 process.options = cms.untracked.PSet(wantSummary = cms.untracked.bool(False))
 
 ## Global Tags
@@ -215,14 +215,14 @@ outCommands = cms.untracked.vstring(
 
     )
 
-out_dir = "/afs/cern.ch/work/a/abrinke1/public/EMTF/Commissioning/2017/"
-# out_dir = "./"
+# out_dir = "/afs/cern.ch/work/a/abrinke1/public/EMTF/Commissioning/2017/"
+out_dir = "./"
 
 process.treeOut = cms.OutputModule("PoolOutputModule", 
                                    # fileName = cms.untracked.string("EMTF_MC_Tree_RelValNuGun_UP15_1k.root"),
                                    # fileName = cms.untracked.string("EMTF_MC_Tree_tau_to_3_mu_RPC_debug.root"),
                                    # fileName = cms.untracked.string(out_dir+"EMTF_MC_Tree_SingleMu_2017_fromXMLv7_test.root"),
-                                   fileName = cms.untracked.string(out_dir+"EMTF_MC_Tree_SingleMu_2017_v7_O2O_v5_11k.root"),
+                                   fileName = cms.untracked.string(out_dir+"EMTF_MC_Tree_SingleMu_2017_v7_O2O_v5_test.root"),
                                    outputCommands = outCommands
                                    )
 

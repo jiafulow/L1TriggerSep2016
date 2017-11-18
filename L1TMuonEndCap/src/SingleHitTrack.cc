@@ -20,7 +20,7 @@ void SingleHitTrack::process(
     EMTFTrackCollection& best_tracks
 ) const {
 
-  if (conv_hits.size() == 0)
+  if (conv_hits.empty())
     return;
 
   if (!useSingleHits_)
@@ -97,8 +97,7 @@ void SingleHitTrack::process(
       else if (zone_code & 0b0010) zone = 2;
       else if (zone_code & 0b0001) zone = 1;
       else {
-	edm::LogError("L1T") << "\nEMTF SingleHitTrack.cc - bizzare case where zone_code = " << zone_code;
-	assert(zone > 0);
+	edm::LogError("L1T") << "EMTF SingleHitTrack.cc - bizzare case where zone_code = " << zone_code; return;
       }
 
       EMTFTrack new_trk;
@@ -134,12 +133,12 @@ void SingleHitTrack::process(
 	break;
     
       // Firmware only sends one single-hit track per sector
-      if (one_hit_trks.size() > 0) 
+      if (!one_hit_trks.empty()) 
 	break;
 
     } // End loop:  for (const auto & conv_hits_it : conv_hits)
 
-    if (one_hit_trks.size() > 0) 
+    if (!one_hit_trks.empty()) 
       break;
 
   } // End loop: for (int sub_ID = 5; sub_ID > 0; sub_ID--) {
