@@ -73,8 +73,7 @@ void PrimitiveSelection::process(
     int selected_csc = select_csc(new_tp); // Returns CSC "link" index (0 - 53)
 
     if (selected_csc >= 0) {
-      if (not(selected_csc < NUM_CSC_CHAMBERS))
-	{ edm::LogError("L1T") << "selected_csc = " << selected_csc << ", NUM_CSC_CHAMBERS = " << NUM_CSC_CHAMBERS; return; }
+      assert(selected_csc < NUM_CSC_CHAMBERS);
       
       if (selected_csc_map[selected_csc].size() < 2) {
 	selected_csc_map[selected_csc].push_back(new_tp);
@@ -106,8 +105,7 @@ void PrimitiveSelection::process(
     for (; map_tp_it != map_tp_end; ++map_tp_it) {
       int selected = map_tp_it->first;
       TriggerPrimitiveCollection& tmp_primitives = map_tp_it->second;  // pass by reference
-      if (not(tmp_primitives.size() <= 2))  // at most 2 hits
-	{ edm::LogError("L1T") << "tmp_primitives.size()  = " << tmp_primitives.size() ; return; }
+      assert(tmp_primitives.size() <= 2);  // at most 2 hits
 
       if (tmp_primitives.size() == 2) {
         if (
@@ -140,8 +138,7 @@ void PrimitiveSelection::process(
             tmp_primitives.insert(tmp_primitives.begin()+1, tp1);  // (s2,w1) at 2nd pos
             tmp_primitives.insert(tmp_primitives.begin()+2, tp0);  // (s1,w2) at 3rd pos
           }
-          if (not(tmp_primitives.size() == 1 || tmp_primitives.size() == 4))
-	    { edm::LogError("L1T") << "tmp_primitives.size() = " << tmp_primitives.size(); return; }
+          assert(tmp_primitives.size() == 1 || tmp_primitives.size() == 4);
         }
 
       }  // end if tmp_primitives.size() == 2
@@ -170,8 +167,7 @@ void PrimitiveSelection::process(
     int selected_rpc = select_rpc(*tp_it);  // Returns RPC "link" index (0 - 41)
 
     if (selected_rpc >= 0) {
-      if (not(selected_rpc < NUM_RPC_CHAMBERS))
-	{ edm::LogError("L1T") << "selected_rpc = " << selected_rpc << ", NUM_RPC_CHAMBERS = " << NUM_RPC_CHAMBERS; return; }
+      assert(selected_rpc < NUM_RPC_CHAMBERS);
       selected_rpc_map[selected_rpc].push_back(*tp_it);
     }
   }
@@ -265,8 +261,7 @@ void PrimitiveSelection::process(
          }
       }
 
-      if (not(pc_station != -1 && pc_chamber != -1))
-	{ edm::LogError("L1T") << "pc_station = " << pc_station << ", pc_chamber = " << pc_chamber; return; }
+      assert(pc_station != -1 && pc_chamber != -1);
 
       selected = (pc_station * 9) + pc_chamber;
 
@@ -279,8 +274,7 @@ void PrimitiveSelection::process(
       }
 
       if (!ignore_this_rpc_chm) {
-        if (not(tmp_selected_rpc_map.find(selected) == tmp_selected_rpc_map.end()))  // make sure it does not exist
-	  { edm::LogError("L1T") << "tmp_selected_rpc_map.find(selected) != tmp_selected_rpc_map.end()"; return; }
+        assert(tmp_selected_rpc_map.find(selected) == tmp_selected_rpc_map.end());  // make sure it does not exist
         tmp_selected_rpc_map[selected] = tmp_primitives;
       }
       else { // If both RE34/2 and RE34/3 exist, keep both for now - remove ring 3 hits in PrimitiveSelection::merge()
@@ -314,8 +308,7 @@ void PrimitiveSelection::process(
     int selected_gem = select_gem(*tp_it);  // Returns GEM "link" index (0 - 53)
 
     if (selected_gem >= 0) {
-      if (not(selected_gem < NUM_GEM_CHAMBERS))
-	{ edm::LogError("L1T") << "selected_gem = " << selected_gem << ", NUM_GEM_CHAMBERS = " << NUM_GEM_CHAMBERS; return; }
+      assert(selected_gem < NUM_GEM_CHAMBERS);
       selected_gem_map[selected_gem].push_back(*tp_it);
     }
   }
@@ -388,8 +381,7 @@ void PrimitiveSelection::merge(
   for (; map_tp_it != map_tp_end; ++map_tp_it) {
     int selected_csc = map_tp_it->first;
     const TriggerPrimitiveCollection& csc_primitives = map_tp_it->second;
-    if (not(csc_primitives.size() <= 4))  // at most 4 hits, including duplicated hits
-      { edm::LogError("L1T") << "csc_primitives.size() = " << csc_primitives.size(); return; }
+    assert(csc_primitives.size() <= 4);  // at most 4 hits, including duplicated hits
 
     // Insert all CSC hits
     selected_prim_map[selected_csc] = csc_primitives;
@@ -403,8 +395,7 @@ void PrimitiveSelection::merge(
     int selected_rpc = map_tp_it->first;
     const TriggerPrimitiveCollection& rpc_primitives = map_tp_it->second;
     if (rpc_primitives.empty())  continue;
-    if (not(rpc_primitives.size() <= 4))  // at most 4 hits
-      { edm::LogError("L1T") << "rpc_primitives.size() = " << rpc_primitives.size(); return; }
+    assert(rpc_primitives.size() <= 4);  // at most 4 hits
 
     bool found = (selected_prim_map.find(selected_rpc) != selected_prim_map.end());
     if (!found) {
@@ -439,8 +430,7 @@ void PrimitiveSelection::merge(
 	}
       }
 
-      if (not(selected_prim_map[selected_rpc].size() <= 2))  // at most 2 hits
-	{ edm::LogError("L1T") << "selected_prim_map[selected_rpc].size() = " << selected_prim_map[selected_rpc].size(); return; }
+      assert(selected_prim_map[selected_rpc].size() <= 2);  // at most 2 hits
 
     } // End conditional: if (!found)
     // else { // Initial FW in 2017; was disabled on June 7
@@ -461,8 +451,7 @@ void PrimitiveSelection::merge(
     int selected_gem = map_tp_it->first;
     const TriggerPrimitiveCollection& gem_primitives = map_tp_it->second;
     if (gem_primitives.empty())  continue;
-    if (not(gem_primitives.size() <= 2))  // at most 2 hits
-      { edm::LogError("L1T") << "gem_primitives.size() = " << gem_primitives.size(); return; }
+    assert(gem_primitives.size() <= 2);  // at most 2 hits
 
     bool found = (selected_prim_map.find(selected_gem) != selected_prim_map.end());
     if (!found) {
@@ -520,6 +509,18 @@ int PrimitiveSelection::select_csc(const TriggerPrimitive& muon_primitive) const
     int tp_bx        = tp_data.bx;
     int tp_csc_ID    = tp_data.cscID;
 
+    // assert(emtf::MIN_ENDCAP <= tp_endcap && tp_endcap <= emtf::MAX_ENDCAP);
+    // assert(emtf::MIN_TRIGSECTOR <= tp_sector && tp_sector <= emtf::MAX_TRIGSECTOR);
+    // assert(1 <= tp_station && tp_station <= 4);
+    // assert(1 <= tp_csc_ID && tp_csc_ID <= 9);
+    // assert(tp_data.strip < 160);
+    // // assert(tp_data.keywire < 112);
+    // assert(tp_data.keywire < 128);
+    // assert(tp_data.valid == true);
+    // assert(tp_data.pattern <= 10);
+    // assert(tp_data.quality > 0);
+
+
     if ( !(emtf::MIN_ENDCAP <= tp_endcap && tp_endcap <= emtf::MAX_ENDCAP) ) {
       edm::LogWarning("L1T") << "EMTF CSC format error: tp_endcap = "  << tp_endcap; return selected; }
     if ( !(emtf::MIN_TRIGSECTOR <= tp_sector && tp_sector <= emtf::MAX_TRIGSECTOR) ) {
@@ -542,16 +543,12 @@ int PrimitiveSelection::select_csc(const TriggerPrimitive& muon_primitive) const
 
     // Check using ME1/1a --> ring 4 convention
     if (tp_station == 1 && tp_ring == 1) {
-      if (not(tp_data.strip < 128))
-	{ edm::LogError("L1T") << "tp_data.strip = " << tp_data.strip; return selected; }
-      if (not(1 <= tp_csc_ID && tp_csc_ID <= 3))
-	{ edm::LogError("L1T") << "tp_csc_ID = " << tp_csc_ID; return selected; }
+      assert(tp_data.strip < 128);
+      assert(1 <= tp_csc_ID && tp_csc_ID <= 3);
     }
     if (tp_station == 1 && tp_ring == 4) {
-      if (not(tp_data.strip < 128))
-	{ edm::LogError("L1T") << "tp_data.strip = " << tp_data.strip; return selected; }
-      if (not(1 <= tp_csc_ID && tp_csc_ID <= 3))
-	{ edm::LogError("L1T") << "tp_csc_ID = " << tp_csc_ID; return selected; }
+      assert(tp_data.strip < 128);
+      assert(1 <= tp_csc_ID && tp_csc_ID <= 3);
     }
 
     // station 1 --> subsector 1 or 2
@@ -721,6 +718,17 @@ int PrimitiveSelection::select_rpc(const TriggerPrimitive& muon_primitive) const
     int tp_bx        = tp_data.bx;
     int tp_strip     = tp_data.strip;
 
+    // assert(tp_region != 0);
+    // assert(emtf::MIN_ENDCAP <= tp_endcap && tp_endcap <= emtf::MAX_ENDCAP);
+    // assert(emtf::MIN_TRIGSECTOR <= tp_sector && tp_sector <= emtf::MAX_TRIGSECTOR);
+    // assert(1 <= tp_subsector && tp_subsector <= 6);
+    // assert(1 <= tp_station && tp_station <= 4);
+    // assert(2 <= tp_ring && tp_ring <= 3);
+    // assert(1 <= tp_roll && tp_roll <= 3);
+    // assert(1 <= tp_strip && tp_strip <= 32);
+    // assert(tp_station > 2 || tp_ring != 3);  // stations 1 and 2 do not receive RPCs from ring 3
+
+
     if ( !(tp_region != 0) ) {
       edm::LogWarning("L1T") << "EMTF RPC format error: tp_region = "  << tp_region; return selected; }
     if ( !(emtf::MIN_ENDCAP <= tp_endcap && tp_endcap <= emtf::MAX_ENDCAP) ) {
@@ -799,8 +807,7 @@ int PrimitiveSelection::get_index_rpc(int tp_station, int tp_ring, int tp_subsec
     rpc_chm = 2 + (tp_station - 3)*2 + (tp_ring - 2);
   }
 
-  if (not(rpc_sub != -1 && rpc_chm != -1))
-    { edm::LogError("L1T") << "rpc_sub = " << rpc_sub << ", rpc_chm = " << rpc_chm; return selected; }
+  assert(rpc_sub != -1 && rpc_chm != -1);
 
   selected = (rpc_sub * 6) + rpc_chm;
   return selected;
@@ -955,32 +962,19 @@ int PrimitiveSelection::select_gem(const TriggerPrimitive& muon_primitive) const
     // station 2,3,4 --> subsector 0
     int tp_subsector = (tp_station != 1) ? 0 : ((tp_chamber%6 > 2) ? 1 : 2);
 
+    assert(emtf::MIN_ENDCAP <= tp_endcap && tp_endcap <= emtf::MAX_ENDCAP);
+    assert(emtf::MIN_TRIGSECTOR <= tp_sector && tp_sector <= emtf::MAX_TRIGSECTOR);
+    assert(1 <= tp_station && tp_station <= 2);
+    assert(1 <= tp_ring && tp_ring <= 1);
+    //assert(1 <= tp_roll && tp_roll <= 12);
+    assert((tp_station == 1 && 1 <= tp_roll && tp_roll <= 8) || (tp_station != 1));
+    assert((tp_station == 2 && 1 <= tp_roll && tp_roll <= 12) || (tp_station != 2));
+    assert(1 <= tp_layer && tp_layer <= 2);
+    assert(1 <= tp_csc_ID && tp_csc_ID <= 9);
+    //assert(tp_data.pad < 192);
+    assert((tp_station == 1 && 1 <= tp_pad && tp_pad <= 192) || (tp_station != 1));
+    assert((tp_station == 2 && 1 <= tp_pad && tp_pad <= 192) || (tp_station != 2));
 
-    if ( !(emtf::MIN_ENDCAP <= tp_endcap && tp_endcap <= emtf::MAX_ENDCAP) ) {
-      edm::LogWarning("L1T") << "EMTF GEM format error: tp_endcap = "  << tp_endcap; return selected; }
-    if ( !(emtf::MIN_TRIGSECTOR <= tp_sector && tp_sector <= emtf::MAX_TRIGSECTOR) ) {
-      edm::LogWarning("L1T") << "EMTF GEM format error: tp_sector = "  << tp_sector; return selected; }
-    if ( !(1 <= tp_station && tp_station <= 2) ) {
-      edm::LogWarning("L1T") << "EMTF GEM format error: tp_station = " << tp_station; return selected; }
-    if ( !(1 <= tp_ring && tp_ring <= 1) ) {
-      edm::LogWarning("L1T") << "EMTF GEM format error: tp_ring = " << tp_ring; return selected; }
-    if ( !(1 <= tp_csc_ID && tp_csc_ID <= 9) ) {
-      edm::LogWarning("L1T") << "EMTF GEM format error: tp_csc_ID = "  << tp_csc_ID; return selected; }
-    if (!(tp_station == 1 && 1 <= tp_roll && tp_roll <= 8) || (tp_station != 1)) {
-      edm::LogWarning("L1T") << "EMTF GEM format error: tp_station = " << tp_station
-			     << ", tp_roll = " << tp_roll; return selected; }
-    if ( !(tp_station == 2 && 1 <= tp_roll && tp_roll <= 12) || (tp_station != 2)) {
-      edm::LogWarning("L1T") << "EMTF GEM format error: tp_station = " << tp_station
-			     << ", tp_roll = " << tp_roll; return selected; }
-    if ( !(1 <= tp_layer && tp_layer <= 2)) {
-      edm::LogWarning("L1T") << "EMTF GEM format error: tp_layer = " << tp_layer; return selected; }
-    if ( !((tp_station == 1 && 1 <= tp_pad && tp_pad <= 192) || (tp_station != 1))) {
-	edm::LogWarning("L1T") << "EMTF GEM format error: tp_station = " << tp_station
-			       << ", tp_pad = " << tp_pad; return selected; }
-    if ( !((tp_station == 2 && 1 <= tp_pad && tp_pad <= 192) || (tp_station != 2))) {
-      edm::LogWarning("L1T") << "EMTF GEM format error: tp_station = " << tp_station
-			     << ", tp_pad = " << tp_pad; return selected; }
-    
     // Selection
     if (is_in_bx_gem(tp_bx)) {
       if (is_in_sector_gem(tp_endcap, tp_sector)) {

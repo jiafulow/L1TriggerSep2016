@@ -44,9 +44,8 @@ void PtAssignmentEngine::read(const std::string& xml_dir) {
 void PtAssignmentEngine::load(const L1TMuonEndCapForest *payload) {
   // unsigned pt_lut_version = payload->version_;  // Why is payload->version_ always 0? - AWB 02.06.17
   // std::cout << "ptLUTVersion_ from configuration = " << ptLUTVersion_ << ", payload->version_ = " << payload->version_ << std::endl;
-  // if (not(pt_lut_version == unsigned(ptLUTVersion_)))
-  //   { edm::LogError("L1T") << "pt_lut_version = " << pt_lut_version << ", ptLUTVersion_ = " << ptLUTVersion_; return; }
-    
+  // assert(pt_lut_version == unsigned(ptLUTVersion_));
+  
   for (unsigned i = 0; i < allowedModes_.size(); ++i) {
     int mode = allowedModes_.at(i);
     
@@ -60,8 +59,7 @@ void PtAssignmentEngine::load(const L1TMuonEndCapForest *payload) {
     // std::cout << "  * ptLUTVersion_ = " << ptLUTVersion_ << std::endl;
     forests_.at(mode).getTree(0)->setBoostWeight( boostWeight_ );
 
-    if (not(boostWeight_ == 0 || ptLUTVersion_ >= 6))  // Check that XMLs and pT LUT version are consistent
-      { edm::LogError("L1T") << "boostWeight_ = " << boostWeight_ << ", ptLUTVersion_ = " << ptLUTVersion_; return; }
+    assert(boostWeight_ == 0 || ptLUTVersion_ >= 6);  // Check that XMLs and pT LUT version are consistent
     // Will catch user trying to run with Global Tag settings on 2017 data, rather than fakeEmtfParams. - AWB 08.06.17
 
     // // Code below can be used to save out trees in XML format

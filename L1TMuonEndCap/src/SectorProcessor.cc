@@ -23,22 +23,13 @@ void SectorProcessor::configure(
     int maxRoadsPerZone, int maxTracks, bool useSecondEarliest, bool bugSameSectorPt0,
     int ptLUTVersion, bool readPtLUTFile, bool fixMode15HighPt, bool bug9BitDPhi, bool bugMode7CLCT, bool bugNegPt, bool bugGMTPhi, bool promoteMode7
 ) {
-  if (not(emtf::MIN_ENDCAP <= endcap && endcap <= emtf::MAX_ENDCAP))
-    { edm::LogError("L1T") << "emtf::MIN_ENDCAP = " << emtf::MIN_ENDCAP 
-			   << ", emtf::MAX_ENDCAP = " << emtf::MAX_ENDCAP
-			   << ", endcap = " << endcap; return; }
-  if (not(emtf::MIN_TRIGSECTOR <= sector && sector <= emtf::MAX_TRIGSECTOR))
-    { edm::LogError("L1T") << "emtf::MIN_TRIGSECTOR = " << emtf::MIN_TRIGSECTOR 
-			   << ", emtf::MAX_TRIGSECTOR = " << emtf::MAX_TRIGSECTOR
-			   << ", endcap = " << sector; return; }
-  if (not(tp_geom != nullptr))
-    { edm::LogError("L1T") << "tp_geom = nullptr"; return; }
-  if (not(cond != nullptr))
-    { edm::LogError("L1T") << "cond = nullptr"; return; }
-  if (not(lut != nullptr))
-    { edm::LogError("L1T") << "lut = nullptr"; return; }
-  if (not(pt_assign_engine != nullptr))
-    { edm::LogError("L1T") << "pt_assign_engine = nullptr"; return; }
+  assert(emtf::MIN_ENDCAP <= endcap && endcap <= emtf::MAX_ENDCAP);
+  assert(emtf::MIN_TRIGSECTOR <= sector && sector <= emtf::MAX_TRIGSECTOR);
+
+  assert(tp_geom != nullptr);
+  assert(cond != nullptr);
+  assert(lut != nullptr);
+  assert(pt_assign_engine != nullptr);
 
   tp_geom_          = tp_geom;
   cond_             = cond;
