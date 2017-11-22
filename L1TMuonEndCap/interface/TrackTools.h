@@ -139,6 +139,15 @@ namespace emtf {
     return theta_int;
   }
 
+  inline double calc_theta_rad_from_eta(double eta) {
+    double theta = std::atan2(1.0, std::sinh(eta));  // cot(theta) = sinh(eta)
+    return theta;
+  }
+
+  inline double calc_theta_deg_from_eta(double eta) {
+    return rad_to_deg(calc_theta_rad_from_eta(eta));
+  }
+
   // ___________________________________________________________________________
   // phi
   inline double calc_phi_glob_deg(double loc, int sector) {  // loc in deg, sector [1-6]
