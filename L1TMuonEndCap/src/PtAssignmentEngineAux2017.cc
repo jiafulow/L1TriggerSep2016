@@ -3,7 +3,7 @@
 #include <cassert>
 #include <cmath>
 
-// From here down, exact copy of code used for training BDT: EMTFPtAssign2017/src/PtLutVarCalc.cc
+// From here down, exact copy of code used for training BDT: EMTFPtAssign2017/src/PtLUTVarCalc.cc
 
 
 // Arrays that map the integer dPhi --> dPhi-units. 1/60th of a degree per unit; 255 units --> 4.25 degrees, 511 --> 8.52 degrees

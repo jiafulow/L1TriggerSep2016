@@ -1,6 +1,6 @@
 #include "L1Trigger/L1TMuonEndCap/interface/PtAssignmentEngine2017.h"
 #include "L1Trigger/L1TMuonEndCap/interface/PtAssignmentEngineAux2017.h"
-#include "L1Trigger/L1TMuonEndCap/interface/PtLutVarCalc.h"
+#include "L1Trigger/L1TMuonEndCap/interface/PtLUTVarCalc.h"
 
 #include <cassert>
 #include <iostream>
