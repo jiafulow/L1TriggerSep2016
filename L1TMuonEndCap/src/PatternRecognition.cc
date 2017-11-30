@@ -403,8 +403,16 @@ void PatternRecognition::process_single_zone(
           int bx1 = bool(bx_shifter & (1<<1));
           int bx0 = bool(bx_shifter & (1<<0));
 
-          if (bx2 == 0 && bx1 == 1) {  // is lifetime up? (note: drift_time is not being used)
+          // is lifetime up?
+          if (drift_time == 2 && bx2 == 0 && bx1 == 1) {
             is_lifetime_up = true;
+          } else if (drift_time == 1 && bx1 == 0 && bx0 == 1) {
+            is_lifetime_up = true;
+          } else {
+            // WARNING: It won't work if drift_time is not 1 or 2. The
+            //          bx_shifter keeps track of a number of booleans
+            //          from BX 0, 1, ..., drift_time.
+            assert(drift_time == 2 || drift_time == 1);
           }
 
           bx2 = bx1;
