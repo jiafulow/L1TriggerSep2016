@@ -231,6 +231,50 @@ void AngleCalculation::calculate_angles(EMTFTrack& track) const {
   if ((vstat & vmask3) != 0 || vstat == 0)
     vstat |= vmask3;
 
+
+  // FIXME: describe changes, add configuration parameter
+  bool use_truth_table = false;
+
+  static const int trk_bld[64] = {
+    0b1111, 0b0111, 0b0111, 0b0111, 0b1011, 0b0011, 0b1110, 0b0011,
+    0b0111, 0b0111, 0b0111, 0b0111, 0b1011, 0b0011, 0b0011, 0b0011,
+    0b1011, 0b1101, 0b0011, 0b0011, 0b1011, 0b0011, 0b0011, 0b0011,
+    0b1011, 0b0011, 0b0011, 0b0011, 0b1011, 0b0011, 0b0011, 0b0011,
+    0b1101, 0b1101, 0b1110, 0b0101, 0b1110, 0b1001, 0b1110, 0b0110,
+    0b0101, 0b0101, 0b0101, 0b0101, 0b1001, 0b1001, 0b0110, 0b0110,
+    0b1101, 0b1101, 0b0101, 0b0101, 0b1001, 0b1001, 0b1010, 0b1100,
+    0b0101, 0b0101, 0b0101, 0b0101, 0b1001, 0b1001, 0b1010, 0b0000
+  };
+
+  if (use_truth_table) {
+    // construct bad delta word
+    // dth_bad = {12,23,34,13,14,24}
+    unsigned dth_bad = 0b111111;  // "1" is bad. if valid, change to "0" (good)
+    if (best_dtheta_valid_arr_1.at(0)) {
+      dth_bad &= (~(1 << 5));  // 12
+    }
+    if (best_dtheta_valid_arr_1.at(1)) {
+      dth_bad &= (~(1 << 2));  // 13
+    }
+    if (best_dtheta_valid_arr_1.at(2)) {
+      dth_bad &= (~(1 << 1));  // 14
+    }
+    if (best_dtheta_valid_arr_1.at(3)) {
+      dth_bad &= (~(1 << 4));  // 23
+    }
+    if (best_dtheta_valid_arr_1.at(4)) {
+      dth_bad &= (~(1 << 0));  // 24
+    }
+    if (best_dtheta_valid_arr_1.at(5)) {
+      dth_bad &= (~(1 << 3));  // 34
+    }
+    assert(dth_bad < 64);
+
+    // extract station mask from LUT
+    vstat = trk_bld[dth_bad];
+  }
+
+
   // remove valid flag for station if hit does not pass the dTheta mask
   for (int istation = 0; istation < emtf::NUM_STATIONS; ++istation) {
     if ((vstat & (1 << istation)) == 0) {  // station bit not set
