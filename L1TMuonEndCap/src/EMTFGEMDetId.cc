@@ -1,18 +1,17 @@
 #include "L1Trigger/L1TMuonEndCap/interface/EMTFGEMDetId.h"
 
-#include "DataFormats/MuonDetId/interface/GEMDetId.h"
-#include "DataFormats/MuonDetId/interface/ME0DetId.h"
-
 
 EMTFGEMDetId::EMTFGEMDetId(const GEMDetId& id) :
-    DetId(id),
+    gemDetId_(id),
+    me0DetId_(),
     isME0_(false)
 {
 
 }
 
 EMTFGEMDetId::EMTFGEMDetId(const ME0DetId& id) :
-    DetId(id),
+    gemDetId_(),
+    me0DetId_(id),
     isME0_(true)
 {
 
@@ -74,19 +73,10 @@ int EMTFGEMDetId::roll() const {
     return getME0DetId().roll();
 }
 
-GEMDetId EMTFGEMDetId::getGEMDetId() const {
-  return GEMDetId(rawId());
-}
-
-ME0DetId EMTFGEMDetId::getME0DetId() const {
-  return ME0DetId(rawId());
-}
-
-
 std::ostream& operator<<( std::ostream& os, const EMTFGEMDetId& id ) {
   if (!id.isME0())
-    os << GEMDetId(id.rawId());
+    os << id.getGEMDetId();
   else
-    os << ME0DetId(id.rawId());
+    os << id.getME0DetId();
   return os;
 }

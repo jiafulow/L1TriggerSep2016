@@ -1,7 +1,8 @@
 #ifndef L1TMuonEndCap_EMTFGEMDetId_h
 #define L1TMuonEndCap_EMTFGEMDetId_h
 
-#include "DataFormats/DetId/interface/DetId.h"
+#include "DataFormats/MuonDetId/interface/GEMDetId.h"
+#include "DataFormats/MuonDetId/interface/ME0DetId.h"
 
 #include <stdint.h>
 #include <iosfwd>
@@ -10,7 +11,7 @@
 class GEMDetId;
 class ME0DetId;
 
-class EMTFGEMDetId : public DetId {
+class EMTFGEMDetId {
 public:
   explicit EMTFGEMDetId(const GEMDetId& id);
   explicit EMTFGEMDetId(const ME0DetId& id);
@@ -28,11 +29,13 @@ public:
 
   bool isME0() const { return isME0_; }
 
-  GEMDetId getGEMDetId() const;
+  GEMDetId getGEMDetId() const { return gemDetId_; }
 
-  ME0DetId getME0DetId() const;
+  ME0DetId getME0DetId() const { return me0DetId_; }
 
 private:
+  GEMDetId gemDetId_;
+  ME0DetId me0DetId_;
   bool isME0_;
 };
 
