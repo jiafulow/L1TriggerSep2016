@@ -731,6 +731,11 @@ void PrimitiveConversion::convert_gem(
 
   // Set properties
   //conv_hit.SetGEMDetId       ( tp_detId );  //FIXME
+  if (!is_me0) {
+    conv_hit.SetGEMDetId       ( tp_detId.getGEMDetId() );
+  } else {
+    //conv_hit.SetME0DetId       ( tp_detId.getME0DetId() );
+  }
 
   conv_hit.set_endcap        ( (tp_endcap == 2) ? -1 : tp_endcap );
   conv_hit.set_station       ( tp_station );
