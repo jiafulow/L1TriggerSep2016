@@ -576,6 +576,9 @@ void PrimitiveConversion::convert_rpc_details(EMTFHit& conv_hit) const {
   int th  = conv_hit.Theta_fp();
 
   bool use_cppf_coords = true;
+#ifdef PHASE_TWO_TRIGGER
+  use_cppf_coords = false;  // The CPPF LUTs fail for Phase 2 geometry
+#endif
   if (use_cppf_coords && is_valid_for_run2(conv_hit)) {
     int halfstrip = (conv_hit.Strip_low() + conv_hit.Strip_hi() - 1);
     assert(1 <= halfstrip && halfstrip <= 64);
