@@ -237,27 +237,27 @@ float PtAssignmentEngine2017::calculate_pt_xml(const address_t& address) const {
   // Unpack variable words from the pT LUT address
   if      (nHits == 4) {
     dPhiAB    = (address >> (0)                 & ((1<<7)-1));
-    dPhiBC    = (address >> (0+7)                 & ((1<<5)-1));
-    dPhiCD    = (address >> (0+7+5)                 & ((1<<4)-1));
+    dPhiBC    = (address >> (0+7)               & ((1<<5)-1));
+    dPhiCD    = (address >> (0+7+5)             & ((1<<4)-1));
     sPhiBC    = (address >> (0+7+5+4)           & ((1<<1)-1));
     sPhiCD    = (address >> (0+7+5+4+1)         & ((1<<1)-1));
     dTheta    = (address >> (0+7+5+4+1+1)       & ((1<<2)-1));
-    frA       = (address >> (0+7+5+4+1+1+2)         & ((1<<1)-1));
+    frA       = (address >> (0+7+5+4+1+1+2)     & ((1<<1)-1));
     mode15_8b = (address >> (0+7+5+4+1+1+2+1)   & ((1<<8)-1));
     mode_ID   = (address >> (0+7+5+4+1+1+2+1+8) & ((1<<1)-1));
     assert(address < pow(2, 30));
   }
   else if (nHits == 3) {
-    dPhiAB    = (address >> (0)                            & ((1<<7)-1));
-    dPhiBC    = (address >> (0+7)                    & ((1<<5)-1));
-    sPhiBC    = (address >> (0+7+5)                    & ((1<<1)-1));
-    dTheta    = (address >> (0+7+5+1)                    & ((1<<3)-1));
+    dPhiAB    = (address >> (0)                     & ((1<<7)-1));
+    dPhiBC    = (address >> (0+7)                   & ((1<<5)-1));
+    sPhiBC    = (address >> (0+7+5)                 & ((1<<1)-1));
+    dTheta    = (address >> (0+7+5+1)               & ((1<<3)-1));
     frA       = (address >> (0+7+5+1+3)             & ((1<<1)-1));
     int bit = 0;
     if (mode != 7) {
       frB     = (address >> (0+7+5+1+3+1)           & ((1<<1)-1)); bit = 1;
     }
-    clctA     = (address >> (0+7+5+1+3+1+bit)            & ((1<<2)-1));
+    clctA     = (address >> (0+7+5+1+3+1+bit)       & ((1<<2)-1));
     rpc_2b    = (address >> (0+7+5+1+3+1+bit+2)     & ((1<<2)-1));
     theta     = (address >> (0+7+5+1+3+1+bit+2+2)   & ((1<<5)-1));
     if (mode != 7) {
@@ -268,10 +268,10 @@ float PtAssignmentEngine2017::calculate_pt_xml(const address_t& address) const {
   }
   else if (nHits == 2) {
     dPhiAB    = (address >> (0)               & ((1<<7)-1));
-    dTheta    = (address >> (0+7)              & ((1<<3)-1));
-    frA       = (address >> (0+7+3)              & ((1<<1)-1));
-    frB       = (address >> (0+7+3+1)              & ((1<<1)-1));
-    clctA     = (address >> (0+7+3+1+1)              & ((1<<3)-1));
+    dTheta    = (address >> (0+7)             & ((1<<3)-1));
+    frA       = (address >> (0+7+3)           & ((1<<1)-1));
+    frB       = (address >> (0+7+3+1)         & ((1<<1)-1));
+    clctA     = (address >> (0+7+3+1+1)       & ((1<<3)-1));
     clctB     = (address >> (0+7+3+1+1+3)     & ((1<<3)-1));
     theta     = (address >> (0+7+3+1+1+3+3)   & ((1<<5)-1));
     mode_ID   = (address >> (0+7+3+1+1+3+3+5) & ((1<<3)-1));
