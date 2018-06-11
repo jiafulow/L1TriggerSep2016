@@ -11,8 +11,7 @@ def customise(process):
         process.simEmtfDigis.IRPCEnable                  = True
         process.simEmtfDigis.ME0Enable                   = True
         process.simEmtfDigis.TTEnable                    = False
-        process.simEmtfDigis.ME0Input                    = cms.InputTag('fakeSimMuonME0PadDigis')
-        process.simEmtfDigis.Era                         = cms.string('Phase2C2')
+        process.simEmtfDigis.Era                         = cms.string('Phase2_timing')
         process.simEmtfDigis.spPAParams16.PtLUTVersion   = cms.int32(7)
 
     # From python/fakeEmtfParams_cff.py

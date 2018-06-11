@@ -34,7 +34,7 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
     pt_assign_engine_.reset(new PtAssignmentEngine2016());
   } else if (era_ == "Run2_2017") {
     pt_assign_engine_.reset(new PtAssignmentEngine2017());
-  } else if (era_ == "Phase2C2") {
+  } else if (era_ == "Phase2_timing") {
     pt_assign_engine_.reset(new PtAssignmentEngine2017());
   } else {
     assert(false && "Cannot recognize the era option");

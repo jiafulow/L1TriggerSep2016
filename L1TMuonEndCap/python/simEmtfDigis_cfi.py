@@ -17,7 +17,7 @@ simEmtfDigisMC = cms.EDProducer("L1TMuonEndCapTrackProducer",
     RPCInput = cms.InputTag('simMuonRPCDigis'),
     GEMInput = cms.InputTag('simMuonGEMPadDigis'),
     IRPCInput = cms.InputTag('simMuonRPCDigis'),
-    ME0Input = cms.InputTag('simMuonME0PadDigis'),
+    ME0Input = cms.InputTag('me0TriggerPseudoDigis'),
     TTInput = cms.InputTag('TTStubsFromPhase2TrackerDigis','StubAccepted'),
 
     # Run with CSC, RPC, GEM

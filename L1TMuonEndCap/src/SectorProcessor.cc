@@ -252,6 +252,86 @@ void SectorProcessor::process(
     EMTFTrackCollection& out_tracks
 ) const {
 
+  // ___________________________________________________________________________
+  // Debug
+  bool dump_csc_input = true;
+  bool dump_rpc_input = true;
+  bool dump_gem_input = true;
+  bool dump_me0_input = true;
+
+  if (dump_csc_input && endcap_ == 1 && sector_ == 1) {
+    TriggerPrimitiveCollection::const_iterator tp_it = muon_primitives.begin();
+    TriggerPrimitiveCollection::const_iterator tp_end = muon_primitives.end();
+    int i = 0;
+
+    for (; tp_it != tp_end; ++tp_it) {
+      if (tp_it->subsystem() == TriggerPrimitive::kCSC) {
+        const CSCDetId& tp_detId = tp_it->detId<CSCDetId>();
+        const CSCData&  tp_data  = tp_it->getCSCData();
+        std::cout << "LCT #" << i++ << ": BX " << tp_it->getBX()
+          << ", endcap " << tp_detId.endcap() << ", sector " << tp_detId.triggerSector()
+          << ", station " << tp_detId.station() << ", ring " << tp_detId.ring()
+          << ", chamber " << tp_detId.chamber() << ", CSC ID " << tp_data.cscID
+          << ", strip " << tp_it->getStrip() << ", wire " << tp_it->getWire() << ", pattern " << tp_it->getPattern()
+          << std::endl;
+
+        //tp_it->print(std::cout);
+
+      }  // end if CSC
+    }  // end loop over muon_primitives
+  }
+
+  if (dump_rpc_input && endcap_ == 1 && sector_ == 1) {
+    TriggerPrimitiveCollection::const_iterator tp_it = muon_primitives.begin();
+    TriggerPrimitiveCollection::const_iterator tp_end = muon_primitives.end();
+    int i = 0;
+
+    for (; tp_it != tp_end; ++tp_it) {
+      if (tp_it->subsystem() == TriggerPrimitive::kRPC) {
+        const RPCDetId& tp_detId = tp_it->detId<RPCDetId>();
+        const RPCData&  tp_data  = tp_it->getRPCData();
+        std::cout << "RPC #" << i++ << ": BX " << tp_it->getBX()
+          << ", endcap " << ((tp_detId.region() == -1) ? 2 : tp_detId.region()) << ", sector_rpc " << tp_detId.sector()
+          << ", station " << tp_detId.station() << ", ring " << tp_detId.ring()
+          << ", subsector_rpc " << tp_detId.subsector() << ", roll " << tp_detId.roll()
+          << ", strip " << tp_it->getStrip() << ", strip_low " << tp_data.strip_low << ", strip_hi " << tp_data.strip_hi
+          << std::endl;
+      }
+    }
+  }
+
+  if (dump_gem_input && endcap_ == 1 && sector_ == 1) {
+    TriggerPrimitiveCollection::const_iterator tp_it = muon_primitives.begin();
+    TriggerPrimitiveCollection::const_iterator tp_end = muon_primitives.end();
+    int i = 0;
+
+    for (; tp_it != tp_end; ++tp_it) {
+      if (tp_it->subsystem() == TriggerPrimitive::kGEM && tp_it->getGEMData().isME0 == false) {
+        const GEMDetId& tp_detId = tp_it->detId<GEMDetId>();
+        const GEMData&  tp_data  = tp_it->getGEMData();
+        std::cout << "GEM #" << i++ << ": BX " << tp_it->getBX()
+          << ", endcap " << ((tp_detId.region() == -1) ? 2 : tp_detId.region())
+          << ", station " << tp_detId.station() << ", ring " << tp_detId.ring()
+          << ", chamber " << tp_detId.chamber() << ", roll " << tp_detId.roll()
+          << ", strip " << tp_it->getStrip() << ", pad_low " << tp_data.pad_low << ", pad_hi " << tp_data.pad_hi
+          << std::endl;
+      }
+    }
+  }
+
+  if (dump_me0_input && endcap_ == 1 && sector_ == 1) {
+    TriggerPrimitiveCollection::const_iterator tp_it = muon_primitives.begin();
+    TriggerPrimitiveCollection::const_iterator tp_end = muon_primitives.end();
+
+    for (; tp_it != tp_end; ++tp_it) {
+      if (tp_it->subsystem() == TriggerPrimitive::kGEM && tp_it->getGEMData().isME0 == true) {
+        const ME0DetId& tp_detId = tp_it->detId<ME0DetId>();
+        const GEMData&  tp_data  = tp_it->getGEMData();  //FIXME: create ME0Data
+      }
+    }
+  }
+
+  // ___________________________________________________________________________
   // List of converted hits, extended from previous BXs
   // deque (double-ended queue) is similar to a vector, but allows insertion or deletion of elements at both beginning and end
   std::deque<EMTFHitCollection> extended_conv_hits;

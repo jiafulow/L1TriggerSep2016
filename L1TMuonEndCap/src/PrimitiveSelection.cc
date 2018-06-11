@@ -58,7 +58,7 @@ void PrimitiveSelection::process(
     bool patchPattern = true;
     if (patchPattern && new_tp.subsystem() == TriggerPrimitive::kCSC) {
       if (new_tp.getCSCData().pattern == 11 || new_tp.getCSCData().pattern == 12 || new_tp.getCSCData().pattern == 13 || new_tp.getCSCData().pattern == 14) {  // 11, 12, 13, 14 -> 10
-        edm::LogWarning("L1T") << "EMTF patching corrupt CSC LCT pattern: changing " << new_tp.getCSCData().pattern << " to 10";
+        edm::LogWarning("L1T") << "EMTF patching corrupt CSC LCT pattern: changing " << new_tp.getCSCData().pattern << " to 10 (station " << new_tp.detId<CSCDetId>().station() << " ring " << new_tp.detId<CSCDetId>().ring() << ")";
         new_tp.accessCSCData().pattern = 10;
       }
     }
@@ -68,7 +68,7 @@ void PrimitiveSelection::process(
     bool patchQuality = true;
     if (patchQuality && new_tp.subsystem() == TriggerPrimitive::kCSC) {
       if (new_tp.getCSCData().quality == 0) {  // 0 -> 1
-        edm::LogWarning("L1T") << "EMTF patching corrupt CSC LCT quality: changing " << new_tp.getCSCData().quality << " to 1";
+        edm::LogWarning("L1T") << "EMTF patching corrupt CSC LCT quality: changing " << new_tp.getCSCData().quality << " to 1 (station " << new_tp.detId<CSCDetId>().station() << " ring " << new_tp.detId<CSCDetId>().ring() << ")";
         new_tp.accessCSCData().quality = 1;
       }
     }

@@ -28,6 +28,7 @@ TriggerPrimitive::TriggerPrimitive(const DTChamberId& detid,
   _id(detid),
   _subsystem(TriggerPrimitive::kDT) {
   calculateGlobalSector(detid,_globalsector,_subsector);
+  _eta = 0.; _phi = 0.; _rho = 0.; _theta = 0.;
   // fill in information from theta trigger
   _dt.theta_bti_group = -1;
   _dt.segment_number = segment_number;
@@ -51,6 +52,7 @@ TriggerPrimitive::TriggerPrimitive(const DTChamberId& detid,
   _id(detid),
   _subsystem(TriggerPrimitive::kDT) {
   calculateGlobalSector(detid,_globalsector,_subsector);
+  _eta = 0.; _phi = 0.; _rho = 0.; _theta = 0.;
   // fill in information from theta trigger
   _dt.theta_bti_group = theta_bti_group;
   _dt.segment_number = digi_th.position(theta_bti_group);
@@ -75,6 +77,7 @@ TriggerPrimitive::TriggerPrimitive(const DTChamberId& detid,
   _id(detid),
   _subsystem(TriggerPrimitive::kDT) {
   calculateGlobalSector(detid,_globalsector,_subsector);
+  _eta = 0.; _phi = 0.; _rho = 0.; _theta = 0.;
   // fill in information from theta trigger
   _dt.theta_bti_group = theta_bti_group;
   _dt.segment_number = digi_th.position(theta_bti_group);
@@ -98,6 +101,7 @@ TriggerPrimitive::TriggerPrimitive(const CSCDetId& detid,
   _id(detid),
   _subsystem(TriggerPrimitive::kCSC) {
   calculateGlobalSector(detid,_globalsector,_subsector);
+  _eta = 0.; _phi = 0.; _rho = 0.; _theta = 0.;
   _csc.trknmb  = digi.getTrknmb();
   _csc.valid   = digi.isValid();
   _csc.quality = digi.getQuality();
@@ -125,6 +129,7 @@ TriggerPrimitive::TriggerPrimitive(const RPCDetId& detid,
   _id(detid),
   _subsystem(TriggerPrimitive::kRPC) {
   calculateGlobalSector(detid,_globalsector,_subsector);
+  _eta = 0.; _phi = 0.; _rho = 0.; _theta = 0.;
   _rpc.strip = digi.strip();
   _rpc.strip_low = digi.strip();
   _rpc.strip_hi = digi.strip();
@@ -141,6 +146,7 @@ TriggerPrimitive::TriggerPrimitive(const RPCDetId& detid,
   _id(detid),
   _subsystem(TriggerPrimitive::kRPC) {
   calculateGlobalSector(detid,_globalsector,_subsector);
+  _eta = 0.; _phi = 0.; _rho = 0.; _theta = 0.;
   _rpc.strip = strip;
   _rpc.strip_low = strip;
   _rpc.strip_hi = strip;
@@ -157,6 +163,7 @@ TriggerPrimitive::TriggerPrimitive(const GEMDetId& detid,
   _id(detid),
   _subsystem(TriggerPrimitive::kGEM) {
   calculateGlobalSector(detid,_globalsector,_subsector);
+  _eta = 0.; _phi = 0.; _rho = 0.; _theta = 0.;
   _gem.pad = digi.pad();
   _gem.pad_low = digi.pad();
   _gem.pad_hi = digi.pad();
@@ -170,6 +177,7 @@ TriggerPrimitive::TriggerPrimitive(const ME0DetId& detid,
   _id(detid),
   _subsystem(TriggerPrimitive::kGEM) {
   calculateGlobalSector(detid,_globalsector,_subsector);
+  _eta = 0.; _phi = 0.; _rho = 0.; _theta = 0.;
   _gem.pad = digi.pad();
   _gem.pad_low = digi.pad();
   _gem.pad_hi = digi.pad();
