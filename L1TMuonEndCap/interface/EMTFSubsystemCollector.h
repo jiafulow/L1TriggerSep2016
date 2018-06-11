@@ -17,26 +17,45 @@ public:
   template<typename T>
   void extractPrimitives(
     T tag,
+    const GeometryTranslator* tp_geom,
     const edm::Event& iEvent,
     const edm::EDGetToken& token,
     TriggerPrimitiveCollection& out
-  ) const;
-
-  template<typename T>
-  void extractTTPrimitives(
-    T tag,
-    const edm::Event& iEvent,
-    const edm::EDGetToken& token,
-    TTTriggerPrimitiveCollection& out
   ) const;
 
   // RPC functions
   void cluster_rpc(const TriggerPrimitiveCollection& muon_primitives, TriggerPrimitiveCollection& clus_muon_primitives) const;
 
   // GEM functions
-  void make_copad_gem(const TriggerPrimitiveCollection& muon_primitives, TriggerPrimitiveCollection& copad_muon_primitives) const;
-
+  // 1. Cluster GEM pads.
+  // 2. Declusterize GEM clusters.
+  //    - Reject clusters with width > 8 pads. Then, for each of the 2 layers, declusterize a maximum of 8 pad clusters.
+  // 3. Make GEM copads.
   void cluster_gem(const TriggerPrimitiveCollection& muon_primitives, TriggerPrimitiveCollection& clus_muon_primitives) const;
+
+  void declusterize_gem(TriggerPrimitiveCollection& clus_muon_primitives, TriggerPrimitiveCollection& declus_muon_primitives) const;
+
+  void make_copad_gem(TriggerPrimitiveCollection& declus_muon_primitives, TriggerPrimitiveCollection& copad_muon_primitives) const;
 };
+
+
+// _____________________________________________________________________________
+// Experimental features! Very unstable!!
+namespace experimental {
+
+class EMTFSubsystemCollector {
+public:
+  template<typename T>
+  void extractPrimitives(
+    T tag,
+    const GeometryTranslator* tp_geom,
+    const edm::Event& iEvent,
+    const edm::EDGetToken& token_lct,        // for CSC
+    const edm::EDGetToken& token_comparator, // for CSC
+    TriggerPrimitiveCollection& out
+  ) const;
+};
+
+}
 
 #endif

@@ -20,11 +20,12 @@ public:
       std::map<int, TriggerPrimitiveCollection>& selected_prim_map
   ) const;
 
-  // Put the hits from CSC, RPC, GEM together in one collection
+  // Put the hits from CSC, RPC, GEM, ME0 together in one collection
   void merge(
       const std::map<int, TriggerPrimitiveCollection>& selected_csc_map,
       const std::map<int, TriggerPrimitiveCollection>& selected_rpc_map,
       const std::map<int, TriggerPrimitiveCollection>& selected_gem_map,
+      const std::map<int, TriggerPrimitiveCollection>& selected_me0_map,
       std::map<int, TriggerPrimitiveCollection>& selected_prim_map
   ) const;
 
@@ -33,6 +34,7 @@ public:
       const std::map<int, TriggerPrimitiveCollection>& selected_csc_map,
       const std::map<int, TriggerPrimitiveCollection>& selected_rpc_map,
       const std::map<int, TriggerPrimitiveCollection>& selected_gem_map,
+      const std::map<int, TriggerPrimitiveCollection>& selected_me0_map,
       std::map<int, TriggerPrimitiveCollection>& selected_prim_map
   ) const;
 
@@ -52,6 +54,11 @@ public:
   int get_index_csc(int tp_subsector, int tp_station, int tp_csc_ID, bool is_neighbor) const;
 
   // RPC functions
+  // If selected, return an index 0-41, else return -1
+  // The index 0-41 corresponds to CPPF link x chamber. Each CPPF link corresponds
+  // to a RPC subsector (6+1 incl. neighbor), and carries data from 6 RPC rings
+  // (RE1/2, RE2/2, RE3/2, RE3/3, RE4/2, RE4/3). The index maps to the 2D index
+  // [subsector][chamber] used in the firmware, with size [6:0][5:0].
   int select_rpc(const TriggerPrimitive& muon_primitive) const;
 
   bool is_in_sector_rpc(int tp_endcap, int tp_station, int tp_ring, int tp_sector, int tp_subsector) const;
@@ -72,6 +79,17 @@ public:
   bool is_in_bx_gem(int tp_bx) const;
 
   int get_index_gem(int tp_subsector, int tp_station, int tp_csc_ID, bool is_neighbor) const;
+
+  // ME0 functions
+  int select_me0(const TriggerPrimitive& muon_primitive) const;
+
+  bool is_in_sector_me0(int tp_endcap, int tp_sector) const;
+
+  bool is_in_neighbor_sector_me0(int tp_endcap, int tp_sector, int tp_subsector, int tp_station, int tp_csc_ID) const;
+
+  bool is_in_bx_me0(int tp_bx) const;
+
+  int get_index_me0(int tp_subsector, int tp_station, int tp_csc_ID, bool is_neighbor) const;
 
 
 private:

@@ -16,6 +16,13 @@ namespace emtf {
 
   int calc_uGMT_chamber(int csc_ID, int subsector, int neighbor, int station);
 
+  // CSC trigger sector & CSC ID
+
+  int get_trigger_sector(int ring, int station, int chamber);
+
+  int get_trigger_csc_ID(int ring, int station, int chamber);
+
+
   // ___________________________________________________________________________
   // coordinate ranges: phi[-180, 180] or [-pi, pi], theta[0, 90] or [0, pi/2]
   inline double range_phi_deg(double deg) {

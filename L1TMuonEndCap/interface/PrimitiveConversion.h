@@ -52,6 +52,15 @@ public:
 
   void convert_gem_details(EMTFHit& conv_hit) const;
 
+  // ME0 functions
+  void convert_me0(
+    int pc_sector, int pc_station, int pc_chamber, int pc_segment,
+    const TriggerPrimitive& muon_primitive,
+    EMTFHit& conv_hit
+  ) const;
+
+  void convert_me0_details(EMTFHit& conv_hit) const;
+
   // Aux functions
   int get_zone_code(const EMTFHit& conv_hit, int th) const;
 

@@ -3,14 +3,15 @@
 
 #include "DataFormats/CSCDigi/interface/CSCCorrelatedLCTDigi.h"
 #include "DataFormats/CSCDigi/interface/CSCCorrelatedLCTDigiCollection.h"
+#include "DataFormats/CSCDigi/interface/CSCComparatorDigi.h"
+#include "DataFormats/CSCDigi/interface/CSCComparatorDigiCollection.h"
 #include "DataFormats/RPCDigi/interface/RPCDigi.h"
 #include "DataFormats/RPCDigi/interface/RPCDigiCollection.h"
 #include "DataFormats/L1TMuon/interface/CPPFDigi.h"
 #include "DataFormats/GEMDigi/interface/GEMPadDigi.h"
 #include "DataFormats/GEMDigi/interface/GEMPadDigiCollection.h"
-#include "DataFormats/GEMDigi/interface/ME0PadDigi.h"
-#include "DataFormats/GEMDigi/interface/ME0PadDigiCollection.h"
-#include "DataFormats/L1TrackTrigger/interface/TTTypes.h"
+#include "DataFormats/GEMRecHit/interface/ME0Segment.h"
+#include "DataFormats/GEMRecHit/interface/ME0SegmentCollection.h"
 
 
 namespace emtf {
@@ -18,6 +19,8 @@ namespace emtf {
   struct CSCTag {
     typedef CSCCorrelatedLCTDigi           digi_type;
     typedef CSCCorrelatedLCTDigiCollection digi_collection;
+    typedef CSCComparatorDigi              comparator_digi_type;
+    typedef CSCComparatorDigiCollection    comparator_digi_collection;
   };
 
   struct RPCTag {
@@ -41,14 +44,8 @@ namespace emtf {
   };
 
   struct ME0Tag {
-    typedef ME0PadDigi           digi_type;
-    typedef ME0PadDigiCollection digi_collection;
-  };
-
-  struct TTTag {
-    typedef Ref_Phase2TrackerDigi_            digi_ref;
-    typedef TTStub<digi_ref>                  digi_type;
-    typedef edmNew::DetSetVector<digi_type>   digi_collection;
+    typedef ME0Segment           digi_type;
+    typedef ME0SegmentCollection digi_collection;
   };
 
 }  //  namespace emtf
