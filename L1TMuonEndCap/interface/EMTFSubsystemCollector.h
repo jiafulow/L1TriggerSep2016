@@ -17,6 +17,7 @@ public:
   template<typename T>
   void extractPrimitives(
     T tag,
+    const GeometryTranslator* tp_geom,
     const edm::Event& iEvent,
     const edm::EDGetToken& token,
     TriggerPrimitiveCollection& out

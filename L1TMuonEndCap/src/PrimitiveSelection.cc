@@ -4,8 +4,8 @@
 #include "DataFormats/MuonDetId/interface/CSCDetId.h"
 #include "DataFormats/MuonDetId/interface/RPCDetId.h"
 #include "DataFormats/MuonDetId/interface/GEMDetId.h"
-#include "L1Trigger/L1TMuonEndCap/interface/EMTFGEMDetId.h"
-#include "L1Trigger/L1TMuonEndCap/interface/EMTFGEMDetIdImpl.h"
+#include "DataFormats/MuonDetId/interface/ME0DetId.h"
+#include "L1Trigger/L1TMuonEndCap/interface/TrackTools.h"
 
 
 #include "helper.h"  // merge_map_into_map, assert_no_abort
@@ -13,9 +13,8 @@
 #define NUM_CSC_CHAMBERS 6*9   // 18 in ME1; 9x3 in ME2,3,4; 9 from neighbor sector.
                                // Arranged in FW as 6 stations, 9 chambers per station.
 #define NUM_RPC_CHAMBERS 7*8   // 6x2 in RE1,2; 12x2 in RE3,4; 6 from neighbor sector.
-                               // Arranged in FW as 7 stations, 6 chambers per station. (8 with iRPC)
-#define NUM_GEM_CHAMBERS 6*9   // 6 in GE1/1; 3 in GE2/1; 2 from neighbor sector.
-                               // Arranged in FW as 6 stations, 9 chambers per station, mimicking CSC. (unconfirmed!)
+                               // Arranged in FW as 7 subsectors, 6 chambers per station. (8 chambers with iRPC)
+#define NUM_GEM_CHAMBERS 15    // 6 in GE1/1; 3 in GE2/1; 3 in ME0; 3 from neighbor sector.
 
 
 void PrimitiveSelection::configure(
@@ -155,7 +154,7 @@ void PrimitiveSelection::process(
   TriggerPrimitiveCollection::const_iterator tp_end = muon_primitives.end();
 
   for (; tp_it != tp_end; ++tp_it) {
-    int selected_rpc = select_rpc(*tp_it);  // Returns RPC "link" index (0 - 41)
+    int selected_rpc = select_rpc(*tp_it);  // Returns RPC "link" index
 
     if (selected_rpc >= 0) {
       assert(selected_rpc < NUM_RPC_CHAMBERS);
@@ -171,6 +170,7 @@ void PrimitiveSelection::process(
   // there are 1 large cluster and 2 small clusters, it is possible that
   // one of the two small clusters is discarded first, and the large cluster
   // then is removed by the cluster size cut, leaving only one cluster.
+  // Note: this needs to be modified for Phase 2 with additional iRPC chambers.
   bool apply_truncation = true;
   if (apply_truncation) {
     struct {
@@ -312,7 +312,7 @@ void PrimitiveSelection::process(
   TriggerPrimitiveCollection::const_iterator tp_end = muon_primitives.end();
 
   for (; tp_it != tp_end; ++tp_it) {
-    int selected_gem = select_gem(*tp_it);  // Returns GEM "link" index (0 - 53)
+    int selected_gem = select_gem(*tp_it);  // Returns GEM "link" index
 
     if (selected_gem >= 0) {
       assert(selected_gem < NUM_GEM_CHAMBERS);
@@ -353,6 +353,28 @@ void PrimitiveSelection::process(
 
 
 // _____________________________________________________________________________
+// Specialized process() for ME0
+template<>
+void PrimitiveSelection::process(
+    ME0Tag tag,
+    const TriggerPrimitiveCollection& muon_primitives,
+    std::map<int, TriggerPrimitiveCollection>& selected_me0_map
+) const {
+  TriggerPrimitiveCollection::const_iterator tp_it  = muon_primitives.begin();
+  TriggerPrimitiveCollection::const_iterator tp_end = muon_primitives.end();
+
+  for (; tp_it != tp_end; ++tp_it) {
+    int selected_me0 = select_me0(*tp_it);  // Returns ME0 "link" index
+
+    if (selected_me0 >= 0) {
+      assert(selected_me0 < NUM_GEM_CHAMBERS);
+      selected_me0_map[selected_me0].push_back(*tp_it);
+    }
+  }
+}
+
+
+// _____________________________________________________________________________
 // Put the hits from CSC, RPC, GEM together in one collection
 
 // Notes from Alex (2017-03-28):
@@ -376,6 +398,7 @@ void PrimitiveSelection::merge(
     const std::map<int, TriggerPrimitiveCollection>& selected_csc_map,
     const std::map<int, TriggerPrimitiveCollection>& selected_rpc_map,
     const std::map<int, TriggerPrimitiveCollection>& selected_gem_map,
+    const std::map<int, TriggerPrimitiveCollection>& selected_me0_map,
     std::map<int, TriggerPrimitiveCollection>& selected_prim_map
 ) const {
   // First, put CSC hits
@@ -391,25 +414,8 @@ void PrimitiveSelection::merge(
     selected_prim_map[selected_csc] = csc_primitives;
   }
 
-  // Second, insert GEM stubs if there is no CSC hits
-  map_tp_it  = selected_gem_map.begin();
-  map_tp_end = selected_gem_map.end();
-
-  for (; map_tp_it != map_tp_end; ++map_tp_it) {
-    int selected_gem = map_tp_it->first;
-    const TriggerPrimitiveCollection& gem_primitives = map_tp_it->second;
-    if (gem_primitives.empty())  continue;
-    assert(gem_primitives.size() <= 8);  // at most 8 hits
-
-    bool found = (selected_prim_map.find(selected_gem) != selected_prim_map.end());
-    if (!found) {
-      // No CSC hits, insert all GEM hits
-      selected_prim_map[selected_gem] = gem_primitives;
-
-    } else {
-      // Do nothing
-    }
-  }
+  // Second, insert GEM/ME0 hits ...
+  //FIXME: implement this
 
   // Third, insert RPC stubs if there is no CSC/GEM hits
   map_tp_it  = selected_rpc_map.begin();
@@ -452,6 +458,7 @@ void PrimitiveSelection::merge_no_truncate(
     const std::map<int, TriggerPrimitiveCollection>& selected_csc_map,
     const std::map<int, TriggerPrimitiveCollection>& selected_rpc_map,
     const std::map<int, TriggerPrimitiveCollection>& selected_gem_map,
+    const std::map<int, TriggerPrimitiveCollection>& selected_me0_map,
     std::map<int, TriggerPrimitiveCollection>& selected_prim_map
 ) const {
   // First, put CSC hits
@@ -460,7 +467,10 @@ void PrimitiveSelection::merge_no_truncate(
   // Second, insert GEM hits
   merge_map_into_map(selected_gem_map, selected_prim_map);
 
-  // Third, insert RPC hits
+  // Third, insert ME0 hits
+  merge_map_into_map(selected_me0_map, selected_prim_map);
+
+  // Fourth, insert RPC hits
   merge_map_into_map(selected_rpc_map, selected_prim_map);
 }
 
@@ -483,26 +493,41 @@ int PrimitiveSelection::select_csc(const TriggerPrimitive& muon_primitive) const
     int tp_bx        = tp_data.bx;
     int tp_csc_ID    = tp_data.cscID;
 
-    assert_no_abort(emtf::MIN_ENDCAP <= tp_endcap && tp_endcap <= emtf::MAX_ENDCAP);
-    assert_no_abort(emtf::MIN_TRIGSECTOR <= tp_sector && tp_sector <= emtf::MAX_TRIGSECTOR);
-    assert_no_abort(1 <= tp_station && tp_station <= 4);
-    assert_no_abort(1 <= tp_csc_ID && tp_csc_ID <= 9);
-    assert_no_abort(tp_data.strip < 160);
-    //assert_no_abort(tp_data.keywire < 112);
-    assert_no_abort(tp_data.keywire < 128);
-    assert_no_abort(tp_data.valid == true);
-    assert_no_abort(tp_data.pattern <= 10);
-    assert_no_abort(tp_data.quality > 0);
-
-
-    // Check using ME1/1a --> ring 4 convention
-    if (tp_station == 1 && tp_ring == 1) {
-      assert(tp_data.strip < 128);
-      assert(1 <= tp_csc_ID && tp_csc_ID <= 3);
+    int max_strip = 0;  // halfstrip
+    int max_wire  = 0;  // wiregroup
+    if        (tp_station == 1 && tp_ring == 4) { // ME1/1a
+      max_strip =  96;
+      max_wire  =  48;
+    } else if (tp_station == 1 && tp_ring == 1) { // ME1/1b
+      max_strip = 128;
+      max_wire  =  48;
+    } else if (tp_station == 1 && tp_ring == 2) { // ME1/2
+      max_strip = 160;
+      max_wire  =  64;
+    } else if (tp_station == 1 && tp_ring == 3) { // ME1/3
+      max_strip = 128;
+      max_wire  =  32;
+    } else if (tp_station == 2 && tp_ring == 1) { // ME2/1
+      max_strip = 160;
+      max_wire  = 112;
+    } else if (tp_station >= 3 && tp_ring == 1) { // ME3/1, ME4/1
+      max_strip = 160;
+      max_wire  =  96;
+    } else if (tp_station >= 2 && tp_ring == 2) { // ME2/2, ME3/2, ME4/2
+      max_strip = 160;
+      max_wire  =  64;
     }
-    if (tp_station == 1 && tp_ring == 4) {
-      assert(tp_data.strip < 128);
-      assert(1 <= tp_csc_ID && tp_csc_ID <= 3);
+
+    if (endcap_ == 1 && sector_ == 1 && bx_ == -3) {  // do assertion checks only once
+      assert_no_abort(emtf::MIN_ENDCAP <= tp_endcap && tp_endcap <= emtf::MAX_ENDCAP);
+      assert_no_abort(emtf::MIN_TRIGSECTOR <= tp_sector && tp_sector <= emtf::MAX_TRIGSECTOR);
+      assert_no_abort(1 <= tp_station && tp_station <= 4);
+      assert_no_abort(1 <= tp_csc_ID && tp_csc_ID <= 9);
+      assert_no_abort(tp_data.strip < max_strip);
+      assert_no_abort(tp_data.keywire < max_wire);
+      assert_no_abort(tp_data.valid == true);
+      assert_no_abort(tp_data.pattern <= 10);
+      assert_no_abort(tp_data.quality > 0);
     }
 
     // station 1 --> subsector 1 or 2
@@ -562,9 +587,9 @@ int PrimitiveSelection::get_index_csc(int tp_subsector, int tp_station, int tp_c
     }
 
   } else {
-    if (tp_station == 1) {  // ME1: 45 - 47
+    if (tp_station == 1) {  // ME1n: 45 - 47
       selected = (5) * 9 + (tp_csc_ID-1)/3;
-    } else {                // ME2,3,4: 48 - 53
+    } else {                // ME2n,3n,4n: 48 - 53
       selected = (5) * 9 + (tp_station) * 2 - 1 + (tp_csc_ID-1 < 3 ? 0 : 1);
     }
   }
@@ -595,17 +620,18 @@ int PrimitiveSelection::select_rpc(const TriggerPrimitive& muon_primitive) const
 
     const bool is_irpc = (tp_station == 3 || tp_station == 4) && (tp_ring == 1);
 
-    assert_no_abort(tp_region != 0);
-    assert_no_abort(emtf::MIN_ENDCAP <= tp_endcap && tp_endcap <= emtf::MAX_ENDCAP);
-    assert_no_abort(emtf::MIN_TRIGSECTOR <= tp_sector && tp_sector <= emtf::MAX_TRIGSECTOR);
-    assert_no_abort(1 <= tp_subsector && tp_subsector <= 6);
-    assert_no_abort(1 <= tp_station && tp_station <= 4);
-    assert_no_abort((!is_irpc && 2 <= tp_ring && tp_ring <= 3) || (is_irpc && 1 <= tp_ring && tp_ring <= 3));
-    assert_no_abort((!is_irpc && 1 <= tp_roll && tp_roll <= 3) || (is_irpc && 1 <= tp_roll && tp_roll <= 5));
-    assert_no_abort((!is_irpc && 1 <= tp_strip && tp_strip <= 32) || (is_irpc && 1 <= tp_strip && tp_strip <= 192));
-    assert_no_abort(tp_station > 2 || tp_ring != 3);  // stations 1 and 2 do not receive RPCs from ring 3
-    assert_no_abort(tp_data.valid == true);
-
+    if (endcap_ == 1 && sector_ == 1 && bx_ == -3) {  // do assertion checks only once
+      assert_no_abort(tp_region != 0);
+      assert_no_abort(emtf::MIN_ENDCAP <= tp_endcap && tp_endcap <= emtf::MAX_ENDCAP);
+      assert_no_abort(emtf::MIN_TRIGSECTOR <= tp_sector && tp_sector <= emtf::MAX_TRIGSECTOR);
+      assert_no_abort(1 <= tp_subsector && tp_subsector <= 6);
+      assert_no_abort(1 <= tp_station && tp_station <= 4);
+      assert_no_abort((!is_irpc && 2 <= tp_ring && tp_ring <= 3) || (is_irpc && tp_ring == 1));
+      assert_no_abort((!is_irpc && 1 <= tp_roll && tp_roll <= 3) || (is_irpc && 1 <= tp_roll && tp_roll <= 5));
+      assert_no_abort((!is_irpc && 1 <= tp_strip && tp_strip <= 32) || (is_irpc && 1 <= tp_strip && tp_strip <= 192));
+      assert_no_abort(tp_station > 2 || tp_ring != 3);  // stations 1 and 2 do not receive RPCs from ring 3
+      assert_no_abort(tp_data.valid == true);
+    }
 
     // Selection
     if (is_in_bx_rpc(tp_bx)) {
@@ -620,8 +646,10 @@ int PrimitiveSelection::select_rpc(const TriggerPrimitive& muon_primitive) const
 }
 
 bool PrimitiveSelection::is_in_sector_rpc(int tp_endcap, int tp_station, int tp_ring, int tp_sector, int tp_subsector) const {
-  // RPC sector X, subsectors 1-2 corresponds to CSC sector X-1
-  // RPC sector X, subsectors 3-6 corresponds to CSC sector X
+  // RPC sector X, subsectors 1-2 correspond to CSC sector X-1
+  // RPC sector X, subsectors 3-6 correspond to CSC sector X
+  // iRPC sector X, subsectors 1   correspond to CSC sector X-1
+  // iRPC sector X, subsectors 2-3 correspind to CSC sector X
   auto get_csc_sector = [](int tp_station, int tp_ring, int tp_sector, int tp_subsector) {
     const bool is_irpc = (tp_station == 3 || tp_station == 4) && (tp_ring == 1);
     if (is_irpc) {
@@ -638,7 +666,7 @@ bool PrimitiveSelection::is_in_sector_rpc(int tp_endcap, int tp_station, int tp_
 }
 
 bool PrimitiveSelection::is_in_neighbor_sector_rpc(int tp_endcap, int tp_station, int tp_ring, int tp_sector, int tp_subsector) const {
-  auto get_csc_neighbor_subsector = [](int tp_station, int tp_ring) {
+  auto get_neighbor_subsector = [](int tp_station, int tp_ring) {
     const bool is_irpc = (tp_station == 3 || tp_station == 4) && (tp_ring == 1);
     if (is_irpc) {
       // 20 degree chamber
@@ -648,7 +676,7 @@ bool PrimitiveSelection::is_in_neighbor_sector_rpc(int tp_endcap, int tp_station
       return 2;
     }
   };
-  return (includeNeighbor_ && (endcap_ == tp_endcap) && (sector_ == tp_sector) && (tp_subsector == get_csc_neighbor_subsector(tp_station, tp_ring)));
+  return (includeNeighbor_ && (endcap_ == tp_endcap) && (sector_ == tp_sector) && (tp_subsector == get_neighbor_subsector(tp_station, tp_ring)));
 }
 
 bool PrimitiveSelection::is_in_bx_rpc(int tp_bx) const {
@@ -708,12 +736,16 @@ int PrimitiveSelection::get_index_rpc(int tp_station, int tp_ring, int tp_subsec
 
 // _____________________________________________________________________________
 // GEM functions
+//
+// According to what I know at the moment
+// - GE1/1: 10 degree chamber, 8 rolls, 394 strips = 192 pads
+// - GE2/1: 20 degree chamber, 8 rolls, 768 strips = 384 pads
 int PrimitiveSelection::select_gem(const TriggerPrimitive& muon_primitive) const {
   int selected = -1;
 
   if (muon_primitive.subsystem() == TriggerPrimitive::kGEM) {
-    const EMTFGEMDetId& tp_detId = emtf::construct_EMTFGEMDetId(muon_primitive);
-    const GEMData&      tp_data  = muon_primitive.getGEMData();
+    const GEMDetId& tp_detId = muon_primitive.detId<GEMDetId>();
+    const GEMData&  tp_data  = muon_primitive.getGEMData();
 
     int tp_region    = tp_detId.region();     // 0 for Barrel, +/-1 for +/- Endcap
     int tp_endcap    = (tp_region == -1) ? 2 : tp_region;
@@ -724,76 +756,27 @@ int PrimitiveSelection::select_gem(const TriggerPrimitive& muon_primitive) const
     int tp_chamber   = tp_detId.chamber();
 
     int tp_bx        = tp_data.bx;
-    int tp_pad       = tp_data.pad;
+    int tp_pad       = ((tp_data.pad_low + tp_data.pad_hi) / 2);
 
-    const bool is_me0 = tp_data.isME0;
-
-    // Use CSC trigger sector definitions
-    // Code copied from DataFormats/MuonDetId/src/CSCDetId.cc
-    auto get_trigger_sector = [](int ring, int station, int chamber) {
-      int result = 0;
-      if( station > 1 && ring > 1 ) {
-        result = ((static_cast<unsigned>(chamber-3) & 0x7f) / 6) + 1; // ch 3-8->1, 9-14->2, ... 1,2 -> 6
-      }
-      else if( station == 1 && ring != 4 ) {
-        result = ((static_cast<unsigned>(chamber-3) & 0x7f) / 6) + 1; // ch 3-8->1, 9-14->2, ... 1,2 -> 6
-      }
-      else {
-        result = ((static_cast<unsigned>(chamber-2) & 0x1f) / 3) + 1; // ch 2-4-> 1, 5-7->2, ...
-      }
-      return (result <= 6) ? result : 6; // max sector is 6, some calculations give a value greater than six but this is expected.
-    };
-
-    // Use CSC trigger "CSC ID" definitions
-    // Code copied from DataFormats/MuonDetId/src/CSCDetId.cc
-    auto get_trigger_csc_ID = [](int ring, int station, int chamber) {
-      int result = 0;
-      if( station == 1 ) {
-        result = (chamber) % 3 + 1; // 1,2,3
-        switch (ring) {
-        case 1:
-          break;
-        case 2:
-          result += 3; // 4,5,6
-          break;
-        case 3:
-          result += 6; // 7,8,9
-          break;
-        case 4:  // ME0
-          result = (chamber+1) % 3 + 1; // 1,2,3
-          break;
-        }
-      }
-      else {
-        if( ring == 1 ) {
-          result = (chamber+1) % 3 + 1; // 1,2,3
-        }
-        else {
-          result = (chamber+3) % 6 + 4; // 4,5,6,7,8,9
-        }
-      }
-      return result;
-    };
-
-    int tp_sector    = get_trigger_sector(tp_ring, tp_station, tp_chamber);
-    int tp_csc_ID    = get_trigger_csc_ID(tp_ring, tp_station, tp_chamber);
+    int tp_sector    = emtf::get_trigger_sector(tp_ring, tp_station, tp_chamber);
+    int tp_csc_ID    = emtf::get_trigger_csc_ID(tp_ring, tp_station, tp_chamber);
 
     // station 1 --> subsector 1 or 2
     // station 2,3,4 --> subsector 0
     int tp_subsector = (tp_station != 1) ? 0 : ((tp_chamber%6 > 2) ? 1 : 2);
-    if (is_me0)  tp_subsector = 2;
 
-    assert_no_abort(emtf::MIN_ENDCAP <= tp_endcap && tp_endcap <= emtf::MAX_ENDCAP);
-    assert_no_abort(emtf::MIN_TRIGSECTOR <= tp_sector && tp_sector <= emtf::MAX_TRIGSECTOR);
-    assert_no_abort(1 <= tp_station && tp_station <= 2);
-    assert_no_abort(tp_ring == 1 || tp_ring == 4);
-    assert_no_abort(1 <= tp_roll && tp_roll <= 8);
-    assert_no_abort((!is_me0 && 1 <= tp_layer && tp_layer <= 2) || (is_me0 && 1 <= tp_layer && tp_layer <= 6));
-    assert_no_abort(1 <= tp_csc_ID && tp_csc_ID <= 9);
-    //assert_no_abort(tp_data.pad < 192);
-    assert_no_abort((tp_station == 1 && 1 <= tp_pad && tp_pad <= 192) || (tp_station != 1));
-    assert_no_abort((tp_station == 2 && 1 <= tp_pad && tp_pad <= 384) || (tp_station != 2));
-
+    if (endcap_ == 1 && sector_ == 1 && bx_ == -3) {  // do assertion checks only once
+      assert_no_abort(tp_region != 0);
+      assert_no_abort(emtf::MIN_ENDCAP <= tp_endcap && tp_endcap <= emtf::MAX_ENDCAP);
+      assert_no_abort(emtf::MIN_TRIGSECTOR <= tp_sector && tp_sector <= emtf::MAX_TRIGSECTOR);
+      assert_no_abort(1 <= tp_station && tp_station <= 2);
+      assert_no_abort(tp_ring == 1);
+      assert_no_abort(1 <= tp_roll && tp_roll <= 8);
+      assert_no_abort(1 <= tp_layer && tp_layer <= 2);
+      assert_no_abort(1 <= tp_csc_ID && tp_csc_ID <= 3);
+      assert_no_abort((tp_station == 1 && 1 <= tp_pad && tp_pad <= 192) || (tp_station != 1));
+      assert_no_abort((tp_station == 2 && 1 <= tp_pad && tp_pad <= 384) || (tp_station != 2));
+    }
 
     // Selection
     if (is_in_bx_gem(tp_bx)) {
@@ -823,6 +806,103 @@ bool PrimitiveSelection::is_in_bx_gem(int tp_bx) const {
 }
 
 int PrimitiveSelection::get_index_gem(int tp_subsector, int tp_station, int tp_csc_ID, bool is_neighbor) const {
+  int selected = -1;
+
+  if (!is_neighbor) {
+    if (tp_station == 1) {  // GE1/1: 0 - 5
+      selected = (tp_subsector-1) * 3 + (tp_csc_ID-1);
+    } else {  // GE2/1: 6 - 8
+      selected = 6 + (tp_csc_ID-1);
+    }
+
+  } else {
+    if (tp_station == 1) {  // GE1/1n: 12
+      selected = 12;
+    } else {  // GE2/1n: 13
+      selected = 13;
+    }
+  }
+  return selected;
+}
+
+
+// _____________________________________________________________________________
+// ME0 functions
+//
+// According to what I know at the moment
+// - ME0: 20 degree chamber, 8 rolls, 394 strips = 192 pads
+int PrimitiveSelection::select_me0(const TriggerPrimitive& muon_primitive) const {
+  int selected = -1;
+
+  if (muon_primitive.subsystem() == TriggerPrimitive::kME0) {
+    const ME0DetId& tp_detId = muon_primitive.detId<ME0DetId>();
+    const ME0Data&  tp_data  = muon_primitive.getME0Data();
+
+    int tp_region    = tp_detId.region();     // 0 for Barrel, +/-1 for +/- Endcap
+    int tp_endcap    = (tp_region == -1) ? 2 : tp_region;
+    int tp_station   = tp_detId.station();
+    int tp_ring      = 1;  // tp_detId.ring() does not exist
+    int tp_roll      = tp_detId.roll();
+    //int tp_layer     = tp_detId.layer();
+    int tp_chamber   = tp_detId.chamber();
+
+    int tp_bx        = tp_data.bx;
+    int tp_pad       = tp_data.pad;
+
+    // The ME0 geometry is similar to ME2/1, so I use tp_station = 2, tp_ring = 1
+    // when calling get_trigger_sector() and get_trigger_csc_ID()
+    // (Yes, I know!)
+    int tp_sector    = emtf::get_trigger_sector(1, 2, tp_chamber);
+    int tp_csc_ID    = emtf::get_trigger_csc_ID(1, 2, tp_chamber);
+    int tp_subsector = 0;
+
+    if (endcap_ == 1 && sector_ == 1 && bx_ == -3) {  // do assertion checks only once
+      assert_no_abort(tp_region != 0);
+      assert_no_abort(emtf::MIN_ENDCAP <= tp_endcap && tp_endcap <= emtf::MAX_ENDCAP);
+      assert_no_abort(emtf::MIN_TRIGSECTOR <= tp_sector && tp_sector <= emtf::MAX_TRIGSECTOR);
+      assert_no_abort(tp_station == 1);
+      assert_no_abort(tp_ring == 1);
+      assert_no_abort(1 <= tp_roll && tp_roll <= 8);
+      //assert_no_abort(1 <= tp_layer && tp_layer <= 6);  // it is currently not set
+      assert_no_abort(1 <= tp_csc_ID && tp_csc_ID <= 3);
+      assert_no_abort(1 <= tp_pad && tp_pad <= 192);
+    }
+
+    // Selection
+    if (is_in_bx_me0(tp_bx)) {
+      if (is_in_sector_me0(tp_endcap, tp_sector)) {
+        selected = get_index_me0(tp_subsector, tp_station, tp_csc_ID, false);
+      } else if (is_in_neighbor_sector_me0(tp_endcap, tp_sector, tp_subsector, tp_station, tp_csc_ID)) {
+        selected = get_index_me0(tp_subsector, tp_station, tp_csc_ID, true);
+      }
+    }
+  }
+  return selected;
+}
+
+bool PrimitiveSelection::is_in_sector_me0(int tp_endcap, int tp_sector) const {
   // Identical to the corresponding CSC function
-  return get_index_csc(tp_subsector, tp_station, tp_csc_ID, is_neighbor);
+  return is_in_sector_csc(tp_endcap, tp_sector);
+}
+
+bool PrimitiveSelection::is_in_neighbor_sector_me0(int tp_endcap, int tp_sector, int tp_subsector, int tp_station, int tp_csc_ID) const {
+  // Identical to the corresponding CSC function
+  // (Note: use tp_station = 2)
+  return is_in_neighbor_sector_csc(tp_endcap, tp_sector, tp_subsector, 2, tp_csc_ID);
+}
+
+bool PrimitiveSelection::is_in_bx_me0(int tp_bx) const {
+  tp_bx += bxShiftGEM_;
+  return (bx_ == tp_bx);
+}
+
+int PrimitiveSelection::get_index_me0(int tp_subsector, int tp_station, int tp_csc_ID, bool is_neighbor) const {
+  int selected = -1;
+
+  if (!is_neighbor) {  // ME0: 9 - 11
+    selected = 9 + (tp_csc_ID-1);
+  } else {  // ME0n: 14
+    selected = 14;
+  }
+  return selected;
 }

@@ -8,7 +8,6 @@
 
 TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollector&& iConsumes) :
     geometry_translator_(),
-    ttgeometry_translator_(),
     condition_helper_(),
     sector_processor_lut_(),
     pt_assign_engine_(),
@@ -19,14 +18,12 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
     tokenGEM_(iConsumes.consumes<GEMTag::digi_collection>(iConfig.getParameter<edm::InputTag>("GEMInput"))),
     tokenIRPC_(iConsumes.consumes<IRPCTag::digi_collection>(iConfig.getParameter<edm::InputTag>("IRPCInput"))),
     tokenME0_(iConsumes.consumes<ME0Tag::digi_collection>(iConfig.getParameter<edm::InputTag>("ME0Input"))),
-    tokenTT_(iConsumes.consumes<TTTag::digi_collection>(iConfig.getParameter<edm::InputTag>("TTInput"))),
     verbose_(iConfig.getUntrackedParameter<int>("verbosity")),
     useCSC_(iConfig.getParameter<bool>("CSCEnable")),
     useRPC_(iConfig.getParameter<bool>("RPCEnable")),
     useGEM_(iConfig.getParameter<bool>("GEMEnable")),
     useIRPC_(iConfig.getParameter<bool>("IRPCEnable")),
     useME0_(iConfig.getParameter<bool>("ME0Enable")),
-    useTT_(iConfig.getParameter<bool>("TTEnable")),
     era_(iConfig.getParameter<std::string>("Era"))
 {
 
@@ -89,7 +86,6 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
 
       sector_processors_.at(es).configure(
           &geometry_translator_,
-          &ttgeometry_translator_,
           &condition_helper_,
           &sector_processor_lut_,
           pt_assign_engine_.get(),
@@ -128,9 +124,6 @@ void TrackFinder::process(
 
   // Get the geometry for TP conversions
   geometry_translator_.checkAndUpdateGeometry(iSetup);
-#ifdef PHASE_TWO_TRIGGER
-  ttgeometry_translator_.checkAndUpdateGeometry(iSetup);
-#endif
 
   // Get the conditions, primarily the firmware version and the BDT forests
   condition_helper_.checkAndUpdateConditions(iEvent, iSetup);
@@ -139,21 +132,18 @@ void TrackFinder::process(
   // Extract all trigger primitives
 
   TriggerPrimitiveCollection muon_primitives;
-  TTTriggerPrimitiveCollection ttmuon_primitives;
 
   EMTFSubsystemCollector collector;
   if (useCSC_)
-    collector.extractPrimitives(CSCTag(), iEvent, tokenCSC_, muon_primitives);
+    collector.extractPrimitives(CSCTag(), &geometry_translator_, iEvent, tokenCSC_, muon_primitives);
   if (useRPC_)
-    collector.extractPrimitives(RPCTag(), iEvent, tokenRPC_, muon_primitives);
+    collector.extractPrimitives(RPCTag(), &geometry_translator_, iEvent, tokenRPC_, muon_primitives);
   if (useGEM_)
-    collector.extractPrimitives(GEMTag(), iEvent, tokenGEM_, muon_primitives);
+    collector.extractPrimitives(GEMTag(), &geometry_translator_, iEvent, tokenGEM_, muon_primitives);
   if (useIRPC_)
-    collector.extractPrimitives(IRPCTag(), iEvent, tokenIRPC_, muon_primitives);
+    collector.extractPrimitives(IRPCTag(), &geometry_translator_, iEvent, tokenIRPC_, muon_primitives);
   if (useME0_)
-    collector.extractPrimitives(ME0Tag(), iEvent, tokenME0_, muon_primitives);
-  if (useTT_)
-    collector.extractTTPrimitives(TTTag(), iEvent, tokenTT_, ttmuon_primitives);
+    collector.extractPrimitives(ME0Tag(), &geometry_translator_, iEvent, tokenME0_, muon_primitives);
 
 
   // Check trigger primitives
@@ -187,7 +177,6 @@ void TrackFinder::process(
       sector_processors_.at(es).process(
           iEvent.id().event(),
           muon_primitives,
-          ttmuon_primitives,
           out_hits,
           out_tracks
       );

@@ -10,6 +10,7 @@
 template<>
 void EMTFSubsystemCollector::extractPrimitives(
     CSCTag tag, // Defined in interface/EMTFSubsystemTag.h, maps to CSCCorrelatedLCTDigi
+    const GeometryTranslator* tp_geom,
     const edm::Event& iEvent,
     const edm::EDGetToken& token,
     TriggerPrimitiveCollection& out
@@ -34,6 +35,7 @@ void EMTFSubsystemCollector::extractPrimitives(
 template<>
 void EMTFSubsystemCollector::extractPrimitives(
     RPCTag tag, // Defined in interface/EMTFSubsystemTag.h, maps to RPCDigi
+    const GeometryTranslator* tp_geom,
     const edm::Event& iEvent,
     const edm::EDGetToken& token,
     TriggerPrimitiveCollection& out
@@ -71,6 +73,7 @@ void EMTFSubsystemCollector::extractPrimitives(
 template<>
 void EMTFSubsystemCollector::extractPrimitives(
     GEMTag tag, // Defined in interface/EMTFSubsystemTag.h, maps to GEMPadDigi
+    const GeometryTranslator* tp_geom,
     const edm::Event& iEvent,
     const edm::EDGetToken& token,
     TriggerPrimitiveCollection& out
@@ -106,6 +109,7 @@ void EMTFSubsystemCollector::extractPrimitives(
 template<>
 void EMTFSubsystemCollector::extractPrimitives(
     IRPCTag tag, // Defined in interface/EMTFSubsystemTag.h, maps to RPCDigi
+    const GeometryTranslator* tp_geom,
     const edm::Event& iEvent,
     const edm::EDGetToken& token,
     TriggerPrimitiveCollection& out
@@ -142,6 +146,7 @@ void EMTFSubsystemCollector::extractPrimitives(
 template<>
 void EMTFSubsystemCollector::extractPrimitives(
     ME0Tag tag, // Defined in interface/EMTFSubsystemTag.h, maps to ME0Segment
+    const GeometryTranslator* tp_geom,
     const edm::Event& iEvent,
     const edm::EDGetToken& token,
     TriggerPrimitiveCollection& out
@@ -152,7 +157,10 @@ void EMTFSubsystemCollector::extractPrimitives(
   auto segment = me0Digis->begin();
   auto segend  = me0Digis->end();
   for( ; segment != segend; ++segment ) {
-    out.emplace_back((*segment).me0DetId(),*segment);
+    //out.emplace_back((*segment).me0DetId(), *segment, tp_geom->getME0Geometry());  // does not work because me0DetId is missing the eta partition number
+
+    assert((*segment).specificRecHits().size() > 0);  // must contain at least 1 rechit
+    out.emplace_back((*segment).specificRecHits().front().me0Id(), *segment, tp_geom->getME0Geometry());
   }
   return;
 }

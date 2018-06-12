@@ -11,7 +11,6 @@ SectorProcessor::~SectorProcessor() {
 
 void SectorProcessor::configure(
     const GeometryTranslator* tp_geom,
-    const TTGeometryTranslator* tp_ttgeom,
     const ConditionHelper* cond,
     const SectorProcessorLUT* lut,
     PtAssignmentEngine* pt_assign_engine,
@@ -29,13 +28,11 @@ void SectorProcessor::configure(
   assert(emtf::MIN_TRIGSECTOR <= sector && sector <= emtf::MAX_TRIGSECTOR);
 
   assert(tp_geom != nullptr);
-  assert(tp_ttgeom != nullptr);
   assert(cond != nullptr);
   assert(lut != nullptr);
   assert(pt_assign_engine != nullptr);
 
   tp_geom_          = tp_geom;
-  tp_ttgeom_        = tp_ttgeom;
   cond_             = cond;
   lut_              = lut;
   pt_assign_engine_ = pt_assign_engine;
@@ -247,7 +244,6 @@ void SectorProcessor::configure_by_fw_version(unsigned fw_version) {
 void SectorProcessor::process(
     EventNumber_t ievent,
     const TriggerPrimitiveCollection& muon_primitives,
-    const TTTriggerPrimitiveCollection& ttmuon_primitives,
     EMTFHitCollection& out_hits,
     EMTFTrackCollection& out_tracks
 ) const {
@@ -279,7 +275,7 @@ void SectorProcessor::process(
 
       }  // end if CSC
     }  // end loop over muon_primitives
-  }
+  }  // end if dump_csc_input
 
   if (dump_rpc_input && endcap_ == 1 && sector_ == 1) {
     TriggerPrimitiveCollection::const_iterator tp_it = muon_primitives.begin();
@@ -295,10 +291,11 @@ void SectorProcessor::process(
           << ", station " << tp_detId.station() << ", ring " << tp_detId.ring()
           << ", subsector_rpc " << tp_detId.subsector() << ", roll " << tp_detId.roll()
           << ", strip " << tp_it->getStrip() << ", strip_low " << tp_data.strip_low << ", strip_hi " << tp_data.strip_hi
+          << ", time " << tp_data.time << ", valid " << tp_data.valid
           << std::endl;
-      }
-    }
-  }
+      }  // end if RPC
+    }  // end loop over muon_primitives
+  }  // end if dump_rpc_input
 
   if (dump_gem_input && endcap_ == 1 && sector_ == 1) {
     TriggerPrimitiveCollection::const_iterator tp_it = muon_primitives.begin();
@@ -306,30 +303,39 @@ void SectorProcessor::process(
     int i = 0;
 
     for (; tp_it != tp_end; ++tp_it) {
-      if (tp_it->subsystem() == TriggerPrimitive::kGEM && tp_it->getGEMData().isME0 == false) {
+      if (tp_it->subsystem() == TriggerPrimitive::kGEM) {
         const GEMDetId& tp_detId = tp_it->detId<GEMDetId>();
         const GEMData&  tp_data  = tp_it->getGEMData();
         std::cout << "GEM #" << i++ << ": BX " << tp_it->getBX()
           << ", endcap " << ((tp_detId.region() == -1) ? 2 : tp_detId.region())
           << ", station " << tp_detId.station() << ", ring " << tp_detId.ring()
-          << ", chamber " << tp_detId.chamber() << ", roll " << tp_detId.roll()
-          << ", strip " << tp_it->getStrip() << ", pad_low " << tp_data.pad_low << ", pad_hi " << tp_data.pad_hi
+          << ", chamber " << tp_detId.chamber() << ", roll " << tp_detId.roll() << ", layer " << tp_detId.layer()
+          << ", pad " << tp_it->getStrip() << ", pad_low " << tp_data.pad_low << ", pad_hi " << tp_data.pad_hi
           << std::endl;
-      }
-    }
-  }
+      }  // end if GEM
+    }  // end loop over muon_primitives
+  }  // end if dump_gem_input
 
   if (dump_me0_input && endcap_ == 1 && sector_ == 1) {
     TriggerPrimitiveCollection::const_iterator tp_it = muon_primitives.begin();
     TriggerPrimitiveCollection::const_iterator tp_end = muon_primitives.end();
+    int i = 0;
 
     for (; tp_it != tp_end; ++tp_it) {
-      if (tp_it->subsystem() == TriggerPrimitive::kGEM && tp_it->getGEMData().isME0 == true) {
+      if (tp_it->subsystem() == TriggerPrimitive::kME0) {
         const ME0DetId& tp_detId = tp_it->detId<ME0DetId>();
-        const GEMData&  tp_data  = tp_it->getGEMData();  //FIXME: create ME0Data
-      }
-    }
-  }
+        const ME0Data&  tp_data  = tp_it->getME0Data();
+        std::cout << "ME0 #" << i++ << ": BX " << tp_it->getBX()
+          << ", endcap " << ((tp_detId.region() == -1) ? 2 : tp_detId.region())
+          << ", station " << 1 << ", ring " << 1
+          << ", chamber " << tp_detId.chamber() << ", roll " << tp_detId.roll() << ", layer " << tp_detId.layer()
+          << ", pad " << tp_data.pad << ", x " << tp_data.x << ", y " << tp_data.y << ", dirx " << tp_data.dirx << ", diry " << tp_data.diry
+          << ", chi2 " << tp_data.chi2 << ", nhits " << tp_data.nhits << ", time " << tp_data.time << ", bend " << tp_data.bend
+          << std::endl;
+      }  // end if ME0
+    }  // end loop over muon_primitives
+  }  // end if dump_me0_input
+
 
   // ___________________________________________________________________________
   // List of converted hits, extended from previous BXs
@@ -355,7 +361,6 @@ void SectorProcessor::process(
     process_single_bx(
         bx,
         muon_primitives,
-        ttmuon_primitives,
         out_hits,
         out_tracks,
         extended_conv_hits,
@@ -372,13 +377,30 @@ void SectorProcessor::process(
     }
   }  // end loop over bx
 
+
+  // ___________________________________________________________________________
+  // Debug
+  bool dump_emtf_hits = true;
+
+  if (dump_emtf_hits && endcap_ == 2 && sector_ == 6) {
+    int i = 0;
+    for (const auto& h : out_hits) {
+      std::cout << "conv_hit #" << i++ << ": BX " << h.BX()
+                << ", endcap " << h.Endcap() << ", sector " << h.PC_sector()
+                << ", station " << h.Station() << ", ring " << h.Ring()
+                << ", chamber " << h.Chamber() << ", roll " << h.Roll()
+                << ", subsector " << h.Subsector() << ", CSC ID " << h.CSC_ID()
+                << ", strip " << h.Strip() << ", wire " << h.Wire() << ", pattern " << h.Pattern() << ", bend " << h.Bend() << ", quality " << h.Quality()
+                << std::endl;
+    }
+  }
+
   return;
 }
 
 void SectorProcessor::process_single_bx(
     int bx,
     const TriggerPrimitiveCollection& muon_primitives,
-    const TTTriggerPrimitiveCollection& ttmuon_primitives,
     EMTFHitCollection& out_hits,
     EMTFTrackCollection& out_tracks,
     std::deque<EMTFHitCollection>& extended_conv_hits,
@@ -405,12 +427,6 @@ void SectorProcessor::process_single_bx(
       zoneBoundaries_, zoneOverlap_,
       duplicateTheta_, fixZonePhi_, useNewZones_, fixME11Edges_,
       bugME11Dupes_
-  );
-
-  TTPrimitiveConversion ttprim_conv;
-  ttprim_conv.configure(
-      tp_ttgeom_, lut_,
-      verbose_, endcap_, sector_, bx
   );
 
   PatternRecognition patt_recog;
@@ -463,6 +479,7 @@ void SectorProcessor::process_single_bx(
   std::map<int, TriggerPrimitiveCollection> selected_csc_map;
   std::map<int, TriggerPrimitiveCollection> selected_rpc_map;
   std::map<int, TriggerPrimitiveCollection> selected_gem_map;
+  std::map<int, TriggerPrimitiveCollection> selected_me0_map;
   std::map<int, TriggerPrimitiveCollection> selected_prim_map;
   std::map<int, TriggerPrimitiveCollection> inclusive_selected_prim_map;
 
@@ -485,7 +502,8 @@ void SectorProcessor::process_single_bx(
   prim_sel.process(CSCTag(), muon_primitives, selected_csc_map);
   prim_sel.process(RPCTag(), muon_primitives, selected_rpc_map);
   prim_sel.process(GEMTag(), muon_primitives, selected_gem_map);
-  prim_sel.merge(selected_csc_map, selected_rpc_map, selected_gem_map, selected_prim_map);
+  prim_sel.process(ME0Tag(), muon_primitives, selected_me0_map);
+  prim_sel.merge(selected_csc_map, selected_rpc_map, selected_gem_map, selected_me0_map, selected_prim_map);
 
   // Convert trigger primitives into "converted" hits
   // A converted hit consists of integer representations of phi, theta, and zones
@@ -507,18 +525,14 @@ void SectorProcessor::process_single_bx(
   {
     // Keep all the converted hits for the use of data-emulator comparisons.
     // They include the extra ones that are not used in track building and the subsequent steps.
-    prim_sel.merge_no_truncate(selected_csc_map, selected_rpc_map, selected_gem_map, inclusive_selected_prim_map);
+    prim_sel.merge_no_truncate(selected_csc_map, selected_rpc_map, selected_gem_map, selected_me0_map, inclusive_selected_prim_map);
     prim_conv.process(inclusive_selected_prim_map, inclusive_conv_hits);
 
     // Clear the input maps to save memory
     selected_csc_map.clear();
     selected_rpc_map.clear();
     selected_gem_map.clear();
-
-#ifdef PHASE_TWO_TRIGGER
-    // Convert tracker trigger primitives into "converted" hits
-    ttprim_conv.process_no_prim_sel(ttmuon_primitives, inclusive_conv_hits);
-#endif
+    selected_me0_map.clear();
   }
 
   // Detect patterns in all zones, find 3 best roads in each zone
