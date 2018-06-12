@@ -44,8 +44,9 @@ class GEMPadDigi;
 class GEMDetId;
 
 // ME0 digi types
-class ME0PadDigi;
+class ME0Segment;
 class ME0DetId;
+class ME0Geometry;
 
 
 namespace L1TMuonEndCap {
@@ -53,21 +54,23 @@ namespace L1TMuonEndCap {
   class TriggerPrimitive {
   public:
     // define the subsystems that we have available
-    enum subsystem_type{kDT,kCSC,kRPC,kGEM,kNSubsystems};
+    enum subsystem_type{kDT,kCSC,kRPC,kGEM,kME0,kNSubsystems};
 
     // define the data we save locally from each subsystem type
     // variables in these structs keep their colloquial meaning
     // within a subsystem
     // for RPCs you have to unroll the digi-link and raw det-id
     struct RPCData {
-      RPCData() : strip(0), strip_low(0), strip_hi(0), layer(0), bx(0), valid(0), time(0.) {}
+      RPCData() : strip(0), strip_low(0), strip_hi(0), layer(0), bx(0), valid(0), x(0.), y(0.), time(0.) {}
       uint16_t strip;
       uint16_t strip_low; // for use in clustering
       uint16_t strip_hi;  // for use in clustering
       uint16_t layer;
       int16_t bx;
       uint16_t valid;
-      double time;  // why double?
+      float x;
+      float y;
+      float time;
     };
 
     struct CSCData {
@@ -116,13 +119,26 @@ namespace L1TMuonEndCap {
     };
 
     struct GEMData {
-      GEMData() : pad(0), pad_low(0), pad_hi(0), bx(0), bend(0), isME0(false) {}
+      GEMData() : pad(0), pad_low(0), pad_hi(0), bx(0), bend(0) {}
       uint16_t pad;
       uint16_t pad_low; // for use in clustering
       uint16_t pad_hi;  // for use in clustering
       int16_t bx;
       int16_t bend;
-      bool isME0;
+    };
+
+    struct ME0Data {
+      ME0Data() : x(0.), y(0.), dirx(0.), diry(0.), chi2(0.), nhits(0), time(0.), bend(0.), bx(0), pad(0) {}
+      float x;
+      float y;
+      float dirx;
+      float diry;
+      float chi2;
+      int   nhits;
+      float time;
+      float bend;
+      int   bx;
+      int   pad;
     };
 
     //Persistency
@@ -153,8 +169,11 @@ namespace L1TMuonEndCap {
     // GEM
     TriggerPrimitive(const GEMDetId& detid,
                      const GEMPadDigi& digi);
+
+    // ME0
     TriggerPrimitive(const ME0DetId& detid,
-                     const ME0PadDigi& digi);
+                     const ME0Segment& digi,
+                     const ME0Geometry& geom);
 
     //copy
     TriggerPrimitive(const TriggerPrimitive&);
@@ -190,16 +209,19 @@ namespace L1TMuonEndCap {
     void setCSCData(const CSCData& csc) { _csc = csc; }
     void setRPCData(const RPCData& rpc) { _rpc = rpc; }
     void setGEMData(const GEMData& gem) { _gem = gem; }
+    void setME0Data(const ME0Data& me0) { _me0 = me0; }
 
     const DTData  getDTData()  const { return _dt;  }
     const CSCData getCSCData() const { return _csc; }
     const RPCData getRPCData() const { return _rpc; }
     const GEMData getGEMData() const { return _gem; }
+    const ME0Data getME0Data() const { return _me0; }
 
     DTData&  accessDTData()  { return _dt; }
     CSCData& accessCSCData() { return _csc; }
     RPCData& accessRPCData() { return _rpc; }
     GEMData& accessGEMData() { return _gem; }
+    ME0Data& accessME0Data() { return _me0; }
 
     // consistent accessors to common information
     const int getBX() const;
@@ -229,6 +251,7 @@ namespace L1TMuonEndCap {
     CSCData _csc;
     RPCData _rpc;
     GEMData _gem;
+    ME0Data _me0;
 
     DetId _id;
 
