@@ -141,7 +141,7 @@ void EMTFSubsystemCollector::extractPrimitives(
 // Specialized for ME0
 template<>
 void EMTFSubsystemCollector::extractPrimitives(
-    ME0Tag tag, // Defined in interface/EMTFSubsystemTag.h, maps to ME0PadDigi
+    ME0Tag tag, // Defined in interface/EMTFSubsystemTag.h, maps to ME0Segment
     const edm::Event& iEvent,
     const edm::EDGetToken& token,
     TriggerPrimitiveCollection& out
@@ -149,38 +149,12 @@ void EMTFSubsystemCollector::extractPrimitives(
   edm::Handle<ME0Tag::digi_collection> me0Digis;
   iEvent.getByToken(token, me0Digis);
 
-  auto chamber = me0Digis->begin();
-  auto chend   = me0Digis->end();
-  for( ; chamber != chend; ++chamber ) {
-    auto digi = (*chamber).second.first;
-    auto dend = (*chamber).second.second;
-    for( ; digi != dend; ++digi ) {
-      out.emplace_back((*chamber).first,*digi);
-    }
+  auto segment = me0Digis->begin();
+  auto segend  = me0Digis->end();
+  for( ; segment != segend; ++segment ) {
+    out.emplace_back((*segment).me0DetId(),*segment);
   }
   return;
-}
-
-// Specialized for TT
-template<>
-void EMTFSubsystemCollector::extractTTPrimitives(
-    TTTag tag, // Defined in interface/EMTFSubsystemTag.h, maps to TTStub<T>
-    const edm::Event& iEvent,
-    const edm::EDGetToken& token,
-    TTTriggerPrimitiveCollection& out
-) const {
-  edm::Handle<TTTag::digi_collection> ttDigis;
-  iEvent.getByToken(token, ttDigis);
-
-  auto chamber = ttDigis->begin();
-  auto chend   = ttDigis->end();
-  for ( ; chamber != chend; ++chamber ) {
-    auto digi = chamber->begin();
-    auto dend = chamber->end();
-    for( ; digi != dend; ++digi ) {
-      out.emplace_back(digi->getDetId(),*digi);
-    }
-  }
 }
 
 

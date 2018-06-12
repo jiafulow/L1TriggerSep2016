@@ -10,7 +10,6 @@ def customise(process):
         process.simEmtfDigis.GEMEnable                   = True
         process.simEmtfDigis.IRPCEnable                  = True
         process.simEmtfDigis.ME0Enable                   = True
-        process.simEmtfDigis.TTEnable                    = False
         process.simEmtfDigis.Era                         = cms.string('Phase2_timing')
         process.simEmtfDigis.spPAParams16.PtLUTVersion   = cms.int32(7)
 

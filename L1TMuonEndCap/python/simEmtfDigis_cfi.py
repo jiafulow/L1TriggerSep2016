@@ -18,7 +18,6 @@ simEmtfDigisMC = cms.EDProducer("L1TMuonEndCapTrackProducer",
     GEMInput = cms.InputTag('simMuonGEMPadDigis'),
     IRPCInput = cms.InputTag('simMuonRPCDigis'),
     ME0Input = cms.InputTag('me0TriggerPseudoDigis'),
-    TTInput = cms.InputTag('TTStubsFromPhase2TrackerDigis','StubAccepted'),
 
     # Run with CSC, RPC, GEM
     CSCEnable = cms.bool(True),
@@ -26,7 +25,6 @@ simEmtfDigisMC = cms.EDProducer("L1TMuonEndCapTrackProducer",
     GEMEnable = cms.bool(False),
     IRPCEnable = cms.bool(False),
     ME0Enable = cms.bool(False),
-    TTEnable = cms.bool(False),
 
     # Era (options: 'Run2_2016', 'Run2_2017')
     Era = cms.string('Run2_2017'),
