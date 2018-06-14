@@ -93,15 +93,21 @@ void EMTFSubsystemCollector::extractPrimitives(
     }
   }
 
-  // Cluster the GEM digis.
-  TriggerPrimitiveCollection copad_muon_primitives;
-  make_copad_gem(muon_primitives, copad_muon_primitives);
-
+  // 1. Cluster GEM pads.
   TriggerPrimitiveCollection clus_muon_primitives;
-  cluster_gem(copad_muon_primitives, clus_muon_primitives);
+  cluster_gem(muon_primitives, clus_muon_primitives);
+
+  // 2. Declusterize GEM pads.
+  //    - Reject clusters with width > 8 pads. Then, for each of the 2 layers, declusterize a maximum of 8 pad clusters.
+  TriggerPrimitiveCollection declus_muon_primitives;
+  declusterize_gem(clus_muon_primitives, declus_muon_primitives);
+
+  // 3. Make GEM copads.
+  TriggerPrimitiveCollection copad_muon_primitives;
+  make_copad_gem(declus_muon_primitives, copad_muon_primitives);
 
   // Output
-  std::copy(clus_muon_primitives.begin(), clus_muon_primitives.end(), std::back_inserter(out));
+  std::copy(copad_muon_primitives.begin(), copad_muon_primitives.end(), std::back_inserter(out));
   return;
 }
 
@@ -157,10 +163,22 @@ void EMTFSubsystemCollector::extractPrimitives(
   auto segment = me0Digis->begin();
   auto segend  = me0Digis->end();
   for( ; segment != segend; ++segment ) {
+    // Debug
+    //std::cout << "segment id: " << segment->me0DetId() << " lp: " << segment->localPosition() << " ld: " << segment->localDirection() << " time: " << segment->time() << " bend: " << segment->deltaPhi() << std::endl;
+    //for (auto rechit = segment->specificRecHits().begin(); rechit != segment->specificRecHits().end(); ++rechit) {
+    //  std::cout << "rechit id: " << rechit->me0Id() << " lp: " << rechit->localPosition() << " err: " << rechit->localPositionError() << " tof: " << rechit->tof() << " pad: " << tp_geom->getME0Geometry().etaPartition(rechit->me0Id())->pad(rechit->localPosition()) << std::endl;
+    //}
+
     //out.emplace_back((*segment).me0DetId(), *segment, tp_geom->getME0Geometry());  // does not work because me0DetId is missing the eta partition number
 
     assert((*segment).specificRecHits().size() > 0);  // must contain at least 1 rechit
-    out.emplace_back((*segment).specificRecHits().front().me0Id(), *segment, tp_geom->getME0Geometry());
+    ME0DetId detid = segment->me0DetId();
+    if (detid.roll() == 0 || detid.layer() == 0) {
+      auto rechit_it = (*segment).specificRecHits().begin();
+      std::advance(rechit_it, (*segment).specificRecHits().size()/2);  // pick the median
+      detid = ME0DetId(rechit_it->me0Id().region(), 3, rechit_it->me0Id().chamber(), rechit_it->me0Id().roll());  // use layer 3 as the key layer
+    }
+    out.emplace_back(detid, *segment, tp_geom->getME0Geometry());
   }
   return;
 }
@@ -229,6 +247,7 @@ void EMTFSubsystemCollector::cluster_rpc(const TriggerPrimitiveCollection& muon_
   // Do clustering using C++ <algorithm> functions
 
   // 1. Select RPC digis
+  clus_muon_primitives.clear();
   std::copy_if(muon_primitives.begin(), muon_primitives.end(), std::back_inserter(clus_muon_primitives), rpc_digi_select);
 
   // 2. Sort
@@ -250,90 +269,6 @@ void EMTFSubsystemCollector::cluster_rpc(const TriggerPrimitiveCollection& muon_
 
 // _____________________________________________________________________________
 // GEM functions
-void EMTFSubsystemCollector::make_copad_gem(const TriggerPrimitiveCollection& muon_primitives, TriggerPrimitiveCollection& copad_muon_primitives) const {
-  // Use the inner layer (layer 1) hit coordinates as output, and the outer
-  // layer (layer 2) as coincidence
-  // Copied from: L1Trigger/CSCTriggerPrimitives/src/GEMCoPadProcessor.cc
-
-  const unsigned int maxDeltaBX = 1;
-  const unsigned int maxDeltaPadGE11 = 2;
-  const unsigned int maxDeltaPadGE21 = 2;
-
-  std::map<int, TriggerPrimitiveCollection> in_pads_layer1, in_pads_layer2;
-
-  TriggerPrimitiveCollection::const_iterator tp_it  = muon_primitives.begin();
-  TriggerPrimitiveCollection::const_iterator tp_end = muon_primitives.end();
-
-  for (; tp_it != tp_end; ++tp_it) {
-    const TriggerPrimitive& muon_primitive = *tp_it;
-
-    // Split by layer
-    if (muon_primitive.subsystem() == TriggerPrimitive::kGEM) {
-      const GEMDetId& tp_detId = muon_primitive.detId<GEMDetId>();
-      assert(tp_detId.layer() == 1 || tp_detId.layer() == 2);
-      if (tp_detId.layer() == 1) {
-        in_pads_layer1[tp_detId.rawId()].push_back(muon_primitive);
-      } else {
-        in_pads_layer2[tp_detId.rawId()].push_back(muon_primitive);
-      }
-
-      // Modified copad logic
-      bool modified_copad_logic = false;
-      if (modified_copad_logic) {
-        if (tp_detId.layer() == 1) {
-          auto id = tp_detId;
-          const GEMDetId co_detId(id.region(), id.ring(), id.station(), 2, id.chamber(), id.roll());
-          const GEMPadDigi co_digi(muon_primitive.getGEMData().pad, muon_primitive.getGEMData().bx);
-          const TriggerPrimitive co_muon_primitive(co_detId, co_digi);
-          in_pads_layer2[co_detId.rawId()].push_back(co_muon_primitive);
-        } else {
-          auto id = tp_detId;
-          const GEMDetId co_detId(id.region(), id.ring(), id.station(), 1, id.chamber(), id.roll());
-          const GEMPadDigi co_digi(muon_primitive.getGEMData().pad, muon_primitive.getGEMData().bx);
-          const TriggerPrimitive co_muon_primitive(co_detId, co_digi);
-          in_pads_layer1[co_detId.rawId()].push_back(co_muon_primitive);
-        }
-      }
-    }
-  }
-
-  std::map<int, TriggerPrimitiveCollection>::iterator map_tp_it  = in_pads_layer1.begin();
-  std::map<int, TriggerPrimitiveCollection>::iterator map_tp_end = in_pads_layer1.end();
-
-  for (; map_tp_it != map_tp_end; ++map_tp_it) {
-    const GEMDetId& id = map_tp_it->first;
-    const TriggerPrimitiveCollection& pads = map_tp_it->second;
-    assert(id.layer() == 1);
-
-    // find the corresponding id with layer=2 and same roll number
-    const GEMDetId co_id(id.region(), id.ring(), id.station(), 2, id.chamber(), id.roll());
-
-    // empty range = no possible coincidence pads
-    auto found = in_pads_layer2.find(co_id);
-    if (found == in_pads_layer2.end())  continue;
-
-    // now let's correlate the pads in two layers of this partition
-    const TriggerPrimitiveCollection& co_pads = found->second;
-    for (TriggerPrimitiveCollection::const_iterator p = pads.begin(); p != pads.end(); ++p) {
-      for (TriggerPrimitiveCollection::const_iterator co_p = co_pads.begin(); co_p != co_pads.end(); ++co_p) {
-        unsigned int deltaPad = std::abs(p->getGEMData().pad - co_p->getGEMData().pad);
-        unsigned int deltaBX = std::abs(p->getGEMData().bx - co_p->getGEMData().bx);
-
-        // check the match in pad
-        if ((id.station() == 1 && deltaPad > maxDeltaPadGE11) || (id.station() == 2 && deltaPad > maxDeltaPadGE21))
-          continue;
-
-        // check the match in BX
-        if (deltaBX > maxDeltaBX)
-          continue;
-
-        // make a new coincidence pad digi
-        copad_muon_primitives.push_back(*p);
-      }
-    }
-  }
-}
-
 void EMTFSubsystemCollector::cluster_gem(const TriggerPrimitiveCollection& muon_primitives, TriggerPrimitiveCollection& clus_muon_primitives) const {
   // Define operator to select GEM digis
   struct {
@@ -395,6 +330,7 @@ void EMTFSubsystemCollector::cluster_gem(const TriggerPrimitiveCollection& muon_
   // Do clustering using C++ <algorithm> functions
 
   // 1. Select GEM digis
+  clus_muon_primitives.clear();
   std::copy_if(muon_primitives.begin(), muon_primitives.end(), std::back_inserter(clus_muon_primitives), gem_digi_select);
 
   // 2. Sort
@@ -411,4 +347,155 @@ void EMTFSubsystemCollector::cluster_gem(const TriggerPrimitiveCollection& muon_
       adjacent_cluster(clus_muon_primitives.begin(), clus_muon_primitives.end(), gem_digi_adjacent, gem_digi_cluster),
       clus_muon_primitives.end()
   );
+}
+
+void EMTFSubsystemCollector::declusterize_gem(TriggerPrimitiveCollection& clus_muon_primitives, TriggerPrimitiveCollection& declus_muon_primitives) const {
+  const unsigned int maxClusterSize = 8;
+  const unsigned int maxClusters = 8;
+
+  // Define operator to reject GEM clusters
+  struct {
+    typedef TriggerPrimitive value_type;
+    bool operator()(const value_type& x) const {
+      unsigned int sz = x.getGEMData().pad_hi - x.getGEMData().pad_low + 1;
+      return sz > maxClusterSize;  // at most 8 pads
+    }
+  } gem_cluster_size_cut;
+
+  // Define operator to select GEM clusters in a given layer
+  struct {
+    typedef TriggerPrimitive value_type;
+    bool operator()(const value_type& x) const {
+      const GEMDetId& detid = x.detId<GEMDetId>();
+      return (x.subsystem() == TriggerPrimitive::kGEM && detid.layer() == 1);
+    }
+  } gem_cluster_layer1_select;
+
+  struct {
+    typedef TriggerPrimitive value_type;
+    bool operator()(const value_type& x) const {
+      const GEMDetId& detid = x.detId<GEMDetId>();
+      return (x.subsystem() == TriggerPrimitive::kGEM && detid.layer() == 2);
+    }
+  } gem_cluster_layer2_select;
+
+
+  // ___________________________________________________________________________
+  // 1. Reject clusters with width > 8 pads
+  clus_muon_primitives.erase(
+      std::remove_if(clus_muon_primitives.begin(), clus_muon_primitives.end(), gem_cluster_size_cut),
+      clus_muon_primitives.end()
+  );
+
+  // 2. For each of the 2 layers, pick a maximum of 8 pad clusters.
+  TriggerPrimitiveCollection tmp_clus_muon_primitives;
+  copy_n_if(clus_muon_primitives.begin(), clus_muon_primitives.end(), maxClusters, std::back_inserter(tmp_clus_muon_primitives), gem_cluster_layer1_select);
+  copy_n_if(clus_muon_primitives.begin(), clus_muon_primitives.end(), maxClusters, std::back_inserter(tmp_clus_muon_primitives), gem_cluster_layer2_select);
+
+  // 3. Declusterize
+  declus_muon_primitives.clear();
+
+  TriggerPrimitiveCollection::const_iterator tp_it  = tmp_clus_muon_primitives.begin();
+  TriggerPrimitiveCollection::const_iterator tp_end = tmp_clus_muon_primitives.end();
+
+  for (; tp_it != tp_end; ++tp_it) {
+    for (uint16_t pad = tp_it->getGEMData().pad_low; pad != tp_it->getGEMData().pad_hi+1; ++pad) {
+      TriggerPrimitive new_tp = *tp_it;  // make a copy
+      new_tp.accessGEMData().pad     = pad;
+      new_tp.accessGEMData().pad_low = pad;
+      new_tp.accessGEMData().pad_hi  = pad;
+      declus_muon_primitives.push_back(new_tp);
+    }
+  }
+}
+
+void EMTFSubsystemCollector::make_copad_gem(TriggerPrimitiveCollection& declus_muon_primitives, TriggerPrimitiveCollection& copad_muon_primitives) const {
+  // Use the inner layer (layer 1) hit coordinates as output, and the outer
+  // layer (layer 2) as coincidence
+  // Copied from: L1Trigger/CSCTriggerPrimitives/src/GEMCoPadProcessor.cc
+
+  const unsigned int maxDeltaBX = 1;
+  const unsigned int maxDeltaRoll = 1;
+  const unsigned int maxDeltaPadGE11 = 2;
+  const unsigned int maxDeltaPadGE21 = 2;
+
+  // Make sure that the difference is calculated using signed integer, and
+  // output the absolute difference (as unsigned integer)
+  auto calculate_delta = [](int a, int b) -> unsigned int {
+    return std::abs(a-b);
+  };
+
+  // Create maps of GEM pads (key = detid), split by layer
+  std::map<uint32_t, TriggerPrimitiveCollection> in_pads_layer1, in_pads_layer2;
+
+  TriggerPrimitiveCollection::const_iterator tp_it  = declus_muon_primitives.begin();
+  TriggerPrimitiveCollection::const_iterator tp_end = declus_muon_primitives.end();
+
+  for (; tp_it != tp_end; ++tp_it) {
+    GEMDetId detid = tp_it->detId<GEMDetId>();
+    assert(detid.layer() == 1 || detid.layer() == 2);
+    assert(1 <= detid.roll() && detid.roll() <= 8);
+    uint32_t layer = detid.layer();
+
+    // Remove layer number and roll number from detid
+    detid = GEMDetId(detid.region(), detid.ring(), detid.station(), 0, detid.chamber(), 0);
+
+    if (layer == 1) {
+      in_pads_layer1[detid.rawId()].push_back(*tp_it);
+    } else {
+      in_pads_layer2[detid.rawId()].push_back(*tp_it);
+    }
+  }
+
+  // Build coincidences
+  copad_muon_primitives.clear();
+
+  std::map<uint32_t, TriggerPrimitiveCollection>::iterator map_tp_it  = in_pads_layer1.begin();
+  std::map<uint32_t, TriggerPrimitiveCollection>::iterator map_tp_end = in_pads_layer1.end();
+
+  for (; map_tp_it != map_tp_end; ++map_tp_it) {
+    const GEMDetId& detid = map_tp_it->first;
+    const TriggerPrimitiveCollection& pads = map_tp_it->second;
+
+    // find all corresponding ids with layer 2
+    auto found = in_pads_layer2.find(detid);
+
+    // empty range = no possible coincidence pads
+    if (found == in_pads_layer2.end())  continue;
+
+    // now let's correlate the pads in two layers
+    const TriggerPrimitiveCollection& co_pads = found->second;
+    for (TriggerPrimitiveCollection::const_iterator p = pads.begin(); p != pads.end(); ++p) {
+      bool has_copad = false;
+      int bend = 999999;
+
+      for (TriggerPrimitiveCollection::const_iterator co_p = co_pads.begin(); co_p != co_pads.end(); ++co_p) {
+        unsigned int deltaPad  = calculate_delta(p->getGEMData().pad, co_p->getGEMData().pad);
+        unsigned int deltaBX   = calculate_delta(p->getGEMData().bx, co_p->getGEMData().bx);
+        unsigned int deltaRoll = calculate_delta(p->detId<GEMDetId>().roll(), co_p->detId<GEMDetId>().roll());
+
+        // check the match in pad
+        if ((detid.station() == 1 && deltaPad > maxDeltaPadGE11) || (detid.station() == 2 && deltaPad > maxDeltaPadGE21))
+          continue;
+
+        // check the match in BX
+        if (deltaBX > maxDeltaBX)
+          continue;
+
+        // check the match in roll
+        if (deltaRoll > maxDeltaRoll)
+          continue;
+
+        has_copad = true;
+        if (std::abs(bend) > deltaPad)
+          bend = deltaPad;
+      }  // end loop over co_pads
+
+      // make a new coincidence pad digi
+      if (has_copad) {
+        copad_muon_primitives.push_back(*p);
+        copad_muon_primitives.back().accessGEMData().bend = bend;  // overwrites the bend
+      }
+    }  // end loop over pads
+  }  // end loop over in_pads_layer1
 }

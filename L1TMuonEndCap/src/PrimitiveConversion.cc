@@ -68,13 +68,11 @@ void PrimitiveConversion::process(
       } else if (tp_it->subsystem() == TriggerPrimitive::kRPC) {
         convert_rpc(pc_sector, pc_station, pc_chamber, pc_segment, *tp_it, conv_hit);
       } else if (tp_it->subsystem() == TriggerPrimitive::kGEM) {
-        pc_station = 0;
-        pc_chamber = selected;
-        convert_gem(pc_sector, pc_station, pc_chamber, pc_segment, *tp_it, conv_hit);
+        convert_gem(pc_sector, 0, selected, pc_segment, *tp_it, conv_hit);  // pc_station and pc_chamber are meaningless
+        //convert_gem(pc_sector, pc_station, pc_chamber, pc_segment, *tp_it, conv_hit);
       } else if (tp_it->subsystem() == TriggerPrimitive::kME0) {
-        pc_station = 0;
-        pc_chamber = selected;
-        convert_me0(pc_sector, pc_station, pc_chamber, pc_segment, *tp_it, conv_hit);
+        convert_me0(pc_sector, 0, selected, pc_segment, *tp_it, conv_hit);  // pc_station and pc_chamber are meaningless
+        //convert_me0(pc_sector, pc_station, pc_chamber, pc_segment, *tp_it, conv_hit);
       } else {
         assert(false && "Incorrect subsystem type");
       }
@@ -465,7 +463,24 @@ void PrimitiveConversion::convert_rpc(
   // CSC-like sector, subsector and chamber numbers
   int csc_tp_chamber   = (tp_sector - 1)*6 + tp_subsector;
   int csc_tp_sector    = (tp_subsector > 2) ? tp_sector : ((tp_sector + 4) % 6) + 1;  // Rotate by 20 deg
-  int csc_tp_subsector = ((tp_subsector + 3) % 6) + 1;  // Rotate by 2
+  int csc_tp_subsector = (tp_station != 1) ? 0 : ((csc_tp_chamber % 6 > 2) ? 1 : 2);
+
+  const bool is_irpc = (tp_station == 3 || tp_station == 4) && (tp_ring == 1);
+  if (is_irpc) {
+    csc_tp_chamber   = (tp_sector - 1)*3 + tp_subsector;
+    csc_tp_sector    = (tp_subsector > 1) ? tp_sector : ((tp_sector + 4) % 6) + 1;  // Rotate by 20 deg
+    csc_tp_subsector = (tp_station != 1) ? 0 : ((csc_tp_chamber % 6 > 2) ? 1 : 2);
+  }
+  int tp_csc_ID    = emtf::get_trigger_csc_ID(tp_ring, tp_station, csc_tp_chamber);
+
+  int csc_nID      = tp_csc_ID;  // modify csc_ID if coming from neighbor sector
+  if (is_neighbor) {
+    // station 1 has 3 neighbor chambers: 13,14,15 in rings 1,2,3
+    // (where are chambers 10,11,12 in station 1? they were used to label ME1/1a, but not anymore)
+    // station 2,3,4 have 2 neighbor chambers: 10,11 in rings 1,2
+    csc_nID = (pc_chamber < 3) ? (pc_chamber + 12) : ( ((pc_chamber - 1) % 2) + 9);
+    csc_nID += 1;
+  }
 
   // Set properties
   conv_hit.SetRPCDetId       ( tp_detId );
@@ -477,8 +492,8 @@ void PrimitiveConversion::convert_rpc(
   conv_hit.set_chamber       ( csc_tp_chamber );
   conv_hit.set_sector        ( csc_tp_sector );
   conv_hit.set_subsector     ( csc_tp_subsector );
-  //conv_hit.set_csc_ID        ( tp_csc_ID );
-  //conv_hit.set_csc_nID       ( csc_nID );
+  conv_hit.set_csc_ID        ( tp_csc_ID );
+  conv_hit.set_csc_nID       ( csc_nID );
   //conv_hit.set_track_num     ( tp_data.trknmb );
   //conv_hit.set_sync_err      ( tp_data.syncErr );
   conv_hit.set_sector_RPC    ( tp_sector );  // In RPC convention in CMSSW (RPCDetId.h), sector 1 starts at -5 deg
@@ -564,19 +579,7 @@ void PrimitiveConversion::convert_rpc_details(EMTFHit& conv_hit) const {
   //const int fw_endcap  = (endcap_-1);
   //const int fw_sector  = (sector_-1);
   const int fw_station = (conv_hit.Station() == 1) ? (is_neighbor ? 0 : pc_station) : conv_hit.Station();
-
-  int fw_cscid = pc_chamber;
-  if (is_neighbor) {
-    int csc_nID = -1;
-
-    // station 1 has 3 neighbor chambers: 13,14,15 in rings 1,2,3
-    // (where are chambers 10,11,12 in station 1? they were used to label ME1/1a, but not anymore)
-    // station 2,3,4 have 2 neighbor chambers: 10,11 in rings 1,2
-    csc_nID = (pc_chamber < 3) ? (pc_chamber + 12) : ( ((pc_chamber - 1) % 2) + 9);
-    csc_nID += 1;
-
-    fw_cscid = csc_nID - 1;
-  }
+  const int fw_cscid   = (conv_hit.CSC_nID()-1);
 
   int fph = conv_hit.Phi_fp();
   int th  = conv_hit.Theta_fp();

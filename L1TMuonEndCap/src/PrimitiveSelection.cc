@@ -270,6 +270,7 @@ void PrimitiveSelection::process(
       }
 
       assert(pc_station != -1 && pc_chamber != -1);
+      assert(pc_station < 6 && pc_chamber < 9);
 
       selected = (pc_station * 9) + pc_chamber;
 
@@ -738,7 +739,7 @@ int PrimitiveSelection::get_index_rpc(int tp_station, int tp_ring, int tp_subsec
 // GEM functions
 //
 // According to what I know at the moment
-// - GE1/1: 10 degree chamber, 8 rolls, 394 strips = 192 pads
+// - GE1/1: 10 degree chamber, 8 rolls, 384 strips = 192 pads
 // - GE2/1: 20 degree chamber, 8 rolls, 768 strips = 384 pads
 int PrimitiveSelection::select_gem(const TriggerPrimitive& muon_primitive) const {
   int selected = -1;
@@ -830,7 +831,7 @@ int PrimitiveSelection::get_index_gem(int tp_subsector, int tp_station, int tp_c
 // ME0 functions
 //
 // According to what I know at the moment
-// - ME0: 20 degree chamber, 8 rolls, 394 strips = 192 pads
+// - ME0: 20 degree chamber, 8 rolls, 384 strips = 192 pads
 int PrimitiveSelection::select_me0(const TriggerPrimitive& muon_primitive) const {
   int selected = -1;
 

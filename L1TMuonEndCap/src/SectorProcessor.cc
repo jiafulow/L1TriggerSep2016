@@ -310,7 +310,7 @@ void SectorProcessor::process(
           << ", endcap " << ((tp_detId.region() == -1) ? 2 : tp_detId.region())
           << ", station " << tp_detId.station() << ", ring " << tp_detId.ring()
           << ", chamber " << tp_detId.chamber() << ", roll " << tp_detId.roll() << ", layer " << tp_detId.layer()
-          << ", pad " << tp_it->getStrip() << ", pad_low " << tp_data.pad_low << ", pad_hi " << tp_data.pad_hi
+          << ", pad " << tp_it->getStrip() << ", pad_low " << tp_data.pad_low << ", pad_hi " << tp_data.pad_hi << ", bend " << tp_data.bend
           << std::endl;
       }  // end if GEM
     }  // end loop over muon_primitives
@@ -384,14 +384,15 @@ void SectorProcessor::process(
 
   if (dump_emtf_hits && endcap_ == 2 && sector_ == 6) {
     int i = 0;
+    const char subsystem_names[][4] = {"DT","CSC","RPC","GEM","ME0"};
     for (const auto& h : out_hits) {
-      std::cout << "conv_hit #" << i++ << ": BX " << h.BX()
-                << ", endcap " << h.Endcap() << ", sector " << h.PC_sector()
-                << ", station " << h.Station() << ", ring " << h.Ring()
-                << ", chamber " << h.Chamber() << ", roll " << h.Roll()
-                << ", subsector " << h.Subsector() << ", CSC ID " << h.CSC_ID()
-                << ", strip " << h.Strip() << ", wire " << h.Wire() << ", pattern " << h.Pattern() << ", bend " << h.Bend() << ", quality " << h.Quality()
-                << std::endl;
+      std::cout << "conv_hit #" << i++ << " [" << subsystem_names[h.Subsystem()] << "]: BX " << h.BX()
+        << ", endcap " << h.Endcap() << ", sector " << h.PC_sector()
+        << ", station " << h.Station() << ", ring " << h.Ring()
+        << ", chamber " << h.Chamber() << ", roll " << h.Roll()
+        << ", subsector " << h.Subsector() << ", CSC ID " << h.CSC_ID()
+        << ", strip " << h.Strip() << ", wire " << h.Wire() << ", pattern " << h.Pattern() << ", quality " << h.Quality() << ", bend " << h.Bend()
+        << std::endl;
     }
   }
 

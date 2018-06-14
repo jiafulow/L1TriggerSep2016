@@ -197,17 +197,15 @@ TriggerPrimitive::TriggerPrimitive(const ME0DetId& detid,
   _me0.pad = 0;
   {
     // ME0 convert x to pad
-    ME0DetId detid2 = detid;
-    if (detid2.layer() == 0)
-      detid2 = ME0DetId(detid.region(), 3, detid.chamber(), detid.roll());  // use layer 3 as the key layer
-    const ME0EtaPartition* roll = geom.etaPartition(detid2);
+    const ME0EtaPartition* roll = geom.etaPartition(detid);
     assert(roll != nullptr);  // failed to get ME0 roll
-    float pad_f = roll->pad(digi.localPosition());
+    const LocalPoint lp(_me0.x, 0., 0.);
+    float pad_f = roll->pad(lp);
     _me0.pad = static_cast<int>(std::ceil(pad_f));
     if (_me0.pad == 0)
       _me0.pad = 1;
   }
-  _me0.bx = static_cast<int>(std::round(digi.time()));
+  _me0.bx = static_cast<int>(std::round(_me0.time/25.));  // 1BX = 25ns
 }
 
 // copy constructor
