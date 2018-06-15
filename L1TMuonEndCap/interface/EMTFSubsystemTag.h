@@ -3,6 +3,8 @@
 
 #include "DataFormats/CSCDigi/interface/CSCCorrelatedLCTDigi.h"
 #include "DataFormats/CSCDigi/interface/CSCCorrelatedLCTDigiCollection.h"
+#include "DataFormats/CSCDigi/interface/CSCComparatorDigi.h"
+#include "DataFormats/CSCDigi/interface/CSCComparatorDigiCollection.h"
 #include "DataFormats/RPCDigi/interface/RPCDigi.h"
 #include "DataFormats/RPCDigi/interface/RPCDigiCollection.h"
 #include "DataFormats/GEMDigi/interface/GEMPadDigi.h"
@@ -16,6 +18,8 @@ namespace emtf {
   struct CSCTag {
     typedef CSCCorrelatedLCTDigi           digi_type;
     typedef CSCCorrelatedLCTDigiCollection digi_collection;
+    typedef CSCComparatorDigi              comparator_digi_type;
+    typedef CSCComparatorDigiCollection    comparator_digi_collection;
   };
 
   struct RPCTag {

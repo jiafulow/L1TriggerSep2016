@@ -3,6 +3,8 @@
 #include "FWCore/Framework/interface/Event.h"
 #include "DataFormats/Common/interface/Handle.h"
 
+#include "L1Trigger/CSCTriggerPrimitives/src/CSCComparatorDigiFitter.h"
+
 #include "helper.h"  // adjacent_cluster
 
 
@@ -498,4 +500,56 @@ void EMTFSubsystemCollector::make_copad_gem(TriggerPrimitiveCollection& declus_m
       }
     }  // end loop over pads
   }  // end loop over in_pads_layer1
+}
+
+
+// _____________________________________________________________________________
+// Experimental features! Very unstable!!
+namespace experimental {
+
+// Specialized for CSC
+template<>
+void EMTFSubsystemCollector::extractPrimitives(
+    CSCTag tag, // Defined in interface/EMTFSubsystemTag.h, maps to CSCCorrelatedLCTDigi
+    const GeometryTranslator* tp_geom,
+    const edm::Event& iEvent,
+    const edm::EDGetToken& token_lct,        // for CSC
+    const edm::EDGetToken& token_comparator, // for CSC
+    TriggerPrimitiveCollection& out
+) const {
+  edm::Handle<CSCTag::digi_collection> cscDigis;
+  iEvent.getByToken(token_lct, cscDigis);
+
+  edm::Handle<CSCTag::comparator_digi_collection> cscComparatorDigis;
+  iEvent.getByToken(token_comparator, cscComparatorDigis);
+
+  // TAMU fitter
+  std::unique_ptr<CSCComparatorDigiFitter> tamu_fitter(new CSCComparatorDigiFitter());
+  tamu_fitter->setGeometry(&(tp_geom->getCSCGeometry()));
+  tamu_fitter->setStripBits(0);
+  tamu_fitter->useKeyRadius(true);
+
+  auto chamber = cscDigis->begin();
+  auto chend   = cscDigis->end();
+  for( ; chamber != chend; ++chamber ) {
+    auto digi = (*chamber).second.first;
+    auto dend = (*chamber).second.second;
+    for( ; digi != dend; ++digi ) {
+      const CSCDetId& detid = (*chamber).first;
+      const CSCCorrelatedLCTDigi& lct = (*digi);
+
+      // TAMU fitter
+      if ((1 <= detid.station() && detid.station() <= 4) && (detid.ring() == 1 || detid.ring() == 4)) {
+        std::vector<float> fit_phi_layers;
+        std::vector<float> fit_z_layers;
+        float fitRadius = 0.;
+        tamu_fitter->fit(detid, lct, *cscComparatorDigis, fit_phi_layers, fit_z_layers, fitRadius);
+      }
+
+      out.emplace_back(detid, lct);
+    }
+  }
+  return;
+}
+
 }

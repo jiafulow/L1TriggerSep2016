@@ -38,4 +38,24 @@ public:
   void make_copad_gem(TriggerPrimitiveCollection& declus_muon_primitives, TriggerPrimitiveCollection& copad_muon_primitives) const;
 };
 
+
+// _____________________________________________________________________________
+// Experimental features! Very unstable!!
+namespace experimental {
+
+class EMTFSubsystemCollector {
+public:
+  template<typename T>
+  void extractPrimitives(
+    T tag,
+    const GeometryTranslator* tp_geom,
+    const edm::Event& iEvent,
+    const edm::EDGetToken& token_lct,        // for CSC
+    const edm::EDGetToken& token_comparator, // for CSC
+    TriggerPrimitiveCollection& out
+  ) const;
+};
+
+}
+
 #endif

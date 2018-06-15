@@ -392,6 +392,7 @@ void SectorProcessor::process(
         << ", chamber " << h.Chamber() << ", roll " << h.Roll()
         << ", subsector " << h.Subsector() << ", CSC ID " << h.CSC_ID()
         << ", strip " << h.Strip() << ", wire " << h.Wire() << ", pattern " << h.Pattern() << ", quality " << h.Quality() << ", bend " << h.Bend()
+        << ", phi_fp " << h.Phi_fp() << ", theta_fp " << h.Theta_fp() << ", phi_sim " << h.Phi_sim() << ", theta_sim " << h.Theta_sim()
         << std::endl;
     }
   }

@@ -40,7 +40,7 @@ private:
 
   const edm::ParameterSet config_;
 
-  const edm::EDGetToken tokenCSC_, tokenRPC_, tokenGEM_, tokenIRPC_, tokenME0_;
+  const edm::EDGetToken tokenCSC_, tokenCSCComparator_, tokenRPC_, tokenGEM_, tokenIRPC_, tokenME0_;
 
   int verbose_;
 

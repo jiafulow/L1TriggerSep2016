@@ -14,6 +14,7 @@ simEmtfDigisMC = cms.EDProducer("L1TMuonEndCapTrackProducer",
 
     # Input collections
     CSCInput = cms.InputTag('simCscTriggerPrimitiveDigis','MPCSORTED'),
+    CSCComparatorInput = cms.InputTag('simMuonCSCDigis','MuonCSCComparatorDigi'),
     RPCInput = cms.InputTag('simMuonRPCDigis'),
     GEMInput = cms.InputTag('simMuonGEMPadDigis'),
     IRPCInput = cms.InputTag('simMuonRPCDigis'),

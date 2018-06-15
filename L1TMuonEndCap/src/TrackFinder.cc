@@ -14,6 +14,7 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
     sector_processors_(),
     config_(iConfig),
     tokenCSC_(iConsumes.consumes<CSCTag::digi_collection>(iConfig.getParameter<edm::InputTag>("CSCInput"))),
+    tokenCSCComparator_(iConsumes.consumes<CSCTag::comparator_digi_collection>(iConfig.getParameter<edm::InputTag>("CSCComparatorInput"))),
     tokenRPC_(iConsumes.consumes<RPCTag::digi_collection>(iConfig.getParameter<edm::InputTag>("RPCInput"))),
     tokenGEM_(iConsumes.consumes<GEMTag::digi_collection>(iConfig.getParameter<edm::InputTag>("GEMInput"))),
     tokenIRPC_(iConsumes.consumes<IRPCTag::digi_collection>(iConfig.getParameter<edm::InputTag>("IRPCInput"))),
@@ -134,8 +135,14 @@ void TrackFinder::process(
   TriggerPrimitiveCollection muon_primitives;
 
   EMTFSubsystemCollector collector;
+#ifdef PHASE_TWO_TRIGGER
+  experimental::EMTFSubsystemCollector expt_collector;
+  if (useCSC_)
+    expt_collector.extractPrimitives(CSCTag(), &geometry_translator_, iEvent, tokenCSC_, tokenCSCComparator_, muon_primitives);
+#else
   if (useCSC_)
     collector.extractPrimitives(CSCTag(), &geometry_translator_, iEvent, tokenCSC_, muon_primitives);
+#endif
   if (useRPC_)
     collector.extractPrimitives(RPCTag(), &geometry_translator_, iEvent, tokenRPC_, muon_primitives);
   if (useGEM_)
