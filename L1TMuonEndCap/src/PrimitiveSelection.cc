@@ -217,6 +217,10 @@ void PrimitiveSelection::process(
       if (tmp_primitives.size() > 2)
         tmp_primitives.erase(tmp_primitives.begin()+2, tmp_primitives.end());
 
+      // Skip cluster size cut if primitives are from CPPF emulator or EMTF unpacker (already clustered)
+      if (tmp_primitives.size() > 0 && tmp_primitives.at(0).getRPCData().isCPPF)
+	break;
+
       // Apply cluster size cut
       tmp_primitives.erase(
           std::remove_if(tmp_primitives.begin(), tmp_primitives.end(), cluster_size_cut),
@@ -633,6 +637,11 @@ int PrimitiveSelection::select_rpc(const TriggerPrimitive& muon_primitive) const
 
     int tp_bx        = tp_data.bx;
     int tp_strip     = tp_data.strip;
+    int tp_emtf_sect = tp_data.emtf_sector;
+    bool tp_CPPF     = tp_data.isCPPF;
+
+    // In neighbor chambers, have two separate CPPFDigis for the two EMTF sectors
+    if (tp_CPPF && (tp_emtf_sect != sector_)) return selected;
 
     const bool is_irpc = (tp_station == 3 || tp_station == 4) && (tp_ring == 1);
 
@@ -643,7 +652,7 @@ int PrimitiveSelection::select_rpc(const TriggerPrimitive& muon_primitive) const
     assert_no_abort(1 <= tp_station && tp_station <= 4);
     assert_no_abort((!is_irpc && 2 <= tp_ring && tp_ring <= 3) || (is_irpc && 1 <= tp_ring && tp_ring <= 3));
     assert_no_abort((!is_irpc && 1 <= tp_roll && tp_roll <= 3) || (is_irpc && 1 <= tp_roll && tp_roll <= 5));
-    assert_no_abort((!is_irpc && 1 <= tp_strip && tp_strip <= 32) || (is_irpc && 1 <= tp_strip && tp_strip <= 192));
+    assert_no_abort((!is_irpc && (tp_CPPF || (1 <= tp_strip && tp_strip <= 32))) || (is_irpc && 1 <= tp_strip && tp_strip <= 192));
     assert_no_abort(tp_station > 2 || tp_ring != 3);  // stations 1 and 2 do not receive RPCs from ring 3
     assert_no_abort(tp_data.valid == true);
 
