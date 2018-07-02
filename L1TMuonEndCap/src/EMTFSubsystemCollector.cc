@@ -489,8 +489,12 @@ void EMTFSubsystemCollector::make_copad_gem(TriggerPrimitiveCollection& declus_m
           continue;
 
         has_copad = true;
-        if (std::abs(bend) > deltaPad)
-          bend = deltaPad;
+        if (std::abs(bend) > deltaPad) {
+          if (p->getGEMData().pad >= co_p->getGEMData().pad)
+            bend = deltaPad;
+          else
+            bend = -deltaPad;
+        }
       }  // end loop over co_pads
 
       // make a new coincidence pad digi
@@ -524,11 +528,33 @@ void EMTFSubsystemCollector::extractPrimitives(
   iEvent.getByToken(token_comparator, cscComparatorDigis);
 
   // TAMU fitter
+  bool use_comp_digi_fitter = false;
   std::unique_ptr<CSCComparatorDigiFitter> tamu_fitter(new CSCComparatorDigiFitter());
   tamu_fitter->setGeometry(&(tp_geom->getCSCGeometry()));
   tamu_fitter->setStripBits(0);
   tamu_fitter->useKeyRadius(true);
 
+  auto encode_comp_digis = [](std::bitset<64>& bits, int layer, int comp_digi, int lct_digi) {
+    int delta = comp_digi - lct_digi;
+    if (std::abs(delta) <= 4) {  // from -4 to +4, 9 possible values
+      int b = delta;
+      b += 4;
+      b += (layer-1) * 9;
+      bits.set(b);
+    }
+  };
+
+  //auto decode_comp_digis = [](const std::bitset<64>& bits, int layer, int lct_digi) {
+  //  std::vector<int> compDigis;
+  //  for (int i=0; i<9; i++) {
+  //    if (bits.test((layer-1) * 9 + i)) {
+  //      compDigis.push_back(lct_digi + i - 4);
+  //    }
+  //  }
+  //  return compDigis;
+  //};
+
+  // Loop over chambers
   auto chamber = cscDigis->begin();
   auto chend   = cscDigis->end();
   for( ; chamber != chend; ++chamber ) {
@@ -539,14 +565,44 @@ void EMTFSubsystemCollector::extractPrimitives(
       const CSCCorrelatedLCTDigi& lct = (*digi);
 
       // TAMU fitter
-      if ((1 <= detid.station() && detid.station() <= 4) && (detid.ring() == 1 || detid.ring() == 4)) {
+      if (use_comp_digi_fitter && (1 <= detid.station() && detid.station() <= 4) && (detid.ring() == 1 || detid.ring() == 4)) {
         std::vector<float> fit_phi_layers;
         std::vector<float> fit_z_layers;
         float fitRadius = 0.;
         tamu_fitter->fit(detid, lct, *cscComparatorDigis, fit_phi_layers, fit_z_layers, fitRadius);
+
+        // Debug
+        //std::cout << "size: " << fit_phi_layers.size() << ", " << fit_z_layers.size() << std::endl;
+        //for (unsigned i=0; i < fit_phi_layers.size(); ++i) {
+        //  std::cout << ".. " << i << " " << fit_phi_layers.at(i) << ", " << fit_z_layers.at(i) << std::endl;
+        //}
       }
 
+      // Extract & encode comparator digis
+      std::bitset<64> bits;
+      //std::cout << "comparators for key strip " << lct.getStrip() << std::endl;
+      for (int layer=1; layer <= 6; ++layer) {
+        const CSCDetId layerId(detid.endcap(), detid.station(), detid.ring(), detid.chamber(), layer);
+        const auto& compRange = cscComparatorDigis->get(layerId);
+        for (auto compDigiItr = compRange.first; compDigiItr != compRange.second; compDigiItr++) {
+          int halfstrip = (*compDigiItr).getHalfStrip();
+          //std::cout << ".. " << layer << " " << halfstrip << std::endl;
+          encode_comp_digis(bits, layer, halfstrip, lct.getStrip());
+        }
+      }
+
+      // Decode comparator digis
+      //for (int layer=1; layer <= 6; ++layer) {
+      //  const std::vector<int>& compDigis = decode_comp_digis(bits, layer, lct.getStrip());
+      //  for (auto halfstrip : compDigis) {
+      //    std::cout << ".... " << layer << " " << halfstrip << std::endl;
+      //  }
+      //}
+
       out.emplace_back(detid, lct);
+
+      // Store encoded comparator digis
+      out.back().accessCSCData().compDigis = bits.to_ullong();
     }
   }
   return;

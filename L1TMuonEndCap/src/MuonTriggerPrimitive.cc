@@ -117,6 +117,7 @@ TriggerPrimitive::TriggerPrimitive(const CSCDetId& detid,
   _csc.bx0     = digi.getBX0();
   _csc.syncErr = digi.getSyncErr();
   _csc.cscID   = digi.getCSCID();
+  _csc.compDigis = 0;
 
   // Use ME1/1a --> ring 4 convention
   if (detid.station() == 1 && detid.ring() == 1 && digi.getStrip() >= 128) {
@@ -281,6 +282,7 @@ bool TriggerPrimitive::operator==(const TriggerPrimitive& tp) const {
               this->_csc.bx0 == tp._csc.bx0 &&
               this->_csc.syncErr == tp._csc.syncErr &&
               this->_csc.cscID == tp._csc.cscID &&
+              this->_csc.compDigis == tp._csc.compDigis &&
               this->_id == tp._id &&
               this->_subsystem == tp._subsystem &&
               this->_globalsector == tp._globalsector &&
@@ -447,6 +449,7 @@ void TriggerPrimitive::print(std::ostream& out) const {
     out << "BX0           : " << _csc.bx0 << std::endl;
     out << "Sync Error    : " << _csc.syncErr << std::endl;
     out << "CSCID         : " << _csc.cscID << std::endl;
+    out << "Comp Digis    : " << _csc.compDigis << std::endl;
     break;
   case kRPC:
     out << detId<RPCDetId>() << std::endl;

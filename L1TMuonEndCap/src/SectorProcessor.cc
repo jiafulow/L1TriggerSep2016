@@ -250,10 +250,10 @@ void SectorProcessor::process(
 
   // ___________________________________________________________________________
   // Debug
-  bool dump_csc_input = true;
-  bool dump_rpc_input = true;
-  bool dump_gem_input = true;
-  bool dump_me0_input = true;
+  bool dump_csc_input = false;
+  bool dump_rpc_input = false;
+  bool dump_gem_input = false;
+  bool dump_me0_input = false;
 
   if (dump_csc_input && endcap_ == 1 && sector_ == 1) {
     TriggerPrimitiveCollection::const_iterator tp_it = muon_primitives.begin();
@@ -380,7 +380,7 @@ void SectorProcessor::process(
 
   // ___________________________________________________________________________
   // Debug
-  bool dump_emtf_hits = true;
+  bool dump_emtf_hits = false;
 
   if (dump_emtf_hits && endcap_ == 2 && sector_ == 6) {
     int i = 0;

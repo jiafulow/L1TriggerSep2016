@@ -92,12 +92,14 @@ void PrimitiveSelection::process(
       TriggerPrimitiveCollection& tmp_primitives = map_tp_it->second;  // pass by reference
 
       if (tmp_primitives.size() >= 4) {
-        edm::LogWarning("L1T") << "EMTF found 4 or more CSC LCTs in one chamber: keeping only two";
+        const TriggerPrimitive& tmp_tp = tmp_primitives.front();
+        edm::LogWarning("L1T") << "EMTF found 4 or more CSC LCTs in one chamber: keeping only two (station " << tmp_tp.detId<CSCDetId>().station() << " ring " << tmp_tp.detId<CSCDetId>().ring() << " CSC ID " << tmp_tp.getCSCData().cscID << ")";
         tmp_primitives.erase(tmp_primitives.begin() + 4, tmp_primitives.end());  // erase 5th element++
         tmp_primitives.erase(tmp_primitives.begin() + 2);  // erase 3rd element
         tmp_primitives.erase(tmp_primitives.begin() + 1);  // erase 2nd element
       } else if (tmp_primitives.size() == 3) {
-        edm::LogWarning("L1T") << "EMTF found 3 CSC LCTs in one chamber: keeping only two";
+        const TriggerPrimitive& tmp_tp = tmp_primitives.front();
+        edm::LogWarning("L1T") << "EMTF found 3 CSC LCTs in one chamber: keeping only two (station " << tmp_tp.detId<CSCDetId>().station() << " ring " << tmp_tp.detId<CSCDetId>().ring() << " CSC ID " << tmp_tp.getCSCData().cscID << ")";
         tmp_primitives.erase(tmp_primitives.begin() + 2);  // erase 3rd element
       }
       assert(tmp_primitives.size() <= 2);  // at most 2 hits
@@ -530,6 +532,19 @@ int PrimitiveSelection::select_csc(const TriggerPrimitive& muon_primitive) const
       assert_no_abort(tp_data.pattern <= 10);
       assert_no_abort(tp_data.quality > 0);
     }
+
+    // LogWarning
+    if ( !(tp_data.strip < max_strip) ) {
+      edm::LogWarning("L1T") << "EMTF CSC format error in station " << tp_station << ", ring " << tp_ring
+        << ": tp_data.strip = " << tp_data.strip << " (max = " << max_strip - 1 << ")";
+      //return selected;
+    }
+    if ( !(tp_data.keywire < max_wire) ) {
+      edm::LogWarning("L1T") << "EMTF CSC format error in station " << tp_station << ", ring " << tp_ring
+        << ": tp_data.keywire = " << tp_data.keywire << " (max = " << max_wire - 1 << ")";
+      //return selected;
+    }
+
 
     // station 1 --> subsector 1 or 2
     // station 2,3,4 --> subsector 0

@@ -76,7 +76,7 @@ namespace L1TMuonEndCap {
     struct CSCData {
       CSCData() : trknmb(0), valid(0), quality(0), keywire(0), strip(0),
                   pattern(0), bend(0), bx(0), mpclink(0), bx0(0), syncErr(0),
-                  cscID(0) {}
+                  cscID(0), compDigis(0) {}
       uint16_t trknmb;
       uint16_t valid;
       uint16_t quality;
@@ -89,6 +89,7 @@ namespace L1TMuonEndCap {
       uint16_t bx0;
       uint16_t syncErr;
       uint16_t cscID;
+      uint64_t compDigis;
     };
 
     struct DTData {
