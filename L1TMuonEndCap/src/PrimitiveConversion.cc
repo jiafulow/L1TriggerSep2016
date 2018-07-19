@@ -872,6 +872,9 @@ void PrimitiveConversion::convert_me0(
     csc_nID = 10;
   }
 
+  // 'bend' is ME0Segment::deltaPhi(). It is a float. Divide by strip resolution to convert to an int.
+  int tp_bend = static_cast<int>(std::round(tp_data.bend / (M_PI/9/384)));
+
   // Set properties
   conv_hit.SetME0DetId       ( tp_detId );
   conv_hit.set_endcap        ( (tp_endcap == 2) ? -1 : tp_endcap );
@@ -907,7 +910,7 @@ void PrimitiveConversion::convert_me0(
   //conv_hit.set_wire          ( tp_data.keywire );
   //conv_hit.set_quality       ( tp_data.quality );
   conv_hit.set_pattern       ( 1 );  // In firmware, this marks GEM stub (unconfirmed!)
-  conv_hit.set_bend          ( tp_data.bend );
+  conv_hit.set_bend          ( tp_bend );
   conv_hit.set_time          ( tp_data.time );
   //conv_hit.set_comp_digis    ( tp_data.compDigis );
 
