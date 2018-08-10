@@ -157,9 +157,8 @@ void PrimitiveConversion::convert_csc(
   conv_hit.set_wire          ( tp_data.keywire );
   conv_hit.set_quality       ( tp_data.quality );
   conv_hit.set_pattern       ( tp_data.pattern );
-  conv_hit.set_bend          ( tp_data.bend );
-  //conv_hit.set_time          ( tp_data.time );
-  conv_hit.set_comp_digis    ( tp_data.compDigis );
+  conv_hit.set_bend          ( static_cast<int16_t>(tp_data.bend) );  // get proper sign
+  conv_hit.set_time          ( 0. );  // No fine resolution timing
 
   conv_hit.set_neighbor      ( is_neighbor );
   conv_hit.set_sector_idx    ( (endcap_ == 1) ? sector_ - 1 : sector_ + 5 );
@@ -483,6 +482,13 @@ void PrimitiveConversion::convert_rpc(
     csc_nID += 1;
   }
 
+  // Use cluster width as 'quality'
+  int tp_quality = (tp_data.strip_hi - tp_data.strip_low + 1);
+  if (!is_irpc) {
+     tp_quality *= 3;  // old RPC strip pitch is 3 times the new iRPC
+  }
+
+
   // Set properties
   conv_hit.SetRPCDetId       ( tp_detId );
 
@@ -517,11 +523,10 @@ void PrimitiveConversion::convert_rpc(
   conv_hit.set_strip_low     ( tp_data.strip_low );
   conv_hit.set_strip_hi      ( tp_data.strip_hi );
   //conv_hit.set_wire          ( tp_data.keywire );
-  //conv_hit.set_quality       ( tp_data.quality );
+  conv_hit.set_quality       ( tp_quality );
   conv_hit.set_pattern       ( 0 );  // In firmware, this marks RPC stub
   //conv_hit.set_bend          ( tp_data.bend );
   conv_hit.set_time          ( tp_data.time );
-  //conv_hit.set_comp_digis    ( tp_data.compDigis );
 
   conv_hit.set_neighbor      ( is_neighbor );
   conv_hit.set_sector_idx    ( (endcap_ == 1) ? sector_ - 1 : sector_ + 5 );
@@ -697,6 +702,10 @@ void PrimitiveConversion::convert_gem(
     }
   }
 
+  // Use cluster width as 'quality'
+  int tp_quality = (tp_data.pad_hi - tp_data.pad_low + 1);
+
+
   // Set properties
   conv_hit.SetGEMDetId       ( tp_detId );
   conv_hit.set_endcap        ( (tp_endcap == 2) ? -1 : tp_endcap );
@@ -730,11 +739,10 @@ void PrimitiveConversion::convert_gem(
   conv_hit.set_strip_low     ( tp_data.pad_low );
   conv_hit.set_strip_hi      ( tp_data.pad_hi );
   //conv_hit.set_wire          ( tp_data.keywire );
-  //conv_hit.set_quality       ( tp_data.quality );
+  conv_hit.set_quality       ( tp_quality );
   conv_hit.set_pattern       ( 1 );  // In firmware, this marks GEM stub (unconfirmed!)
   conv_hit.set_bend          ( tp_data.bend );
-  //conv_hit.set_time          ( tp_data.time );
-  //conv_hit.set_comp_digis    ( tp_data.compDigis );
+  conv_hit.set_time          ( 0. );  // No fine resolution timing
 
   conv_hit.set_neighbor      ( is_neighbor );
   conv_hit.set_sector_idx    ( (endcap_ == 1) ? sector_ - 1 : sector_ + 5 );
@@ -875,6 +883,11 @@ void PrimitiveConversion::convert_me0(
   // 'bend' is ME0Segment::deltaPhi(). It is a float. Divide by strip resolution to convert to an int.
   int tp_bend = static_cast<int>(std::round(tp_data.bend / (M_PI/9/384)));
 
+  // 'quality' is ME0Segment::chi2(). It is a float. Multiply by 100 for now.
+  float chi2 = tp_data.chi2;
+  int ndof = tp_data.nhits*2 - 4;
+  int tp_quality = static_cast<int>(std::round(chi2/float(ndof) * 100));
+
   // Set properties
   conv_hit.SetME0DetId       ( tp_detId );
   conv_hit.set_endcap        ( (tp_endcap == 2) ? -1 : tp_endcap );
@@ -908,11 +921,10 @@ void PrimitiveConversion::convert_me0(
   //conv_hit.set_strip_low     ( tp_strip );
   //conv_hit.set_strip_hi      ( tp_strip );
   //conv_hit.set_wire          ( tp_data.keywire );
-  //conv_hit.set_quality       ( tp_data.quality );
+  conv_hit.set_quality       ( tp_quality );
   conv_hit.set_pattern       ( 1 );  // In firmware, this marks GEM stub (unconfirmed!)
   conv_hit.set_bend          ( tp_bend );
   conv_hit.set_time          ( tp_data.time );
-  //conv_hit.set_comp_digis    ( tp_data.compDigis );
 
   conv_hit.set_neighbor      ( is_neighbor );
   conv_hit.set_sector_idx    ( (endcap_ == 1) ? sector_ - 1 : sector_ + 5 );

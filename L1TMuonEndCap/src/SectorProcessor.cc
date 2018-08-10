@@ -268,7 +268,7 @@ void SectorProcessor::process(
           << ", endcap " << tp_detId.endcap() << ", sector " << tp_detId.triggerSector()
           << ", station " << tp_detId.station() << ", ring " << tp_detId.ring()
           << ", chamber " << tp_detId.chamber() << ", CSC ID " << tp_data.cscID
-          << ", strip " << tp_it->getStrip() << ", wire " << tp_it->getWire() << ", pattern " << tp_it->getPattern()
+          << ", strip " << tp_it->getStrip() << ", wire " << tp_it->getWire() << ", pattern " << tp_it->getPattern() << ", bend " << tp_data.bend << ", quality " << tp_data.quality
           << std::endl;
 
         //tp_it->print(std::cout);
@@ -391,7 +391,7 @@ void SectorProcessor::process(
         << ", station " << h.Station() << ", ring " << h.Ring()
         << ", chamber " << h.Chamber() << ", roll " << h.Roll()
         << ", subsector " << h.Subsector() << ", CSC ID " << h.CSC_ID()
-        << ", strip " << h.Strip() << ", wire " << h.Wire() << ", pattern " << h.Pattern() << ", quality " << h.Quality() << ", bend " << h.Bend()
+        << ", strip " << h.Strip() << ", wire " << h.Wire() << ", pattern " << h.Pattern() << ", bend " << h.Bend() << ", quality " << h.Quality()
         << ", phi_fp " << h.Phi_fp() << ", theta_fp " << h.Theta_fp() << ", phi_sim " << h.Phi_sim() << ", theta_sim " << h.Theta_sim()
         << std::endl;
     }

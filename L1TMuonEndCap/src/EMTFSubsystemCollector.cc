@@ -2,8 +2,15 @@
 
 #include "FWCore/Framework/interface/Event.h"
 #include "DataFormats/Common/interface/Handle.h"
+#include "Geometry/CSCGeometry/interface/CSCGeometry.h"
+#include "Geometry/RPCGeometry/interface/RPCGeometry.h"
+#include "Geometry/GEMGeometry/interface/GEMGeometry.h"
+#include "Geometry/GEMGeometry/interface/ME0Geometry.h"
 
+#include "L1Trigger/CSCCommonTrigger/interface/CSCConstants.h"
 #include "L1Trigger/CSCTriggerPrimitives/src/CSCComparatorDigiFitter.h"
+
+#include "L1Trigger/L1TMuonEndCap/interface/EMTFCSCComparatorDigiFitter.h"
 
 #include "helper.h"  // adjacent_cluster
 
@@ -92,6 +99,8 @@ void EMTFSubsystemCollector::extractPrimitives(
     auto dend = (*chamber).second.second;
     for( ; digi != dend; ++digi ) {
       muon_primitives.emplace_back((*chamber).first,*digi);
+
+      //std::cout << "GEM detid " << (*chamber).first << ", pad " << digi->pad() << std::endl;
     }
   }
 
@@ -166,7 +175,7 @@ void EMTFSubsystemCollector::extractPrimitives(
   auto segend  = me0Digis->end();
   for( ; segment != segend; ++segment ) {
     // Debug
-    //std::cout << "segment id: " << segment->me0DetId() << " lp: " << segment->localPosition() << " ld: " << segment->localDirection() << " time: " << segment->time() << " bend: " << segment->deltaPhi() << std::endl;
+    //std::cout << "segment id: " << segment->me0DetId() << " lp: " << segment->localPosition() << " ld: " << segment->localDirection() << " time: " << segment->time() << " bend: " << segment->deltaPhi() << " chi2: " << segment->chi2() / float(segment->nRecHits()*2 - 4) << std::endl;
     //for (auto rechit = segment->specificRecHits().begin(); rechit != segment->specificRecHits().end(); ++rechit) {
     //  std::cout << "rechit id: " << rechit->me0Id() << " lp: " << rechit->localPosition() << " err: " << rechit->localPositionError() << " tof: " << rechit->tof() << " pad: " << tp_geom->getME0Geometry().etaPartition(rechit->me0Id())->pad(rechit->localPosition()) << std::endl;
     //}
@@ -174,7 +183,7 @@ void EMTFSubsystemCollector::extractPrimitives(
     //out.emplace_back((*segment).me0DetId(), *segment, tp_geom->getME0Geometry());  // does not work because me0DetId is missing the eta partition number
 
     assert((*segment).specificRecHits().size() > 0);  // must contain at least 1 rechit
-    ME0DetId detid = segment->me0DetId();
+    ME0DetId detid = (*segment).me0DetId();
     if (detid.roll() == 0 || detid.layer() == 0) {
       auto rechit_it = (*segment).specificRecHits().begin();
       std::advance(rechit_it, (*segment).specificRecHits().size()/2);  // pick the median
@@ -418,7 +427,7 @@ void EMTFSubsystemCollector::make_copad_gem(TriggerPrimitiveCollection& declus_m
 
   const unsigned int maxDeltaBX = 1;
   const unsigned int maxDeltaRoll = 1;
-  const unsigned int maxDeltaPadGE11 = 2;
+  const unsigned int maxDeltaPadGE11 = 3;  // it was 2
   const unsigned int maxDeltaPadGE21 = 2;
 
   // Make sure that the difference is calculated using signed integer, and
@@ -490,12 +499,18 @@ void EMTFSubsystemCollector::make_copad_gem(TriggerPrimitiveCollection& declus_m
 
         has_copad = true;
         if (std::abs(bend) > deltaPad) {
-          if (p->getGEMData().pad >= co_p->getGEMData().pad)
+          if (co_p->getGEMData().pad >= p->getGEMData().pad)
             bend = deltaPad;
           else
             bend = -deltaPad;
         }
       }  // end loop over co_pads
+
+      // Need to flip the bend sign depending on the parity
+      bool isEven = (detid.chamber() % 2 == 0);
+      if (!isEven) {
+        bend = -bend;
+      }
 
       // make a new coincidence pad digi
       if (has_copad) {
@@ -527,32 +542,18 @@ void EMTFSubsystemCollector::extractPrimitives(
   edm::Handle<CSCTag::comparator_digi_collection> cscComparatorDigis;
   iEvent.getByToken(token_comparator, cscComparatorDigis);
 
-  // TAMU fitter
-  bool use_comp_digi_fitter = false;
-  std::unique_ptr<CSCComparatorDigiFitter> tamu_fitter(new CSCComparatorDigiFitter());
-  tamu_fitter->setGeometry(&(tp_geom->getCSCGeometry()));
-  tamu_fitter->setStripBits(0);
-  tamu_fitter->useKeyRadius(true);
+  // TAMU comparator digi fitter
+  bool use_tamu_fitter = false;
+  std::unique_ptr<CSCComparatorDigiFitter> tamu_fitter;
+  if (use_tamu_fitter) {
+    tamu_fitter = std::make_unique<CSCComparatorDigiFitter>();
+    tamu_fitter->setGeometry(&(tp_geom->getCSCGeometry()));
+    tamu_fitter->setStripBits(0);
+    tamu_fitter->useKeyRadius(true);
+  }
 
-  auto encode_comp_digis = [](std::bitset<64>& bits, int layer, int comp_digi, int lct_digi) {
-    int delta = comp_digi - lct_digi;
-    if (std::abs(delta) <= 4) {  // from -4 to +4, 9 possible values
-      int b = delta;
-      b += 4;
-      b += (layer-1) * 9;
-      bits.set(b);
-    }
-  };
-
-  //auto decode_comp_digis = [](const std::bitset<64>& bits, int layer, int lct_digi) {
-  //  std::vector<int> compDigis;
-  //  for (int i=0; i<9; i++) {
-  //    if (bits.test((layer-1) * 9 + i)) {
-  //      compDigis.push_back(lct_digi + i - 4);
-  //    }
-  //  }
-  //  return compDigis;
-  //};
+  // My rough comparator digi fitter
+  std::unique_ptr<EMTFCSCComparatorDigiFitter> emtf_fitter = std::make_unique<EMTFCSCComparatorDigiFitter>();
 
   // Loop over chambers
   auto chamber = cscDigis->begin();
@@ -564,8 +565,8 @@ void EMTFSubsystemCollector::extractPrimitives(
       const CSCDetId& detid = (*chamber).first;
       const CSCCorrelatedLCTDigi& lct = (*digi);
 
-      // TAMU fitter
-      if (use_comp_digi_fitter && (1 <= detid.station() && detid.station() <= 4) && (detid.ring() == 1 || detid.ring() == 4)) {
+      // TAMU comparator digi fitter
+      if (use_tamu_fitter && (1 <= detid.station() && detid.station() <= 4) && (detid.ring() == 1 || detid.ring() == 4)) {
         std::vector<float> fit_phi_layers;
         std::vector<float> fit_z_layers;
         float fitRadius = 0.;
@@ -578,31 +579,62 @@ void EMTFSubsystemCollector::extractPrimitives(
         //}
       }
 
-      // Extract & encode comparator digis
-      std::bitset<64> bits;
-      //std::cout << "comparators for key strip " << lct.getStrip() << std::endl;
-      for (int layer=1; layer <= 6; ++layer) {
-        const CSCDetId layerId(detid.endcap(), detid.station(), detid.ring(), detid.chamber(), layer);
+      // My rough comparator digi fitter
+      std::vector<std::vector<CSCComparatorDigi> > compDigisAllLayers(CSCConstants::NUM_LAYERS);
+      std::vector<int> stagger(CSCConstants::NUM_LAYERS, 0);
+
+      //std::cout << "LCT detid " << detid << ", keyStrip " << lct.getStrip() << ", pattern " << lct.getPattern() << ", keyWG " << lct.getKeyWG() << std::endl;
+      for (int ilayer=0; ilayer<CSCConstants::NUM_LAYERS; ++ilayer) {
+        // Build CSCDetId for particular layer
+        // Layer numbers increase going away from the IP
+        const CSCDetId layerId(detid.endcap(), detid.station(), detid.ring(), detid.chamber(), ilayer+1);
+
+        // Retrieve comparator digis
         const auto& compRange = cscComparatorDigis->get(layerId);
         for (auto compDigiItr = compRange.first; compDigiItr != compRange.second; compDigiItr++) {
-          int halfstrip = (*compDigiItr).getHalfStrip();
-          //std::cout << ".. " << layer << " " << halfstrip << std::endl;
-          encode_comp_digis(bits, layer, halfstrip, lct.getStrip());
+          const CSCComparatorDigi& compDigi = (*compDigiItr);
+          if (std::abs(compDigi.getHalfStrip() - lct.getStrip()) <= 5) {  // only if the comparator digis fit the CLCT patterns
+            compDigisAllLayers.at(ilayer).push_back(compDigi);
+          }
+
+          // Debug
+          //std::cout << ".. " << ilayer+1 << " " << compDigi.getHalfStrip() << " " << compDigi.getFractionalStrip() << " " << compDigi.getTimeBin() << std::endl;
         }
+
+        // Stagger corrections
+        // In all types of chambers except ME1/1, strip 1 is indented by 1/2-strip in layers 1 (top), 3, and 5;
+        // with respect to strip 1 in layers 2, 4, and 6 (bottom).
+        bool is_me11 = (detid.station() == 1 && (detid.ring() == 1 || detid.ring() == 4));
+        if (!is_me11) {
+          stagger.at(ilayer) = ((ilayer+1)%2 == 0) ? 0 : 1;  // 1,3,5 -> stagger; 2,4,6 -> no stagger
+        }
+
+        // Check stagger corrections
+        //{
+        //  const CSCChamber* chamber = tp_geom->getCSCGeometry().chamber(detid);
+        //  int stagger0 = stagger.at(ilayer);
+        //  int stagger1 = (chamber->layer(ilayer+1)->geometry()->stagger() + 1) / 2;
+        //  assert(stagger0 == stagger1);
+        //}
       }
 
-      // Decode comparator digis
-      //for (int layer=1; layer <= 6; ++layer) {
-      //  const std::vector<int>& compDigis = decode_comp_digis(bits, layer, lct.getStrip());
-      //  for (auto halfstrip : compDigis) {
-      //    std::cout << ".... " << layer << " " << halfstrip << std::endl;
-      //  }
-      //}
+      int nhitlayers = 0;
+      for (const auto& x : compDigisAllLayers) {
+        if (x.size() > 0)
+          ++nhitlayers;
+      }
+      assert(nhitlayers >= 3);
+
+      const std::pair<float, float>& res = emtf_fitter->fit(compDigisAllLayers, stagger, lct.getStrip());
+      //std::cout << "fit result: " << res.first << " " << res.second << std::endl;
 
       out.emplace_back(detid, lct);
 
-      // Store encoded comparator digis
-      out.back().accessCSCData().compDigis = bits.to_ullong();
+      // Overwrite bend and quality
+      // 'bend' is deltaPhi. It gets converted into large positive number if negative. Multiply by 4 for now.
+      // 'quality' is chi2/ndof. Multiply by 100 for now.
+      out.back().accessCSCData().bend    = static_cast<uint16_t>(std::round(res.first * 4));
+      out.back().accessCSCData().quality = static_cast<uint16_t>(std::round(res.second * 100));
     }
   }
   return;

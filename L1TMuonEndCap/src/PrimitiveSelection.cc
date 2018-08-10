@@ -64,7 +64,7 @@ void PrimitiveSelection::process(
 
     // Patch the LCT quality number
     // It should be 1-15, see: L1Trigger/CSCTriggerPrimitives/src/CSCMotherboard.cc
-    bool patchQuality = true;
+    bool patchQuality = false;
     if (patchQuality && new_tp.subsystem() == TriggerPrimitive::kCSC) {
       if (new_tp.getCSCData().quality == 0) {  // 0 -> 1
         edm::LogWarning("L1T") << "EMTF patching corrupt CSC LCT quality: changing " << new_tp.getCSCData().quality << " to 1 (station " << new_tp.detId<CSCDetId>().station() << " ring " << new_tp.detId<CSCDetId>().ring() << ")";
@@ -374,6 +374,8 @@ void PrimitiveSelection::process(
       selected_me0_map[selected_me0].push_back(*tp_it);
     }
   }
+
+  // At most 24 clusters, but don't know the limit on segments
 }
 
 
@@ -530,7 +532,7 @@ int PrimitiveSelection::select_csc(const TriggerPrimitive& muon_primitive) const
       assert_no_abort(tp_data.keywire < max_wire);
       assert_no_abort(tp_data.valid == true);
       assert_no_abort(tp_data.pattern <= 10);
-      assert_no_abort(tp_data.quality > 0);
+      //assert_no_abort(tp_data.quality > 0);
     }
 
     // LogWarning
