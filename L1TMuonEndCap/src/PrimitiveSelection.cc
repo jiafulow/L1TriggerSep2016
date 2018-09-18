@@ -184,8 +184,8 @@ void PrimitiveSelection::process(
         int tp_station     = tp_detId.station();
         int tp_ring        = tp_detId.ring();
         const bool is_irpc = (tp_station == 3 || tp_station == 4) && (tp_ring == 1);
-        if (is_irpc)  sz /= 3;  // iRPC strip pitch is 3 times smaller than traditional RPC
-
+        if (is_irpc)
+          return sz > 9;  // iRPC strip pitch is 3 times smaller than traditional RPC
         return sz > 3;
       }
     } cluster_size_cut;
