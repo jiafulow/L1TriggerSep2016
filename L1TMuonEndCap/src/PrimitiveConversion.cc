@@ -560,6 +560,15 @@ void PrimitiveConversion::convert_rpc(
     th <<= 2;   // upgrade to full CSC precision by adding 2 zeros
     th = (th == 0) ? 1 : th;  // protect against invalid value
 
+    if (is_irpc) {
+      fph = emtf::calc_phi_loc_int(glob_phi, conv_hit.PC_sector());
+      th  = emtf::calc_theta_int(glob_theta, conv_hit.Endcap());
+
+      assert(0 <= fph && fph < 5000);
+      assert(0 <=  th &&  th < 128);
+      th = (th == 0) ? 1 : th;  // protect against invalid value
+    }
+
     // _________________________________________________________________________
     // Output
 
