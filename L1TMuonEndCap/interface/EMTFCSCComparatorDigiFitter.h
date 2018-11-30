@@ -27,7 +27,13 @@ public:
 
   typedef CSCComparatorDigi CompDigi;
 
-  typedef std::pair<float, float> FitResult;
+  struct FitResult {
+    FitResult() : position(0.), slope(0.), chi2(100.), ndof(4) {}
+    float position;  // local position at layer 3
+    float slope;     // slope
+    float chi2;      // chi2
+    int ndof;        // degress of freedom
+  };
 
   // For doing least square fit
   typedef ROOT::Math::SMatrix<double,2> SMatrix22;
@@ -35,13 +41,12 @@ public:
   typedef ROOT::Math::SVector<double,2> SVector2;
 
   // Fit comp digis
-  // Return (bend, quality) = (deltaPhi a la ME0, chi2/ndof)
   FitResult fit(const std::vector<std::vector<CompDigi> >& compDigisAllLayers, const std::vector<int>& stagger, int keyStrip) const;
 
   // Least square fit with local x & y coordinates
   FitResult fitlsq(const std::vector<float>& x, const std::vector<float>& y) const;
 
-  // For making combinations
+  // A custom exception class used in making combinations
   class StopIteration : public std::exception {
   public:
     explicit StopIteration(const std::string& what_arg) {}
@@ -52,7 +57,7 @@ public:
 
 private:
   static const unsigned int min_nhits  = 3;
-  static const unsigned int max_ncombs = 8;
+  static const unsigned int max_ncombs = 10;
   static constexpr float    max_dx     = 2.;
 };
 

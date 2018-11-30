@@ -37,6 +37,7 @@ class CSCDetId;
 
 // RPC digi types
 class RPCDigi;
+class RPCRecHit;
 class RPCDetId;
 
 // CPPF digi types
@@ -67,14 +68,13 @@ namespace L1TMuonEndCap {
     // for RPCs you have to unroll the digi-link and raw det-id
     struct RPCData {
       RPCData() : strip(0), strip_low(0), strip_hi(0), phi_int(0), theta_int(0),
-                  emtf_sector(0), layer(0), bx(0), valid(0), x(0.), y(0.), time(0.), isCPPF(false) {}
+                  emtf_sector(0), bx(0), valid(0), x(0.), y(0.), time(0.), isCPPF(false) {}
       uint16_t strip;
       uint16_t strip_low;   // for use in clustering
       uint16_t strip_hi;    // for use in clustering
       uint16_t phi_int;     // for CPPFDigis in EMTF
       uint16_t theta_int;   // for CPPFDigis in EMTF
       uint16_t emtf_sector; // for CPPFDigis in EMTF
-      uint16_t layer;
       int16_t  bx;
       uint16_t valid;
       float    x;
@@ -107,7 +107,7 @@ namespace L1TMuonEndCap {
 
     struct DTData {
       DTData() : bx(0), wheel(0), sector(0), station(0), radialAngle(0),
-                 bendingAngle(0), qualityCode(0), Ts2TagCode(0), BxCntCode(0),
+                 bendingAngle(0), qualityCode(0), Ts2TagCode(0), BxCntCode(0), RpcBit(-10),
                  theta_bti_group(0), segment_number(0), theta_code(0),
                  theta_quality(0) {}
       // from ChambPhDigi (corresponds to a TRACO)
@@ -121,6 +121,7 @@ namespace L1TMuonEndCap {
       int qualityCode; // need to decode
       int Ts2TagCode; // ??
       int BxCntCode; // ????
+      int RpcBit; // 0: DT only, 1: DT segment BX corrected by RPC, 2: RPC only
       // from ChambThDigi (corresponds to a BTI)
       // we have to root out the eta manually
       // theta super layer == SL 1
@@ -164,7 +165,7 @@ namespace L1TMuonEndCap {
                      const int segment_number);
     TriggerPrimitive(const DTChamberId&,
                      const L1MuDTChambThDigi&,
-                     const int segment_number);
+                     const int theta_bti_group);
     TriggerPrimitive(const DTChamberId&,
                      const L1MuDTChambPhDigi&,
                      const L1MuDTChambThDigi&,
@@ -175,10 +176,8 @@ namespace L1TMuonEndCap {
     //RPC
     TriggerPrimitive(const RPCDetId& detid,
                      const RPCDigi& digi);
-    TriggerPrimitive(const RPCDetId& detid,  // keep this version for backward compatibility
-                     const unsigned strip,
-                     const unsigned layer,
-                     const int bx);
+    TriggerPrimitive(const RPCDetId& detid,
+                     const RPCRecHit& rechit);
     TriggerPrimitive(const RPCDetId& detid,  // constructor from CPPFDigi
                      const l1t::CPPFDigi& digi);
 
@@ -188,7 +187,7 @@ namespace L1TMuonEndCap {
 
     // ME0
     TriggerPrimitive(const ME0DetId& detid,
-                     const ME0Segment& digi,
+                     const ME0Segment& rechit,
                      const ME0Geometry& geom);
 
     //copy
@@ -221,7 +220,7 @@ namespace L1TMuonEndCap {
       IDType detId() const { return IDType(_id); }
 
     // accessors to raw subsystem data
-    void setDTData(const DTData& dt) { _dt = dt; }
+    void setDTData(const DTData& dt)    { _dt = dt; }
     void setCSCData(const CSCData& csc) { _csc = csc; }
     void setRPCData(const RPCData& rpc) { _rpc = rpc; }
     void setGEMData(const GEMData& gem) { _gem = gem; }

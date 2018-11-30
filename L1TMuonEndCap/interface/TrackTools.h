@@ -38,14 +38,14 @@ namespace emtf {
   }
 
   inline double range_theta_deg(double deg) {
-    deg = fabs(deg);
+    deg = std::abs(deg);
     while (deg >= 180.)    deg -= 180.;
     if    (deg >= 180./2.) deg  = 180. - deg;
     return deg;
   }
 
   inline double range_theta_rad(double rad) {
-    rad = fabs(rad);
+    rad = std::abs(rad);
     while (rad >= M_PI)    rad -= M_PI;
     if    (rad >= M_PI/2.) rad  = M_PI - rad;
     return rad;
