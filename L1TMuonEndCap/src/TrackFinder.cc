@@ -5,6 +5,9 @@
 
 #include "L1Trigger/L1TMuonEndCap/interface/EMTFSubsystemCollector.h"
 
+// Experimental features
+#include "L1Trigger/L1TMuonEndCap/interface/experimental/EMTFSubsystemCollector.h"
+
 
 TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollector&& iConsumes) :
     geometry_translator_(),

@@ -1,6 +1,10 @@
 #ifndef L1TMuonEndCap_EMTFSubsystemTag_h
 #define L1TMuonEndCap_EMTFSubsystemTag_h
 
+#include "DataFormats/L1DTTrackFinder/interface/L1MuDTChambPhDigi.h"
+#include "DataFormats/L1DTTrackFinder/interface/L1MuDTChambPhContainer.h"
+#include "DataFormats/L1DTTrackFinder/interface/L1MuDTChambThDigi.h"
+#include "DataFormats/L1DTTrackFinder/interface/L1MuDTChambThContainer.h"
 #include "DataFormats/CSCDigi/interface/CSCCorrelatedLCTDigi.h"
 #include "DataFormats/CSCDigi/interface/CSCCorrelatedLCTDigiCollection.h"
 #include "DataFormats/CSCDigi/interface/CSCComparatorDigi.h"
@@ -14,6 +18,13 @@
 
 
 namespace emtf {
+
+  struct DTTag {
+    typedef L1MuDTChambPhDigi      digi_type;
+    typedef L1MuDTChambPhContainer digi_collection;
+    typedef L1MuDTChambThDigi      theta_digi_type;
+    typedef L1MuDTChambThContainer theta_digi_collection;
+  };
 
   struct CSCTag {
     typedef CSCCorrelatedLCTDigi           digi_type;

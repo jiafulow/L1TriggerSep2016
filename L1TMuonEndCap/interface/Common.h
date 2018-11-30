@@ -29,11 +29,13 @@ typedef L1TMuonEndCap::GeometryTranslator         GeometryTranslator;
 typedef L1TMuonEndCap::TriggerPrimitive           TriggerPrimitive;
 typedef L1TMuonEndCap::TriggerPrimitiveCollection TriggerPrimitiveCollection;
 
-typedef TriggerPrimitive::CSCData   CSCData;
-typedef TriggerPrimitive::RPCData   RPCData;
-typedef TriggerPrimitive::GEMData   GEMData;
-typedef TriggerPrimitive::ME0Data   ME0Data;
+typedef TriggerPrimitive::DTData   DTData;
+typedef TriggerPrimitive::CSCData  CSCData;
+typedef TriggerPrimitive::RPCData  RPCData;
+typedef TriggerPrimitive::GEMData  GEMData;
+typedef TriggerPrimitive::ME0Data  ME0Data;
 
+typedef emtf::DTTag   DTTag;
 typedef emtf::CSCTag  CSCTag;
 typedef emtf::RPCTag  RPCTag;
 typedef emtf::GEMTag  GEMTag;
