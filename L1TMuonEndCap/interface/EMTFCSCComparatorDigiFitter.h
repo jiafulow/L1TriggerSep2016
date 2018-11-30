@@ -27,7 +27,13 @@ public:
 
   typedef CSCComparatorDigi CompDigi;
 
-  typedef std::pair<float, float> FitResult;
+  struct FitResult {
+    FitResult() : position(0.), slope(0.), chi2(100.), ndof(4) {}
+    float position;
+    float slope;
+    float chi2;
+    int ndof;
+  };
 
   // For doing least square fit
   typedef ROOT::Math::SMatrix<double,2> SMatrix22;
@@ -52,7 +58,7 @@ public:
 
 private:
   static const unsigned int min_nhits  = 3;
-  static const unsigned int max_ncombs = 8;
+  static const unsigned int max_ncombs = 10;
   static constexpr float    max_dx     = 2.;
 };
 
