@@ -363,7 +363,7 @@ GeometryTranslator::calcDTSpecificPoint(const TriggerPrimitive& tp) const {
 
   // local phi in sector -> global phi
   double phi = ((double)tp.getDTData().radialAngle)/4096.0;
-  phi += tp.getDTData().sector*M_PI/6.0; // add sector offset
+  phi += tp.getDTData().sector*M_PI/6.0; // add sector offset, sector is [0,11]
 
   return GlobalPoint( GlobalPoint::Polar( theta_gp.theta(),
                                           phi,

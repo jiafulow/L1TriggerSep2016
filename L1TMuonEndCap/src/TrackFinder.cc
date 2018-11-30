@@ -5,6 +5,9 @@
 
 #include "L1Trigger/L1TMuonEndCap/interface/EMTFSubsystemCollector.h"
 
+// Experimental features
+#include "L1Trigger/L1TMuonEndCap/interface/experimental/EMTFSubsystemCollector.h"
+
 
 TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollector&& iConsumes) :
     geometry_translator_(),
@@ -13,16 +16,19 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
     pt_assign_engine_(),
     sector_processors_(),
     config_(iConfig),
+    tokenDTPhi_(iConsumes.consumes<DTTag::digi_collection>(iConfig.getParameter<edm::InputTag>("DTPhiInput"))),
+    tokenDTTheta_(iConsumes.consumes<DTTag::theta_digi_collection>(iConfig.getParameter<edm::InputTag>("DTThetaInput"))),
     tokenCSC_(iConsumes.consumes<CSCTag::digi_collection>(iConfig.getParameter<edm::InputTag>("CSCInput"))),
     tokenCSCComparator_(iConsumes.consumes<CSCTag::comparator_digi_collection>(iConfig.getParameter<edm::InputTag>("CSCComparatorInput"))),
     tokenRPC_(iConsumes.consumes<RPCTag::digi_collection>(iConfig.getParameter<edm::InputTag>("RPCInput"))),
+    tokenRPCRecHit_(iConsumes.consumes<RPCTag::rechit_collection>(iConfig.getParameter<edm::InputTag>("RPCRecHitInput"))),
     tokenCPPF_(iConsumes.consumes<CPPFTag::digi_collection>(iConfig.getParameter<edm::InputTag>("CPPFInput"))),
     tokenGEM_(iConsumes.consumes<GEMTag::digi_collection>(iConfig.getParameter<edm::InputTag>("GEMInput"))),
-    tokenIRPC_(iConsumes.consumes<IRPCTag::digi_collection>(iConfig.getParameter<edm::InputTag>("IRPCInput"))),
     tokenME0_(iConsumes.consumes<ME0Tag::digi_collection>(iConfig.getParameter<edm::InputTag>("ME0Input"))),
     verbose_(iConfig.getUntrackedParameter<int>("verbosity")),
     primConvLUT_(iConfig.getParameter<edm::ParameterSet>("spPCParams16").getParameter<int>("PrimConvLUT")),
     fwConfig_(iConfig.getParameter<bool>("FWConfig")),
+    useDT_(iConfig.getParameter<bool>("DTEnable")),
     useCSC_(iConfig.getParameter<bool>("CSCEnable")),
     useRPC_(iConfig.getParameter<bool>("RPCEnable")),
     useCPPF_(iConfig.getParameter<bool>("CPPFEnable")),
@@ -148,21 +154,24 @@ void TrackFinder::process(
   experimental::EMTFSubsystemCollector expt_collector;
   if (useCSC_)
     expt_collector.extractPrimitives(CSCTag(), &geometry_translator_, iEvent, tokenCSC_, tokenCSCComparator_, muon_primitives);
+  if (useRPC_)
+    expt_collector.extractPrimitives(RPCTag(), &geometry_translator_, iEvent, tokenRPC_, tokenRPCRecHit_, muon_primitives);
+  if (useIRPC_)
+    expt_collector.extractPrimitives(IRPCTag(), &geometry_translator_, iEvent, tokenRPC_, tokenRPCRecHit_, muon_primitives);
+  if (useGEM_)
+    collector.extractPrimitives(GEMTag(), &geometry_translator_, iEvent, tokenGEM_, muon_primitives);
+  if (useME0_)
+    collector.extractPrimitives(ME0Tag(), &geometry_translator_, iEvent, tokenME0_, muon_primitives);
+  if (useDT_)
+    collector.extractPrimitives(DTTag(), &geometry_translator_, iEvent, tokenDTPhi_, tokenDTTheta_, muon_primitives);
 #else
   if (useCSC_)
     collector.extractPrimitives(CSCTag(), &geometry_translator_, iEvent, tokenCSC_, muon_primitives);
-#endif
   if (useRPC_ && useCPPF_)
     collector.extractPrimitives(CPPFTag(), &geometry_translator_, iEvent, tokenCPPF_, muon_primitives);
   else if (useRPC_)
     collector.extractPrimitives(RPCTag(), &geometry_translator_, iEvent, tokenRPC_, muon_primitives);
-  if (useGEM_)
-    collector.extractPrimitives(GEMTag(), &geometry_translator_, iEvent, tokenGEM_, muon_primitives);
-  if (useIRPC_)
-    collector.extractPrimitives(IRPCTag(), &geometry_translator_, iEvent, tokenIRPC_, muon_primitives);
-  if (useME0_)
-    collector.extractPrimitives(ME0Tag(), &geometry_translator_, iEvent, tokenME0_, muon_primitives);
-
+#endif
 
   // Check trigger primitives
   if (verbose_ > 2) {  // debug

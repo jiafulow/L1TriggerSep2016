@@ -372,10 +372,31 @@ void SectorProcessor::process(
 
   // ___________________________________________________________________________
   // Debug
+  bool dump_dt_input  = false;
   bool dump_csc_input = false;
   bool dump_rpc_input = false;
   bool dump_gem_input = false;
   bool dump_me0_input = false;
+
+  if (dump_dt_input && endcap_ == 1 && sector_ == 1) {
+    TriggerPrimitiveCollection::const_iterator tp_it = muon_primitives.begin();
+    TriggerPrimitiveCollection::const_iterator tp_end = muon_primitives.end();
+    int i = 0;
+
+    for (; tp_it != tp_end; ++tp_it) {
+      if (tp_it->subsystem() == TriggerPrimitive::kDT) {
+        const DTChamberId& tp_detId = tp_it->detId<DTChamberId>();
+        const DTData&  tp_data  = tp_it->getDTData();
+        std::cout << "DT #" << i++ << ": BX " << tp_it->getBX()
+          << ", wheel " << tp_detId.wheel() << ", sector " << tp_detId.sector() << ", station " << tp_detId.station()
+          << ", strip " << tp_it->getStrip() << ", wire " << tp_it->getWire() << ", pattern " << tp_it->getPattern() << ", bend " << tp_data.bendingAngle << ", quality " << tp_data.qualityCode << ", bti_group " << tp_data.theta_bti_group
+          << std::endl;
+
+        //tp_it->print(std::cout);
+
+      }  // end if DT
+    }  // end loop over muon_primitives
+  }  // end if dump_dt_input
 
   if (dump_csc_input && endcap_ == 1 && sector_ == 1) {
     TriggerPrimitiveCollection::const_iterator tp_it = muon_primitives.begin();
@@ -600,6 +621,7 @@ void SectorProcessor::process_single_bx(
       bugGMTPhi_, promoteMode7_, modeQualVer_
   );
 
+  std::map<int, TriggerPrimitiveCollection> selected_dt_map;
   std::map<int, TriggerPrimitiveCollection> selected_csc_map;
   std::map<int, TriggerPrimitiveCollection> selected_rpc_map;
   std::map<int, TriggerPrimitiveCollection> selected_gem_map;
@@ -623,13 +645,14 @@ void SectorProcessor::process_single_bx(
   // Put them into maps with an index that roughly corresponds to
   // each input link.
   // From src/PrimitiveSelection.cc
+  prim_sel.process(DTTag(), muon_primitives, selected_dt_map);
   prim_sel.process(CSCTag(), muon_primitives, selected_csc_map);
   if (useRPC_) {
     prim_sel.process(RPCTag(), muon_primitives, selected_rpc_map);
   }
   prim_sel.process(GEMTag(), muon_primitives, selected_gem_map);
   prim_sel.process(ME0Tag(), muon_primitives, selected_me0_map);
-  prim_sel.merge(selected_csc_map, selected_rpc_map, selected_gem_map, selected_me0_map, selected_prim_map);
+  prim_sel.merge(selected_dt_map, selected_csc_map, selected_rpc_map, selected_gem_map, selected_me0_map, selected_prim_map);
 
   // Convert trigger primitives into "converted" hits
   // A converted hit consists of integer representations of phi, theta, and zones
@@ -651,10 +674,11 @@ void SectorProcessor::process_single_bx(
   {
     // Keep all the converted hits for the use of data-emulator comparisons.
     // They include the extra ones that are not used in track building and the subsequent steps.
-    prim_sel.merge_no_truncate(selected_csc_map, selected_rpc_map, selected_gem_map, selected_me0_map, inclusive_selected_prim_map);
+    prim_sel.merge_no_truncate(selected_dt_map, selected_csc_map, selected_rpc_map, selected_gem_map, selected_me0_map, inclusive_selected_prim_map);
     prim_conv.process(inclusive_selected_prim_map, inclusive_conv_hits);
 
     // Clear the input maps to save memory
+    selected_dt_map.clear();
     selected_csc_map.clear();
     selected_rpc_map.clear();
     selected_gem_map.clear();
