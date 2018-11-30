@@ -154,7 +154,7 @@ GeometryTranslator::getME0SpecificPoint(const TriggerPrimitive& tp) const {
   const ME0Chamber * chamber = _geome0->chamber(id);
   assert(chamber != nullptr);  // failed to get ME0 chamber
   const LocalPoint lp(tp.getME0Data().x, tp.getME0Data().y);
-  const GlobalPoint gp = chamber->toGlobal(lp);
+  const GlobalPoint& gp = chamber->toGlobal(lp);
   return gp;
 }
 
@@ -183,8 +183,8 @@ GeometryTranslator::getGEMSpecificPoint(const TriggerPrimitive& tp) const {
   //const uint16_t pad = tp.getGEMData().pad;
   // Use half-strip precision, - 0.5 at the end to get the center of the strip
   const float pad = (0.5 * static_cast<float>(tp.getGEMData().pad_low + tp.getGEMData().pad_hi)) - 0.5;
-  const LocalPoint lp = roll->centreOfPad(pad);
-  const GlobalPoint gp = roll->surface().toGlobal(lp);
+  const LocalPoint& lp = roll->centreOfPad(pad);
+  const GlobalPoint& gp = roll->surface().toGlobal(lp);
   return gp;
 }
 
@@ -213,8 +213,8 @@ GeometryTranslator::getRPCSpecificPoint(const TriggerPrimitive& tp) const {
   //const int strip = static_cast<int>(tp.getRPCData().strip);
   // Use half-strip precision, - 0.5 at the end to get the center of the strip
   const float strip = (0.5 * static_cast<float>(tp.getRPCData().strip_low + tp.getRPCData().strip_hi)) - 0.5;
-  const LocalPoint lp = roll->centreOfStrip(strip);
-  const GlobalPoint gp = roll->surface().toGlobal(lp);
+  const LocalPoint& lp = roll->centreOfStrip(strip);
+  const GlobalPoint& gp = roll->surface().toGlobal(lp);
   return gp;
 }
 
@@ -273,9 +273,9 @@ GeometryTranslator::getCSCSpecificPoint(const TriggerPrimitive& tp) const {
 
   // the rough location of the hit at the ALCT key layer
   // we will refine this using the half strip information
-  const LocalPoint coarse_lp =
+  const LocalPoint& coarse_lp =
     layer_geom->stripWireGroupIntersection(strip,keyWG);
-  const GlobalPoint coarse_gp = layer->surface().toGlobal(coarse_lp);
+  const GlobalPoint& coarse_gp = layer->surface().toGlobal(coarse_lp);
 
   // the strip width/4.0 gives the offset of the half-strip
   // center with respect to the strip center
@@ -359,11 +359,11 @@ GeometryTranslator::calcDTSpecificPoint(const TriggerPrimitive& tp) const {
     // of the chamber
     thetaBTI = DTBtiId(baseid,3,1);
   }
-  const GlobalPoint theta_gp = trig_geom->CMSPosition(thetaBTI);
+  const GlobalPoint& theta_gp = trig_geom->CMSPosition(thetaBTI);
 
   // local phi in sector -> global phi
-  double phi = ((double)tp.getDTData().radialAngle)/4096.0;
-  phi += tp.getDTData().sector*M_PI/6.0; // add sector offset
+  double phi = ((double)tp.getDTData().radialAngle)/4096.0;  // 12 bits for 1 radian
+  phi += tp.getDTData().sector*M_PI/6.0; // add sector offset, sector is [0,11]
 
   return GlobalPoint( GlobalPoint::Polar( theta_gp.theta(),
                                           phi,

@@ -14,7 +14,7 @@ EMTFCSCComparatorDigiFitter::~EMTFCSCComparatorDigiFitter() {}
 EMTFCSCComparatorDigiFitter::FitResult
 EMTFCSCComparatorDigiFitter::fit(const std::vector<std::vector<CompDigi> >& compDigisAllLayers, const std::vector<int>& stagger, int keyStrip) const
 {
-  FitResult res(0., 100.);  // deltaPhi, chi2/ndof
+  FitResult res;
 
   // Make combinations
   std::vector<std::vector<int> > combinations = make_combinations(compDigisAllLayers);
@@ -22,7 +22,7 @@ EMTFCSCComparatorDigiFitter::fit(const std::vector<std::vector<CompDigi> >& comp
   // Shuffle
   std::random_shuffle(combinations.begin(), combinations.end());
 
-  // Only fit up to 8 combinations
+  // Only fit up to 10 combinations
   if (combinations.size() > max_ncombs) {
     combinations.erase(combinations.begin() + max_ncombs, combinations.end());
   }
@@ -42,7 +42,7 @@ EMTFCSCComparatorDigiFitter::fit(const std::vector<std::vector<CompDigi> >& comp
     const std::vector<int>& combination = *it;
     for (unsigned i=0; i<combination.size(); ++i) {
       int ii = combination.at(i);
-      if (compDigisAllLayers.at(i).size() > 0) {
+      if (compDigisAllLayers.at(i).size() > 0) { // protect against empty layer
         const CompDigi& compDigi = compDigisAllLayers.at(i).at(ii);
         x.push_back(compDigi.getHalfStrip() - keyStrip + stagger.at(i) - stagger.at(CSCConstants::KEY_CLCT_LAYER-1));
         y.push_back(i+1);
@@ -51,16 +51,19 @@ EMTFCSCComparatorDigiFitter::fit(const std::vector<std::vector<CompDigi> >& comp
 
     // Fit
     const FitResult& tmp_res = fitlsq(x, y);
-    if (res.second > tmp_res.second) {  // minimize on chi2/ndof
+    if (res.chi2 > tmp_res.chi2) {  // minimize on chi2
       res = tmp_res;
     }
+
+    if (res.chi2 == 0.0)  // already perfect
+      break;
   }
   return res;
 }
 
 EMTFCSCComparatorDigiFitter::FitResult EMTFCSCComparatorDigiFitter::fitlsq(const std::vector<float>& x, const std::vector<float>& y) const
 {
-  FitResult res(0., 100.);  // deltaPhi, chi2/ndof
+  FitResult res;
 
   if (x.size() < min_nhits) {  // not enough hits
     return res;
@@ -115,7 +118,8 @@ EMTFCSCComparatorDigiFitter::FitResult EMTFCSCComparatorDigiFitter::fitlsq(const
     float dx = (intercept + slope * y_i) - x_i;
     chi2 += ee * dx * dx;
 
-    if (std::abs(dx) > max_dx)  please_refit = true;  // detect outlier
+    if (std::abs(dx) > max_dx)
+      please_refit = true;  // detect outlier
   }
   //std::cout << "...... " << intercept << " " << slope << " " << chi2 << " " << ndof << std::endl;
 
@@ -135,9 +139,8 @@ EMTFCSCComparatorDigiFitter::FitResult EMTFCSCComparatorDigiFitter::fitlsq(const
       y_refit.push_back(y_i);
     }
 
-    if (x_refit.size() < min_nhits) {  // not enough hits
+    if (x_refit.size() < min_nhits)  // not enough hits
       please_refit = false;
-    }
 
     assert(x_refit.size() == y_refit.size());
 
@@ -187,8 +190,10 @@ EMTFCSCComparatorDigiFitter::FitResult EMTFCSCComparatorDigiFitter::fitlsq(const
   }  // end refit if necessary
 
   // Calculate deltaPhi a la ME0, chi2/ndof
-  res.first  = slope * CSCConstants::NUM_LAYERS;
-  res.second = chi2/float(ndof);
+  res.position = intercept + (slope * CSCConstants::KEY_CLCT_LAYER);
+  res.slope = slope;
+  res.chi2 = chi2;
+  res.ndof = ndof;
   return res;
 }
 
@@ -214,19 +219,34 @@ EMTFCSCComparatorDigiFitter::make_combinations(const std::vector<std::vector<Com
         if (len == 0)  len = 1;  // protect against empty layer
 
         if (j != len-1) {
-            combinations.push_back(combination);
-            combination.at(i) += 1;
-            for (int ii=CSCConstants::NUM_LAYERS-1; ii>=i+1; --ii)
-                combination.at(ii) = 0;
-            break;
+          combinations.push_back(combination);
+          combination.at(i) += 1;
+          for (int ii=CSCConstants::NUM_LAYERS-1; ii>=i+1; --ii) {
+            combination.at(ii) = 0;
+          }
+          break;
         } else if (i == 0) {
-            combinations.push_back(combination);
-            throw StopIteration("");
+          combinations.push_back(combination);
+          throw StopIteration("");
         }
       }
     }
   } catch (const StopIteration &e) {
-    // do nothing
+    // Debug
+    //for (unsigned i = 0; i < compDigisAllLayers.size(); ++i) {
+    //  std::cout << "Layer " << i << ": ";
+    //  for (unsigned j = 0; j < compDigisAllLayers.at(i).size(); ++j) {
+    //    std::cout << compDigisAllLayers.at(i).at(j).getHalfStrip() << " ";
+    //  }
+    //  std::cout << std::endl;
+    //}
+    //for (unsigned i = 0; i < combinations.size(); ++i) {
+    //  std::cout << "Comb " << i << ": ";
+    //  for (unsigned j = 0; j < combinations.at(i).size(); ++j) {
+    //    std::cout << combinations.at(i).at(j) << " ";
+    //  }
+    //}
+    //std::cout << std::endl;
   }
   return combinations;
 }
