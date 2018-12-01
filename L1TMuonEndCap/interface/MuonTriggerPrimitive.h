@@ -23,6 +23,12 @@
 
 //DetId
 #include "DataFormats/DetId/interface/DetId.h"
+#include "DataFormats/MuonDetId/interface/DTChamberId.h"
+#include "DataFormats/MuonDetId/interface/CSCDetId.h"
+#include "DataFormats/MuonDetId/interface/RPCDetId.h"
+#include "DataFormats/MuonDetId/interface/GEMDetId.h"
+#include "DataFormats/MuonDetId/interface/ME0DetId.h"
+
 //Global point (created on the fly)
 #include "DataFormats/GeometryVector/interface/GlobalPoint.h"
 
@@ -150,7 +156,7 @@ namespace L1TMuonEndCap {
                      const int segment_number);
     TriggerPrimitive(const DTChamberId&,
                      const L1MuDTChambThDigi&,
-                     const int segment_number);
+                     const int theta_bti_group);
     TriggerPrimitive(const DTChamberId&,
                      const L1MuDTChambPhDigi&,
                      const L1MuDTChambThDigi&,
@@ -205,7 +211,7 @@ namespace L1TMuonEndCap {
       IDType detId() const { return IDType(_id); }
 
     // accessors to raw subsystem data
-    void setDTData(const DTData& dt) { _dt = dt; }
+    void setDTData(const DTData& dt)    { _dt = dt; }
     void setCSCData(const CSCData& csc) { _csc = csc; }
     void setRPCData(const RPCData& rpc) { _rpc = rpc; }
     void setGEMData(const GEMData& gem) { _gem = gem; }

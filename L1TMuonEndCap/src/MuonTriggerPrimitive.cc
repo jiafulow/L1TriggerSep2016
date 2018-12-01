@@ -8,13 +8,6 @@
 #include "DataFormats/GEMDigi/interface/GEMPadDigi.h"
 #include "DataFormats/GEMRecHit/interface/ME0Segment.h"
 
-// detector ID types
-#include "DataFormats/MuonDetId/interface/DTChamberId.h"
-#include "DataFormats/MuonDetId/interface/CSCDetId.h"
-#include "DataFormats/MuonDetId/interface/RPCDetId.h"
-#include "DataFormats/MuonDetId/interface/GEMDetId.h"
-#include "DataFormats/MuonDetId/interface/ME0DetId.h"
-
 #include "Geometry/GEMGeometry/interface/ME0Geometry.h"  // ME0 convert x to pad
 
 
@@ -357,7 +350,7 @@ const int TriggerPrimitive::getBX() const {
 const int TriggerPrimitive::getStrip() const {
   switch(_subsystem) {
   case kDT:
-    return -1;
+    return _dt.radialAngle;
   case kCSC:
     return _csc.strip;
   case kRPC:
@@ -377,7 +370,7 @@ const int TriggerPrimitive::getStrip() const {
 const int TriggerPrimitive::getWire() const {
   switch(_subsystem) {
   case kDT:
-    return -1;
+    return _dt.theta_bti_group;
   case kCSC:
     return _csc.keywire;
   case kRPC:

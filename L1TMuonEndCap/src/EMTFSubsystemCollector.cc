@@ -2,6 +2,7 @@
 
 #include "FWCore/Framework/interface/Event.h"
 #include "DataFormats/Common/interface/Handle.h"
+#include "Geometry/DTGeometry/interface/DTGeometry.h"
 #include "Geometry/CSCGeometry/interface/CSCGeometry.h"
 #include "Geometry/RPCGeometry/interface/RPCGeometry.h"
 #include "Geometry/GEMGeometry/interface/GEMGeometry.h"
@@ -11,6 +12,103 @@
 
 // The definitions of CSCTag, RPCTag, GEMTag, etc are defined in interface/EMTFSubsystemTag.h
 // They are used to specialize the extractPrimitives() function.
+
+// Specialized for DT
+template<>
+void EMTFSubsystemCollector::extractPrimitives(
+    DTTag tag,
+    const GeometryTranslator* tp_geom,
+    const edm::Event& iEvent,
+    const edm::EDGetToken& token1,  // for DT phi digis
+    const edm::EDGetToken& token2,  // for DT theta digis
+    TriggerPrimitiveCollection& out
+) const {
+  edm::Handle<DTTag::digi_collection> phiContainer;
+  iEvent.getByToken(token1, phiContainer);
+
+  edm::Handle<DTTag::theta_digi_collection> thetaContainer;
+  iEvent.getByToken(token2, thetaContainer);
+
+  // Adapted from L1Trigger/L1TMuonBarrel/src/L1TMuonBarrelKalmanStubProcessor.cc
+  int minPhiQuality = 0;
+  int minBX = -3;
+  int maxBX = 3;
+
+  for (int bx = minBX; bx <= maxBX; bx++) {
+    for (int wheel = -2; wheel <= 2; wheel++) {
+      for (int sector = 0; sector < 12; sector++) {
+        for (int station = 1; station <= 4; station++) {
+
+          if (wheel == -1 || wheel == 0 || wheel == 1)  continue;  // do not include wheels -1, 0, +1
+          if (station == 4)  continue;  // do not include MB4
+
+          // According to Michalis, in legacy BMTF, the second stub was coming as BXNUM=-1.
+          // This is a code convention now, but you need bx-1 to get the proper second stub.
+          DTTag::theta_digi_type const* theta_segm = thetaContainer->chThetaSegm(wheel,station,sector,bx);
+          DTTag::digi_type const* phi_segm_high = phiContainer->chPhiSegm1(wheel,station,sector,bx);
+          DTTag::digi_type const* phi_segm_low = phiContainer->chPhiSegm2(wheel,station,sector,bx-1);
+
+          // Find theta BTI group(s)
+          bool has_theta_segm = false;
+          int bti_group1 = -1;
+          int bti_group2 = -1;
+
+          if (theta_segm != nullptr) {
+            has_theta_segm = true;
+
+            for (unsigned int i = 0; i < 7; ++i) {
+              if (theta_segm->position(i) != 0) {
+                if (bti_group1 < 0) {
+                  bti_group1 = i;
+                  bti_group2 = i;
+                } else {
+                  bti_group2 = i;
+                }
+              }
+            }
+            assert(bti_group1 != -1 && bti_group2 != -1);
+          }
+
+          // 1st phi segment
+          if (phi_segm_high != nullptr) {
+            if (phi_segm_high->code() >= minPhiQuality) {
+              DTChamberId detid(phi_segm_high->whNum(),phi_segm_high->stNum(),phi_segm_high->scNum()+1);
+              if (has_theta_segm) {
+                out.emplace_back(detid, *phi_segm_high, *theta_segm, bti_group1);
+              } else {
+                out.emplace_back(detid, *phi_segm_high, 1);
+              }
+            }
+          }
+
+          // 2nd phi segment
+          if (phi_segm_low != nullptr) {
+            if (phi_segm_low->code() >= minPhiQuality) {
+              DTChamberId detid(phi_segm_low->whNum(),phi_segm_low->stNum(),phi_segm_low->scNum()+1);
+              if (has_theta_segm) {
+                out.emplace_back(detid, *phi_segm_low, *theta_segm, bti_group2);
+              } else {
+                out.emplace_back(detid, *phi_segm_low, 2);
+              }
+            }
+          }
+
+          // Duplicate DT muon primitives, if more than one theta segment, but only one phi segment
+          if (phi_segm_high != nullptr && phi_segm_low == nullptr && bti_group2 != -1) {
+            DTChamberId detid(phi_segm_high->whNum(),phi_segm_high->stNum(),phi_segm_high->scNum()+1);
+            if (has_theta_segm) {
+              out.emplace_back(detid, *phi_segm_high, *theta_segm, bti_group2);
+            } else {
+              out.emplace_back(detid, *phi_segm_high, 2);
+            }
+          }
+
+        }  // end loop over station
+      }  // end loop over sector
+    }  // end loop over wheel
+  }  // end loop over bx
+  return;
+}
 
 // Specialized for CSC
 template<>
