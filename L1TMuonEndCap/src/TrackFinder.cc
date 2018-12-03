@@ -16,6 +16,8 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
     pt_assign_engine_(),
     sector_processors_(),
     config_(iConfig),
+    tokenDTPhi_(iConsumes.consumes<DTTag::digi_collection>(iConfig.getParameter<edm::InputTag>("DTPhiInput"))),
+    tokenDTTheta_(iConsumes.consumes<DTTag::theta_digi_collection>(iConfig.getParameter<edm::InputTag>("DTThetaInput"))),
     tokenCSC_(iConsumes.consumes<CSCTag::digi_collection>(iConfig.getParameter<edm::InputTag>("CSCInput"))),
     tokenCSCComparator_(iConsumes.consumes<CSCTag::comparator_digi_collection>(iConfig.getParameter<edm::InputTag>("CSCComparatorInput"))),
     tokenRPC_(iConsumes.consumes<RPCTag::digi_collection>(iConfig.getParameter<edm::InputTag>("RPCInput"))),
@@ -23,6 +25,7 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
     tokenIRPC_(iConsumes.consumes<IRPCTag::digi_collection>(iConfig.getParameter<edm::InputTag>("IRPCInput"))),
     tokenME0_(iConsumes.consumes<ME0Tag::digi_collection>(iConfig.getParameter<edm::InputTag>("ME0Input"))),
     verbose_(iConfig.getUntrackedParameter<int>("verbosity")),
+    useDT_(iConfig.getParameter<bool>("DTEnable")),
     useCSC_(iConfig.getParameter<bool>("CSCEnable")),
     useRPC_(iConfig.getParameter<bool>("RPCEnable")),
     useGEM_(iConfig.getParameter<bool>("GEMEnable")),
@@ -154,6 +157,8 @@ void TrackFinder::process(
     collector.extractPrimitives(IRPCTag(), &geometry_translator_, iEvent, tokenIRPC_, muon_primitives);
   if (useME0_)
     collector.extractPrimitives(ME0Tag(), &geometry_translator_, iEvent, tokenME0_, muon_primitives);
+  if (useDT_)
+    collector.extractPrimitives(DTTag(), &geometry_translator_, iEvent, tokenDTPhi_, tokenDTTheta_, muon_primitives);
 
 
   // Check trigger primitives

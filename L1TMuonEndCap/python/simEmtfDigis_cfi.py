@@ -13,6 +13,8 @@ simEmtfDigisMC = cms.EDProducer("L1TMuonEndCapTrackProducer",
     verbosity = cms.untracked.int32(0),
 
     # Input collections
+    DTPhiInput = cms.InputTag('simTwinMuxDigis'),
+    DTThetaInput = cms.InputTag('simDtTriggerPrimitiveDigis'),
     CSCInput = cms.InputTag('simCscTriggerPrimitiveDigis','MPCSORTED'),
     CSCComparatorInput = cms.InputTag('simMuonCSCDigis','MuonCSCComparatorDigi'),
     RPCInput = cms.InputTag('simMuonRPCDigis'),
@@ -21,6 +23,7 @@ simEmtfDigisMC = cms.EDProducer("L1TMuonEndCapTrackProducer",
     ME0Input = cms.InputTag('me0TriggerPseudoDigis'),
 
     # Run with CSC, RPC, GEM
+    DTEnable = cms.bool(False),
     CSCEnable = cms.bool(True),
     RPCEnable = cms.bool(True),
     GEMEnable = cms.bool(False),

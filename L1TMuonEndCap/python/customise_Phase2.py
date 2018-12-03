@@ -4,8 +4,10 @@ def customise(process):
 
     # From python/simEmtfDigis_cfi.py
     if hasattr(process, 'simEmtfDigis'):
-        process.simEmtfDigis.spPCParams16.ZoneBoundaries = [0,36,54,96,127]
-        process.simEmtfDigis.spPCParams16.UseNewZones    = True
+        #process.simEmtfDigis.spPCParams16.ZoneBoundaries = [0,36,54,96,127]
+        #process.simEmtfDigis.spPCParams16.UseNewZones    = True
+        process.simEmtfDigis.DTEnable                    = True
+        process.simEmtfDigis.CSCEnable                   = True
         process.simEmtfDigis.RPCEnable                   = True
         process.simEmtfDigis.GEMEnable                   = True
         process.simEmtfDigis.IRPCEnable                  = True
