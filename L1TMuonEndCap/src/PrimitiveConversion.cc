@@ -1,10 +1,5 @@
 #include "L1Trigger/L1TMuonEndCap/interface/PrimitiveConversion.h"
 
-#include "DataFormats/MuonDetId/interface/DTChamberId.h"
-#include "DataFormats/MuonDetId/interface/CSCDetId.h"
-#include "DataFormats/MuonDetId/interface/RPCDetId.h"
-#include "DataFormats/MuonDetId/interface/GEMDetId.h"
-#include "DataFormats/MuonDetId/interface/ME0DetId.h"
 #include "L1Trigger/L1TMuonEndCap/interface/TrackTools.h"
 #include "L1Trigger/L1TMuonEndCap/interface/SectorProcessorLUT.h"
 
@@ -69,10 +64,10 @@ void PrimitiveConversion::process(
         convert_rpc(pc_sector, pc_station, pc_chamber, pc_segment, *tp_it, conv_hit);
       } else if (tp_it->subsystem() == TriggerPrimitive::kGEM) {
         convert_gem(pc_sector, 0, selected, pc_segment, *tp_it, conv_hit);  // pc_station and pc_chamber are meaningless
-        //convert_gem(pc_sector, pc_station, pc_chamber, pc_segment, *tp_it, conv_hit);
       } else if (tp_it->subsystem() == TriggerPrimitive::kME0) {
         convert_me0(pc_sector, 0, selected, pc_segment, *tp_it, conv_hit);  // pc_station and pc_chamber are meaningless
-        //convert_me0(pc_sector, pc_station, pc_chamber, pc_segment, *tp_it, conv_hit);
+      } else if (tp_it->subsystem() == TriggerPrimitive::kDT) {
+        convert_dt(pc_sector, 0, selected, pc_segment, *tp_it, conv_hit);  // pc_station and pc_chamber are meaningless
       } else {
         assert(false && "Incorrect subsystem type");
       }
@@ -144,6 +139,7 @@ void PrimitiveConversion::convert_csc(
   conv_hit.set_is_RPC        ( false );
   conv_hit.set_is_GEM        ( false );
   conv_hit.set_is_ME0        ( false );
+  conv_hit.set_is_DT         ( false );
 
   conv_hit.set_pc_sector     ( pc_sector );
   conv_hit.set_pc_station    ( pc_station );
@@ -512,6 +508,7 @@ void PrimitiveConversion::convert_rpc(
   conv_hit.set_is_RPC        ( true );
   conv_hit.set_is_GEM        ( false );
   conv_hit.set_is_ME0        ( false );
+  conv_hit.set_is_DT         ( false );
 
   conv_hit.set_pc_sector     ( pc_sector );
   conv_hit.set_pc_station    ( pc_station );
@@ -737,6 +734,7 @@ void PrimitiveConversion::convert_gem(
   conv_hit.set_is_RPC        ( false );
   conv_hit.set_is_GEM        ( true );
   conv_hit.set_is_ME0        ( false );
+  conv_hit.set_is_DT         ( false );
 
   conv_hit.set_pc_sector     ( pc_sector );
   conv_hit.set_pc_station    ( pc_station );
@@ -788,10 +786,10 @@ void PrimitiveConversion::convert_gem(
     conv_hit.set_theta_fp  ( th );  // Full-precision integer theta
   }
 
-  convert_gem_details(conv_hit);
+  convert_other_details(conv_hit);
 }
 
-void PrimitiveConversion::convert_gem_details(EMTFHit& conv_hit) const {
+void PrimitiveConversion::convert_other_details(EMTFHit& conv_hit) const {
   const bool is_neighbor = conv_hit.Neighbor();
 
   const int pc_station = conv_hit.PC_station();
@@ -874,7 +872,6 @@ void PrimitiveConversion::convert_me0(
 
   // The ME0 geometry is similar to ME2/1, so I use tp_station = 2, tp_ring = 1
   // when calling get_trigger_sector() and get_trigger_csc_ID()
-  // (Yes, I know!)
   int tp_sector    = emtf::get_trigger_sector(1, 2, tp_chamber);
   int tp_csc_ID    = emtf::get_trigger_csc_ID(1, 2, tp_chamber);
   int tp_subsector = 0;
@@ -919,6 +916,7 @@ void PrimitiveConversion::convert_me0(
   conv_hit.set_is_RPC        ( false );
   conv_hit.set_is_GEM        ( false );
   conv_hit.set_is_ME0        ( true );
+  conv_hit.set_is_DT         ( false );
 
   conv_hit.set_pc_sector     ( pc_sector );
   conv_hit.set_pc_station    ( pc_station );
@@ -933,7 +931,7 @@ void PrimitiveConversion::convert_me0(
   conv_hit.set_quality       ( tp_quality );
   conv_hit.set_pattern       ( 1 );  // In firmware, this marks GEM stub (unconfirmed!)
   conv_hit.set_bend          ( tp_bend );
-  conv_hit.set_time          ( tp_data.time );
+  conv_hit.set_time          ( 0. );  // No fine resolution timing
 
   conv_hit.set_neighbor      ( is_neighbor );
   conv_hit.set_sector_idx    ( (endcap_ == 1) ? sector_ - 1 : sector_ + 5 );
@@ -990,12 +988,134 @@ void PrimitiveConversion::convert_me0(
     conv_hit.set_theta_fp  ( th );  // Full-precision integer theta
   }
 
-  convert_me0_details(conv_hit);
+  convert_other_details(conv_hit);
 }
 
-void PrimitiveConversion::convert_me0_details(EMTFHit& conv_hit) const {
-  // Identical to the corresponding GEM function
-  convert_gem_details(conv_hit);
+
+// _____________________________________________________________________________
+// DT functions
+void PrimitiveConversion::convert_dt(
+    int pc_sector, int pc_station, int pc_chamber, int pc_segment,
+    const TriggerPrimitive& muon_primitive,
+    EMTFHit& conv_hit
+) const {
+  const DTChamberId& tp_detId = muon_primitive.detId<DTChamberId>();
+  const DTData&      tp_data  = muon_primitive.getDTData();
+
+  int tp_wheel     = tp_detId.wheel();
+  int tp_station   = tp_detId.station();
+  int tp_sector    = tp_detId.sector(); // sectors are 1-12, starting at phi=0 and increasing with phi
+
+  int tp_bx        = tp_data.bx;
+  int tp_phi       = tp_data.radialAngle;
+  int tp_phiB      = tp_data.bendingAngle;
+
+  // Mimic 10 deg CSC chamber. I use tp_station = 2, tp_ring = 2
+  // when calling get_trigger_sector() and get_trigger_csc_ID()
+  int csc_tp_chamber = tp_sector * 3;  // DT chambers are 30 deg. Multiply sector number by 3 to mimic 10 deg CSC chamber
+  int csc_tp_endcap  = (tp_wheel > 0) ? +1 : ((tp_wheel < 0) ? -1 : 0);
+  int csc_tp_sector  = emtf::get_trigger_sector(2, 2, csc_tp_chamber);
+  int tp_csc_ID      = emtf::get_trigger_csc_ID(2, 2, csc_tp_chamber);
+  int tp_subsector   = 0;
+
+  const bool is_neighbor = (pc_chamber >= 8);
+
+  int csc_nID      = tp_csc_ID;  // modify csc_ID if coming from neighbor sector
+  if (is_neighbor) {
+    // station 1 has 3 neighbor chambers: 13,14,15 in rings 1,2,3
+    // (where are chambers 10,11,12 in station 1? they were used to label ME1/1a, but not anymore)
+    // station 2,3,4 have 2 neighbor chambers: 10,11 in rings 1,2
+    csc_nID = 10;
+  }
+
+  // Set properties
+  conv_hit.SetDTDetId        ( tp_detId );
+  conv_hit.set_endcap        ( csc_tp_endcap );
+  conv_hit.set_station       ( tp_station );
+  conv_hit.set_ring          ( 1 );  // set to ring 1?
+  //conv_hit.set_roll          ( tp_roll );
+  conv_hit.set_chamber       ( csc_tp_chamber );
+  conv_hit.set_sector        ( csc_tp_sector );
+  conv_hit.set_subsector     ( tp_subsector );
+  conv_hit.set_csc_ID        ( tp_csc_ID );
+  conv_hit.set_csc_nID       ( csc_nID );
+  conv_hit.set_track_num     ( tp_data.segment_number );
+  //conv_hit.set_sync_err      ( tp_data.syncErr );
+  //conv_hit.set_sector_RPC    ( tp_sector );
+  //conv_hit.set_subsector_RPC ( tp_subsector );
+
+  conv_hit.set_bx            ( tp_bx );
+  conv_hit.set_subsystem     ( TriggerPrimitive::kDT );
+  conv_hit.set_is_CSC        ( false );
+  conv_hit.set_is_RPC        ( false );
+  conv_hit.set_is_GEM        ( false );
+  conv_hit.set_is_ME0        ( false );
+  conv_hit.set_is_DT         ( true );
+
+  conv_hit.set_pc_sector     ( pc_sector );
+  conv_hit.set_pc_station    ( pc_station );
+  conv_hit.set_pc_chamber    ( pc_chamber );
+  conv_hit.set_pc_segment    ( pc_segment );
+
+  conv_hit.set_valid         ( true );
+  conv_hit.set_strip         ( tp_phi );
+  //conv_hit.set_strip_low     ( tp_strip );
+  //conv_hit.set_strip_hi      ( tp_strip );
+  conv_hit.set_wire          ( tp_data.theta_bti_group );
+  conv_hit.set_quality       ( tp_data.qualityCode );
+  conv_hit.set_pattern       ( 1 );  // In firmware, this marks GEM stub (unconfirmed!)
+  conv_hit.set_bend          ( tp_phiB );
+  conv_hit.set_time          ( 0. );  // No fine resolution timing
+
+  conv_hit.set_neighbor      ( is_neighbor );
+  conv_hit.set_sector_idx    ( (endcap_ == 1) ? sector_ - 1 : sector_ + 5 );
+
+
+  // Get coordinates from fullsim since LUTs do not exist yet
+  bool use_fullsim_coords = true;
+  if (use_fullsim_coords) {
+    const GlobalPoint& gp = tp_geom_->getGlobalPoint(muon_primitive);
+    double glob_phi   = emtf::rad_to_deg(gp.phi().value());
+    double glob_theta = emtf::rad_to_deg(gp.theta());
+    double glob_eta   = gp.eta();
+    double glob_rho   = gp.perp();
+    double glob_z     = gp.z();
+
+    // Use the CSC precision (unconfirmed!)
+    int fph = emtf::calc_phi_loc_int(glob_phi, conv_hit.PC_sector());
+    int th  = emtf::calc_theta_int(glob_theta, conv_hit.Endcap());
+
+    bool fix_dt_phi_edge = true;
+    if (fix_dt_phi_edge) {
+      // The DT chamber edges are not always aligned at 0,30,60,etc. The local
+      // phi 0 is set to the CSC chamber edge minus 22 deg. But it is possible
+      // for the DT neighbor chamber to go as far as the CSC chamber edge minus
+      // 28 deg.
+      double loc = emtf::calc_phi_loc_deg_from_glob(glob_phi, conv_hit.PC_sector());
+      if ((loc + 22.) < 0.&& (loc + 30.) > 0.)
+        fph = 0;
+      else if ((loc + 360. + 22.) < 0.&& (loc + 360. + 30.) > 0.)
+        fph = 0;
+    }
+
+    assert(0 <= fph && fph < 5400);
+    assert(0 <=  th &&  th < 150);
+    th = (th == 0) ? 1 : th;  // protect against invalid value
+
+    // _________________________________________________________________________
+    // Output
+
+    conv_hit.set_phi_sim   ( glob_phi );
+    conv_hit.set_theta_sim ( glob_theta );
+    conv_hit.set_eta_sim   ( glob_eta );
+    conv_hit.set_rho_sim   ( glob_rho );
+    conv_hit.set_z_sim     ( glob_z );
+
+    conv_hit.set_phi_fp    ( fph ); // Full-precision integer phi
+    conv_hit.set_theta_fp  ( th );  // Full-precision integer theta
+  }
+
+  convert_other_details(conv_hit);
 }
 
 
@@ -1008,6 +1128,8 @@ int PrimitiveConversion::get_zone_code(const EMTFHit& conv_hit, int th) const {
 
   bool is_csc = (conv_hit.Subsystem() == TriggerPrimitive::kCSC);
   bool is_me13 = (is_csc && conv_hit.Station() == 1 && conv_hit.Ring() == 3);
+
+  if (th >= 127)  th = 127;
 
   for (int izone = 0; izone < emtf::NUM_ZONES; ++izone) {
     int zone_code_tmp = get_fs_zone_code(conv_hit);

@@ -1,10 +1,5 @@
 #include "L1Trigger/L1TMuonEndCap/interface/PrimitiveSelection.h"
 
-#include "DataFormats/MuonDetId/interface/DTChamberId.h"
-#include "DataFormats/MuonDetId/interface/CSCDetId.h"
-#include "DataFormats/MuonDetId/interface/RPCDetId.h"
-#include "DataFormats/MuonDetId/interface/GEMDetId.h"
-#include "DataFormats/MuonDetId/interface/ME0DetId.h"
 #include "L1Trigger/L1TMuonEndCap/interface/TrackTools.h"
 
 
@@ -15,6 +10,8 @@
 #define NUM_RPC_CHAMBERS 7*8   // 6x2 in RE1,2; 12x2 in RE3,4; 6 from neighbor sector.
                                // Arranged in FW as 7 subsectors, 6 chambers per station. (8 chambers with iRPC)
 #define NUM_GEM_CHAMBERS 15    // 6 in GE1/1; 3 in GE2/1; 3 in ME0; 3 from neighbor sector.
+
+#define NUM_DT_CHAMBERS 3*4    // 2x4 in MB1,2,3,4; 4 from neighbor sector.
 
 
 void PrimitiveSelection::configure(
@@ -375,7 +372,59 @@ void PrimitiveSelection::process(
     }
   }
 
-  // At most 24 clusters, but don't know the limit on segments
+  // Apply any truncation?
+}
+
+
+// _____________________________________________________________________________
+// Specialized process() for DT
+template<>
+void PrimitiveSelection::process(
+    DTTag tag,
+    const TriggerPrimitiveCollection& muon_primitives,
+    std::map<int, TriggerPrimitiveCollection>& selected_dt_map
+) const {
+  TriggerPrimitiveCollection::const_iterator tp_it  = muon_primitives.begin();
+  TriggerPrimitiveCollection::const_iterator tp_end = muon_primitives.end();
+
+  for (; tp_it != tp_end; ++tp_it) {
+    int selected_dt = select_dt(*tp_it);  // Returns DT "link" index
+
+    if (selected_dt >= 0) {
+      assert(selected_dt < NUM_DT_CHAMBERS);
+      selected_dt_map[selected_dt].push_back(*tp_it);
+    }
+  }
+
+  // Duplicate DT muon primitives
+  if (duplicateTheta_) {
+    std::map<int, TriggerPrimitiveCollection>::iterator map_tp_it  = selected_dt_map.begin();
+    std::map<int, TriggerPrimitiveCollection>::iterator map_tp_end = selected_dt_map.end();
+
+    for (; map_tp_it != map_tp_end; ++map_tp_it) {
+      //int selected = map_tp_it->first;
+      TriggerPrimitiveCollection& tmp_primitives = map_tp_it->second;  // pass by reference
+
+      assert(tmp_primitives.size() <= 2);  // at most 2 hits
+
+      if (tmp_primitives.size() == 2) {
+        if (
+            (tmp_primitives.at(0).getStrip() != tmp_primitives.at(1).getStrip()) &&
+            (tmp_primitives.at(0).getWire() != tmp_primitives.at(1).getWire())
+        ) {
+          // Swap wire numbers
+          TriggerPrimitive tp0 = tmp_primitives.at(0);  // (s1,w1)
+          TriggerPrimitive tp1 = tmp_primitives.at(1);  // (s2,w2)
+          uint16_t tmp_keywire               = tp0.accessDTData().theta_bti_group;
+          tp0.accessDTData().theta_bti_group = tp1.accessDTData().theta_bti_group;  // (s1,w2)
+          tp1.accessDTData().theta_bti_group = tmp_keywire;                         // (s2,w1)
+
+          tmp_primitives.insert(tmp_primitives.begin()+1, tp1);  // (s2,w1) at 2nd pos
+          tmp_primitives.insert(tmp_primitives.begin()+2, tp0);  // (s1,w2) at 3rd pos
+        }
+      }  // end if tmp_primitives.size() == 2
+    }  // end loop over selected_dt_map
+  }  // end if duplicate theta
 }
 
 
@@ -400,6 +449,7 @@ void PrimitiveSelection::process(
 // supplemental source of stubs for CSCs.
 
 void PrimitiveSelection::merge(
+    const std::map<int, TriggerPrimitiveCollection>& selected_dt_map,
     const std::map<int, TriggerPrimitiveCollection>& selected_csc_map,
     const std::map<int, TriggerPrimitiveCollection>& selected_rpc_map,
     const std::map<int, TriggerPrimitiveCollection>& selected_gem_map,
@@ -460,6 +510,7 @@ void PrimitiveSelection::merge(
 }
 
 void PrimitiveSelection::merge_no_truncate(
+    const std::map<int, TriggerPrimitiveCollection>& selected_dt_map,
     const std::map<int, TriggerPrimitiveCollection>& selected_csc_map,
     const std::map<int, TriggerPrimitiveCollection>& selected_rpc_map,
     const std::map<int, TriggerPrimitiveCollection>& selected_gem_map,
@@ -477,6 +528,9 @@ void PrimitiveSelection::merge_no_truncate(
 
   // Fourth, insert RPC hits
   merge_map_into_map(selected_rpc_map, selected_prim_map);
+
+  // Fifth, insert DT hits
+  merge_map_into_map(selected_dt_map, selected_prim_map);
 }
 
 
@@ -869,7 +923,6 @@ int PrimitiveSelection::select_me0(const TriggerPrimitive& muon_primitive) const
 
     // The ME0 geometry is similar to ME2/1, so I use tp_station = 2, tp_ring = 1
     // when calling get_trigger_sector() and get_trigger_csc_ID()
-    // (Yes, I know!)
     int tp_sector    = emtf::get_trigger_sector(1, 2, tp_chamber);
     int tp_csc_ID    = emtf::get_trigger_csc_ID(1, 2, tp_chamber);
     int tp_subsector = 0;
@@ -921,6 +974,160 @@ int PrimitiveSelection::get_index_me0(int tp_subsector, int tp_station, int tp_c
     selected = 9 + (tp_csc_ID-1);
   } else {  // ME0n: 14
     selected = 14;
+  }
+  return selected;
+}
+
+
+// _____________________________________________________________________________
+// DT functions
+int PrimitiveSelection::select_dt(const TriggerPrimitive& muon_primitive) const {
+  int selected = -1;
+
+  if (muon_primitive.subsystem() == TriggerPrimitive::kDT) {
+    const DTChamberId& tp_detId = muon_primitive.detId<DTChamberId>();
+    const DTData&      tp_data  = muon_primitive.getDTData();
+
+    int tp_wheel     = tp_detId.wheel();
+    int tp_station   = tp_detId.station();
+    int tp_sector    = tp_detId.sector(); // sectors are 1-12, starting at phi=0 and increasing with phi
+
+    int tp_bx        = tp_data.bx;
+    int tp_phi       = tp_data.radialAngle;
+    int tp_phiB      = tp_data.bendingAngle;
+
+    // Mimic 10 deg CSC chamber. I use tp_station = 2, tp_ring = 2
+    // when calling get_trigger_sector() and get_trigger_csc_ID()
+    int csc_tp_chamber = tp_sector * 3;  // DT chambers are 30 deg. Multiply sector number by 3 to mimic 10 deg CSC chamber
+    int csc_tp_endcap  = (tp_wheel > 0) ? +1 : ((tp_wheel < 0) ? -1 : 0);
+    int csc_tp_sector  = emtf::get_trigger_sector(2, 2, csc_tp_chamber);
+    int tp_csc_ID      = emtf::get_trigger_csc_ID(2, 2, csc_tp_chamber);
+    //int tp_subsector   = 0;
+
+    if (endcap_ == 1 && sector_ == 1 && bx_ == -3) {  // do assertion checks only once
+      //assert_no_abort(-2 <= tp_wheel && tp_wheel <= +2);
+      assert_no_abort(tp_wheel == -2 || tp_wheel == +2);  // do not include wheels -1, 0, +1
+      //assert_no_abort(1 <= tp_station && tp_station <= 4);
+      assert_no_abort(1 <= tp_station && tp_station <= 3);  // do not include MB4
+      assert_no_abort(1 <= tp_sector && tp_sector <= 12);
+      assert_no_abort(emtf::MIN_ENDCAP <= csc_tp_endcap && csc_tp_endcap <= emtf::MAX_ENDCAP);
+      assert_no_abort(emtf::MIN_TRIGSECTOR <= csc_tp_sector && csc_tp_sector <= emtf::MAX_TRIGSECTOR);
+      assert_no_abort(4 <= tp_csc_ID && tp_csc_ID <= 9);
+      assert_no_abort(-2048 <= tp_phi && tp_phi <= 2047);  // 12-bit
+      assert_no_abort(-512 <= tp_phiB && tp_phiB <= 511);  // 10-bit
+    }
+
+    // Selection
+    if (is_in_bx_dt(tp_bx)) {
+      if (is_in_sector_dt(tp_wheel, tp_station, tp_sector)) { //FIXME: use tp_csc_ID?
+        selected = get_index_dt(tp_wheel, tp_station, tp_sector, false);
+      } else if (is_in_neighbor_sector_dt(tp_wheel, tp_station, tp_sector)) {
+        selected = get_index_dt(tp_wheel, tp_station, tp_sector, true);
+      }
+    }
+  }
+  return selected;
+}
+
+bool PrimitiveSelection::is_in_sector_dt(int tp_wheel, int tp_station, int tp_sector) const {
+  // Wheel > 0: positive endcap, wheel < 0: negative endcap, wheel = 0: both?
+  auto get_csc_endcap = [](int tp_wheel) {
+    if (tp_wheel > 0) {
+      return +1;
+    } else if (tp_wheel < 0) {
+      return -1;
+    } else {
+      return 0;
+    }
+  };
+
+  // DT sectors are 30 deg. Sector 1 starts at phi=0. Use 3 DT chambers in 1 sector, so starts at 0 and ends at 90.
+  // CSC sectors including neighbors are 80 deg. Sector 1 starts at -5 and ends at 75.
+  auto get_csc_sector = [](int tp_station, int tp_sector) {
+    // In station 4, where the top and bottom setcors are made of two chambers,
+    // two additional sector numbers are used, 13 (after sector 4, top)
+    // and 14 (after sector 10, bottom).
+    if (tp_station == 4) {
+      if (tp_sector == 13)
+        tp_sector = 4;
+      else if (tp_sector == 14)
+        tp_sector = 10;
+    }
+
+    if (tp_sector <= 1)  tp_sector += 12;
+    tp_sector -= 2;
+    tp_sector /= 2;
+    tp_sector += 1;
+    return tp_sector;
+  };
+
+  int csc_endcap = get_csc_endcap(tp_wheel);
+  if (csc_endcap == 0)
+    csc_endcap = endcap_;
+  int csc_sector = get_csc_sector(tp_station, tp_sector);
+  return (endcap_ == csc_endcap) && (sector_ == csc_sector);
+}
+
+bool PrimitiveSelection::is_in_neighbor_sector_dt(int tp_wheel, int tp_station, int tp_sector) const {
+  // Wheel > 0: positive endcap, wheel < 0: negative endcap, wheel = 0: both?
+  auto get_csc_endcap = [](int tp_wheel) {
+    if (tp_wheel > 0) {
+      return +1;
+    } else if (tp_wheel < 0) {
+      return -1;
+    } else {
+      return 0;
+    }
+  };
+
+  // DT sectors are 30 deg. Sector 1 starts at phi=0. Use 3 DT chambers in 1 sector, so starts at 0 and ends at 90.
+  // CSC sectors including neighbors are 80 deg. Sector 1 starts at -5 and ends at 75.
+  auto get_csc_sector = [](int tp_station, int tp_sector) {
+    // In station 4, where the top and bottom setcors are made of two chambers,
+    // two additional sector numbers are used, 13 (after sector 4, top)
+    // and 14 (after sector 10, bottom).
+    if (tp_station == 4) {
+      if (tp_sector == 13)
+        tp_sector = 4;
+      else if (tp_sector == 14)
+        tp_sector = 10;
+    }
+
+    tp_sector -= 1;  // this changed
+    tp_sector /= 2;
+    tp_sector += 1;
+    return tp_sector;
+  };
+
+  int csc_endcap = get_csc_endcap(tp_wheel);
+  if (csc_endcap == 0)
+    csc_endcap = endcap_;
+  int csc_sector = get_csc_sector(tp_station, tp_sector);
+  return (endcap_ == csc_endcap) && (sector_ == csc_sector);
+}
+
+bool PrimitiveSelection::is_in_bx_dt(int tp_bx) const {
+  return (bx_ == tp_bx);
+}
+
+int PrimitiveSelection::get_index_dt(int tp_wheel, int tp_station, int tp_sector, bool is_neighbor) const {
+  int selected = -1;
+
+  // In station 4, where the top and bottom setcors are made of two chambers,
+  // two additional sector numbers are used, 13 (after sector 4, top)
+  // and 14 (after sector 10, bottom).
+  if (tp_station == 4) {
+    if (tp_sector == 13)
+      tp_sector = 4;
+    else if (tp_sector == 14)
+      tp_sector = 10;
+  }
+
+  if (!is_neighbor) {  // MB1,2,3,4: 0-7
+    if (tp_sector <= 1)  tp_sector += 12;
+    selected = (tp_station-1)*2 + (tp_sector-2) % 2;
+  } else {  // ME1,2,3,4n: 8-11
+    selected = 8 + (tp_station-1);
   }
   return selected;
 }
