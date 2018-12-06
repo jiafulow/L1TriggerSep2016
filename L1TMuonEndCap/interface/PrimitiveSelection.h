@@ -40,6 +40,7 @@ public:
       std::map<int, TriggerPrimitiveCollection>& selected_prim_map
   ) const;
 
+  // ___________________________________________________________________________
   // CSC functions
   // If selected, return an index 0-53, else return -1
   // The index 0-53 roughly corresponds to an input link. It maps to the
@@ -87,22 +88,22 @@ public:
 
   bool is_in_sector_me0(int tp_endcap, int tp_sector) const;
 
-  bool is_in_neighbor_sector_me0(int tp_endcap, int tp_sector, int tp_subsector, int tp_station, int tp_csc_ID) const;
+  bool is_in_neighbor_sector_me0(int tp_endcap, int tp_sector, int tp_csc_ID) const;
 
   bool is_in_bx_me0(int tp_bx) const;
 
-  int get_index_me0(int tp_subsector, int tp_station, int tp_csc_ID, bool is_neighbor) const;
+  int get_index_me0(int tp_station, int tp_csc_ID, bool is_neighbor) const;
 
   // DT functions
   int select_dt(const TriggerPrimitive& muon_primitive) const;
 
-  bool is_in_sector_dt(int tp_wheel, int tp_station, int tp_sector) const;
+  bool is_in_sector_dt(int tp_endcap, int tp_sector) const;
 
-  bool is_in_neighbor_sector_dt(int tp_wheel, int tp_station, int tp_sector) const;
+  bool is_in_neighbor_sector_dt(int tp_endcap, int tp_sector, int tp_csc_ID) const;
 
   bool is_in_bx_dt(int tp_bx) const;
 
-  int get_index_dt(int tp_wheel, int tp_station, int tp_sector, bool is_neighbor) const;
+  int get_index_dt(int tp_station, int tp_csc_ID, bool is_neighbor) const;
 
 
 private:

@@ -1006,17 +1006,27 @@ void PrimitiveConversion::convert_dt(
   int tp_station   = tp_detId.station();
   int tp_sector    = tp_detId.sector(); // sectors are 1-12, starting at phi=0 and increasing with phi
 
+  // In station 4, where the top and bottom setcors are made of two chambers,
+  // two additional sector numbers are used, 13 (after sector 4, top)
+  // and 14 (after sector 10, bottom).
+  if (tp_station == 4) {
+    if (tp_sector == 13)
+      tp_sector = 4;
+    else if (tp_sector == 14)
+      tp_sector = 10;
+  }
+
   int tp_bx        = tp_data.bx;
   int tp_phi       = tp_data.radialAngle;
   int tp_phiB      = tp_data.bendingAngle;
 
   // Mimic 10 deg CSC chamber. I use tp_station = 2, tp_ring = 2
   // when calling get_trigger_sector() and get_trigger_csc_ID()
-  int csc_tp_chamber = tp_sector * 3;  // DT chambers are 30 deg. Multiply sector number by 3 to mimic 10 deg CSC chamber
-  int csc_tp_endcap  = (tp_wheel > 0) ? +1 : ((tp_wheel < 0) ? -1 : 0);
-  int csc_tp_sector  = emtf::get_trigger_sector(2, 2, csc_tp_chamber);
-  int tp_csc_ID      = emtf::get_trigger_csc_ID(2, 2, csc_tp_chamber);
-  int tp_subsector   = 0;
+  int tp_chamber    = tp_sector * 3 - 1;  // DT chambers are 30 deg. Multiply sector number by 3 to mimic 10 deg CSC chamber number
+  int tp_endcap     = (tp_wheel > 0) ? +1 : ((tp_wheel < 0) ? -1 : 0);
+  int csc_tp_sector = emtf::get_trigger_sector(2, 2, tp_chamber);
+  int tp_csc_ID     = emtf::get_trigger_csc_ID(2, 2, tp_chamber);
+  int tp_subsector  = 0;
 
   const bool is_neighbor = (pc_chamber >= 8);
 
@@ -1030,11 +1040,11 @@ void PrimitiveConversion::convert_dt(
 
   // Set properties
   conv_hit.SetDTDetId        ( tp_detId );
-  conv_hit.set_endcap        ( csc_tp_endcap );
+  conv_hit.set_endcap        ( tp_endcap );
   conv_hit.set_station       ( tp_station );
   conv_hit.set_ring          ( 1 );  // set to ring 1?
   //conv_hit.set_roll          ( tp_roll );
-  conv_hit.set_chamber       ( csc_tp_chamber );
+  conv_hit.set_chamber       ( tp_chamber );
   conv_hit.set_sector        ( csc_tp_sector );
   conv_hit.set_subsector     ( tp_subsector );
   conv_hit.set_csc_ID        ( tp_csc_ID );
