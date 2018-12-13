@@ -119,6 +119,8 @@ void PrimitiveConversion::convert_csc(
   // Set properties
   conv_hit.SetCSCDetId       ( tp_detId );
 
+  conv_hit.set_bx            ( tp_bx + bxShiftCSC_ );
+  conv_hit.set_subsystem     ( TriggerPrimitive::kCSC );
   conv_hit.set_endcap        ( (tp_endcap == 2) ? -1 : tp_endcap );
   conv_hit.set_station       ( tp_station );
   conv_hit.set_ring          ( tp_ring );
@@ -132,14 +134,6 @@ void PrimitiveConversion::convert_csc(
   conv_hit.set_sync_err      ( tp_data.syncErr );
   //conv_hit.set_sector_RPC    ( tp_sector );
   //conv_hit.set_subsector_RPC ( tp_subsector );
-
-  conv_hit.set_bx            ( tp_bx + bxShiftCSC_ );
-  conv_hit.set_subsystem     ( TriggerPrimitive::kCSC );
-  conv_hit.set_is_CSC        ( true );
-  conv_hit.set_is_RPC        ( false );
-  conv_hit.set_is_GEM        ( false );
-  conv_hit.set_is_ME0        ( false );
-  conv_hit.set_is_DT         ( false );
 
   conv_hit.set_pc_sector     ( pc_sector );
   conv_hit.set_pc_station    ( pc_station );
@@ -400,7 +394,7 @@ void PrimitiveConversion::convert_csc_details(EMTFHit& conv_hit) const {
 
   //int zone_hit     = ((fph + (1<<4)) >> 5);
   int zone_code    = get_zone_code(conv_hit, th);
-  int phzvl        = get_phzvl(conv_hit, zone_code);
+  //int phzvl        = get_phzvl(conv_hit, zone_code);
 
   int fs_zone_code = get_fs_zone_code(conv_hit);
   int fs_segment   = get_fs_segment(conv_hit, fw_station, fw_cscid, pc_segment);
@@ -413,8 +407,8 @@ void PrimitiveConversion::convert_csc_details(EMTFHit& conv_hit) const {
 
   conv_hit.set_phi_fp     ( fph );        // Full-precision integer phi
   conv_hit.set_theta_fp   ( th );         // Full-precision integer theta
-  conv_hit.set_phzvl      ( phzvl );      // Local zone word: (1*low) + (2*mid) + (4*low) - used in FW debugging
-  conv_hit.set_ph_hit     ( ph_hit );     // Intermediate quantity in phi calculation - used in FW debugging
+  //conv_hit.set_phzvl      ( phzvl );      // Local zone word: (1*low) + (2*mid) + (4*low) - used in FW debugging
+  //conv_hit.set_ph_hit     ( ph_hit );     // Intermediate quantity in phi calculation - used in FW debugging
   conv_hit.set_zone_hit   ( zone_hit );   // Phi value for building patterns (0.53333 deg precision)
   conv_hit.set_zone_code  ( zone_code );  // Full zone word: 1*(zone 0) + 2*(zone 1) + 4*(zone 2) + 8*(zone 3)
 
@@ -488,6 +482,8 @@ void PrimitiveConversion::convert_rpc(
   // Set properties
   conv_hit.SetRPCDetId       ( tp_detId );
 
+  conv_hit.set_bx            ( tp_bx + bxShiftRPC_ );
+  conv_hit.set_subsystem     ( TriggerPrimitive::kRPC );
   conv_hit.set_endcap        ( (tp_endcap == 2) ? -1 : tp_endcap );
   conv_hit.set_station       ( tp_station );
   conv_hit.set_ring          ( tp_ring );
@@ -501,14 +497,6 @@ void PrimitiveConversion::convert_rpc(
   //conv_hit.set_sync_err      ( tp_data.syncErr );
   conv_hit.set_sector_RPC    ( tp_sector );  // In RPC convention in CMSSW (RPCDetId.h), sector 1 starts at -5 deg
   conv_hit.set_subsector_RPC ( tp_subsector );
-
-  conv_hit.set_bx            ( tp_bx + bxShiftRPC_ );
-  conv_hit.set_subsystem     ( TriggerPrimitive::kRPC );
-  conv_hit.set_is_CSC        ( false );
-  conv_hit.set_is_RPC        ( true );
-  conv_hit.set_is_GEM        ( false );
-  conv_hit.set_is_ME0        ( false );
-  conv_hit.set_is_DT         ( false );
 
   conv_hit.set_pc_sector     ( pc_sector );
   conv_hit.set_pc_station    ( pc_station );
@@ -714,6 +702,9 @@ void PrimitiveConversion::convert_gem(
 
   // Set properties
   conv_hit.SetGEMDetId       ( tp_detId );
+
+  conv_hit.set_bx            ( tp_bx + bxShiftGEM_ );
+  conv_hit.set_subsystem     ( TriggerPrimitive::kGEM );
   conv_hit.set_endcap        ( (tp_endcap == 2) ? -1 : tp_endcap );
   conv_hit.set_station       ( tp_station );
   conv_hit.set_ring          ( tp_ring );
@@ -727,14 +718,6 @@ void PrimitiveConversion::convert_gem(
   //conv_hit.set_sync_err      ( tp_data.syncErr );
   //conv_hit.set_sector_RPC    ( tp_sector );
   //conv_hit.set_subsector_RPC ( tp_subsector );
-
-  conv_hit.set_bx            ( tp_bx + bxShiftGEM_ );
-  conv_hit.set_subsystem     ( TriggerPrimitive::kGEM );
-  conv_hit.set_is_CSC        ( false );
-  conv_hit.set_is_RPC        ( false );
-  conv_hit.set_is_GEM        ( true );
-  conv_hit.set_is_ME0        ( false );
-  conv_hit.set_is_DT         ( false );
 
   conv_hit.set_pc_sector     ( pc_sector );
   conv_hit.set_pc_station    ( pc_station );
@@ -896,6 +879,9 @@ void PrimitiveConversion::convert_me0(
 
   // Set properties
   conv_hit.SetME0DetId       ( tp_detId );
+
+  conv_hit.set_bx            ( tp_bx + bxShiftGEM_ );
+  conv_hit.set_subsystem     ( TriggerPrimitive::kME0 );
   conv_hit.set_endcap        ( (tp_endcap == 2) ? -1 : tp_endcap );
   conv_hit.set_station       ( tp_station );
   conv_hit.set_ring          ( tp_ring );
@@ -909,14 +895,6 @@ void PrimitiveConversion::convert_me0(
   //conv_hit.set_sync_err      ( tp_data.syncErr );
   //conv_hit.set_sector_RPC    ( tp_sector );
   //conv_hit.set_subsector_RPC ( tp_subsector );
-
-  conv_hit.set_bx            ( tp_bx + bxShiftGEM_ );
-  conv_hit.set_subsystem     ( TriggerPrimitive::kME0 );
-  conv_hit.set_is_CSC        ( false );
-  conv_hit.set_is_RPC        ( false );
-  conv_hit.set_is_GEM        ( false );
-  conv_hit.set_is_ME0        ( true );
-  conv_hit.set_is_DT         ( false );
 
   conv_hit.set_pc_sector     ( pc_sector );
   conv_hit.set_pc_station    ( pc_station );
@@ -1040,6 +1018,9 @@ void PrimitiveConversion::convert_dt(
 
   // Set properties
   conv_hit.SetDTDetId        ( tp_detId );
+
+  conv_hit.set_bx            ( tp_bx );
+  conv_hit.set_subsystem     ( TriggerPrimitive::kDT );
   conv_hit.set_endcap        ( tp_endcap );
   conv_hit.set_station       ( tp_station );
   conv_hit.set_ring          ( 1 );  // set to ring 1?
@@ -1053,14 +1034,6 @@ void PrimitiveConversion::convert_dt(
   //conv_hit.set_sync_err      ( tp_data.syncErr );
   //conv_hit.set_sector_RPC    ( tp_sector );
   //conv_hit.set_subsector_RPC ( tp_subsector );
-
-  conv_hit.set_bx            ( tp_bx );
-  conv_hit.set_subsystem     ( TriggerPrimitive::kDT );
-  conv_hit.set_is_CSC        ( false );
-  conv_hit.set_is_RPC        ( false );
-  conv_hit.set_is_GEM        ( false );
-  conv_hit.set_is_ME0        ( false );
-  conv_hit.set_is_DT         ( true );
 
   conv_hit.set_pc_sector     ( pc_sector );
   conv_hit.set_pc_station    ( pc_station );
