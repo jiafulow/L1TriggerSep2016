@@ -9,8 +9,6 @@
 
 //#include "helper.h"  // adjacent_cluster
 
-#include "L1Trigger/CSCCommonTrigger/interface/CSCConstants.h"
-#include "L1Trigger/CSCTriggerPrimitives/src/CSCComparatorDigiFitter.h"
 #include "L1Trigger/L1TMuonEndCap/interface/EMTFCSCComparatorDigiFitter.h"
 
 
@@ -32,17 +30,7 @@ void EMTFSubsystemCollector::extractPrimitives(
   edm::Handle<CSCTag::comparator_digi_collection> cscComparatorDigis;
   iEvent.getByToken(token2, cscComparatorDigis);
 
-  // TAMU comparator digi fitter
-  bool use_tamu_fitter = false;
-  std::unique_ptr<CSCComparatorDigiFitter> tamu_fitter;
-  if (use_tamu_fitter) {
-    tamu_fitter = std::make_unique<CSCComparatorDigiFitter>();
-    tamu_fitter->setGeometry(&(tp_geom->getCSCGeometry()));
-    tamu_fitter->setStripBits(0);
-    tamu_fitter->useKeyRadius(true);
-  }
-
-  // My rough comparator digi fitter
+  // My comparator digi fitter
   std::unique_ptr<EMTFCSCComparatorDigiFitter> emtf_fitter = std::make_unique<EMTFCSCComparatorDigiFitter>();
 
   // Loop over chambers
@@ -54,22 +42,9 @@ void EMTFSubsystemCollector::extractPrimitives(
     for( ; digi != dend; ++digi ) {
       const CSCDetId& detid = (*chamber).first;
       const CSCCorrelatedLCTDigi& lct = (*digi);
+      out.emplace_back(detid, lct);
 
-      // TAMU comparator digi fitter
-      if (use_tamu_fitter && (1 <= detid.station() && detid.station() <= 4) && (detid.ring() == 1 || detid.ring() == 4)) {
-        std::vector<float> fit_phi_layers;
-        std::vector<float> fit_z_layers;
-        float fitRadius = 0.;
-        tamu_fitter->fit(detid, lct, *cscComparatorDigis, fit_phi_layers, fit_z_layers, fitRadius);
-
-        // Debug
-        //std::cout << "size: " << fit_phi_layers.size() << ", " << fit_z_layers.size() << std::endl;
-        //for (unsigned i=0; i < fit_phi_layers.size(); ++i) {
-        //  std::cout << ".. " << i << " " << fit_phi_layers.at(i) << ", " << fit_z_layers.at(i) << std::endl;
-        //}
-      }
-
-      // My rough comparator digi fitter
+      // My comparator digi fitter
       std::vector<std::vector<CSCComparatorDigi> > compDigisAllLayers(CSCConstants::NUM_LAYERS);
       std::vector<int> stagger(CSCConstants::NUM_LAYERS, 0);
 
@@ -115,16 +90,36 @@ void EMTFSubsystemCollector::extractPrimitives(
       }
       assert(nhitlayers >= 3);
 
-      const std::pair<float, float>& res = emtf_fitter->fit(compDigisAllLayers, stagger, lct.getStrip());
-      //std::cout << "fit result: " << res.first << " " << res.second << std::endl;
+      const EMTFCSCComparatorDigiFitter::FitResult& res = emtf_fitter->fit(compDigisAllLayers, stagger, lct.getStrip());
+      //std::cout << "fit result: " << res.position << " " << res.slope << " " << res.chi2 << " halfStrip: " << lct.getStrip() << std::endl;
 
-      out.emplace_back(detid, lct);
+      // Find half-strip after fit
+      float position = res.position + lct.getStrip();
+      int strip = std::round(position);
 
-      // Overwrite bend and quality
-      // 'bend' is deltaPhi. It gets converted into large positive number if negative. Multiply by 4 for now.
-      // 'quality' is chi2/ndof. Multiply by 100 for now.
-      out.back().accessCSCData().bend    = static_cast<uint16_t>(std::round(res.first * 4));
-      out.back().accessCSCData().quality = static_cast<uint16_t>(std::round(res.second * 100));
+      // Encode fractional strip in 3 bits (4 including sign), which corresponds to 1/16-strip unit
+      float frac_position = position - static_cast<float>(strip);
+      int frac_strip = static_cast<int>(std::round(std::abs(frac_position) * 8));
+      frac_strip = std::min(std::max(frac_strip, 0), 7);
+      frac_strip = (frac_position >= 0) ? frac_strip : -frac_strip;
+
+      // Encode bend in 6 bits, which correspinds to 1/32-strip unit
+      int bend = static_cast<int>(std::round(res.slope * 16));
+      bend = std::min(std::max(bend, -32), 31);
+
+      // Encode quality in 5 bits, which corresponds to 0.25 step from 0 to 8
+      int quality = static_cast<int>(std::round(res.chi2 * 4));
+      quality = std::min(std::max(quality, 0), 31);
+
+      //std::cout << "check position: " << position << " " << strip << " " << frac_position << " " << frac_strip << " " << (float(strip) + float(frac_strip)/8) << std::endl;
+      //std::cout << "check bend    : " << bend << " " << float(bend)/16 << std::endl;
+      //std::cout << "check quality : " << quality << " " << float(quality)/4 << std::endl;
+
+      // Overwrite strip, bend, quality, and syncErr
+      out.back().accessCSCData().strip   = static_cast<uint16_t>(strip);
+      out.back().accessCSCData().bend    = static_cast<uint16_t>(bend);
+      out.back().accessCSCData().quality = static_cast<uint16_t>(quality);
+      out.back().accessCSCData().syncErr = static_cast<uint16_t>(frac_strip);
     }
   }
   return;

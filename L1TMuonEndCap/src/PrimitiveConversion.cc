@@ -131,7 +131,7 @@ void PrimitiveConversion::convert_csc(
   conv_hit.set_csc_ID        ( tp_csc_ID );
   conv_hit.set_csc_nID       ( csc_nID );
   conv_hit.set_track_num     ( tp_data.trknmb );
-  conv_hit.set_sync_err      ( tp_data.syncErr );
+  conv_hit.set_sync_err      ( static_cast<int16_t>(tp_data.syncErr) );  // get proper sign
   //conv_hit.set_sector_RPC    ( tp_sector );
   //conv_hit.set_subsector_RPC ( tp_subsector );
 
@@ -276,6 +276,17 @@ void PrimitiveConversion::convert_csc_details(EMTFHit& conv_hit) const {
   bool bugStrip0BeforeFW48200 = false;
   if (bugStrip0BeforeFW48200 == false && fw_strip == 0 && clct_pat_corr_sign == -1)
     clct_pat_corr = 0;
+
+  bool applyCLCTFit = false;
+#ifdef PHASE_TWO_TRIGGER
+  applyCLCTFit = true;
+#endif
+
+  if (applyCLCTFit) {
+    int syncErr = conv_hit.Sync_err();
+    clct_pat_corr = std::abs(syncErr);
+    clct_pat_corr_sign = (syncErr >= 0) ? 1 : -1;
+  }
 
   if (is_10degree) {
     eighth_strip = fw_strip << 2;  // full precision, uses only 2 bits of pattern correction
