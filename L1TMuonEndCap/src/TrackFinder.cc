@@ -21,8 +21,8 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
     tokenCSC_(iConsumes.consumes<CSCTag::digi_collection>(iConfig.getParameter<edm::InputTag>("CSCInput"))),
     tokenCSCComparator_(iConsumes.consumes<CSCTag::comparator_digi_collection>(iConfig.getParameter<edm::InputTag>("CSCComparatorInput"))),
     tokenRPC_(iConsumes.consumes<RPCTag::digi_collection>(iConfig.getParameter<edm::InputTag>("RPCInput"))),
+    tokenRPCRecHit_(iConsumes.consumes<RPCTag::rechit_collection>(iConfig.getParameter<edm::InputTag>("RPCRecHitInput"))),
     tokenGEM_(iConsumes.consumes<GEMTag::digi_collection>(iConfig.getParameter<edm::InputTag>("GEMInput"))),
-    tokenIRPC_(iConsumes.consumes<IRPCTag::digi_collection>(iConfig.getParameter<edm::InputTag>("IRPCInput"))),
     tokenME0_(iConsumes.consumes<ME0Tag::digi_collection>(iConfig.getParameter<edm::InputTag>("ME0Input"))),
     verbose_(iConfig.getUntrackedParameter<int>("verbosity")),
     useDT_(iConfig.getParameter<bool>("DTEnable")),
@@ -145,21 +145,22 @@ void TrackFinder::process(
   experimental::EMTFSubsystemCollector expt_collector;
   if (useCSC_)
     expt_collector.extractPrimitives(CSCTag(), &geometry_translator_, iEvent, tokenCSC_, tokenCSCComparator_, muon_primitives);
-#else
-  if (useCSC_)
-    collector.extractPrimitives(CSCTag(), &geometry_translator_, iEvent, tokenCSC_, muon_primitives);
-#endif
   if (useRPC_)
-    collector.extractPrimitives(RPCTag(), &geometry_translator_, iEvent, tokenRPC_, muon_primitives);
+    expt_collector.extractPrimitives(RPCTag(), &geometry_translator_, iEvent, tokenRPC_, tokenRPCRecHit_, muon_primitives);
+  if (useIRPC_)
+    expt_collector.extractPrimitives(IRPCTag(), &geometry_translator_, iEvent, tokenRPC_, tokenRPCRecHit_, muon_primitives);
   if (useGEM_)
     collector.extractPrimitives(GEMTag(), &geometry_translator_, iEvent, tokenGEM_, muon_primitives);
-  if (useIRPC_)
-    collector.extractPrimitives(IRPCTag(), &geometry_translator_, iEvent, tokenIRPC_, muon_primitives);
   if (useME0_)
     collector.extractPrimitives(ME0Tag(), &geometry_translator_, iEvent, tokenME0_, muon_primitives);
   if (useDT_)
     collector.extractPrimitives(DTTag(), &geometry_translator_, iEvent, tokenDTPhi_, tokenDTTheta_, muon_primitives);
-
+#else
+  if (useCSC_)
+    collector.extractPrimitives(CSCTag(), &geometry_translator_, iEvent, tokenCSC_, muon_primitives);
+  if (useRPC_)
+    collector.extractPrimitives(RPCTag(), &geometry_translator_, iEvent, tokenRPC_, muon_primitives);
+#endif
 
   // Check trigger primitives
   if (verbose_ > 2) {  // debug

@@ -486,7 +486,8 @@ void PrimitiveConversion::convert_rpc(
   // Use cluster width as 'quality'
   int tp_quality = (tp_data.strip_hi - tp_data.strip_low + 1);
   if (!is_irpc) {
-     tp_quality *= 3;  // old RPC strip pitch is 3 times the new iRPC
+     tp_quality *= 3;  // old RPC strip pitch is 1.5 times the new iRPC
+     tp_quality /= 2;
   }
 
 
@@ -558,6 +559,8 @@ void PrimitiveConversion::convert_rpc(
 
     if (is_irpc) {
       fph = emtf::calc_phi_loc_int(glob_phi, conv_hit.PC_sector());
+      GlobalPoint gp2(tp_data.x, tp_data.y, tp_data.z);  // Do this to get the measurement
+      glob_theta = emtf::rad_to_deg(gp2.theta());        // along the strip
       th  = emtf::calc_theta_int(glob_theta, conv_hit.Endcap());
 
       assert(0 <= fph && fph < 5000);
@@ -880,14 +883,6 @@ void PrimitiveConversion::convert_me0(
     csc_nID = 10;
   }
 
-  // 'bend' is ME0Segment::deltaPhi(). It is a float. Divide by strip resolution to convert to an int.
-  int tp_bend = static_cast<int>(std::round(tp_data.bend / (M_PI/9/384)));
-
-  // 'quality' is ME0Segment::chi2(). It is a float. Multiply by 100 for now.
-  float chi2 = tp_data.chi2;
-  int ndof = tp_data.nhits*2 - 4;
-  int tp_quality = static_cast<int>(std::round(chi2/float(ndof) * 100));
-
   // Set properties
   conv_hit.SetME0DetId       ( tp_detId );
 
@@ -917,9 +912,9 @@ void PrimitiveConversion::convert_me0(
   //conv_hit.set_strip_low     ( tp_strip );
   //conv_hit.set_strip_hi      ( tp_strip );
   //conv_hit.set_wire          ( tp_data.keywire );
-  conv_hit.set_quality       ( tp_quality );
+  conv_hit.set_quality       ( static_cast<int>(std::round(tp_data.chi2)) );
   conv_hit.set_pattern       ( 1 );  // In firmware, this marks GEM stub (unconfirmed!)
-  conv_hit.set_bend          ( tp_bend );
+  conv_hit.set_bend          ( static_cast<int>(std::round(tp_data.bend)) );
   conv_hit.set_time          ( 0. );  // No fine resolution timing
 
   conv_hit.set_neighbor      ( is_neighbor );
@@ -1259,5 +1254,6 @@ bool PrimitiveConversion::is_valid_for_run2(const EMTFHit& conv_hit) const {
   bool is_csc = conv_hit.Is_CSC();
   bool is_rpc = conv_hit.Is_RPC();
   bool is_irpc = conv_hit.Is_RPC() && ((conv_hit.Station() == 3 || conv_hit.Station() == 4) && (conv_hit.Ring() == 1));
-  return (is_csc || (is_rpc && !is_irpc));
+  bool is_omtf = conv_hit.Is_RPC() && ((conv_hit.Station() == 1 || conv_hit.Station() == 2) && (conv_hit.Ring() == 3));  // RPC in the overlap region
+  return (is_csc || (is_rpc && !is_irpc && !is_omtf));
 }

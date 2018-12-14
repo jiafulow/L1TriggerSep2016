@@ -125,4 +125,103 @@ void EMTFSubsystemCollector::extractPrimitives(
   return;
 }
 
+// _____________________________________________________________________________
+// Specialized for RPC
+template<>
+void EMTFSubsystemCollector::extractPrimitives(
+    RPCTag tag,
+    const GeometryTranslator* tp_geom,
+    const edm::Event& iEvent,
+    const edm::EDGetToken& token1, // for RPC digis
+    const edm::EDGetToken& token2, // for RPC rechits
+    TriggerPrimitiveCollection& out
+) const {
+  const int maxClusterSize = 3;
+
+  //edm::Handle<RPCTag::digi_collection> rpcDigis;
+  //iEvent.getByToken(token1, rpcDigis);
+
+  edm::Handle<RPCTag::rechit_collection> rpcRecHits;
+  iEvent.getByToken(token2, rpcRecHits);
+
+  auto rechit = rpcRecHits->begin();
+  auto rhend  = rpcRecHits->end();
+  for (; rechit != rhend; ++rechit) {
+    const RPCDetId& detid = rechit->rpcId();
+    const RPCRoll* roll = dynamic_cast<const RPCRoll*>(tp_geom->getRPCGeometry().roll(detid));
+    if (!roll)  continue;
+
+    if (detid.region() != 0) {  // 0 is barrel
+      //if (detid.station() <= 2 && detid.ring() == 3)  continue;  // do not include RE1/3, RE2/3
+      if (detid.station() >= 3 && detid.ring() == 1)  continue;  // do not include RE3/1, RE4/1 (iRPC)
+
+      if (rechit->clusterSize() <= maxClusterSize) {
+        out.emplace_back(detid, *rechit, tp_geom->getRPCGeometry());
+      }
+    }
+  }
+  return;
+}
+
+// _____________________________________________________________________________
+// Specialized for iRPC
+template<>
+void EMTFSubsystemCollector::extractPrimitives(
+    IRPCTag tag,
+    const GeometryTranslator* tp_geom,
+    const edm::Event& iEvent,
+    const edm::EDGetToken& token1, // for RPC digis
+    const edm::EDGetToken& token2, // for RPC rechits
+    TriggerPrimitiveCollection& out
+) const {
+  const int maxClusterSize = 6;
+
+  //edm::Handle<IRPCTag::digi_collection> irpcDigis;
+  //iEvent.getByToken(token1, irpcDigis);
+
+  edm::Handle<IRPCTag::rechit_collection> irpcRecHits;
+  iEvent.getByToken(token2, irpcRecHits);
+
+  auto rechit = irpcRecHits->begin();
+  auto rhend  = irpcRecHits->end();
+  for (; rechit != rhend; ++rechit) {
+    const RPCDetId& detid = rechit->rpcId();
+    const RPCRoll* roll = dynamic_cast<const RPCRoll*>(tp_geom->getRPCGeometry().roll(detid));
+    if (!roll)  continue;
+
+    if (detid.region() != 0) {  // 0 is barrel
+      if (detid.station() >= 3 && detid.ring() == 1) {  // only RE3/1, RE4/1 (iRPC)
+        RPCRecHit tmpRecHit = (*rechit);  // make a copy
+
+        // According to the TDR, the iRPC chamber has 96 strips.
+        // But in CMSSW, the iRPC chamber has 192 strips.
+        bool fixNStrips192 = true;
+        if (fixNStrips192 && roll->nstrips() == 192) {
+          int firstStrip  = tmpRecHit.firstClusterStrip();
+          int clusterSize = tmpRecHit.clusterSize();
+          float time      = tmpRecHit.time();
+          float timeError = tmpRecHit.timeError();
+
+          int lastStrip  = firstStrip + clusterSize - 1;
+          firstStrip -= 1;
+          firstStrip /= 2;
+          firstStrip += 1;
+          lastStrip -= 1;
+          lastStrip /= 2;
+          lastStrip += 1;
+          clusterSize = lastStrip - firstStrip + 1;
+
+          tmpRecHit = RPCRecHit(tmpRecHit.rpcId(), tmpRecHit.BunchX(), firstStrip, clusterSize, tmpRecHit.localPosition(), tmpRecHit.localPositionError());
+          tmpRecHit.setTimeAndError(time, timeError);
+        }
+
+        if (tmpRecHit.clusterSize() <= maxClusterSize) {
+          out.emplace_back(detid, tmpRecHit, tp_geom->getRPCGeometry());
+        }
+      }
+    }
+  }
+  return;
+}
+
 }  // namespace experimental

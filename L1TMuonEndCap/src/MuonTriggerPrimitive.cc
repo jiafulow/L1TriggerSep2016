@@ -5,10 +5,12 @@
 #include "DataFormats/L1DTTrackFinder/interface/L1MuDTChambPhDigi.h"
 #include "DataFormats/L1DTTrackFinder/interface/L1MuDTChambThDigi.h"
 #include "DataFormats/RPCDigi/interface/RPCDigi.h"
+#include "DataFormats/RPCRecHit/interface/RPCRecHit.h"
 #include "DataFormats/GEMDigi/interface/GEMPadDigi.h"
 #include "DataFormats/GEMRecHit/interface/ME0Segment.h"
 
-#include "Geometry/GEMGeometry/interface/ME0Geometry.h"  // ME0 convert x to pad
+#include "Geometry/RPCGeometry/interface/RPCGeometry.h"
+#include "Geometry/GEMGeometry/interface/ME0Geometry.h"
 
 
 using namespace L1TMuonEndCap;
@@ -129,31 +131,37 @@ TriggerPrimitive::TriggerPrimitive(const RPCDetId& detid,
   _rpc.strip = digi.strip();
   _rpc.strip_low = digi.strip();
   _rpc.strip_hi = digi.strip();
-  _rpc.layer = detid.layer();
   _rpc.bx = digi.bx();
   _rpc.valid = 1;
   _rpc.x = digi.hasX() ? digi.coordinateX() : -999999.;
   _rpc.y = digi.hasY() ? digi.coordinateY() : -999999.;
+  _rpc.z = -999999.;
   _rpc.time = digi.hasTime() ? digi.time() : -999999.;
 }
 
 TriggerPrimitive::TriggerPrimitive(const RPCDetId& detid,
-                                   const unsigned strip,
-                                   const unsigned layer,
-                                   const int bx):
+                                   const RPCRecHit& rechit,
+                                   const RPCGeometry& geom):
   _id(detid),
   _subsystem(TriggerPrimitive::kRPC) {
   calculateGlobalSector(detid,_globalsector,_subsector);
   _eta = 0.; _phi = 0.; _rho = 0.; _theta = 0.;
-  _rpc.strip = strip;
-  _rpc.strip_low = strip;
-  _rpc.strip_hi = strip;
-  _rpc.layer = layer;
-  _rpc.bx = bx;
+  _rpc.strip = (rechit.firstClusterStrip()*2 + rechit.clusterSize() - 1)/2;  // (strip_low + strip_hi)/2
+  _rpc.strip_low = rechit.firstClusterStrip();
+  _rpc.strip_hi = rechit.firstClusterStrip() + rechit.clusterSize() - 1;
+  _rpc.bx = rechit.BunchX();
   _rpc.valid = 1;
   _rpc.x = -999999.;
   _rpc.y = -999999.;
-  _rpc.time = -999999.;
+  _rpc.z = -999999.;
+  {
+    const RPCRoll* roll = dynamic_cast<const RPCRoll*>(geom.roll(detid));
+    const GlobalPoint gp = roll->surface().toGlobal(rechit.localPosition());
+    _rpc.x = gp.x();
+    _rpc.y = gp.y();
+    _rpc.z = gp.z();
+  }
+  _rpc.time = rechit.time();
 }
 
 
@@ -173,20 +181,20 @@ TriggerPrimitive::TriggerPrimitive(const GEMDetId& detid,
 
 // constructor from ME0 data
 TriggerPrimitive::TriggerPrimitive(const ME0DetId& detid,
-                                   const ME0Segment& digi,
+                                   const ME0Segment& rechit,
                                    const ME0Geometry& geom):
   _id(detid),
   _subsystem(TriggerPrimitive::kME0) {
   calculateGlobalSector(detid,_globalsector,_subsector);
   _eta = 0.; _phi = 0.; _rho = 0.; _theta = 0.;
-  _me0.x = digi.localPosition().x();
-  _me0.y = digi.localPosition().y();
-  _me0.dirx = digi.localDirection().x();
-  _me0.diry = digi.localDirection().y();
-  _me0.chi2 = digi.chi2();
-  _me0.nhits = digi.nRecHits();
-  _me0.time = digi.time();
-  _me0.bend = digi.deltaPhi();
+  _me0.x = rechit.localPosition().x();
+  _me0.y = rechit.localPosition().y();
+  _me0.dirx = rechit.localDirection().x();
+  _me0.diry = rechit.localDirection().y();
+  _me0.chi2 = std::round(rechit.chi2() * 4);  // 0.25 step
+  _me0.nhits = rechit.nRecHits();
+  _me0.time = rechit.time();
+  _me0.bend = std::round(rechit.deltaPhi()/(M_PI/9/768));  // half-strip or 1/4-pad unit (20/768 deg)
   _me0.pad = 0;
   {
     // ME0 convert x to pad
@@ -282,11 +290,11 @@ bool TriggerPrimitive::operator==(const TriggerPrimitive& tp) const {
     return  ( this->_rpc.strip == tp._rpc.strip &&
               this->_rpc.strip_low == tp._rpc.strip_low &&
               this->_rpc.strip_hi == tp._rpc.strip_hi &&
-              this->_rpc.layer == tp._rpc.layer &&
               this->_rpc.bx == tp._rpc.bx &&
               this->_rpc.valid == tp._rpc.valid &&
               isclose(this->_rpc.x, tp._rpc.x) &&        // floating-point
               isclose(this->_rpc.y, tp._rpc.y) &&        // floating-point
+              isclose(this->_rpc.z, tp._rpc.z) &&        // floating-point
               isclose(this->_rpc.time, tp._rpc.time) &&  // floating-point
               this->_id == tp._id &&
               this->_subsystem == tp._subsystem &&
@@ -447,10 +455,10 @@ void TriggerPrimitive::print(std::ostream& out) const {
     out << "Strip         : " << _rpc.strip << std::endl;
     out << "Strip Low     : " << _rpc.strip_low << std::endl;
     out << "Strip High    : " << _rpc.strip_hi << std::endl;
-    out << "Layer         : " << _rpc.layer << std::endl;
     out << "Valid         : " << _rpc.valid << std::endl;
     out << "Local x       : " << _rpc.x << std::endl;
     out << "Local y       : " << _rpc.y << std::endl;
+    out << "Local z       : " << _rpc.z << std::endl;
     out << "Time          : " << _rpc.time << std::endl;
     break;
   case kGEM:

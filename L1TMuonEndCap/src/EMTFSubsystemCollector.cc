@@ -499,20 +499,23 @@ void EMTFSubsystemCollector::declusterize_gem(TriggerPrimitiveCollection& clus_m
   copy_n_if(clus_muon_primitives.begin(), clus_muon_primitives.end(), maxClusters, std::back_inserter(tmp_clus_muon_primitives), gem_cluster_layer2_select);
 
   // 3. Declusterize
-  declus_muon_primitives.clear();
+  //declus_muon_primitives.clear();
+  //
+  //TriggerPrimitiveCollection::const_iterator tp_it  = tmp_clus_muon_primitives.begin();
+  //TriggerPrimitiveCollection::const_iterator tp_end = tmp_clus_muon_primitives.end();
+  //
+  //for (; tp_it != tp_end; ++tp_it) {
+  //  for (uint16_t pad = tp_it->getGEMData().pad_low; pad != tp_it->getGEMData().pad_hi+1; ++pad) {
+  //    TriggerPrimitive new_tp = *tp_it;  // make a copy
+  //    new_tp.accessGEMData().pad     = pad;
+  //    new_tp.accessGEMData().pad_low = pad;
+  //    new_tp.accessGEMData().pad_hi  = pad;
+  //    declus_muon_primitives.push_back(new_tp);
+  //  }
+  //}
 
-  TriggerPrimitiveCollection::const_iterator tp_it  = tmp_clus_muon_primitives.begin();
-  TriggerPrimitiveCollection::const_iterator tp_end = tmp_clus_muon_primitives.end();
-
-  for (; tp_it != tp_end; ++tp_it) {
-    for (uint16_t pad = tp_it->getGEMData().pad_low; pad != tp_it->getGEMData().pad_hi+1; ++pad) {
-      TriggerPrimitive new_tp = *tp_it;  // make a copy
-      new_tp.accessGEMData().pad     = pad;
-      new_tp.accessGEMData().pad_low = pad;
-      new_tp.accessGEMData().pad_hi  = pad;
-      declus_muon_primitives.push_back(new_tp);
-    }
-  }
+  // Dec 2018: do not declusterize
+  declus_muon_primitives = tmp_clus_muon_primitives;
 }
 
 void EMTFSubsystemCollector::make_copad_gem(TriggerPrimitiveCollection& declus_muon_primitives, TriggerPrimitiveCollection& copad_muon_primitives) const {

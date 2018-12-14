@@ -18,8 +18,8 @@ simEmtfDigisMC = cms.EDProducer("L1TMuonEndCapTrackProducer",
     CSCInput = cms.InputTag('simCscTriggerPrimitiveDigis','MPCSORTED'),
     CSCComparatorInput = cms.InputTag('simMuonCSCDigis','MuonCSCComparatorDigi'),
     RPCInput = cms.InputTag('simMuonRPCDigis'),
+    RPCRecHitInput = cms.InputTag('rpcRecHits'),
     GEMInput = cms.InputTag('simMuonGEMPadDigis'),
-    IRPCInput = cms.InputTag('simMuonRPCDigis'),
     ME0Input = cms.InputTag('me0TriggerPseudoDigis'),
 
     # Run with CSC, RPC, GEM

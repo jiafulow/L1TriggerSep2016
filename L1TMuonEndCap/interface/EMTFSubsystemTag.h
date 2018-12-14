@@ -11,6 +11,8 @@
 #include "DataFormats/CSCDigi/interface/CSCComparatorDigiCollection.h"
 #include "DataFormats/RPCDigi/interface/RPCDigi.h"
 #include "DataFormats/RPCDigi/interface/RPCDigiCollection.h"
+#include "DataFormats/RPCRecHit/interface/RPCRecHit.h"
+#include "DataFormats/RPCRecHit/interface/RPCRecHitCollection.h"
 #include "DataFormats/GEMDigi/interface/GEMPadDigi.h"
 #include "DataFormats/GEMDigi/interface/GEMPadDigiCollection.h"
 #include "DataFormats/GEMRecHit/interface/ME0Segment.h"
@@ -34,8 +36,17 @@ namespace emtf {
   };
 
   struct RPCTag {
-    typedef RPCDigi           digi_type;
-    typedef RPCDigiCollection digi_collection;
+    typedef RPCDigi             digi_type;
+    typedef RPCDigiCollection   digi_collection;
+    typedef RPCRecHit           rechit_type;
+    typedef RPCRecHitCollection rechit_collection;
+  };
+
+  struct IRPCTag {
+    typedef RPCDigi             digi_type;
+    typedef RPCDigiCollection   digi_collection;
+    typedef RPCRecHit           rechit_type;
+    typedef RPCRecHitCollection rechit_collection;
   };
 
   struct GEMTag {
@@ -43,14 +54,9 @@ namespace emtf {
     typedef GEMPadDigiCollection digi_collection;
   };
 
-  struct IRPCTag {
-    typedef RPCDigi           digi_type;
-    typedef RPCDigiCollection digi_collection;
-  };
-
   struct ME0Tag {
-    typedef ME0Segment           digi_type;
-    typedef ME0SegmentCollection digi_collection;
+    typedef ME0Segment           digi_type;       // rechit actually
+    typedef ME0SegmentCollection digi_collection; // rechit actually
   };
 
 }  //  namespace emtf
