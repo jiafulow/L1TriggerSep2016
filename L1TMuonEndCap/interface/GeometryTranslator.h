@@ -1,5 +1,5 @@
-#ifndef __L1TMuonEndCap_GeometryTranslator_h__
-#define __L1TMuonEndCap_GeometryTranslator_h__
+#ifndef __L1TMuon_GeometryTranslator_h__
+#define __L1TMuon_GeometryTranslator_h__
 //
 // Class: L1TMuon::GeometryTranslator
 //
@@ -33,7 +33,7 @@ class CSCLayer;
 class DTGeometry;
 class MagneticField;
 
-namespace L1TMuonEndCap {
+namespace L1TMuon {
   class TriggerPrimitive;
 
   class GeometryTranslator {

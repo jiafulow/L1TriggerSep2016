@@ -1,12 +1,12 @@
-#ifndef __L1TMuonEndCap_TriggerPrimitiveFwd_h__
-#define __L1TMuonEndCap_TriggerPrimitiveFwd_h__
+#ifndef __L1TMuon_TriggerPrimitiveFwd_h__
+#define __L1TMuon_TriggerPrimitiveFwd_h__
 
 #include <vector>
 #include <map>
 #include "DataFormats/Common/interface/Ref.h"
 #include "DataFormats/Common/interface/Ptr.h"
 
-namespace L1TMuonEndCap {
+namespace L1TMuon {
   class TriggerPrimitive;
 
   typedef std::vector<TriggerPrimitive> TriggerPrimitiveCollection;
@@ -16,7 +16,7 @@ namespace L1TMuonEndCap {
   //typedef edm::Ptr<TriggerPrimitive> TriggerPrimitivePtr;
   //typedef std::map<unsigned,TriggerPrimitiveCollection> TriggerPrimitiveStationMap;
 
-  class TTTriggerPrimitive;
+  class TTTriggerPrimitive;  // Track Trigger hits
 
   typedef std::vector<TTTriggerPrimitive> TTTriggerPrimitiveCollection;
 }

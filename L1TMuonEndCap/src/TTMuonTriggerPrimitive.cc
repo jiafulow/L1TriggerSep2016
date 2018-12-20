@@ -1,8 +1,8 @@
-#include "L1Trigger/L1TMuonEndCap/interface/TTMuonTriggerPrimitive.h"
+#include "L1Trigger/L1TMuon/interface/TTMuonTriggerPrimitive.h"
 
 #include <iostream>
 
-using namespace L1TMuonEndCap;
+using namespace L1TMuon;
 
 namespace {
   const char subsystem_names[][3] = {"TT"};

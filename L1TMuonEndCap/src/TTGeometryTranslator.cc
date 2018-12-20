@@ -1,5 +1,5 @@
-#include "L1Trigger/L1TMuonEndCap/interface/TTGeometryTranslator.h"
-#include "L1Trigger/L1TMuonEndCap/interface/TTMuonTriggerPrimitive.h"
+#include "L1Trigger/L1TMuon/interface/TTGeometryTranslator.h"
+#include "L1Trigger/L1TMuon/interface/TTMuonTriggerPrimitive.h"
 
 // event setup stuff / geometries
 #include "FWCore/Framework/interface/EventSetup.h"
@@ -17,7 +17,7 @@
 using Phase2TrackerGeomDetUnit = PixelGeomDetUnit;
 using Phase2TrackerTopology    = PixelTopology;
 
-using namespace L1TMuonEndCap;
+using namespace L1TMuon;
 
 
 TTGeometryTranslator::TTGeometryTranslator():

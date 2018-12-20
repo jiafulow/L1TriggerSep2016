@@ -1,5 +1,5 @@
-#ifndef __L1TMuonEndCap_TTMuonTriggerPrimitive_h__
-#define __L1TMuonEndCap_TTMuonTriggerPrimitive_h__
+#ifndef __L1TMuon_TTMuonTriggerPrimitive_h__
+#define __L1TMuon_TTMuonTriggerPrimitive_h__
 
 //
 // This class implements a layer for Phase 2 Tracker trigger primitive
@@ -18,7 +18,7 @@
 #include "DataFormats/L1TrackTrigger/interface/TTTypes.h"
 
 
-namespace L1TMuonEndCap {
+namespace L1TMuon {
 
   class TTTriggerPrimitive {
   public:
@@ -116,6 +116,6 @@ namespace L1TMuonEndCap {
     double _theta; // bend angle with respect to ray from (0,0,0). // NOT USED
   };
 
-}  // namespace L1TMuonEndCap
+}  // namespace L1TMuon
 
 #endif

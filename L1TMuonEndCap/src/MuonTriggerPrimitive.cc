@@ -1,4 +1,4 @@
-#include "L1Trigger/L1TMuonEndCap/interface/MuonTriggerPrimitive.h"
+#include "L1Trigger/L1TMuon/interface/MuonTriggerPrimitive.h"
 
 // the primitive types we can use
 #include "DataFormats/CSCDigi/interface/CSCCorrelatedLCTDigi.h"
@@ -15,7 +15,7 @@
 #include "DataFormats/MuonDetId/interface/GEMDetId.h"
 #include "DataFormats/MuonDetId/interface/ME0DetId.h"
 
-using namespace L1TMuonEndCap;
+using namespace L1TMuon;
 
 namespace {
   const char subsystem_names[][4] = {"DT","CSC","RPC","GEM"};
@@ -116,8 +116,13 @@ TriggerPrimitive::TriggerPrimitive(const CSCDetId& detid,
     _id = CSCDetId(detid.endcap(), detid.station(), 4, detid.chamber(), detid.layer());
     _csc.strip = digi.getStrip() - 128;
   }
-}
 
+  CSCCorrelatedLCTDigi digi_clone = digi; // Necessary to get around const qualifier
+  CSCALCTDigi alct = digi_clone.getALCT();
+  CSCCLCTDigi clct = digi_clone.getCLCT();
+  _csc.alct_quality = alct.getQuality();
+  _csc.clct_quality = clct.getQuality();
+}
 
 // constructor from RPC data
 TriggerPrimitive::TriggerPrimitive(const RPCDetId& detid,
