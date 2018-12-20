@@ -31,13 +31,13 @@
 //#include "DataFormats/MuonDetId/interface/CSCTriggerNumbering.h"
 #include "L1Trigger/CSCCommonTrigger/interface/CSCConstants.h"
 
-#include "L1Trigger/L1TMuon/interface/GeometryTranslator.h"
-#include "L1Trigger/L1TMuon/interface/MuonTriggerPrimitive.h"
-#include "L1Trigger/L1TMuon/interface/MuonTriggerPrimitiveFwd.h"
+#include "L1Trigger/L1TMuonEndCap/interface/GeometryTranslator.h"
+#include "L1Trigger/L1TMuonEndCap/interface/MuonTriggerPrimitive.h"
+#include "L1Trigger/L1TMuonEndCap/interface/MuonTriggerPrimitiveFwd.h"
 
-typedef L1TMuon::GeometryTranslator         GeometryTranslator;
-typedef L1TMuon::TriggerPrimitive           TriggerPrimitive;
-typedef L1TMuon::TriggerPrimitiveCollection TriggerPrimitiveCollection;
+typedef L1TMuonEndCap::GeometryTranslator         GeometryTranslator;
+typedef L1TMuonEndCap::TriggerPrimitive           TriggerPrimitive;
+typedef L1TMuonEndCap::TriggerPrimitiveCollection TriggerPrimitiveCollection;
 
 #include "helper.h"
 
