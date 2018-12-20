@@ -1,4 +1,4 @@
-#include "L1Trigger/L1TMuon/interface/MuonTriggerPrimitive.h"
+#include "L1Trigger/L1TMuonEndCap/interface/MuonTriggerPrimitive.h"
 
 // the primitive types we can use
 #include "DataFormats/CSCDigi/interface/CSCCorrelatedLCTDigi.h"
@@ -15,7 +15,7 @@
 #include "DataFormats/MuonDetId/interface/GEMDetId.h"
 #include "DataFormats/MuonDetId/interface/ME0DetId.h"
 
-using namespace L1TMuon;
+using namespace L1TMuonEndCap;
 
 namespace {
   const char subsystem_names[][4] = {"DT","CSC","RPC","GEM"};

@@ -1,5 +1,5 @@
-#ifndef __L1TMuon_TriggerPrimitive_h__
-#define __L1TMuon_TriggerPrimitive_h__
+#ifndef __L1TMuonEndCap_TriggerPrimitive_h__
+#define __L1TMuonEndCap_TriggerPrimitive_h__
 //
 // Class: L1TMuon::TriggerPrimitive
 //
@@ -48,7 +48,7 @@ class ME0PadDigi;
 class ME0DetId;
 
 
-namespace L1TMuon {
+namespace L1TMuonEndCap {
 
   class TriggerPrimitive {
   public:

@@ -1,12 +1,12 @@
-#ifndef __L1TMuon_TriggerPrimitiveFwd_h__
-#define __L1TMuon_TriggerPrimitiveFwd_h__
+#ifndef __L1TMuonEndCap_TriggerPrimitiveFwd_h__
+#define __L1TMuonEndCap_TriggerPrimitiveFwd_h__
 
 #include <vector>
 #include <map>
 #include "DataFormats/Common/interface/Ref.h"
 #include "DataFormats/Common/interface/Ptr.h"
 
-namespace L1TMuon {
+namespace L1TMuonEndCap {
   class TriggerPrimitive;
 
   typedef std::vector<TriggerPrimitive> TriggerPrimitiveCollection;

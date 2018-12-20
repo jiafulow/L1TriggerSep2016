@@ -1,5 +1,5 @@
-#include "L1Trigger/L1TMuon/interface/GeometryTranslator.h"
-#include "L1Trigger/L1TMuon/interface/MuonTriggerPrimitive.h"
+#include "L1Trigger/L1TMuonEndCap/interface/GeometryTranslator.h"
+#include "L1Trigger/L1TMuonEndCap/interface/MuonTriggerPrimitive.h"
 
 // event setup stuff / geometries
 #include "FWCore/Framework/interface/EventSetup.h"
@@ -20,7 +20,7 @@
 
 #include <cmath> // for pi
 
-using namespace L1TMuon;
+using namespace L1TMuonEndCap;
 
 GeometryTranslator::GeometryTranslator():
   _geom_cache_id(0ULL), _magfield_cache_id(0ULL) {

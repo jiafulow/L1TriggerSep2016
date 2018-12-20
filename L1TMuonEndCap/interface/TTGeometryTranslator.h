@@ -1,5 +1,5 @@
-#ifndef __L1TMuon_TTGeometryTranslator_h__
-#define __L1TMuon_TTGeometryTranslator_h__
+#ifndef __L1TMuonEndCap_TTGeometryTranslator_h__
+#define __L1TMuonEndCap_TTGeometryTranslator_h__
 
 //
 // This class implements the translations from trigger primitive to
@@ -21,7 +21,7 @@ class TrackerGeometry;
 class TrackerTopology;
 class MagneticField;
 
-namespace L1TMuon {
+namespace L1TMuonEndCap {
 
   class TTTriggerPrimitive;
 
