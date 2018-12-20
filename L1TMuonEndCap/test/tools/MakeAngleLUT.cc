@@ -31,13 +31,13 @@
 //#include "DataFormats/MuonDetId/interface/CSCTriggerNumbering.h"
 #include "L1Trigger/CSCCommonTrigger/interface/CSCConstants.h"
 
-#include "L1Trigger/L1TMuonEndCap/interface/GeometryTranslator.h"
-#include "L1Trigger/L1TMuonEndCap/interface/MuonTriggerPrimitive.h"
-#include "L1Trigger/L1TMuonEndCap/interface/MuonTriggerPrimitiveFwd.h"
+#include "L1Trigger/L1TMuon/interface/GeometryTranslator.h"
+#include "L1Trigger/L1TMuon/interface/MuonTriggerPrimitive.h"
+#include "L1Trigger/L1TMuon/interface/MuonTriggerPrimitiveFwd.h"
 
-typedef L1TMuonEndCap::GeometryTranslator         GeometryTranslator;
-typedef L1TMuonEndCap::TriggerPrimitive           TriggerPrimitive;
-typedef L1TMuonEndCap::TriggerPrimitiveCollection TriggerPrimitiveCollection;
+typedef L1TMuon::GeometryTranslator         GeometryTranslator;
+typedef L1TMuon::TriggerPrimitive           TriggerPrimitive;
+typedef L1TMuon::TriggerPrimitiveCollection TriggerPrimitiveCollection;
 
 #include "helper.h"
 
@@ -116,47 +116,11 @@ void MakeAngleLUT::generateLUTs() {
     return 0.5 * (x + y);
   };
 
-/*
-  // from RecoMuon/DetLayers/src/MuonCSCDetLayerGeometryBuilder.cc
-  //      RecoMuon/DetLayers/src/MuonRPCDetLayerGeometryBuilder.cc
-  //      RecoMuon/DetLayers/src/MuonGEMDetLayerGeometryBuilder.cc
-  auto isFront_detail = [](int subsystem, int station, int ring, int chamber, int subsector) {
-    bool result = false;
-
-    if (subsystem == TriggerPrimitive::kCSC) {
-      bool isOverlapping = !(station == 1 && ring == 3);
-      // not overlapping means back
-      if(isOverlapping)
-      {
-        bool isEven = (chamber % 2 == 0);
-        // odd chambers are bolted to the iron, which faces
-        // forward in 1&2, backward in 3&4, so...
-        result = (station < 3) ? isEven : !isEven;
-      }
-    } else if (subsystem == TriggerPrimitive::kRPC) {
-      // 10 degree rings have even subsectors in front
-      // 20 degree rings have odd subsectors in front
-      bool is_10degree = !((station == 3 || station == 4) && (ring == 1));
-      bool isEven = (subsector % 2 == 0);
-      result = (is_10degree) ? isEven : !isEven;
-    } else if (subsystem == TriggerPrimitive::kGEM) {
-      //
-      result = (chamber % 2 == 0);
-    }
-    return result;
-  };
-
-  //auto isFront = [](const auto& hit) {
-  //  return isFront_detail(hit.Subsystem(), hit.Station(), hit.Ring(), hit.Chamber(), (hit.Subsystem() == TriggerPrimitive::kRPC ? hit.Subsector_RPC() : hit.Subsector()));
-  //};
-
-  if (isFront_detail) {}  // get around GCC unused-but-set-variable error
-*/
 
   // Save z positions for ME1/1, ME1/2, ME1/3, ME2/2, ME3/2, ME4/2,
   //                      RE1/2, RE1/3, RE2/2, RE3/2, RE4/2,
-  //                      GE1/1, GE1/2, RE3/1, RE4/1
-  std::vector<double> z_positions(15*2, 0.);
+  //                      GE1/1, GE1/2,
+  std::vector<double> z_positions(13*2, 0.);
 
 
   // ___________________________________________________________________________
@@ -170,7 +134,7 @@ void MakeAngleLUT::generateLUTs() {
     const CSCDetId& cscDetId = chamber->id();
     //double zpos = chamber->surface().position().z();  // [cm]
     double zpos = chamber->layer(CSCConstants::KEY_ALCT_LAYER)->surface().position().z();  // [cm]
-    //std::cout << "CSC: " << cscDetId.endcap() << " " << cscDetId.station() << " " << cscDetId.ring() << " " << cscDetId.chamber() << " " << layer->geometry()->numberOfStrips() << " " << layer->geometry()->numberOfWires() << " " << cscDetId.layer() << " " << zpos << std::endl;
+    //std::cout << "CSC: " << cscDetId.endcap() << " " << cscDetId.station() << " " << cscDetId.ring() << " " << cscDetId.chamber() << " " << cscDetId.layer() << " " << zpos << std::endl;
 
     // Save the numbers
     if (cscDetId.endcap() == 1 && (cscDetId.chamber() == 1 || cscDetId.chamber() == 2)) {
@@ -229,7 +193,7 @@ void MakeAngleLUT::generateLUTs() {
     //if (rpcDetId.region() == 0 || (rpcDetId.station() <= 2 && rpcDetId.ring() == 3))  // skip barrel, RE1/3, RE2/3
     //  continue;
     double zpos = roll->surface().position().z();  // [cm]
-    //std::cout << "RPC: " << rpcDetId.region() << " " << rpcDetId.ring() << " " << rpcDetId.station() << " " << rpcDetId.sector() << " " << rpcDetId.layer() << " " << rpcDetId.subsector() << " " << rpcDetId.roll() << " " << roll->nstrips() << " " << zpos << std::endl;
+    //std::cout << "RPC: " << rpcDetId.region() << " " << rpcDetId.ring() << " " << rpcDetId.station() << " " << rpcDetId.sector() << " " << rpcDetId.layer() << " " << rpcDetId.subsector() << " " << rpcDetId.roll() << " " << zpos << std::endl;
 
     // Save the numbers
     if (rpcDetId.region() == 1 && rpcDetId.sector() == 1 && rpcDetId.roll() == 1 && (rpcDetId.subsector() == 1 || rpcDetId.subsector() == 2)) {
@@ -263,18 +227,6 @@ void MakeAngleLUT::generateLUTs() {
         } else if (rpcDetId.subsector() == 1) {  // rear
           z_positions[21] = zpos;
         }
-      } else if (rpcDetId.station() == 3 && rpcDetId.ring() == 1) {
-        if        (rpcDetId.subsector() == 1) {  // front
-          z_positions[26] = zpos;
-        } else if (rpcDetId.subsector() == 2) {  // rear
-          z_positions[27] = zpos;
-        }
-      } else if (rpcDetId.station() == 4 && rpcDetId.ring() == 1) {
-        if        (rpcDetId.subsector() == 1) {  // front
-          z_positions[28] = zpos;
-        } else if (rpcDetId.subsector() == 2) {  // rear
-          z_positions[29] = zpos;
-        }
       }
     }
   }  // end loop over RPC detUnits
@@ -291,24 +243,8 @@ void MakeAngleLUT::generateLUTs() {
     const GEMDetId& gemDetId = roll->id();
     if (gemDetId.region() == 0)  // skip barrel
       continue;
-    double zpos = roll->surface().position().z();  // [cm]
-    //std::cout << "GEM: " << gemDetId.region() << " " << gemDetId.station() << " " << gemDetId.ring() << " " << gemDetId.layer() << " " << gemDetId.chamber() << " " << gemDetId.roll() << " " << roll->nstrips() << " " << zpos << std::endl;
-
-    if (gemDetId.region() == 1 && gemDetId.layer() == 1 && gemDetId.roll() == 1 && (gemDetId.chamber() == 1 || gemDetId.chamber() == 2)) {
-      if (gemDetId.station() == 1 && gemDetId.ring() == 1) {
-        if        (gemDetId.chamber() == 2) {  // front
-          z_positions[22] = zpos;
-        } else if (gemDetId.chamber() == 1) {  // rear
-          z_positions[23] = zpos;
-        }
-      } else if (gemDetId.station() == 2 && gemDetId.ring() == 1) {
-        if        (gemDetId.chamber() == 2) {  // front
-          z_positions[24] = zpos;
-        } else if (gemDetId.chamber() == 1) {  // rear
-          z_positions[25] = zpos;
-        }
-      }
-    }
+    //double zpos = roll->surface().position().z();  // [cm]
+    //std::cout << "GEM: " << gemDetId.region() << " " << gemDetId.ring() << " " << gemDetId.station() << " " << gemDetId.layer() << " " << gemDetId.chamber() << " " << gemDetId.roll() << " " << zpos << std::endl;
   }  // end loop over GEM detUnits
 
 

@@ -34,6 +34,12 @@ void L1TMuonEndCapTrackProducer::produce(edm::Event& iEvent, const edm::EventSet
   iEvent.put(std::move(out_cands) , "EMTF");
 }
 
+// void L1TMuonEndCapTrackProducer::beginJob() {
+// }
+
+// void L1TMuonEndCapTrackProducer::endJob() {
+// }
+
 // Fill 'descriptions' with the allowed parameters
 void L1TMuonEndCapTrackProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   // The following says we do not know what parameters are allowed so do no validation

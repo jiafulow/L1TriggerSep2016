@@ -8,7 +8,6 @@
 
 TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollector&& iConsumes) :
     geometry_translator_(),
-    ttgeometry_translator_(),
     condition_helper_(),
     sector_processor_lut_(),
     pt_assign_engine_(),
@@ -17,27 +16,21 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
     tokenCSC_(iConsumes.consumes<CSCTag::digi_collection>(iConfig.getParameter<edm::InputTag>("CSCInput"))),
     tokenRPC_(iConsumes.consumes<RPCTag::digi_collection>(iConfig.getParameter<edm::InputTag>("RPCInput"))),
     tokenGEM_(iConsumes.consumes<GEMTag::digi_collection>(iConfig.getParameter<edm::InputTag>("GEMInput"))),
-    tokenIRPC_(iConsumes.consumes<IRPCTag::digi_collection>(iConfig.getParameter<edm::InputTag>("IRPCInput"))),
-    tokenME0_(iConsumes.consumes<ME0Tag::digi_collection>(iConfig.getParameter<edm::InputTag>("ME0Input"))),
-    tokenTT_(iConsumes.consumes<TTTag::digi_collection>(iConfig.getParameter<edm::InputTag>("TTInput"))),
     verbose_(iConfig.getUntrackedParameter<int>("verbosity")),
+    primConvLUT_(iConfig.getParameter<edm::ParameterSet>("spPCParams16").getParameter<int>("PrimConvLUT")),
+    fwConfig_(iConfig.getParameter<bool>("FWConfig")),
     useCSC_(iConfig.getParameter<bool>("CSCEnable")),
     useRPC_(iConfig.getParameter<bool>("RPCEnable")),
     useGEM_(iConfig.getParameter<bool>("GEMEnable")),
-    useIRPC_(iConfig.getParameter<bool>("IRPCEnable")),
-    useME0_(iConfig.getParameter<bool>("ME0Enable")),
-    useTT_(iConfig.getParameter<bool>("TTEnable")),
     era_(iConfig.getParameter<std::string>("Era"))
 {
 
   if (era_ == "Run2_2016") {
     pt_assign_engine_.reset(new PtAssignmentEngine2016());
-  } else if (era_ == "Run2_2017") {
-    pt_assign_engine_.reset(new PtAssignmentEngine2017());
-  } else if (era_ == "Phase2C2") {
+  } else if (era_ == "Run2_2017" || era_ == "Run2_2018") {
     pt_assign_engine_.reset(new PtAssignmentEngine2017());
   } else {
-    assert(false && "Cannot recognize the era option");
+    edm::LogError("L1T") << "era_ = " << era_; return;
   }
 
   auto minBX       = iConfig.getParameter<int>("MinBX");
@@ -63,9 +56,12 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
 
   const auto& spTBParams16 = config_.getParameter<edm::ParameterSet>("spTBParams16");
   auto thetaWindow        = spTBParams16.getParameter<int>("ThetaWindow");
+  auto thetaWindowZone0   = spTBParams16.getParameter<int>("ThetaWindowZone0");
   auto useSingleHits      = spTBParams16.getParameter<bool>("UseSingleHits");
   auto bugSt2PhDiff       = spTBParams16.getParameter<bool>("BugSt2PhDiff");
   auto bugME11Dupes       = spTBParams16.getParameter<bool>("BugME11Dupes");
+  auto bugAmbigThetaWin   = spTBParams16.getParameter<bool>("BugAmbigThetaWin");
+  auto twoStationSameBX   = spTBParams16.getParameter<bool>("TwoStationSameBX");
 
   const auto& spGCParams16 = config_.getParameter<edm::ParameterSet>("spGCParams16");
   auto maxRoadsPerZone    = spGCParams16.getParameter<int>("MaxRoadsPerZone");
@@ -81,6 +77,7 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
   auto bugNegPt           = spPAParams16.getParameter<bool>("BugNegPt");
   auto bugGMTPhi          = spPAParams16.getParameter<bool>("BugGMTPhi");
   auto promoteMode7       = spPAParams16.getParameter<bool>("PromoteMode7");
+  auto modeQualVer        = spPAParams16.getParameter<int>("ModeQualVer");
 
   // Configure sector processors
   for (int endcap = emtf::MIN_ENDCAP; endcap <= emtf::MAX_ENDCAP; ++endcap) {
@@ -89,7 +86,6 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
 
       sector_processors_.at(es).configure(
           &geometry_translator_,
-          &ttgeometry_translator_,
           &condition_helper_,
           &sector_processor_lut_,
           pt_assign_engine_.get(),
@@ -99,18 +95,14 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
           zoneBoundaries, zoneOverlap,
           includeNeighbor, duplicateTheta, fixZonePhi, useNewZones, fixME11Edges,
           pattDefinitions, symPattDefinitions, useSymPatterns,
-          thetaWindow, useSingleHits, bugSt2PhDiff, bugME11Dupes,
+          thetaWindow, thetaWindowZone0, useRPC_, useSingleHits, bugSt2PhDiff, bugME11Dupes, bugAmbigThetaWin, twoStationSameBX,
           maxRoadsPerZone, maxTracks, useSecondEarliest, bugSameSectorPt0,
-          readPtLUTFile, fixMode15HighPt, bug9BitDPhi, bugMode7CLCT, bugNegPt, bugGMTPhi, promoteMode7
+          readPtLUTFile, fixMode15HighPt, bug9BitDPhi, bugMode7CLCT, bugNegPt, bugGMTPhi, promoteMode7, modeQualVer
       );
     }
   }
 
-#ifdef PHASE_TWO_TRIGGER
-  // This flag is defined in BuildFile.xml
-  std::cout << "The EMTF emulator has been customized with flag PHASE_TWO_TRIGGER." << std::endl;
-#endif
-}
+} // End constructor: TrackFinder::TrackFinder()
 
 TrackFinder::~TrackFinder() {
 
@@ -128,9 +120,6 @@ void TrackFinder::process(
 
   // Get the geometry for TP conversions
   geometry_translator_.checkAndUpdateGeometry(iSetup);
-#ifdef PHASE_TWO_TRIGGER
-  ttgeometry_translator_.checkAndUpdateGeometry(iSetup);
-#endif
 
   // Get the conditions, primarily the firmware version and the BDT forests
   condition_helper_.checkAndUpdateConditions(iEvent, iSetup);
@@ -139,7 +128,6 @@ void TrackFinder::process(
   // Extract all trigger primitives
 
   TriggerPrimitiveCollection muon_primitives;
-  TTTriggerPrimitiveCollection ttmuon_primitives;
 
   EMTFSubsystemCollector collector;
   if (useCSC_)
@@ -148,13 +136,6 @@ void TrackFinder::process(
     collector.extractPrimitives(RPCTag(), iEvent, tokenRPC_, muon_primitives);
   if (useGEM_)
     collector.extractPrimitives(GEMTag(), iEvent, tokenGEM_, muon_primitives);
-  if (useIRPC_)
-    collector.extractPrimitives(IRPCTag(), iEvent, tokenIRPC_, muon_primitives);
-  if (useME0_)
-    collector.extractPrimitives(ME0Tag(), iEvent, tokenME0_, muon_primitives);
-  if (useTT_)
-    collector.extractTTPrimitives(TTTag(), iEvent, tokenTT_, ttmuon_primitives);
-
 
   // Check trigger primitives
   if (verbose_ > 2) {  // debug
@@ -168,7 +149,7 @@ void TrackFinder::process(
   // Run each sector processor
 
   // Reload primitive conversion LUTs if necessary
-  sector_processor_lut_.read(condition_helper_.get_pc_lut_version());
+  sector_processor_lut_.read(fwConfig_ ? condition_helper_.get_pc_lut_version() : primConvLUT_);
 
   // Reload pT LUT if necessary
   pt_assign_engine_->load(condition_helper_.get_pt_lut_version(), &(condition_helper_.getForest()));
@@ -179,7 +160,7 @@ void TrackFinder::process(
       const int es = (endcap - emtf::MIN_ENDCAP) * (emtf::MAX_TRIGSECTOR - emtf::MIN_TRIGSECTOR + 1) + (sector - emtf::MIN_TRIGSECTOR);
 
       // Run-dependent configure. This overwrites many of the configurables passed by the python config file.
-      if (iEvent.isRealData()) {
+      if (iEvent.isRealData() && fwConfig_) {
         sector_processors_.at(es).configure_by_fw_version(condition_helper_.get_fw_version());
       }
 
@@ -187,7 +168,6 @@ void TrackFinder::process(
       sector_processors_.at(es).process(
           iEvent.id().event(),
           muon_primitives,
-          ttmuon_primitives,
           out_hits,
           out_tracks
       );

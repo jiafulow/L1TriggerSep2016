@@ -3,22 +3,8 @@
 </export>
 <flags ADD_SUBDIR="1"/>
 <flags LDFLAGS="-lXMLIO"/>
-<flags CPPDEFINES="PHASE_TWO_TRIGGER=1"/>
 
 <use name="FWCore/Framework"/>
 <use name="FWCore/ParameterSet"/>
-
 <use name="DataFormats/L1TMuon"/>
-<use name="Geometry/DTGeometry"/>
-<use name="Geometry/RPCGeometry"/>
-<use name="Geometry/CSCGeometry"/>
-<use name="Geometry/GEMGeometry"/>
-<use name="L1Trigger/DTUtilities"/>
-<use name="L1Trigger/CSCCommonTrigger"/>
-<use name="MagneticField/Engine"/>
-<use name="MagneticField/Records"/>
-
-<use name="DataFormats/L1TrackTrigger"/>
-<use name="Geometry/TrackerGeometryBuilder"/>
-
-<use name="root"/>
+<use name="L1Trigger/L1TMuon"/>
