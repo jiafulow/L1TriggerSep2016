@@ -31,6 +31,8 @@ void PatternRecognition::configure(
 }
 
 void PatternRecognition::configure_details() {
+  assert(1 <= bxWindow_ && bxWindow_ <= 3);  // only work for BX windows <= 3
+
   patterns_.clear();
 
   // Parse pattern definitions
@@ -398,6 +400,8 @@ void PatternRecognition::process_single_zone(
         } else {
           // Use 2nd earliest
           auto patt_ins = ins.first;  // iterator of patt_lifetime_map pointing to this pattern
+
+          // The bx_shifter keeps track of a number of booleans from BX 0, 1, ..., drift_time.
           int bx_shifter = patt_ins->second;
           int bx2 = bool(bx_shifter & (1<<2));
           int bx1 = bool(bx_shifter & (1<<1));
@@ -408,11 +412,8 @@ void PatternRecognition::process_single_zone(
             is_lifetime_up = true;
           } else if (drift_time == 1 && bx1 == 0 && bx0 == 1) {
             is_lifetime_up = true;
-          } else {
-            // WARNING: It won't work if drift_time is not 1 or 2. The
-            //          bx_shifter keeps track of a number of booleans
-            //          from BX 0, 1, ..., drift_time.
-            assert(drift_time == 2 || drift_time == 1);
+          } else if (drift_time == 0) {
+            is_lifetime_up = true;
           }
 
           bx2 = bx1;

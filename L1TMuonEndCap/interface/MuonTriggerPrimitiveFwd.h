@@ -16,7 +16,7 @@ namespace L1TMuonEndCap {
   //typedef edm::Ptr<TriggerPrimitive> TriggerPrimitivePtr;
   //typedef std::map<unsigned,TriggerPrimitiveCollection> TriggerPrimitiveStationMap;
 
-  class TTTriggerPrimitive;
+  class TTTriggerPrimitive;  // Track Trigger hits
 
   typedef std::vector<TTTriggerPrimitive> TTTriggerPrimitiveCollection;
 }

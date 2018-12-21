@@ -44,9 +44,9 @@ private:
 
   const edm::EDGetToken tokenCSC_, tokenRPC_, tokenGEM_, tokenIRPC_, tokenME0_, tokenTT_;
 
-  int verbose_;
+  int verbose_, primConvLUT_;
 
-  bool useCSC_, useRPC_, useGEM_, useIRPC_, useME0_, useTT_;
+  bool fwConfig_, useCSC_, useRPC_, useGEM_, useIRPC_, useME0_, useTT_;
 
   std::string era_;
 };

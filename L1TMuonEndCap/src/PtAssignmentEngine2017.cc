@@ -181,9 +181,11 @@ PtAssignmentEngine::address_t PtAssignmentEngine2017::calculate_address(const EM
       address |= (rpc_2b    & ((1<<2)-1)) << (0+7+5+1+3+1+bit+2);
       address |= (theta     & ((1<<5)-1)) << (0+7+5+1+3+1+bit+2+2);
       if (mode != 7) {
-        address |= (mode_ID & ((1<<2)-1)) << (0+7+5+1+3+1+bit+2+2+5); assert(address < pow(2, 29) && address >= pow(2, 27));
+        address |= (mode_ID & ((1<<2)-1)) << (0+7+5+1+3+1+bit+2+2+5);
+        assert(address < pow(2, 29) && address >= pow(2, 27));
       } else {
-        address |= (mode_ID & ((1<<1)-1)) << (0+7+5+1+3+1+bit+2+2+5); assert(address < pow(2, 27) && address >= pow(2, 26));
+        address |= (mode_ID & ((1<<1)-1)) << (0+7+5+1+3+1+bit+2+2+5);
+        assert(address < pow(2, 27) && address >= pow(2, 26));
       }
     }
     else if (nHits == 2) {
@@ -261,9 +263,11 @@ float PtAssignmentEngine2017::calculate_pt_xml(const address_t& address) const {
     rpc_2b    = (address >> (0+7+5+1+3+1+bit+2)     & ((1<<2)-1));
     theta     = (address >> (0+7+5+1+3+1+bit+2+2)   & ((1<<5)-1));
     if (mode != 7) {
-      mode_ID = (address >> (0+7+5+1+3+1+bit+2+2+5) & ((1<<2)-1)); assert(address < pow(2, 29));
+      mode_ID = (address >> (0+7+5+1+3+1+bit+2+2+5) & ((1<<2)-1));
+      assert(address < pow(2, 29));
     } else {
-      mode_ID = (address >> (0+7+5+1+3+1+bit+2+2+5) & ((1<<1)-1)); assert(address < pow(2, 27));
+      mode_ID = (address >> (0+7+5+1+3+1+bit+2+2+5) & ((1<<1)-1));
+      assert(address < pow(2, 27));
     }
   }
   else if (nHits == 2) {
@@ -379,7 +383,7 @@ float PtAssignmentEngine2017::calculate_pt_xml(const address_t& address) const {
   else if (nHits == 2 && mode <  8) {
     predictors = { theta,            dPhiAB, frA, frB, clctA, clctB, dTheta, (clctA == 0), (clctB == 0) };
   }
-  else assert (false);
+  else assert (false && "Incorrect nHits or mode");
 
   // Retreive pT from XMLs
   std::vector<double> tree_data(predictors.cbegin(),predictors.cend());

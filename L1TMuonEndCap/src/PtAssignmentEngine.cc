@@ -4,6 +4,8 @@
 #include <iostream>
 #include <sstream>
 
+#include "helper.h"  // assert_no_abort
+
 
 PtAssignmentEngine::PtAssignmentEngine() :
     allowedModes_({3,5,9,6,10,12,7,11,13,14,15}),

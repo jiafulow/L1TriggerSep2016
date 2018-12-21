@@ -77,9 +77,27 @@ void PrimitiveSelection::process(
 
     if (selected_csc >= 0) {
       assert(selected_csc < NUM_CSC_CHAMBERS);
-      selected_csc_map[selected_csc].push_back(new_tp);
-    }
-  }
+
+      //FIXME
+      if (selected_csc_map[selected_csc].size() < 2) {
+        selected_csc_map[selected_csc].push_back(new_tp);
+      }
+      else {
+        edm::LogWarning("L1T") << "\n******************* EMTF EMULATOR: SUPER-BIZZARE CASE *******************";
+        edm::LogWarning("L1T") << "Found 3 CSC trigger primitives in the same chamber";
+        for (int ii = 0; ii < 3; ii++) {
+          TriggerPrimitive tp_err = (ii < 2 ? selected_csc_map[selected_csc].at(ii) : new_tp);
+          edm::LogWarning("L1T") << "LCT #" << ii+1 << ": BX " << tp_err.getBX()
+                    << ", endcap " << tp_err.detId<CSCDetId>().endcap() << ", sector " << tp_err.detId<CSCDetId>().triggerSector()
+                    << ", station " << tp_err.detId<CSCDetId>().station() << ", ring " << tp_err.detId<CSCDetId>().ring()
+                    << ", chamber " << tp_err.detId<CSCDetId>().chamber() << ", CSC ID " << tp_err.getCSCData().cscID
+                    << ": strip " << tp_err.getStrip() << ", wire " << tp_err.getWire();
+        }
+        edm::LogWarning("L1T") << "************************* ONLY KEEP FIRST TWO *************************\n\n";
+      }
+
+    } // End conditional: if (selected_csc >= 0)
+  } // End loop: for (; tp_it != tp_end; ++tp_it)
 
   // Duplicate CSC muon primitives
   // If there are 2 LCTs in the same chamber with (strip, wire) = (s1, w1) and (s2, w2)
@@ -483,26 +501,49 @@ int PrimitiveSelection::select_csc(const TriggerPrimitive& muon_primitive) const
     int tp_bx        = tp_data.bx;
     int tp_csc_ID    = tp_data.cscID;
 
+    int max_strip = 0;
+    int max_wire  = 0;
+    if        (tp_station == 1 && tp_ring == 4) { // ME1/1a
+      max_strip =  96;
+      max_wire  =  48;
+    } else if (tp_station == 1 && tp_ring == 1) { // ME1/1b
+      max_strip = 128;
+      max_wire  =  48;
+    } else if (tp_station == 1 && tp_ring == 2) { // ME1/2
+      max_strip = 160;
+      max_wire  =  64;
+    } else if (tp_station == 1 && tp_ring == 3) { // ME1/3
+      max_strip = 128;
+      max_wire  =  32;
+    } else if (tp_station == 2 && tp_ring == 1) { // ME2/1
+      max_strip = 160;
+      max_wire  = 112;
+    } else if (tp_station >= 3 && tp_ring == 1) { // ME3/1, ME4/1
+      max_strip = 160;
+      max_wire  =  96;
+    } else if (tp_station >= 2 && tp_ring == 2) { // ME2/2, ME3/2, ME4/2
+      max_strip = 160;
+      max_wire  =  64;
+    }
+
     assert_no_abort(emtf::MIN_ENDCAP <= tp_endcap && tp_endcap <= emtf::MAX_ENDCAP);
     assert_no_abort(emtf::MIN_TRIGSECTOR <= tp_sector && tp_sector <= emtf::MAX_TRIGSECTOR);
     assert_no_abort(1 <= tp_station && tp_station <= 4);
     assert_no_abort(1 <= tp_csc_ID && tp_csc_ID <= 9);
-    assert_no_abort(tp_data.strip < 160);
-    //assert_no_abort(tp_data.keywire < 112);
-    assert_no_abort(tp_data.keywire < 128);
     assert_no_abort(tp_data.valid == true);
     assert_no_abort(tp_data.pattern <= 10);
     assert_no_abort(tp_data.quality > 0);
 
-
-    // Check using ME1/1a --> ring 4 convention
-    if (tp_station == 1 && tp_ring == 1) {
-      assert(tp_data.strip < 128);
-      assert(1 <= tp_csc_ID && tp_csc_ID <= 3);
+    // LogWarning
+    if ( !(tp_data.strip < max_strip) ) {
+      edm::LogWarning("L1T") << "EMTF CSC format error in station " << tp_station << ", ring " << tp_ring
+        << ": tp_data.strip = " << tp_data.strip << " (max = " << max_strip - 1 << ")";
+      //return selected;
     }
-    if (tp_station == 1 && tp_ring == 4) {
-      assert(tp_data.strip < 128);
-      assert(1 <= tp_csc_ID && tp_csc_ID <= 3);
+    if ( !(tp_data.keywire < max_wire) ) {
+      edm::LogWarning("L1T") << "EMTF CSC format error in station " << tp_station << ", ring " << tp_ring
+        << ": tp_data.keywire = " << tp_data.keywire << " (max = " << max_wire - 1 << ")";
+      //return selected;
     }
 
     // station 1 --> subsector 1 or 2

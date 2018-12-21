@@ -116,42 +116,6 @@ void MakeAngleLUT::generateLUTs() {
     return 0.5 * (x + y);
   };
 
-/*
-  // from RecoMuon/DetLayers/src/MuonCSCDetLayerGeometryBuilder.cc
-  //      RecoMuon/DetLayers/src/MuonRPCDetLayerGeometryBuilder.cc
-  //      RecoMuon/DetLayers/src/MuonGEMDetLayerGeometryBuilder.cc
-  auto isFront_detail = [](int subsystem, int station, int ring, int chamber, int subsector) {
-    bool result = false;
-
-    if (subsystem == TriggerPrimitive::kCSC) {
-      bool isOverlapping = !(station == 1 && ring == 3);
-      // not overlapping means back
-      if(isOverlapping)
-      {
-        bool isEven = (chamber % 2 == 0);
-        // odd chambers are bolted to the iron, which faces
-        // forward in 1&2, backward in 3&4, so...
-        result = (station < 3) ? isEven : !isEven;
-      }
-    } else if (subsystem == TriggerPrimitive::kRPC) {
-      // 10 degree rings have even subsectors in front
-      // 20 degree rings have odd subsectors in front
-      bool is_10degree = !((station == 3 || station == 4) && (ring == 1));
-      bool isEven = (subsector % 2 == 0);
-      result = (is_10degree) ? isEven : !isEven;
-    } else if (subsystem == TriggerPrimitive::kGEM) {
-      //
-      result = (chamber % 2 == 0);
-    }
-    return result;
-  };
-
-  //auto isFront = [](const auto& hit) {
-  //  return isFront_detail(hit.Subsystem(), hit.Station(), hit.Ring(), hit.Chamber(), (hit.Subsystem() == TriggerPrimitive::kRPC ? hit.Subsector_RPC() : hit.Subsector()));
-  //};
-
-  if (isFront_detail) {}  // get around GCC unused-but-set-variable error
-*/
 
   // Save z positions for ME1/1, ME1/2, ME1/3, ME2/2, ME3/2, ME4/2,
   //                      RE1/2, RE1/3, RE2/2, RE3/2, RE4/2,

@@ -23,7 +23,7 @@ void ConditionHelper::checkAndUpdateConditions(const edm::Event& iEvent, const e
   bool new_forests = false;
 
   // Pull configuration from the EventSetup
-  auto& params_setup = iSetup.get<L1TMuonEndCapParamsRcd>();
+  auto params_setup = iSetup.get<L1TMuonEndCapParamsRcd>();
   if (params_setup.cacheIdentifier() != params_cache_id_) {
     params_setup.get(params_);
 
@@ -36,7 +36,7 @@ void ConditionHelper::checkAndUpdateConditions(const edm::Event& iEvent, const e
   }
 
   // Pull pt LUT from the EventSetup
-  auto& forest_setup = iSetup.get<L1TMuonEndCapForestRcd>();
+  auto forest_setup = iSetup.get<L1TMuonEndCapForestRcd>();
   if (forest_setup.cacheIdentifier() != forest_cache_id_) {
     forest_setup.get(forest_);
 
@@ -74,11 +74,11 @@ unsigned int ConditionHelper::get_pt_lut_version() const {
 unsigned int ConditionHelper::get_pc_lut_version() const {
   // "PhiMatchWindowSt1" arbitrarily re-mapped to Primitive conversion (PC LUT) version
   // because of rigid CondFormats naming conventions - AWB 02.06.17
-  // std::cout << "    - Getting PC LUT version from ConditionHelper: version = " << params_->PhiMatchWindowSt1_ << std::endl;
+  // std::cout << "    - Getting proper PC LUT version from ConditionHelper: version = " << params_->PhiMatchWindowSt1_ << std::endl;
   // return params_->PhiMatchWindowSt1_;
 
   // Hack until we figure out why the database is returning "0" for 2017 data - AWB 04.08.17
-  // std::cout << "    - Getting PC LUT version from ConditionHelper: version = " << (params_->firmwareVersion_ >= 50000) << std::endl;
+  // std::cout << "    - Getting hacked PC LUT version from ConditionHelper: version = " << (params_->firmwareVersion_ >= 50000) << std::endl;
   if (params_->firmwareVersion_ < 50000)  // for 2016
     return 0;
   return 1;
