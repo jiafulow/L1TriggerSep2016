@@ -553,10 +553,10 @@ void PrimitiveConversion::convert_rpc(
     conv_hit.set_theta_fp  ( th );  // Full-precision integer theta
   }
 
-  convert_rpc_details(conv_hit, (tp_data.isCPPF == false));
+  convert_rpc_details(conv_hit, tp_data.isCPPF);
 }
 
-void PrimitiveConversion::convert_rpc_details(EMTFHit& conv_hit, const bool use_cppf_lut) const {
+void PrimitiveConversion::convert_rpc_details(EMTFHit& conv_hit, bool isCPPF) const {
   const bool is_neighbor = conv_hit.Neighbor();
 
   const int pc_station = conv_hit.PC_station();
@@ -582,6 +582,12 @@ void PrimitiveConversion::convert_rpc_details(EMTFHit& conv_hit, const bool use_
 
   int fph = conv_hit.Phi_fp();
   int th  = conv_hit.Theta_fp();
+
+  // Do coordinate conversion using the CPPF LUTs. Not needed if the received digis are CPPF digis.
+  bool use_cppf_lut = !isCPPF;
+#ifdef PHASE_TWO_TRIGGER
+  use_cppf_lut = false;  // The CPPF LUTs fail for Phase 2 geometry
+#endif
 
   if (use_cppf_lut) {
     int halfstrip = (conv_hit.Strip_low() + conv_hit.Strip_hi() - 1);

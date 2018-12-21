@@ -70,16 +70,16 @@ void EMTFSubsystemCollector::extractPrimitives(
 // Specialized for CPPF
 template<>
 void EMTFSubsystemCollector::extractPrimitives(
-    emtf::CPPFTag tag, // Defined in interface/EMTFSubsystemTag.h, maps to CPPFDigi
+    CPPFTag tag, // Defined in interface/EMTFSubsystemTag.h, maps to CPPFDigi
     const edm::Event& iEvent,
     const edm::EDGetToken& token,
     TriggerPrimitiveCollection& out
 ) const {
-  edm::Handle<emtf::CPPFTag::digi_collection> cppfDigis;
+  edm::Handle<CPPFTag::digi_collection> cppfDigis;
   iEvent.getByToken(token, cppfDigis);
 
   // Output
-  for (auto digi : *cppfDigis) {
+  for (const auto& digi : *cppfDigis) {
     out.emplace_back(digi.rpcId(), digi);
   }
 

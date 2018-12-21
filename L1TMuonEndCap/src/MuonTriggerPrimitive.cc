@@ -141,6 +141,7 @@ TriggerPrimitive::TriggerPrimitive(const RPCDetId& detid,
   _rpc.bx = digi.bx();
   _rpc.valid = 1;
   _rpc.time = digi.time();
+  _rpc.isCPPF = false;
 }
 
 TriggerPrimitive::TriggerPrimitive(const RPCDetId& detid,
@@ -160,16 +161,17 @@ TriggerPrimitive::TriggerPrimitive(const RPCDetId& detid,
   _rpc.bx = bx;
   _rpc.valid = 1;
   _rpc.time = -999999.;
+  _rpc.isCPPF = false;
 }
 
 // constructor from CPPF data
 TriggerPrimitive::TriggerPrimitive(const RPCDetId& detid,
-				   const l1t::CPPFDigi& digi):
+                                   const l1t::CPPFDigi& digi):
   _id(detid),
   _subsystem(TriggerPrimitive::kRPC) {
   calculateGlobalSector(detid,_globalsector,_subsector);
   // In unpacked CPPF digis, the strip number and cluster size are not available, and are set to -99
-  _rpc.strip       = ( digi.first_strip() < 0 ? 0 : digi.first_strip() + (digi.cluster_size() / 2) );
+  _rpc.strip       = ( digi.first_strip() < 0 ? 0 : digi.first_strip() + ((digi.cluster_size() - 1) / 2));
   _rpc.strip_low   = ( digi.first_strip() < 0 ? 0 : digi.first_strip() );
   _rpc.strip_hi    = ( digi.first_strip() < 0 ? 0 : digi.first_strip() + digi.cluster_size() - 1 );
   _rpc.phi_int     = digi.phi_int();
@@ -178,6 +180,7 @@ TriggerPrimitive::TriggerPrimitive(const RPCDetId& detid,
   _rpc.layer       = detid.layer();
   _rpc.bx          = digi.bx();
   _rpc.valid       = digi.valid();
+  _rpc.time        = -999999.;
   _rpc.isCPPF      = true;
 }
 
@@ -407,7 +410,7 @@ void TriggerPrimitive::print(std::ostream& out) const {
     out << "Valid         : " << _rpc.valid << std::endl;
     out << "Time          : " << _rpc.time << std::endl;
     out << "IsCPPF        : " << _rpc.isCPPF << std::endl;
-   break;
+    break;
   case kGEM:
     if (!_gem.isME0)
       out << detId<GEMDetId>() << std::endl;

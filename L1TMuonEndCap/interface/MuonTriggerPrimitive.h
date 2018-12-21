@@ -66,7 +66,7 @@ namespace L1TMuonEndCap {
     // for RPCs you have to unroll the digi-link and raw det-id
     struct RPCData {
       RPCData() : strip(0), strip_low(0), strip_hi(0), phi_int(0), theta_int(0),
-	          emtf_sector(0), layer(0), bx(0), valid(0), time(0.), isCPPF(false) {}
+                  emtf_sector(0), layer(0), bx(0), valid(0), time(0.), isCPPF(false) {}
       uint16_t strip;
       uint16_t strip_low;   // for use in clustering
       uint16_t strip_hi;    // for use in clustering

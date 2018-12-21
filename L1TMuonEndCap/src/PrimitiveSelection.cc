@@ -194,6 +194,10 @@ void PrimitiveSelection::process(
     struct {
       typedef TriggerPrimitive value_type;
       bool operator()(const value_type& x) const {
+        // Skip cluster size cut if primitives are from CPPF emulator or EMTF unpacker (already clustered)
+        if (x.getRPCData().isCPPF)
+          return false;
+
         int sz = x.getRPCData().strip_hi - x.getRPCData().strip_low + 1;
 
         const RPCDetId& tp_detId = x.detId<RPCDetId>();
@@ -213,21 +217,18 @@ void PrimitiveSelection::process(
       //int selected = map_tp_it->first;
       TriggerPrimitiveCollection& tmp_primitives = map_tp_it->second;  // pass by reference
 
+      //FIXME
       // Check to see if unpacked CPPF digis have <= 2 digis per chamber, as expected
       if (tmp_primitives.size() > 2 && tmp_primitives.at(0).getRPCData().isCPPF) {
-	edm::LogWarning("L1T") << "\n******************* EMTF EMULATOR: SUPER-BIZZARE CASE *******************";
-	edm::LogWarning("L1T") << "Found " << tmp_primitives.size() << " CPPF digis in the same chamber";
-	for (const auto & tp : tmp_primitives) tp.print(std::cout);
-	edm::LogWarning("L1T") << "************************* ONLY KEEP FIRST TWO *************************\n\n";
+        edm::LogWarning("L1T") << "\n******************* EMTF EMULATOR: SUPER-BIZZARE CASE *******************";
+        edm::LogWarning("L1T") << "Found " << tmp_primitives.size() << " CPPF digis in the same chamber";
+        for (const auto & tp : tmp_primitives) tp.print(std::cout);
+        edm::LogWarning("L1T") << "************************* ONLY KEEP FIRST TWO *************************\n\n";
       }
 
       // Keep the first two clusters
       if (tmp_primitives.size() > 2)
         tmp_primitives.erase(tmp_primitives.begin()+2, tmp_primitives.end());
-
-      // Skip cluster size cut if primitives are from CPPF emulator or EMTF unpacker (already clustered)
-      if (!tmp_primitives.empty() && tmp_primitives.at(0).getRPCData().isCPPF)
-	break;
 
       // Apply cluster size cut
       tmp_primitives.erase(
