@@ -22,12 +22,12 @@ simEmtfDigisMC = cms.EDProducer("L1TMuonEndCapTrackProducer",
     #   * 'csctfDigis' : real trigger primitives as received by CSCTF (legacy trigger), available only in 2016 data
     #   * 'emtfStage2Digis' : real trigger primitives as received by EMTF, unpacked in EventFilter/L1TRawToDigi/
     CSCInput  = cms.InputTag('simCscTriggerPrimitiveDigis','MPCSORTED'),
+    CSCComparatorInput = cms.InputTag('simMuonCSCDigis','MuonCSCComparatorDigi'),
     RPCInput  = cms.InputTag('simMuonRPCDigis'),
     CPPFInput = cms.InputTag('simCPPFDigis'),  ## Cannot use in MC workflow, does not exist yet.  CPPFEnable set to False - AWB 01.06.18
     GEMInput  = cms.InputTag('simMuonGEMPadDigis'),
     IRPCInput = cms.InputTag('simMuonRPCDigis'),
-    ME0Input = cms.InputTag('simMuonME0PadDigis'),
-    TTInput = cms.InputTag('TTStubsFromPhase2TrackerDigis','StubAccepted'),
+    ME0Input = cms.InputTag('me0TriggerPseudoDigis'),
 
     # Run with CSC, RPC, GEM
     CSCEnable = cms.bool(True),   # Use CSC LCTs from the MPCs in track-building
@@ -36,7 +36,6 @@ simEmtfDigisMC = cms.EDProducer("L1TMuonEndCapTrackProducer",
     GEMEnable = cms.bool(False),  # Use hits from GEMs in track-building
     IRPCEnable = cms.bool(False),
     ME0Enable = cms.bool(False),
-    TTEnable = cms.bool(False),
 
     # Era (options: 'Run2_2016', 'Run2_2017', 'Run2_2018')
     Era = cms.string('Run2_2018'),
