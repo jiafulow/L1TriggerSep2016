@@ -194,6 +194,10 @@ void PrimitiveSelection::process(
     struct {
       typedef TriggerPrimitive value_type;
       bool operator()(const value_type& x) const {
+        // Skip cluster size cut if primitives are from CPPF emulator or EMTF unpacker (already clustered)
+        if (x.getRPCData().isCPPF)
+          return false;
+
         int sz = x.getRPCData().strip_hi - x.getRPCData().strip_low + 1;
 
         const RPCDetId& tp_detId = x.detId<RPCDetId>();
@@ -212,6 +216,15 @@ void PrimitiveSelection::process(
     for (; map_tp_it != map_tp_end; ++map_tp_it) {
       //int selected = map_tp_it->first;
       TriggerPrimitiveCollection& tmp_primitives = map_tp_it->second;  // pass by reference
+
+      //FIXME
+      // Check to see if unpacked CPPF digis have <= 2 digis per chamber, as expected
+      if (tmp_primitives.size() > 2 && tmp_primitives.at(0).getRPCData().isCPPF) {
+        edm::LogWarning("L1T") << "\n******************* EMTF EMULATOR: SUPER-BIZZARE CASE *******************";
+        edm::LogWarning("L1T") << "Found " << tmp_primitives.size() << " CPPF digis in the same chamber";
+        for (const auto & tp : tmp_primitives) tp.print(std::cout);
+        edm::LogWarning("L1T") << "************************* ONLY KEEP FIRST TWO *************************\n\n";
+      }
 
       // Keep the first two clusters
       if (tmp_primitives.size() > 2)
@@ -633,6 +646,11 @@ int PrimitiveSelection::select_rpc(const TriggerPrimitive& muon_primitive) const
 
     int tp_bx        = tp_data.bx;
     int tp_strip     = tp_data.strip;
+    int tp_emtf_sect = tp_data.emtf_sector;
+    bool tp_CPPF     = tp_data.isCPPF;
+
+    // In neighbor chambers, have two separate CPPFDigis for the two EMTF sectors
+    if (tp_CPPF && (tp_emtf_sect != sector_)) return selected;
 
     const bool is_irpc = (tp_station == 3 || tp_station == 4) && (tp_ring == 1);
 
@@ -643,7 +661,7 @@ int PrimitiveSelection::select_rpc(const TriggerPrimitive& muon_primitive) const
     assert_no_abort(1 <= tp_station && tp_station <= 4);
     assert_no_abort((!is_irpc && 2 <= tp_ring && tp_ring <= 3) || (is_irpc && 1 <= tp_ring && tp_ring <= 3));
     assert_no_abort((!is_irpc && 1 <= tp_roll && tp_roll <= 3) || (is_irpc && 1 <= tp_roll && tp_roll <= 5));
-    assert_no_abort((!is_irpc && 1 <= tp_strip && tp_strip <= 32) || (is_irpc && 1 <= tp_strip && tp_strip <= 192));
+    assert_no_abort((!is_irpc && (tp_CPPF || (1 <= tp_strip && tp_strip <= 32))) || (is_irpc && 1 <= tp_strip && tp_strip <= 192));
     assert_no_abort(tp_station > 2 || tp_ring != 3);  // stations 1 and 2 do not receive RPCs from ring 3
     assert_no_abort(tp_data.valid == true);
 

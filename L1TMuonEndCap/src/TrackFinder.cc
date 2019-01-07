@@ -16,6 +16,7 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
     config_(iConfig),
     tokenCSC_(iConsumes.consumes<CSCTag::digi_collection>(iConfig.getParameter<edm::InputTag>("CSCInput"))),
     tokenRPC_(iConsumes.consumes<RPCTag::digi_collection>(iConfig.getParameter<edm::InputTag>("RPCInput"))),
+    tokenCPPF_(iConsumes.consumes<CPPFTag::digi_collection>(iConfig.getParameter<edm::InputTag>("CPPFInput"))),
     tokenGEM_(iConsumes.consumes<GEMTag::digi_collection>(iConfig.getParameter<edm::InputTag>("GEMInput"))),
     tokenIRPC_(iConsumes.consumes<IRPCTag::digi_collection>(iConfig.getParameter<edm::InputTag>("IRPCInput"))),
     tokenME0_(iConsumes.consumes<ME0Tag::digi_collection>(iConfig.getParameter<edm::InputTag>("ME0Input"))),
@@ -25,6 +26,7 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
     fwConfig_(iConfig.getParameter<bool>("FWConfig")),
     useCSC_(iConfig.getParameter<bool>("CSCEnable")),
     useRPC_(iConfig.getParameter<bool>("RPCEnable")),
+    useCPPF_(iConfig.getParameter<bool>("CPPFEnable")),
     useGEM_(iConfig.getParameter<bool>("GEMEnable")),
     useIRPC_(iConfig.getParameter<bool>("IRPCEnable")),
     useME0_(iConfig.getParameter<bool>("ME0Enable")),
@@ -151,7 +153,9 @@ void TrackFinder::process(
   EMTFSubsystemCollector collector;
   if (useCSC_)
     collector.extractPrimitives(CSCTag(), iEvent, tokenCSC_, muon_primitives);
-  if (useRPC_)
+  if (useRPC_ && useCPPF_)
+    collector.extractPrimitives(CPPFTag(), iEvent, tokenCPPF_, muon_primitives);
+  else if (useRPC_)
     collector.extractPrimitives(RPCTag(), iEvent, tokenRPC_, muon_primitives);
   if (useGEM_)
     collector.extractPrimitives(GEMTag(), iEvent, tokenGEM_, muon_primitives);
@@ -175,7 +179,7 @@ void TrackFinder::process(
   // Run each sector processor
 
   // Reload primitive conversion LUTs if necessary
-  sector_processor_lut_.read(fwConfig_ ? condition_helper_.get_pc_lut_version() : primConvLUT_);
+  sector_processor_lut_.read(iEvent.isRealData(), fwConfig_ ? condition_helper_.get_pc_lut_version() : primConvLUT_);
 
   // Reload pT LUT if necessary
   pt_assign_engine_->load(condition_helper_.get_pt_lut_version(), &(condition_helper_.getForest()));
