@@ -2,8 +2,8 @@
 //     L1Trigger/CSCTriggerPrimitives/src/CSCComparatorDigiFitter.h
 //     L1Trigger/CSCTriggerPrimitives/src/CSCComparatorDigiFitter.cc
 
-#ifndef L1TMuonEndCap_EMTFCSCComparatorDigiFitter_h
-#define L1TMuonEndCap_EMTFCSCComparatorDigiFitter_h
+#ifndef L1TMuonEndCap_EMTFCSCComparatorDigiFitter_h_experimental
+#define L1TMuonEndCap_EMTFCSCComparatorDigiFitter_h_experimental
 
 #include "DataFormats/CSCDigi/interface/CSCComparatorDigi.h"
 #include "L1Trigger/CSCCommonTrigger/interface/CSCConstants.h"
@@ -16,6 +16,8 @@
 #include <vector>
 #include <string>
 
+
+namespace experimental {
 
 class EMTFCSCComparatorDigiFitter {
 public:
@@ -56,9 +58,11 @@ public:
   std::vector<std::vector<int> > make_combinations(const std::vector<std::vector<CompDigi> >& compDigisAllLayers) const;
 
 private:
-  static const unsigned int min_nhits  = 3;
-  static const unsigned int max_ncombs = 10;
-  static constexpr float    max_dx     = 2.;
+  static constexpr unsigned int min_nhits  = 3;
+  static constexpr unsigned int max_ncombs = 10;
+  static constexpr float        max_dx     = 2.;
 };
 
-#endif  // L1TMuonEndCap_EMTFCSCComparatorDigiFitter_h
+}  // namespace experimental
+
+#endif

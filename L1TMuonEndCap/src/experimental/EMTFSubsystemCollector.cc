@@ -9,7 +9,7 @@
 
 //#include "helper.h"  // adjacent_cluster
 
-#include "L1Trigger/L1TMuonEndCap/interface/EMTFCSCComparatorDigiFitter.h"
+#include "L1Trigger/L1TMuonEndCap/interface/experimental/EMTFCSCComparatorDigiFitter.h"
 
 
 namespace experimental {

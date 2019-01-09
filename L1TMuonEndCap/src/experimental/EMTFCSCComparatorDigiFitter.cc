@@ -1,4 +1,4 @@
-#include "L1Trigger/L1TMuonEndCap/interface/EMTFCSCComparatorDigiFitter.h"
+#include "L1Trigger/L1TMuonEndCap/interface/experimental/EMTFCSCComparatorDigiFitter.h"
 
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 
@@ -6,6 +6,8 @@
 #include <cassert>
 #include <iostream>
 
+
+namespace experimental {
 
 EMTFCSCComparatorDigiFitter::EMTFCSCComparatorDigiFitter() {}
 
@@ -250,3 +252,5 @@ EMTFCSCComparatorDigiFitter::make_combinations(const std::vector<std::vector<Com
   }
   return combinations;
 }
+
+}  // namespace experimental
