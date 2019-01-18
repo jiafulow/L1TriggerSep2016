@@ -225,7 +225,7 @@ TriggerPrimitive::TriggerPrimitive(const ME0DetId& detid,
   _me0.y = rechit.localPosition().y();
   _me0.dirx = rechit.localDirection().x();
   _me0.diry = rechit.localDirection().y();
-  _me0.chi2 = std::round(rechit.chi2() * 4);  // 0.25 step
+  _me0.chi2 = rechit.chi2();
   _me0.nhits = rechit.nRecHits();
   _me0.time = rechit.time();
   _me0.bend = std::round(rechit.deltaPhi()/(M_PI/9/768));  // half-strip or 1/4-pad unit (20/768 deg)

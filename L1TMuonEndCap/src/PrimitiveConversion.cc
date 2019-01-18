@@ -147,7 +147,7 @@ void PrimitiveConversion::convert_csc(
   //conv_hit.set_strip_low     ( tp_data.strip_low );
   //conv_hit.set_strip_hi      ( tp_data.strip_hi );
   conv_hit.set_wire          ( tp_data.keywire );
-  conv_hit.set_quality       ( tp_data.quality );
+  conv_hit.set_quality       ( tp_data.quality );  // hacked to store the number of hits
   conv_hit.set_pattern       ( tp_data.pattern );
   conv_hit.set_bend          ( static_cast<int16_t>(tp_data.bend) );  // hacked to store deltaPhi between layer 1 & 6 (signed)
   conv_hit.set_time          ( 0. );  // No fine resolution timing
@@ -464,7 +464,6 @@ void PrimitiveConversion::convert_rpc(
 
   int tp_bx        = tp_data.bx;
   int tp_strip     = ((tp_data.strip_low + tp_data.strip_hi) / 2);  // in full-strip unit
-  int tp_valid     = tp_data.valid;
 
   const bool is_neighbor = (pc_station == 5);
 
@@ -522,7 +521,7 @@ void PrimitiveConversion::convert_rpc(
   conv_hit.set_pc_chamber    ( pc_chamber );
   conv_hit.set_pc_segment    ( pc_segment );
 
-  conv_hit.set_valid         ( tp_valid );
+  conv_hit.set_valid         ( tp_data.valid );
   conv_hit.set_strip         ( tp_strip );
   conv_hit.set_strip_low     ( tp_data.strip_low );
   conv_hit.set_strip_hi      ( tp_data.strip_hi );
@@ -937,7 +936,7 @@ void PrimitiveConversion::convert_me0(
   //conv_hit.set_strip_low     ( tp_strip );
   //conv_hit.set_strip_hi      ( tp_strip );
   //conv_hit.set_wire          ( tp_data.keywire );
-  conv_hit.set_quality       ( static_cast<int>(std::round(tp_data.chi2)) );
+  conv_hit.set_quality       ( tp_data.nhits );
   conv_hit.set_pattern       ( 0 );  // arbitrary
   conv_hit.set_bend          ( static_cast<int>(std::round(tp_data.bend)) );
   conv_hit.set_time          ( 0. );  // No fine resolution timing
@@ -1117,7 +1116,7 @@ void PrimitiveConversion::convert_dt(
     }
 
     assert(0 <= fph && fph < 5400);
-    assert(0 <=  th &&  th < 150);  // Note: eta = 0.8 -> theta_int = 140
+    assert(0 <=  th &&  th < 180);  // Note: eta = 0.73 -> theta_int = 150
     th = (th == 0) ? 1 : th;  // protect against invalid value
 
     // _________________________________________________________________________

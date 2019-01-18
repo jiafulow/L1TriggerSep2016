@@ -43,7 +43,7 @@ void SectorProcessorLUT::read(bool is_data, int pc_lut_version) {
       << "Trying to use EMTF pc_lut_version = " << pc_lut_version << ", does not exist!";
   // Will catch user trying to run with Global Tag settings on 2016 data, rather than fakeEmtfParams. - AWB 08.06.17
 
-  std::string coord_lut_path = "L1Trigger/L1TMuonEndCap/data/emtf_luts/" + coord_lut_dir + "/";
+  std::string coord_lut_path = "L1Trigger/L1TMuon/data/emtf_luts/" + coord_lut_dir + "/";
 
   read_file(coord_lut_path+"ph_init_neighbor.txt",     ph_init_neighbor_);
   read_file(coord_lut_path+"ph_disp_neighbor.txt",     ph_disp_neighbor_);
@@ -52,10 +52,10 @@ void SectorProcessorLUT::read(bool is_data, int pc_lut_version) {
   read_file(coord_lut_path+"th_lut_neighbor.txt",      th_lut_neighbor_);
   read_file(coord_lut_path+"th_corr_lut_neighbor.txt", th_corr_lut_neighbor_);
 
-  std::string cppf_coord_lut_path = "L1Trigger/L1TMuonEndCap/data/cppf/";  // Coordinate LUTs actually used by CPPF
+  std::string cppf_coord_lut_path = "L1Trigger/L1TMuon/data/cppf/";  // Coordinate LUTs actually used by CPPF
   bool use_local_cppf_files = (pc_lut_version == -1);
   if (use_local_cppf_files) {  // More accurate coordinate transformation LUTs from Jia Fu
-    cppf_coord_lut_path = "L1Trigger/L1TMuonEndCap/data/cppf_luts/angleScale_v1/";
+    cppf_coord_lut_path = "L1Trigger/L1TMuon/data/cppf_luts/angleScale_v1/";
   }
 
   read_cppf_file(cppf_coord_lut_path, cppf_ph_lut_, cppf_th_lut_, use_local_cppf_files);  // cppf filenames are hardcoded in the function
@@ -319,7 +319,7 @@ void SectorProcessorLUT::read_cppf_file(const std::string& filename, std::vector
 
       if ((line_num % 192) == 191) line_num += 1; // Gap in central files vs. Jia Fu's files
       line_num += 1;
-      // On roughly every-other line, files in L1Trigger/L1TMuonEndCap/data/cppf have 0 in the first three columns
+      // On roughly every-other line, files in L1Trigger/L1TMuon/data/cppf have 0 in the first three columns
       // Skips a "0 0 0" line once every 192 lines
       if ((line_num % 2) == 1) {
         buf1_prev = buf1;

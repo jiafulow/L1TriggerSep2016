@@ -29,6 +29,8 @@ void EMTFSubsystemCollector::extractPrimitives(
   edm::Handle<DTTag::theta_digi_collection> thetaContainer;
   iEvent.getByToken(token2, thetaContainer);
 
+  TriggerPrimitiveCollection muon_primitives;
+
   // Adapted from L1Trigger/L1TMuonBarrel/src/L1TMuonBarrelKalmanStubProcessor.cc
   constexpr int minPhiQuality = 0;
   constexpr int minBX = -3;
@@ -74,9 +76,9 @@ void EMTFSubsystemCollector::extractPrimitives(
             if (phi_segm_high->code() >= minPhiQuality) {
               DTChamberId detid(phi_segm_high->whNum(),phi_segm_high->stNum(),phi_segm_high->scNum()+1);
               if (has_theta_segm) {
-                out.emplace_back(detid, *phi_segm_high, *theta_segm, bti_group1);
+                muon_primitives.emplace_back(detid, *phi_segm_high, *theta_segm, bti_group1);
               } else {
-                out.emplace_back(detid, *phi_segm_high, 1);
+                muon_primitives.emplace_back(detid, *phi_segm_high, 1);
               }
             }
           }
@@ -86,9 +88,9 @@ void EMTFSubsystemCollector::extractPrimitives(
             if (phi_segm_low->code() >= minPhiQuality) {
               DTChamberId detid(phi_segm_low->whNum(),phi_segm_low->stNum(),phi_segm_low->scNum()+1);
               if (has_theta_segm) {
-                out.emplace_back(detid, *phi_segm_low, *theta_segm, bti_group2);
+                muon_primitives.emplace_back(detid, *phi_segm_low, *theta_segm, bti_group2);
               } else {
-                out.emplace_back(detid, *phi_segm_low, 2);
+                muon_primitives.emplace_back(detid, *phi_segm_low, 2);
               }
             }
           }
@@ -97,9 +99,9 @@ void EMTFSubsystemCollector::extractPrimitives(
           if (phi_segm_high != nullptr && phi_segm_low == nullptr && bti_group2 != -1) {
             DTChamberId detid(phi_segm_high->whNum(),phi_segm_high->stNum(),phi_segm_high->scNum()+1);
             if (has_theta_segm) {
-              out.emplace_back(detid, *phi_segm_high, *theta_segm, bti_group2);
+              muon_primitives.emplace_back(detid, *phi_segm_high, *theta_segm, bti_group2);
             } else {
-              out.emplace_back(detid, *phi_segm_high, 2);
+              muon_primitives.emplace_back(detid, *phi_segm_high, 2);
             }
           }
 
@@ -107,6 +109,11 @@ void EMTFSubsystemCollector::extractPrimitives(
       }  // end loop over sector
     }  // end loop over wheel
   }  // end loop over bx
+
+  // Remove duplicates using erase-remove idiom,
+  // assuming the vector is already sorted
+  muon_primitives.erase(std::unique(muon_primitives.begin(), muon_primitives.end()), muon_primitives.end());
+  std::copy(muon_primitives.begin(), muon_primitives.end(), std::back_inserter(out));
   return;
 }
 

@@ -64,7 +64,7 @@ void PrimitiveSelection::process(
     // It should be 1-15, see: L1Trigger/CSCTriggerPrimitives/src/CSCMotherboard.cc
     bool patchQuality = true;
 #ifdef PHASE_TWO_TRIGGER
-    // Quality was hacked to store the chi2 from CLCT comparator digi fit
+    // Quality was hacked to store the number of hits
     patchQuality = false;
 #endif
     if (patchQuality && new_tp.subsystem() == TriggerPrimitive::kCSC) {
@@ -268,7 +268,7 @@ void PrimitiveSelection::process(
       int pc_chamber = -1;
 
       if (rpc_sub != 6) {  // native
-        if (rpc_chm == 0) {  // RE1/2
+        if (rpc_chm == 0) {  // RE1/2: 3-5, 12-14
           if (0 <= rpc_sub && rpc_sub < 3) {
             pc_station = 0;
             pc_chamber = 3 + rpc_sub;
@@ -276,7 +276,7 @@ void PrimitiveSelection::process(
             pc_station = 1;
             pc_chamber = 3 + (rpc_sub - 3);
           }
-        } else if (rpc_chm == 6) {  // RE1/3
+        } else if (rpc_chm == 6) {  // RE1/3: 6-8, 15-17
           if (0 <= rpc_sub && rpc_sub < 3) {
             pc_station = 0;
             pc_chamber = 6 + rpc_sub;
@@ -284,38 +284,38 @@ void PrimitiveSelection::process(
             pc_station = 1;
             pc_chamber = 6 + (rpc_sub - 3);
           }
-        } else if (rpc_chm == 1 || rpc_chm == 7) {  // RE2/2, RE2/3
+        } else if (rpc_chm == 1 || rpc_chm == 7) {  // RE2/2, RE2/3: 21-26
           pc_station = 2;
           pc_chamber = 3 + rpc_sub;
-        } else if (2 <= rpc_chm && rpc_chm <= 3) {  // RE3/2, RE3/3
+        } else if (2 <= rpc_chm && rpc_chm <= 3) {  // RE3/2, RE3/3: 30-35
           pc_station = 3;
           pc_chamber = 3 + rpc_sub;
-        } else if (4 <= rpc_chm && rpc_chm <= 5) {  // RE4/2, RE4/3
+        } else if (4 <= rpc_chm && rpc_chm <= 5) {  // RE4/2, RE4/3: 39-44
           pc_station = 4;
           pc_chamber = 3 + rpc_sub;
-        } else if (rpc_chm == 8) {  // RE3/1
+        } else if (rpc_chm == 8) {  // RE3/1: 27-29
           pc_station = 3;
           pc_chamber = rpc_sub;
-        } else if (rpc_chm == 9) {  // RE4/1
+        } else if (rpc_chm == 9) {  // RE4/1: 36-38
           pc_station = 4;
           pc_chamber = rpc_sub;
         }
 
       } else {  // neighbor
         pc_station = 5;
-        if (rpc_chm == 0) {  // RE1/2
+        if (rpc_chm == 0) {  // RE1/2: 46
           pc_chamber = 1;
-        } else if (rpc_chm == 6) {  // RE1/3
+        } else if (rpc_chm == 6) {  // RE1/3: 47
           pc_chamber = 2;
-        } else if (rpc_chm == 1 || rpc_chm == 7) {  // RE2/2, RE2/3
+        } else if (rpc_chm == 1 || rpc_chm == 7) {  // RE2/2, RE2/3: 49
           pc_chamber = 4;
-        } else if (2 <= rpc_chm && rpc_chm <= 3) {  // RE3/2, RE3/3
+        } else if (2 <= rpc_chm && rpc_chm <= 3) {  // RE3/2, RE3/3: 51
           pc_chamber = 6;
-        } else if (4 <= rpc_chm && rpc_chm <= 5) {  // RE4/2, RE4/3
+        } else if (4 <= rpc_chm && rpc_chm <= 5) {  // RE4/2, RE4/3: 53
           pc_chamber = 8;
-        } else if (rpc_chm == 8) {  // RE3/1
+        } else if (rpc_chm == 8) {  // RE3/1: 50
           pc_chamber = 5;
-        } else if (rpc_chm == 9) {  // RE4/1
+        } else if (rpc_chm == 9) {  // RE4/1: 52
           pc_chamber = 7;
         }
       }
@@ -326,11 +326,19 @@ void PrimitiveSelection::process(
       selected = (pc_station * 9) + pc_chamber;
 
       bool ignore_this_rpc_chm = false;
-      if (rpc_chm == 3 || rpc_chm == 5 || rpc_chm == 7) { // special case of RE3,4/2 and RE3,4/3 chambers
+      if (rpc_chm == 3 || rpc_chm == 5) { // special case of RE3,4/2 and RE3,4/3 chambers
         // if RE3,4/2 exists, ignore RE3,4/3. In C++, this assumes that the loop
         // over selected_rpc_map will always find RE3,4/2 before RE3,4/3
         if (tmp_selected_rpc_map.find(selected) != tmp_selected_rpc_map.end())
           ignore_this_rpc_chm = true;
+      }
+
+      if (rpc_chm == 6 || rpc_chm == 7) { // RE1/3 and RE2/3 chambers are not part of EMTF
+        ignore_this_rpc_chm = true;
+      }
+
+      if (rpc_chm == 8 || rpc_chm == 9) { // RE3/1 and RE4/1 chambers are not available until Phase-2
+        ignore_this_rpc_chm = true;
       }
 
       if (ignore_this_rpc_chm) {
@@ -660,12 +668,12 @@ int PrimitiveSelection::select_csc(const TriggerPrimitive& muon_primitive) const
     if ( !(tp_data.strip < max_strip) ) {
       edm::LogWarning("L1T") << "EMTF CSC format error in station " << tp_station << ", ring " << tp_ring
         << ": tp_data.strip = " << tp_data.strip << " (max = " << max_strip - 1 << ")";
-      //return selected;
+      return selected;
     }
     if ( !(tp_data.keywire < max_wire) ) {
       edm::LogWarning("L1T") << "EMTF CSC format error in station " << tp_station << ", ring " << tp_ring
         << ": tp_data.keywire = " << tp_data.keywire << " (max = " << max_wire - 1 << ")";
-      //return selected;
+      return selected;
     }
 
     // station 1 --> subsector 1 or 2

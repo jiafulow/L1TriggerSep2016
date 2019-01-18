@@ -88,7 +88,7 @@ void EMTFSubsystemCollector::extractPrimitives(
         if (x.size() > 0)
           ++nhitlayers;
       }
-      if (nhitlayers == 0)  // how?!
+      if (nhitlayers < 3)  //FIXME: how?!
         continue;
 
       assert(nhitlayers >= 3);
@@ -110,9 +110,12 @@ void EMTFSubsystemCollector::extractPrimitives(
       int bend = static_cast<int>(std::round(res.slope * 16));
       bend = std::min(std::max(bend, -32), 31);
 
-      // Encode quality in 5 bits, which corresponds to 0.25 step from 0 to 8
-      int quality = static_cast<int>(std::round(res.chi2 * 4));
-      quality = std::min(std::max(quality, 0), 31);
+      //// Encode quality in 5 bits, which corresponds to 0.25 step from 0 to 8
+      //int quality = static_cast<int>(std::round(res.chi2 * 4));
+      //quality = std::min(std::max(quality, 0), 31);
+
+      // Jan 2019: Use number of hits as quality
+      int quality = res.ndof + 2;
 
       //std::cout << "check position: " << position << " " << strip << " " << frac_position << " " << frac_strip << " " << (float(strip) + float(frac_strip)/8) << std::endl;
       //std::cout << "check bend    : " << bend << " " << float(bend)/16 << std::endl;
