@@ -373,7 +373,7 @@ void SectorProcessor::process(
   // ___________________________________________________________________________
   // Debug
   bool dump_dt_input  = false;
-  bool dump_csc_input = false;
+  bool dump_csc_input = true;
   bool dump_rpc_input = false;
   bool dump_gem_input = false;
   bool dump_me0_input = false;
@@ -523,7 +523,7 @@ void SectorProcessor::process(
 
   // ___________________________________________________________________________
   // Debug
-  bool dump_emtf_hits = false;
+  bool dump_emtf_hits = true;
 
   if (dump_emtf_hits && endcap_ == 2 && sector_ == 6) {
     int i = 0;
