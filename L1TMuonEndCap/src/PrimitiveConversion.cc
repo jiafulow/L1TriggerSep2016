@@ -305,6 +305,17 @@ void PrimitiveConversion::convert_csc_details(EMTFHit& conv_hit) const {
   assert(bugStrip0BeforeFW48200 == true || eighth_strip >= 0);
 
   // Multiplicative factor for eighth_strip
+  // +----------------------------+-------------+------------------+
+  // | Chamber type               | Strip angle | Mult factor      |
+  // |                            | (deg)       |                  |
+  // +----------------------------+-------------+------------------+
+  // | ME1/2, ME2/2, ME3/2, ME4/2 | 0.1333      | 1/2 (remove LSB) |
+  // | ME2/1, ME3/1, ME4/1        | 0.2666      | 1 (no op)        |
+  // | ME1/1a                     | 0.2222      | 0.8335           |
+  // | ME1/1b                     | 0.1695      | 0.636            |
+  // | ME1/3                      | 0.1233      | 0.4625           |
+  // +----------------------------+-------------+------------------+
+
   int factor = 1024;
   if (is_me11a)
     factor = 1707;  // ME1/1a

@@ -105,4 +105,46 @@ int get_trigger_csc_ID(int ring, int station, int chamber) {
   return result;
 }
 
+// Number of halfstrips and wiregroups
+// +----------------------------+------------+------------+
+// | Chamber type               | Num of     | Num of     |
+// |                            | halfstrips | wiregroups |
+// +----------------------------+------------+------------+
+// | ME1/1a                     | 96         | 48         |
+// | ME1/1b                     | 128        | 48         |
+// | ME1/2                      | 160        | 64         |
+// | ME1/3                      | 128        | 32         |
+// | ME2/1                      | 160        | 112        |
+// | ME3/1, ME4/1               | 160        | 96         |
+// | ME2/2, ME3/2, ME4/2        | 160        | 64         |
+// +----------------------------+------------+------------+
+
+void get_csc_max_strip_and_wire(int station, int ring, int& max_strip, int& max_wire) {
+  max_strip = 0;  // halfstrip
+  max_wire  = 0;  // wiregroup
+  if        (station == 1 && ring == 4) { // ME1/1a
+    max_strip =  96;
+    max_wire  =  48;
+  } else if (station == 1 && ring == 1) { // ME1/1b
+    max_strip = 128;
+    max_wire  =  48;
+  } else if (station == 1 && ring == 2) { // ME1/2
+    max_strip = 160;
+    max_wire  =  64;
+  } else if (station == 1 && ring == 3) { // ME1/3
+    max_strip = 128;
+    max_wire  =  32;
+  } else if (station == 2 && ring == 1) { // ME2/1
+    max_strip = 160;
+    max_wire  = 112;
+  } else if (station >= 3 && ring == 1) { // ME3/1, ME4/1
+    max_strip = 160;
+    max_wire  =  96;
+  } else if (station >= 2 && ring == 2) { // ME2/2, ME3/2, ME4/2
+    max_strip = 160;
+    max_wire  =  64;
+  }
+  return;
+}
+
 }  // namespace emtf

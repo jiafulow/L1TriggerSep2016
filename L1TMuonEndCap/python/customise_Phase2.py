@@ -37,11 +37,12 @@ def customise(process):
 
     ## CSCTriggerPrimitives
     ## - revert to the old (i.e. Run 2) CSC LCT reconstruction
+    ## - Feb 2019: but set 'isSLHC' and 'runME11Up' to True (need more clarifications!)
     ## - see L1Trigger/CSCTriggerPrimitives/python/cscTriggerPrimitiveDigis_cfi.py
     if hasattr(process, 'simCscTriggerPrimitiveDigis'):
         process.simCscTriggerPrimitiveDigis.commonParam = cms.PSet(
             # Master flag for SLHC studies
-            isSLHC = cms.bool(False),
+            isSLHC = cms.bool(True),
 
             # Debug
             verbosity = cms.int32(0),
@@ -62,7 +63,7 @@ def customise(process):
             # offset between the ALCT and CLCT central BX in simulation
             alctClctOffset = cms.uint32(1),
 
-            runME11Up = cms.bool(False),
+            runME11Up = cms.bool(True),
             runME21Up = cms.bool(False),
             runME31Up = cms.bool(False),
             runME41Up = cms.bool(False),

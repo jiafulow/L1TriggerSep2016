@@ -22,6 +22,10 @@ namespace emtf {
 
   int get_trigger_csc_ID(int ring, int station, int chamber);
 
+  // CSC max strip & max wire
+
+  void get_csc_max_strip_and_wire(int station, int ring, int& max_strip, int& max_wire);
+
 
   // ___________________________________________________________________________
   // coordinate ranges: phi[-180, 180] or [-pi, pi], theta[0, 90] or [0, pi/2]

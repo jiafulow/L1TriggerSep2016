@@ -9,6 +9,7 @@
 
 //#include "helper.h"  // adjacent_cluster
 
+#include "L1Trigger/L1TMuonEndCap/interface/TrackTools.h"
 #include "L1Trigger/L1TMuonEndCap/interface/experimental/EMTFCSCComparatorDigiFitter.h"
 
 
@@ -27,8 +28,8 @@ void EMTFSubsystemCollector::extractPrimitives(
   edm::Handle<CSCTag::digi_collection> cscDigis;
   iEvent.getByToken(token1, cscDigis);
 
-  edm::Handle<CSCTag::comparator_digi_collection> cscComparatorDigis;
-  iEvent.getByToken(token2, cscComparatorDigis);
+  edm::Handle<CSCTag::comparator_digi_collection> cscCompDigis;
+  iEvent.getByToken(token2, cscCompDigis);
 
   // My comparator digi fitter
   std::unique_ptr<EMTFCSCComparatorDigiFitter> emtf_fitter = std::make_unique<EMTFCSCComparatorDigiFitter>();
@@ -48,17 +49,29 @@ void EMTFSubsystemCollector::extractPrimitives(
       std::vector<std::vector<CSCComparatorDigi> > compDigisAllLayers(CSCConstants::NUM_LAYERS);
       std::vector<int> stagger(CSCConstants::NUM_LAYERS, 0);
 
+      int tmp_strip = lct.getStrip();
+      int tmp_ring  = detid.ring();
+
+      // Use ME1/1a --> ring 4 convention
+      const bool is_me11a = (detid.station() == 1 && detid.ring() == 1 && lct.getStrip() >= 128);
+      if (is_me11a) {
+        tmp_strip = lct.getStrip() - 128;
+        tmp_ring = 4;
+      }
+
       //std::cout << "LCT detid " << detid << ", keyStrip " << lct.getStrip() << ", pattern " << lct.getPattern() << ", keyWG " << lct.getKeyWG() << std::endl;
       for (int ilayer=0; ilayer<CSCConstants::NUM_LAYERS; ++ilayer) {
         // Build CSCDetId for particular layer
         // Layer numbers increase going away from the IP
-        const CSCDetId layerId(detid.endcap(), detid.station(), detid.ring(), detid.chamber(), ilayer+1);
+        const CSCDetId layerId(detid.endcap(), detid.station(), tmp_ring, detid.chamber(), ilayer+1);
 
         // Retrieve comparator digis
-        const auto& compRange = cscComparatorDigis->get(layerId);
+        const auto& compRange = cscCompDigis->get(layerId);
         for (auto compDigiItr = compRange.first; compDigiItr != compRange.second; compDigiItr++) {
           const CSCComparatorDigi& compDigi = (*compDigiItr);
-          if (std::abs(compDigi.getHalfStrip() - lct.getStrip()) <= 5) {  // only if the comparator digis fit the CLCT patterns
+          // Check if the comparator digis fit the CLCT patterns (max: +/-5)
+          // (Need to also check the BX?)
+          if (std::abs(compDigi.getHalfStrip() - tmp_strip) <= 5) {
             compDigisAllLayers.at(ilayer).push_back(compDigi);
           }
 
@@ -88,17 +101,33 @@ void EMTFSubsystemCollector::extractPrimitives(
         if (x.size() > 0)
           ++nhitlayers;
       }
-      if (nhitlayers < 3)  //FIXME: how?!
+      if (nhitlayers < 3) {
+        edm::LogWarning("L1T") << "EMTF CSC format error in station " << detid.station() << ", ring " << detid.ring()
+            << ": nhitlayers = " << nhitlayers << " (min = 3)";
         continue;
+      }
 
-      assert(nhitlayers >= 3);
-
-      const EMTFCSCComparatorDigiFitter::FitResult& res = emtf_fitter->fit(compDigisAllLayers, stagger, lct.getStrip());
-      //std::cout << "fit result: " << res.position << " " << res.slope << " " << res.chi2 << " halfStrip: " << lct.getStrip() << std::endl;
+      const EMTFCSCComparatorDigiFitter::FitResult& res = emtf_fitter->fit(compDigisAllLayers, stagger, tmp_strip);
+      //std::cout << "fit result: " << res.position << " " << res.slope << " " << res.chi2 << " halfStrip: " << tmp_strip << std::endl;
 
       // Find half-strip after fit
-      float position = res.position + lct.getStrip();
+      float position = res.position + tmp_strip;
+
+      {
+        // Check boundary conditions
+        int max_strip = 0;  // halfstrip
+        int max_wire  = 0;  // wiregroup
+        emtf::get_csc_max_strip_and_wire(detid.station(), tmp_ring, max_strip, max_wire);
+
+        float eps = 1e-7;
+        if (position < eps)
+          position = eps;
+        if (position > static_cast<float>(max_strip - 1) - eps)
+          position = static_cast<float>(max_strip - 1) - eps;
+      }
+
       int strip = std::round(position);
+      assert(strip >= 0);
 
       // Encode fractional strip in 3 bits (4 including sign), which corresponds to 1/16-strip unit
       float frac_position = position - static_cast<float>(strip);
@@ -106,7 +135,7 @@ void EMTFSubsystemCollector::extractPrimitives(
       frac_strip = std::min(std::max(frac_strip, 0), 7);
       frac_strip = (frac_position >= 0) ? frac_strip : -frac_strip;
 
-      // Encode bend in 6 bits, which correspinds to 1/32-strip unit
+      // Encode bend in 6 bits, which corresponds to 1/32-strip unit
       int bend = static_cast<int>(std::round(res.slope * 16));
       bend = std::min(std::max(bend, -32), 31);
 
@@ -115,7 +144,7 @@ void EMTFSubsystemCollector::extractPrimitives(
       //quality = std::min(std::max(quality, 0), 31);
 
       // Jan 2019: Use number of hits as quality
-      int quality = res.ndof + 2;
+      int quality = nhitlayers;
 
       //std::cout << "check position: " << position << " " << strip << " " << frac_position << " " << frac_strip << " " << (float(strip) + float(frac_strip)/8) << std::endl;
       //std::cout << "check bend    : " << bend << " " << float(bend)/16 << std::endl;
@@ -130,8 +159,8 @@ void EMTFSubsystemCollector::extractPrimitives(
       out.back().accessCSCData().bend    = static_cast<uint16_t>(bend);
       out.back().accessCSCData().quality = static_cast<uint16_t>(quality);
       out.back().accessCSCData().syncErr = static_cast<uint16_t>(frac_strip);
-    }
-  }
+    }  // end loop over digis
+  }  // end loop over chambers
   return;
 }
 

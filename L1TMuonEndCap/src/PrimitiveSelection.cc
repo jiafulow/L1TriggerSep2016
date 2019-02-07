@@ -629,28 +629,7 @@ int PrimitiveSelection::select_csc(const TriggerPrimitive& muon_primitive) const
 
     int max_strip = 0;  // halfstrip
     int max_wire  = 0;  // wiregroup
-    if        (tp_station == 1 && tp_ring == 4) { // ME1/1a
-      max_strip =  96;
-      max_wire  =  48;
-    } else if (tp_station == 1 && tp_ring == 1) { // ME1/1b
-      max_strip = 128;
-      max_wire  =  48;
-    } else if (tp_station == 1 && tp_ring == 2) { // ME1/2
-      max_strip = 160;
-      max_wire  =  64;
-    } else if (tp_station == 1 && tp_ring == 3) { // ME1/3
-      max_strip = 128;
-      max_wire  =  32;
-    } else if (tp_station == 2 && tp_ring == 1) { // ME2/1
-      max_strip = 160;
-      max_wire  = 112;
-    } else if (tp_station >= 3 && tp_ring == 1) { // ME3/1, ME4/1
-      max_strip = 160;
-      max_wire  =  96;
-    } else if (tp_station >= 2 && tp_ring == 2) { // ME2/2, ME3/2, ME4/2
-      max_strip = 160;
-      max_wire  =  64;
-    }
+    emtf::get_csc_max_strip_and_wire(tp_station, tp_ring, max_strip, max_wire);
 
     if (endcap_ == 1 && sector_ == 1 && bx_ == -3) {  // do assertion checks only once
       assert_no_abort(emtf::MIN_ENDCAP <= tp_endcap && tp_endcap <= emtf::MAX_ENDCAP);

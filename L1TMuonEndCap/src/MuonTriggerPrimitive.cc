@@ -124,7 +124,8 @@ TriggerPrimitive::TriggerPrimitive(const CSCDetId& detid,
   _csc.cscID   = digi.getCSCID();
 
   // Use ME1/1a --> ring 4 convention
-  if (detid.station() == 1 && detid.ring() == 1 && digi.getStrip() >= 128) {
+  const bool is_me11a = (detid.station() == 1 && detid.ring() == 1 && digi.getStrip() >= 128);
+  if (is_me11a) {
     _id = CSCDetId(detid.endcap(), detid.station(), 4, detid.chamber(), detid.layer());
     _csc.strip = digi.getStrip() - 128;
   }
