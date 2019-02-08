@@ -44,6 +44,14 @@ void EMTFSubsystemCollector::extractPrimitives(
       const CSCCorrelatedLCTDigi& lct = (*digi);
 
       // _______________________________________________________________________
+      // Debug
+      std::cout << "LCT #" << "??" << ": BX " << lct.getBX() << " strip " << lct.getStrip()
+          << ", endcap " << detid.endcap() << ", sector " << detid.triggerSector()
+          << ", station " << detid.station() << ", ring " << detid.ring()
+          << ", chamber " << detid.chamber() << ", CSC ID " << lct.getCSCID()
+          << std::endl;
+
+      // _______________________________________________________________________
       // My comparator digi fitter
       std::vector<std::vector<CSCComparatorDigi> > compDigisAllLayers(CSCConstants::NUM_LAYERS);
       std::vector<int> stagger(CSCConstants::NUM_LAYERS, 0);
