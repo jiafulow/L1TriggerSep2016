@@ -207,9 +207,12 @@ TriggerPrimitive::TriggerPrimitive(const GEMDetId& detid,
   _subsystem(TriggerPrimitive::kGEM) {
   calculateGlobalSector(detid,_globalsector,_subsector);
   _eta = 0.; _phi = 0.; _rho = 0.; _theta = 0.;
-  _gem.pad = digi.pad();
-  _gem.pad_low = digi.pad();
-  _gem.pad_hi = digi.pad();
+  // Since CMSSW_10_3_0, GEMPadDigi pad number counts from 0, because they
+  // like to be different from every other muon strip detector. But I don't.
+  // See DataFormats/GEMDigi/interface/GEMPadDigi.h
+  _gem.pad = digi.pad() + 1;
+  _gem.pad_low = digi.pad() + 1;
+  _gem.pad_hi = digi.pad() + 1;
   _gem.bx = digi.bx();
   _gem.bend = 0;
 }
@@ -222,14 +225,14 @@ TriggerPrimitive::TriggerPrimitive(const ME0DetId& detid,
   _subsystem(TriggerPrimitive::kME0) {
   calculateGlobalSector(detid,_globalsector,_subsector);
   _eta = 0.; _phi = 0.; _rho = 0.; _theta = 0.;
-  _me0.x = rechit.localPosition().x();
+  _me0.x = rechit.localPosition().x();  //FIXME: change to half-strip resolution
   _me0.y = rechit.localPosition().y();
   _me0.dirx = rechit.localDirection().x();
   _me0.diry = rechit.localDirection().y();
   _me0.chi2 = rechit.chi2();
   _me0.nhits = rechit.nRecHits();
   _me0.time = rechit.time();
-  _me0.bend = std::round(rechit.deltaPhi()/(M_PI/9/768));  // half-strip or 1/4-pad unit (20/768 deg)
+  _me0.bend = std::round(rechit.deltaPhi()/(M_PI/9/768));  // half-strip or 1/4-pad unit (20/768 deg)  //FIXME: change to 1/4-strip resolution
   _me0.pad = 0;
   {
     // ME0 convert x to pad

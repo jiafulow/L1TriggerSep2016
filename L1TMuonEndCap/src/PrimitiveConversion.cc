@@ -205,7 +205,7 @@ void PrimitiveConversion::convert_csc_details(EMTFHit& conv_hit) const {
   // Is this chamber mounted in reverse direction?
   // (i.e., phi vs. strip number is reversed)
   bool ph_reverse = false;
-  if ((fw_endcap == 0 && fw_station >= 3) || (fw_endcap == 1 && fw_station < 3))
+  if ((fw_endcap == 0 && fw_station >= 3) || (fw_endcap == 1 && fw_station < 3))  // ME+3, ME+4, ME-1, ME-2
     ph_reverse = true;
 
   // Chamber coverage if phi_reverse = true
@@ -329,6 +329,14 @@ void PrimitiveConversion::convert_csc_details(EMTFHit& conv_hit) const {
   // zone phi precision: (32/60) deg (4-strip, 32 times coarser than full phi precision)
   int ph_tmp = (eighth_strip * factor) >> 10;
   int ph_tmp_sign = (ph_reverse == 0) ? 1 : -1;
+
+  if (applyCLCTFit) {
+    if (is_10degree) {
+      ph_tmp = (eighth_strip * factor + (clct_pat_corr_sign * (clct_pat_corr & 0x1) * factor)/2) >> 10;
+    } else {
+      ph_tmp = (eighth_strip * factor) >> 10;
+    }
+  }
 
   int fph = lut().get_ph_init(fw_endcap, fw_sector, pc_lut_id);
   fph = fph + ph_tmp_sign * ph_tmp;
