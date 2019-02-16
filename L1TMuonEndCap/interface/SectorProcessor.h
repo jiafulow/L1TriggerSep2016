@@ -7,10 +7,8 @@
 #include <vector>
 
 #include "L1Trigger/L1TMuonEndCap/interface/Common.h"
-
 //#include "L1Trigger/L1TMuonEndCap/interface/GeometryTranslator.h"
 #include "L1Trigger/L1TMuonEndCap/interface/ConditionHelper.h"
-
 #include "L1Trigger/L1TMuonEndCap/interface/SectorProcessorLUT.h"
 #include "L1Trigger/L1TMuonEndCap/interface/PtAssignmentEngine.h"
 #include "L1Trigger/L1TMuonEndCap/interface/PtAssignmentEngine2016.h"

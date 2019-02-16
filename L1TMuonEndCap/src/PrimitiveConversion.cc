@@ -205,7 +205,7 @@ void PrimitiveConversion::convert_csc_details(EMTFHit& conv_hit) const {
   // Is this chamber mounted in reverse direction?
   // (i.e., phi vs. strip number is reversed)
   bool ph_reverse = false;
-  if ((fw_endcap == 0 && fw_station >= 3) || (fw_endcap == 1 && fw_station < 3))
+  if ((fw_endcap == 0 && fw_station >= 3) || (fw_endcap == 1 && fw_station < 3))  // ME+3, ME+4, ME-1, ME-2
     ph_reverse = true;
 
   // Chamber coverage if phi_reverse = true
@@ -329,6 +329,14 @@ void PrimitiveConversion::convert_csc_details(EMTFHit& conv_hit) const {
   // zone phi precision: (32/60) deg (4-strip, 32 times coarser than full phi precision)
   int ph_tmp = (eighth_strip * factor) >> 10;
   int ph_tmp_sign = (ph_reverse == 0) ? 1 : -1;
+
+  if (applyCLCTFit) {
+    if (is_10degree) {
+      ph_tmp = (eighth_strip * factor + (clct_pat_corr_sign * (clct_pat_corr & 0x1) * factor)/2) >> 10;
+    } else {
+      ph_tmp = (eighth_strip * factor) >> 10;
+    }
+  }
 
   int fph = lut().get_ph_init(fw_endcap, fw_sector, pc_lut_id);
   fph = fph + ph_tmp_sign * ph_tmp;
@@ -583,12 +591,12 @@ void PrimitiveConversion::convert_rpc(
     if (is_irpc) {
       const RPCRoll* roll = dynamic_cast<const RPCRoll*>(tp_geom_->getRPCGeometry().roll(tp_detId));
       assert(roll != nullptr);  // failed to get RPC roll
-      const GlobalPoint& gp = roll->surface().toGlobal(LocalPoint(tp_data.x, tp_data.y, 0));
-      glob_phi   = emtf::rad_to_deg(gp.phi().value());
-      glob_theta = emtf::rad_to_deg(gp.theta());
-      glob_eta   = gp.eta();
-      glob_rho   = gp.perp();
-      glob_z     = gp.z();
+      const GlobalPoint& new_gp = roll->surface().toGlobal(LocalPoint(tp_data.x, tp_data.y, 0));
+      glob_phi   = emtf::rad_to_deg(gp.phi().value());  // using 'gp' instead of 'new_gp' for phi
+      glob_theta = emtf::rad_to_deg(new_gp.theta());
+      glob_eta   = new_gp.eta();
+      glob_rho   = new_gp.perp();
+      glob_z     = new_gp.z();
 
       fph = emtf::calc_phi_loc_int(glob_phi, conv_hit.PC_sector());
       th  = emtf::calc_theta_int(glob_theta, conv_hit.Endcap());
@@ -1044,7 +1052,7 @@ void PrimitiveConversion::convert_dt(
   // Mimic 10 deg CSC chamber. I use tp_station = 2, tp_ring = 2
   // when calling get_trigger_sector() and get_trigger_csc_ID()
   int tp_chamber    = tp_sector * 3 - 1;  // DT chambers are 30 deg. Multiply sector number by 3 to mimic 10 deg CSC chamber number
-  int tp_endcap     = (tp_wheel > 0) ? +1 : ((tp_wheel < 0) ? -1 : 0);
+  int tp_endcap     = (tp_wheel > 0) ? +1 : ((tp_wheel < 0) ? 2 : 0);
   int csc_tp_sector = emtf::get_trigger_sector(2, 2, tp_chamber);
   int tp_csc_ID     = emtf::get_trigger_csc_ID(2, 2, tp_chamber);
   int tp_subsector  = 0;
@@ -1064,7 +1072,7 @@ void PrimitiveConversion::convert_dt(
 
   conv_hit.set_bx            ( tp_bx );
   conv_hit.set_subsystem     ( TriggerPrimitive::kDT );
-  conv_hit.set_endcap        ( tp_endcap );
+  conv_hit.set_endcap        ( (tp_endcap == 2) ? -1 : tp_endcap );
   conv_hit.set_station       ( tp_station );
   conv_hit.set_ring          ( 1 );  // set to ring 1?
   conv_hit.set_roll          ( tp_wheel );  // used as wheel
