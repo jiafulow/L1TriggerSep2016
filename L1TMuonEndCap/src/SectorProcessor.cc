@@ -389,7 +389,8 @@ void SectorProcessor::process(
         const DTData&  tp_data  = tp_it->getDTData();
         std::cout << "DT #" << i++ << ": BX " << tp_it->getBX()
           << ", wheel " << tp_detId.wheel() << ", sector " << tp_detId.sector() << ", station " << tp_detId.station()
-          << ", strip " << tp_it->getStrip() << ", wire " << tp_it->getWire() << ", pattern " << tp_it->getPattern() << ", bend " << tp_data.bendingAngle << ", quality " << tp_data.qualityCode << ", bti_group " << tp_data.theta_bti_group
+          << ", strip " << tp_it->getStrip() << ", wire " << tp_it->getWire() << ", bend " << tp_data.bendingAngle << ", quality " << tp_data.qualityCode
+          << ", bti_group " << tp_data.theta_bti_group
           << std::endl;
 
         //tp_it->print(std::cout);
@@ -411,7 +412,8 @@ void SectorProcessor::process(
           << ", endcap " << tp_detId.endcap() << ", sector " << tp_detId.triggerSector()
           << ", station " << tp_detId.station() << ", ring " << tp_detId.ring()
           << ", chamber " << tp_detId.chamber() << ", CSC ID " << tp_data.cscID
-          << ", strip " << tp_it->getStrip() << ", wire " << tp_it->getWire() << ", pattern " << tp_it->getPattern() << ", bend " << tp_data.bend << ", quality " << tp_data.quality
+          << ", strip " << tp_it->getStrip() << ", wire " << tp_it->getWire() << ", bend " << tp_data.bend << ", quality " << tp_data.quality
+          << ", pattern " << tp_data.pattern
           << std::endl;
 
         //tp_it->print(std::cout);
@@ -434,7 +436,7 @@ void SectorProcessor::process(
           << ", station " << tp_detId.station() << ", ring " << tp_detId.ring()
           << ", subsector_rpc " << tp_detId.subsector() << ", roll " << tp_detId.roll()
           << ", strip " << tp_it->getStrip() << ", strip_low " << tp_data.strip_low << ", strip_hi " << tp_data.strip_hi
-          << ", time " << tp_data.time << ", valid " << tp_data.valid
+          << ", x " << tp_data.x << ", y " << tp_data.y << ", time " << tp_data.time << ", valid " << tp_data.valid
           << std::endl;
       }  // end if RPC
     }  // end loop over muon_primitives
@@ -472,8 +474,9 @@ void SectorProcessor::process(
           << ", endcap " << ((tp_detId.region() == -1) ? 2 : tp_detId.region())
           << ", station " << 1 << ", ring " << 1
           << ", chamber " << tp_detId.chamber() << ", roll " << tp_detId.roll() << ", layer " << tp_detId.layer()
-          << ", pad " << tp_data.pad << ", x " << tp_data.x << ", y " << tp_data.y << ", dirx " << tp_data.dirx << ", diry " << tp_data.diry
-          << ", chi2 " << tp_data.chi2 << ", nhits " << tp_data.nhits << ", time " << tp_data.time << ", bend " << tp_data.bend
+          << ", pad " << tp_data.pad << ", bend " << tp_data.bend
+          << ", x " << tp_data.x << ", y " << tp_data.y << ", dirx " << tp_data.dirx << ", diry " << tp_data.diry
+          << ", time " << tp_data.time << ", nhits " << tp_data.nhits << ", chi2 " << tp_data.chi2
           << std::endl;
       }  // end if ME0
     }  // end loop over muon_primitives

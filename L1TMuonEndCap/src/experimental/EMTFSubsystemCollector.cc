@@ -234,7 +234,8 @@ void EMTFSubsystemCollector::extractPrimitives(
 
         // According to the TDR, the iRPC chamber has 96 strips.
         // But in CMSSW, the iRPC chamber has 192 strips.
-        bool fixNStrips192 = true;
+        // Feb 2019: do not try to fix
+        bool fixNStrips192 = false;
         if (fixNStrips192 && roll->nstrips() == 192) {
           int firstStrip  = tmpRecHit.firstClusterStrip();
           int clusterSize = tmpRecHit.clusterSize();

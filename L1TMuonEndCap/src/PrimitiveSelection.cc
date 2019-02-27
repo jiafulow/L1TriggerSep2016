@@ -765,7 +765,8 @@ int PrimitiveSelection::select_rpc(const TriggerPrimitive& muon_primitive) const
       assert_no_abort(1 <= tp_station && tp_station <= 4);
       assert_no_abort((!is_irpc && 2 <= tp_ring && tp_ring <= 3) || (is_irpc && tp_ring == 1));
       assert_no_abort((!is_irpc && 1 <= tp_roll && tp_roll <= 3) || (is_irpc && 1 <= tp_roll && tp_roll <= 5));
-      assert_no_abort((!is_irpc && (tp_CPPF || (1 <= tp_strip && tp_strip <= 32))) || (is_irpc && 1 <= tp_strip && tp_strip <= 96));
+      //assert_no_abort((!is_irpc && (tp_CPPF || (1 <= tp_strip && tp_strip <= 32))) || (is_irpc && 1 <= tp_strip && tp_strip <= 96));
+      assert_no_abort((!is_irpc && (tp_CPPF || (1 <= tp_strip && tp_strip <= 32))) || (is_irpc && 1 <= tp_strip && tp_strip <= 96*2));  // in CMSSW, the iRPC chamber has 192 strips
       //assert_no_abort(tp_station > 2 || tp_ring != 3);  // stations 1 and 2 do not receive RPCs from ring 3
       assert_no_abort(tp_data.valid == true);
     }
