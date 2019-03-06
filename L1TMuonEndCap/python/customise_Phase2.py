@@ -37,12 +37,11 @@ def customise(process):
 
     ## CSCTriggerPrimitives
     ## - revert to the old (i.e. Run 2) CSC LCT reconstruction
-    ## - Feb 2019: but set 'isSLHC' and 'runME11Up' to True (need more clarifications!)
     ## - see L1Trigger/CSCTriggerPrimitives/python/cscTriggerPrimitiveDigis_cfi.py
     if hasattr(process, 'simCscTriggerPrimitiveDigis'):
         process.simCscTriggerPrimitiveDigis.commonParam = cms.PSet(
             # Master flag for SLHC studies
-            isSLHC = cms.bool(True),
+            isSLHC = cms.bool(False),
 
             # Debug
             verbosity = cms.int32(0),
@@ -63,7 +62,7 @@ def customise(process):
             # offset between the ALCT and CLCT central BX in simulation
             alctClctOffset = cms.uint32(1),
 
-            runME11Up = cms.bool(True),
+            runME11Up = cms.bool(False),
             runME21Up = cms.bool(False),
             runME31Up = cms.bool(False),
             runME41Up = cms.bool(False),
@@ -75,5 +74,27 @@ def customise(process):
     else:
         process.load('RecoLocalMuon.RPCRecHit.rpcRecHits_cfi')
         process.rpcRecHits.rpcDigiLabel = 'simMuonRPCDigis'
+
+    ## LCT BX shift
+    ## If processing samples with CSCDigis produced before 10_2_0, we need to revert this PR:
+    ## - https://github.com/cms-sw/cmssw/pull/22288
+    ## So, we do the following:
+    ## - checkout L1Trigger/CSCCommonTrigger and L1Trigger/CSCTriggerPrimitives,
+    ## - in L1Trigger/CSCCommonTrigger/interface/CSCConstants.h, change 'LCT_CENTRAL_BX' from 8 to 6
+    ## - recompile
+    ## - modify process.simMuonCSCDigis, process.CSCCommonTrigger, process.simCscTriggerPrimitiveDigis,
+    ##   and process.simEmtfDigis
+    if hasattr(process, 'simMuonCSCDigis'):
+        process.simMuonCSCDigis.strips.comparatorTimeBinOffset = cms.double(3.0)
+        process.simMuonCSCDigis.wires.timeBitForBxZero = cms.int32(6)
+    if hasattr(process, 'CSCCommonTrigger'):
+        process.CSCCommonTrigger.MinBX = cms.int32(3)
+        process.CSCCommonTrigger.MaxBX = cms.int32(9)
+    if hasattr(process, 'simCscTriggerPrimitiveDigis'):
+        process.simCscTriggerPrimitiveDigis.MinBX = cms.int32(3)
+        process.simCscTriggerPrimitiveDigis.MaxBX = cms.int32(9)
+        process.simCscTriggerPrimitiveDigis.commonParam.alctClctOffset = cms.uint32(0)
+    if hasattr(process, 'simEmtfDigis'):
+        process.simEmtfDigis.CSCInputBXShift = cms.int32(-6)
 
     return process
