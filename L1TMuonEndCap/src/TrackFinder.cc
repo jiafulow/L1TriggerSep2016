@@ -7,6 +7,7 @@
 
 // Experimental features
 #include "L1Trigger/L1TMuonEndCap/interface/experimental/EMTFSubsystemCollector.h"
+#include "L1Trigger/L1TMuonEndCap/interface/experimental/Phase2SectorProcessor.h"
 
 
 TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollector&& iConsumes) :
@@ -193,6 +194,35 @@ void TrackFinder::process(
   // MIN/MAX ENDCAP and TRIGSECTOR set in interface/Common.h
   for (int endcap = emtf::MIN_ENDCAP; endcap <= emtf::MAX_ENDCAP; ++endcap) {
     for (int sector = emtf::MIN_TRIGSECTOR; sector <= emtf::MAX_TRIGSECTOR; ++sector) {
+
+#ifdef PHASE_TWO_TRIGGER
+      auto minBX      = config_.getParameter<int>("MinBX");
+      auto maxBX      = config_.getParameter<int>("MaxBX");
+      auto bxWindow   = config_.getParameter<int>("BXWindow");
+      auto bxShiftCSC = config_.getParameter<int>("CSCInputBXShift");
+      auto bxShiftRPC = config_.getParameter<int>("RPCInputBXShift");
+      auto bxShiftGEM = config_.getParameter<int>("GEMInputBXShift");
+      int delayBX   = bxWindow - 1;
+
+      experimental::Phase2SectorProcessor expt_sp;
+      for (int bx = minBX; bx <= maxBX + delayBX; ++bx) {
+        expt_sp.configure(
+          &geometry_translator_,
+          &condition_helper_,
+          &sector_processor_lut_,
+          verbose_, endcap, sector, bx,
+          bxShiftCSC, bxShiftRPC, bxShiftGEM,
+          era_
+        );
+
+        expt_sp.process(
+          iEvent, iSetup,
+          muon_primitives,
+          out_hits,
+          out_tracks
+        );
+      }
+#else
       const int es = (endcap - emtf::MIN_ENDCAP) * (emtf::MAX_TRIGSECTOR - emtf::MIN_TRIGSECTOR + 1) + (sector - emtf::MIN_TRIGSECTOR);
 
       // Run-dependent configure. This overwrites many of the configurables passed by the python config file.
@@ -207,6 +237,8 @@ void TrackFinder::process(
           out_hits,
           out_tracks
       );
+#endif
+
     }
   }
 
