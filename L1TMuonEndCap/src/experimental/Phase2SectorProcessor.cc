@@ -132,9 +132,15 @@ void Phase2SectorProcessor::process(
 
 constexpr int NLAYERS = 16;  // 5 (CSC) + 4 (RPC) + 3 (GEM) + 4 (DT)
 constexpr int NPREDS = 2;    // pT, PU discr
+
 constexpr int ROAD_LAYER_NVARS = 10;  // each layer in the road carries 10 variables
 constexpr int ROAD_LAYER_NVARS_P1 = ROAD_LAYER_NVARS + 1;  // plus layer mask
 constexpr int ROAD_INFO_NVARS = 3;
+
+constexpr int PATTERN_BANK_NPT = 18;   // straightness
+constexpr int PATTERN_BANK_NETA = 7;   // zone
+constexpr int PATTERN_BANK_NLAYERS = NLAYERS;
+constexpr int PATTERN_BANK_NVARS = 3;  // min, med, max
 
 class Hit {
 public:
@@ -265,8 +271,31 @@ typedef std::array<float, NPREDS> Prediction;
 // Specific modules
 // (adapted from rootpy_trackbuilding9.py)
 
+#include "patternbank.icc"
+
 class PatternBank {
 public:
+  // Constructor
+  explicit PatternBank() {
+    // Initialize 4-D array
+    for (size_t i=0; i<x_array.size(); i++) {
+      for (size_t j=0; j<x_array[i].size(); j++) {
+        for (size_t k=0; k<x_array[i][j].size(); k++) {
+          for (size_t l=0; l<x_array[i][j][k].size(); l++) {
+            x_array[i][j][k][l] = _patternbank[i][j][k][l];
+          }
+        }
+      }
+    }
+  }  // end constructor
+
+  // 4-D array of size [NLAYERS][NETA][NVARS][NPT]
+  // Note: rearranged for cache-friendliness. In the original python script,
+  // it's arranged as [NPT][NETA][NLAYERS][NVARS]
+  typedef std::array<std::array<std::array<std::array<int32_t, PATTERN_BANK_NPT>,
+      PATTERN_BANK_NVARS>, PATTERN_BANK_NETA>, PATTERN_BANK_NLAYERS> patternbank_t;
+
+  patternbank_t x_array;
 };
 
 static const PatternBank bank;
