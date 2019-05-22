@@ -8,12 +8,14 @@
 // in a monolithic fashion to allow easy replacement.
 //
 
+#include <algorithm>
+#include <array>
 #include <deque>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
-#include <array>
 
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
@@ -24,6 +26,9 @@
 //#include "L1Trigger/L1TMuonEndCap/interface/GeometryTranslator.h"
 #include "L1Trigger/L1TMuonEndCap/interface/ConditionHelper.h"
 #include "L1Trigger/L1TMuonEndCap/interface/SectorProcessorLUT.h"
+
+#include "L1Trigger/L1TMuonEndCap/interface/PrimitiveSelection.h"
+#include "L1Trigger/L1TMuonEndCap/interface/PrimitiveConversion.h"
 
 
 namespace experimental {
@@ -51,6 +56,13 @@ public:
   ) const;
 
 private:
+  void build(
+    // Input
+    const EMTFHitCollection& conv_hits,
+    // Output
+    EMTFTrackCollection& best_tracks
+  ) const;
+
   const GeometryTranslator* geom_;
 
   const ConditionHelper* cond_;
