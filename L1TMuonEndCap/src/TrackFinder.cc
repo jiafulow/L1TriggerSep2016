@@ -204,6 +204,11 @@ void TrackFinder::process(
       auto bxShiftGEM = config_.getParameter<int>("GEMInputBXShift");
       int delayBX   = bxWindow - 1;
 
+      // For now, only consider BX=0
+      minBX = 0;
+      maxBX = 0;
+      delayBX = 0;
+
       experimental::Phase2SectorProcessor expt_sp;
       for (int bx = minBX; bx <= maxBX + delayBX; ++bx) {
         expt_sp.configure(
