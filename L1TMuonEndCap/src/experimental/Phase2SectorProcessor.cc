@@ -203,6 +203,22 @@ public:
   // road_id = (endcap, sector, ipt, ieta, iphi)
   typedef std::array<int32_t, 5> road_id_t;
 
+  // Provide hash function for road_id_t
+  struct Hasher {
+    inline std::size_t operator()(const road_id_t& road_id) const noexcept {
+      int32_t endcap = road_id[0];
+      int32_t sector = road_id[1];
+      int32_t endsec = (endcap == 1) ? (sector - 1) : (sector - 1 + 6);
+
+      std::size_t seed = 0;
+      seed |= (road_id[4] << (0));        // allocates 256 (1<<8) entries for iphi (needs ~160)
+      seed |= (road_id[3] << (0+8));      // allocates 8 (1<<3) entries for ieta (needs 7)
+      seed |= (road_id[2] << (0+8+3));    // allocates 32 (1<<5) entries for ipt (needs 18)
+      seed |= (endsec     << (0+8+3+5));
+      return seed;
+    }
+  };
+
   explicit Road(int16_t vr_endcap, int16_t vr_sector, int16_t vr_ipt, int16_t vr_ieta, int16_t vr_iphi,
                 const road_hits_t& vr_hits, int16_t vr_mode, int16_t vr_quality,
                 int16_t vr_sort_code, int32_t vr_theta_median)
@@ -285,11 +301,30 @@ typedef std::array<float, NPREDS> Prediction;
 // Specific functions
 // (adapted from rootpy_trackbuilding9.py)
 
+template<typename Container>
+Container my_copy(const Container& input) {
+  Container output = input;
+  return output;
+}
+
 template<typename Container, typename Predicate>
 Container my_filter(Predicate pred, const Container& input) {
   Container output;
   std::copy_if(input.begin(), input.end(), std::back_inserter(output), pred);
   return output;
+}
+
+template<typename T>
+T my_median(const std::vector<T>& vec) {
+  std::size_t middle = (vec.size() == 0) ? 0 : (vec.size() - 1)/2;
+  return vec.at(middle);
+}
+
+template<typename T>
+T my_median_overwrite_input(std::vector<T>& vec) {
+  std::sort(vec.begin(), vec.end());  // input vec will be sorted while finding median
+  std::size_t middle = (vec.size() == 0) ? 0 : (vec.size() - 1)/2;
+  return vec.at(middle);
 }
 
 
@@ -409,6 +444,24 @@ public:
     int32_t type       = conv_hit.Subsystem();
     int32_t station    = conv_hit.Station();
     int32_t ring       = conv_hit.Ring();
+
+    for (size_t zone=0; zone<find_emtf_zones_lut[type][station][ring].size(); zone++) {
+      int32_t low  = find_emtf_zones_lut[type][station][ring][zone][0];
+      int32_t high = find_emtf_zones_lut[type][station][ring][zone][1];
+      if ((low <= emtf_theta) && (emtf_theta <= high)) {
+        zones.push_back(zone);
+      }
+    }
+    return zones;
+  }
+
+  std::vector<int32_t> find_emtf_zones(const Hit& hit) const {
+    std::vector<int32_t> zones;
+
+    int32_t emtf_theta = hit.emtf_theta;
+    int32_t type       = hit.type;
+    int32_t station    = hit.station;
+    int32_t ring       = hit.ring;
 
     for (size_t zone=0; zone<find_emtf_zones_lut[type][station][ring].size(); zone++) {
       int32_t low  = find_emtf_zones_lut[type][station][ring][zone][0];
@@ -585,7 +638,7 @@ public:
   }
 
   // Decide EMTF road sort code (by hit composition)
-  int32_t find_emtf_road_sort_code(int32_t road_mode, int32_t road_quality, const std::vector<Hit>& road_hits) const {
+  int32_t find_emtf_road_sort_code(int32_t road_quality, const std::vector<int32_t>& road_hits_layers) const {
     // 9    8      7      6    5      4    3    2..0
     //      ME1/1  ME1/2  ME2         ME3  ME4  qual
     //                         RE1&2  RE3  RE4
@@ -594,8 +647,7 @@ public:
     static const int32_t lut[NLAYERS] = {8,7,6,4,3,5,5,4,3,7,5,9,9,8,5,5};
 
     int32_t sort_code = 0;
-    for (const auto& hit : road_hits) {
-      int32_t hit_lay = hit.emtf_layer;
+    for (const auto& hit_lay : road_hits_layers) {
       int32_t mlayer = lut[hit_lay];
       sort_code |= (1 << mlayer);
     }
@@ -704,6 +756,7 @@ public:
     // Convert all the hits again and apply the filter to get the legit hits
     int32_t sector_mode = 0;
     std::vector<Hit> sector_hits;
+    std::vector<Road> sector_roads;
 
     for (size_t ihit = 0; ihit < conv_hits.size(); ++ihit) {
       const EMTFHit& conv_hit = conv_hits.at(ihit);
@@ -745,15 +798,206 @@ public:
     }
 
     // Apply patterns to the sector hits
-    apply_patterns(sector_hits, roads);
+    apply_patterns(sector_hits, sector_roads);
+    roads.insert(roads.end(), sector_roads.begin(), sector_roads.end());
     return;
   }
 
-  void apply_patterns(const std::vector<Hit>& sector_hits, std::vector<Road>& roads) const {
-    //TODO
+private:
+  void create_road(const Road::road_id_t road_id, const Road::road_hits_t road_hits, std::vector<Road>& sector_roads) const {
+
+    // Find road modes
+    int road_mode          = 0;
+    int road_mode_csc      = 0;
+    int road_mode_me0      = 0;  // zones 0,1
+    int road_mode_me12     = 0;  // zone 4
+    int road_mode_csc_me12 = 0;  // zone 4
+    int road_mode_mb1      = 0;  // zone 6
+    int road_mode_mb2      = 0;  // zone 6
+    int road_mode_me13     = 0;  // zone 6
+    //int road_mode_me22     = 0;  // zone 6
+
+    for (const auto& hit : road_hits) {
+      int32_t type    = hit.type;
+      int32_t station = hit.station;
+      int32_t ring    = hit.ring;
+      road_mode |= (1 << (4 - station));
+
+      if ((type == TriggerPrimitive::kCSC) || (type == TriggerPrimitive::kME0)) {
+        road_mode_csc |= (1 << (4 - station));
+      }
+
+      if (type == TriggerPrimitive::kME0) {
+        road_mode_me0 |= (1 << 1);
+      } else if ((type == TriggerPrimitive::kCSC) && (station == 1) && ((ring == 1) || (ring == 4))) {
+        road_mode_me0 |= (1 << 0);
+      }
+
+      if ((type == TriggerPrimitive::kCSC) && (station == 1) && ((ring == 2) || (ring == 3))) {  // pretend as station 2
+        road_mode_me12 |= (1 << (4 - 2));
+      } else if ((type == TriggerPrimitive::kRPC) && (station == 1) && ((ring == 2) || (ring == 3))) {  // pretend as station 2
+        road_mode_me12 |= (1 << (4 - 2));
+      } else {
+        road_mode_me12 |= (1 << (4 - station));
+      }
+
+      if ((type == TriggerPrimitive::kCSC) && (station == 1) && ((ring == 2) || (ring == 3))) {  // pretend as station 2
+        road_mode_csc_me12 |= (1 << (4 - 2));
+      } else if (type == TriggerPrimitive::kCSC) {
+        road_mode_csc_me12 |= (1 << (4 - station));
+      }
+
+      if ((type == TriggerPrimitive::kDT) && (station == 1)) {
+        road_mode_mb1 |= (1 << 1);
+      } else if ((type == TriggerPrimitive::kDT) && (station >= 2)) {
+        road_mode_mb1 |= (1 << 0);
+      } else if ((type == TriggerPrimitive::kCSC) && (station >= 1) && ((ring == 2) || (ring == 3))) {
+        road_mode_mb1 |= (1 << 0);
+      } else if ((type == TriggerPrimitive::kRPC) && (station >= 1) && ((ring == 2) || (ring == 3))) {
+        road_mode_mb1 |= (1 << 0);
+      }
+
+      if ((type == TriggerPrimitive::kDT) && (station == 2)) {
+        road_mode_mb2 |= (1 << 1);
+      } else if ((type == TriggerPrimitive::kDT) && (station >= 3)) {
+        road_mode_mb2 |= (1 << 0);
+      } else if ((type == TriggerPrimitive::kCSC) && (station >= 1) && ((ring == 2) || (ring == 3))) {
+        road_mode_mb2 |= (1 << 0);
+      } else if ((type == TriggerPrimitive::kRPC) && (station >= 1) && ((ring == 2) || (ring == 3))) {
+        road_mode_mb2 |= (1 << 0);
+      }
+
+      if ((type == TriggerPrimitive::kCSC) && (station == 1) && ((ring == 2) || (ring == 3))) {
+        road_mode_me13 |= (1 << 1);
+      } else if ((type == TriggerPrimitive::kCSC) && (station >= 2) && ((ring == 2) || (ring == 3))) {
+        road_mode_me13 |= (1 << 0);
+      } else if ((type == TriggerPrimitive::kRPC) && (station == 1) && ((ring == 2) || (ring == 3))) {
+        road_mode_me13 |= (1 << 1);
+      } else if ((type == TriggerPrimitive::kRPC) && (station >= 2) && ((ring == 2) || (ring == 3))) {
+        road_mode_me13 |= (1 << 0);
+      }
+
+      //if ((type == TriggerPrimitive::kCSC) && (station == 2) && ((ring == 2) || (ring == 3))) {
+      //  road_mode_me22 |= (1 << 1);
+      //} else if ((type == TriggerPrimitive::kCSC) && (station >= 3) && ((ring == 2) || (ring == 3))) {
+      //  road_mode_me22 |= (1 << 0);
+      //} else if ((type == TriggerPrimitive::kRPC) && (station == 2) && ((ring == 2) || (ring == 3))) {
+      //  road_mode_me22 |= (1 << 1);
+      //} else if ((type == TriggerPrimitive::kRPC) && (station >= 3) && ((ring == 2) || (ring == 3))) {
+      //  road_mode_me22 |= (1 << 0);
+      //}
+    }  // end loop over road_hits
+
+    // Create road
+    int32_t ipt  = road_id[2];  // road_id = (endcap, sector, ipt, ieta, iphi)
+    int32_t ieta = road_id[3];
+
+    // Apply SingleMu requirement
+    // + (zones 0,1) any road with ME0 and ME1
+    // + (zone 4) any road with ME1/1, ME1/2 + one more station
+    // + (zone 5) any road with 2 stations
+    // + (zone 6) any road with MB1+MB2, MB1+MB3, MB1+ME1/3, MB1+ME2/2, MB2+MB3, MB2+ME1/3, MB2+ME2/2, ME1/3+ME2/2
+    if ((util.is_emtf_singlemu(road_mode) && util.is_emtf_muopen(road_mode_csc)) ||
+        (((ieta == 0) || (ieta == 1)) && (road_mode_me0 == 3)) ||
+        ((ieta == 4) && util.is_emtf_singlemu(road_mode_me12) && util.is_emtf_muopen(road_mode_csc_me12)) ||
+        ((ieta == 5) && util.is_emtf_doublemu(road_mode) && util.is_emtf_muopen(road_mode_csc)) ||
+        ((ieta == 6) && ((road_mode_mb1 == 3) || (road_mode_mb2 == 3) || (road_mode_me13 == 3))) )
+    {
+      std::vector<int32_t> road_hits_layers;
+      std::vector<int32_t> road_hits_thetas;
+      for (const auto& hit : road_hits) {
+        road_hits_layers.push_back(hit.emtf_layer);
+        road_hits_thetas.push_back(hit.emtf_theta);
+      }
+
+      //int32_t road_quality = util.find_emtf_road_quality(ipt);
+      int32_t road_quality = util.find_emtf_road_quality((ipt%9));  // using 18 patterns
+      int32_t road_sort_code = util.find_emtf_road_sort_code(road_quality, road_hits_layers);
+      int32_t road_theta_median = my_median_overwrite_input(road_hits_thetas);
+
+      //Road(int16_t vr_endcap, int16_t vr_sector, int16_t vr_ipt, int16_t vr_ieta, int16_t vr_iphi,
+      //     const road_hits_t& vr_hits, int16_t vr_mode, int16_t vr_quality,
+      //     int16_t vr_sort_code, int32_t vr_theta_median)
+      sector_roads.emplace_back(road_id[0], road_id[1], road_id[2], road_id[3], road_id[4],
+                                road_hits, road_mode, road_quality,
+                                road_sort_code, road_theta_median);
+    }
     return;
   }
-private:
+
+  void apply_patterns_in_zone(int32_t hit_zone, int32_t hit_lay,
+                              std::vector<std::pair<int32_t, int32_t> >& result) const {
+    result.clear();
+
+    // Given zone & lay & quadstrip, only have to check against straightness
+    //const auto& patterns_x0 = bank.x_array[hit_lay][hit_zone][0];
+    //const auto& patterns_x1 = bank.x_array[hit_lay][hit_zone][2];
+    //assert(patterns_x0.size() == patterns_x1.size());
+
+    auto x0_iter = bank.x_array[hit_lay][hit_zone][0].begin();  // zero-copy op when using the iterators
+    auto x0_end  = bank.x_array[hit_lay][hit_zone][0].end();
+    auto x1_iter = bank.x_array[hit_lay][hit_zone][2].begin();
+    auto x1_end  = bank.x_array[hit_lay][hit_zone][2].end();
+
+    int32_t ipt  = 0;
+    int32_t iphi = 0;
+    for (; (x0_iter != x0_end) && (x1_iter != x1_end); ++x0_iter, ++x1_iter) {
+      auto x0 = (*x0_iter);
+      auto x1 = (*x1_iter);
+      for (iphi = x0; iphi != (x1+1); ++iphi) {
+        result.emplace_back(ipt, iphi);
+      }
+    }
+    return;
+  }
+
+  void apply_patterns(const std::vector<Hit>& sector_hits, std::vector<Road>& sector_roads) const {
+
+    // Create a map of road_id -> road_hits
+    std::unordered_map<Road::road_id_t, Road::road_hits_t, Road::Hasher> amap;
+
+    // Stores the results from pattern recognition (pairs of (ipt, iphi)-indices).
+    std::vector<std::pair<int32_t, int32_t> > result;
+
+    // Loop over hits
+    for (const auto& hit : sector_hits) {
+      int32_t hit_lay = hit.emtf_layer;
+      int32_t hit_x   = util.find_pattern_x(hit.emtf_phi);
+      const auto& hit_zones = util.find_emtf_zones(hit);
+
+      // Loop over the zones that the hit is belong to
+      for (const auto& hit_zone : hit_zones) {
+        if (hit_zone == 6) {  // For now, ignore zone 6
+          continue;
+        }
+
+        // Pattern recognition
+        apply_patterns_in_zone(hit_zone, hit_lay, result);
+
+        // Loop over the results from pattern recognition
+        for (const auto& index : result) {
+          int32_t ipt  = index.first;
+          int32_t iphi = index.second;
+          iphi         = (hit_x - iphi);
+          int32_t ieta = hit_zone;
+
+          // Full range is 0 <= iphi <= 154. but a reduced range is sufficient (27% saving on patterns)
+          if ((PATTERN_X_SEARCH_MIN <= iphi) && (iphi <= PATTERN_X_SEARCH_MAX)) {
+            Road::road_id_t road_id = {{0, 0, ipt, ieta, iphi}};  //CUIDADO: set endcap & sector to 0
+            amap[road_id].push_back(hit);
+          }
+        }
+      }  // end loop over hit_zones
+    }  // end loop over sector_hits
+
+    // Create roads
+    for (const auto& kv : amap) {
+      const Road::road_id_t&   road_id   = kv.first;
+      const Road::road_hits_t& road_hits = kv.second;
+      create_road(road_id, road_hits, sector_roads);  // only valid roads are being appended to sector_roads
+    }
+    return;
+  }
 };
 
 class RoadCleaning {
@@ -774,7 +1018,8 @@ private:
 
 class PtAssignment {
 public:
-  void run(const std::vector<Road>& slim_roads, std::vector<Variable>& variables, std::vector<Prediction>& predictions) const {
+  void run(const std::vector<Road>& slim_roads,
+           std::vector<Variable>& variables, std::vector<Prediction>& predictions) const {
     return;
   }
 private:
@@ -782,7 +1027,8 @@ private:
 
 class TrackProducer {
 public:
-  void run(const std::vector<Road>& slim_roads, const std::vector<Variable>& variables, const std::vector<Prediction>& predictions, std::vector<Track>& tracks) const {
+  void run(const std::vector<Road>& slim_roads, const std::vector<Variable>& variables, const std::vector<Prediction>& predictions,
+           std::vector<Track>& tracks) const {
     return;
   }
 private:
