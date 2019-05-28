@@ -203,6 +203,11 @@ public:
   // road_id = (endcap, sector, ipt, ieta, iphi)
   typedef std::array<int32_t, 5> road_id_t;
 
+  road_id_t id() const {
+    road_id_t ret = {{endcap, sector, ipt, ieta, iphi}};
+    return ret;
+  }
+
   // Provide hash function for road_id_t
   struct Hasher {
     inline std::size_t operator()(const road_id_t& road_id) const noexcept {
@@ -233,6 +238,11 @@ public:
     quality      = vr_quality;
     sort_code    = vr_sort_code;
     theta_median = vr_theta_median;
+  }
+
+  bool operator<(const Road& other) const {
+    // higher sort code is better
+    return (sort_code > other.sort_code);
   }
 
   // Properties
@@ -301,30 +311,62 @@ typedef std::array<float, NPREDS> Prediction;
 // Specific functions
 // (adapted from rootpy_trackbuilding9.py)
 
-template<typename Container>
-Container my_copy(const Container& input) {
-  Container output = input;
-  return output;
-}
-
 template<typename Container, typename Predicate>
 Container my_filter(Predicate pred, const Container& input) {
   Container output;
-  std::copy_if(input.begin(), input.end(), std::back_inserter(output), pred);
+  std::copy_if(input.cbegin(), input.cend(), std::back_inserter(output), pred);
   return output;
 }
 
-template<typename T>
-T my_median(const std::vector<T>& vec) {
-  std::size_t middle = (vec.size() == 0) ? 0 : (vec.size() - 1)/2;
-  return vec.at(middle);
+template<typename ForwardIt>
+ForwardIt my_remove(ForwardIt first, ForwardIt last, const std::vector<bool>& mask) {
+  if (first == last)
+    return last;
+
+  assert(std::distance(mask.cbegin(), mask.cend()) == std::distance(first, last));
+  std::size_t i = 0;
+
+  for (; first != last; ++first, ++i)
+    if (mask[i] == false)  // to be removed
+      break;
+
+  if (first == last)
+    return last;
+
+  ForwardIt result = first;
+  ++first;
+  ++i;
+
+  for (; first != last; ++first, ++i)
+    if (mask[i] == true)  // to be kept
+      *result++ = std::move(*first);
+  return result;
+}
+
+template<typename Container, typename Predicate>
+void my_inplace_filter(Predicate pred, Container& input) {
+  std::vector<bool> mask(input.size(), false);
+  std::size_t i = 0;
+
+  for (auto it = input.cbegin(); it != input.cend(); ++it, ++i) {
+    if (pred(*it)) {
+      mask[i] = true;
+    }
+  }
+  input.erase(my_remove(input.cbegin(), input.cend(), mask), input.end());
 }
 
 template<typename T>
-T my_median_overwrite_input(std::vector<T>& vec) {
+T my_median_sorted(const std::vector<T>& vec) {
+  std::size_t middle = (vec.size() == 0) ? 0 : (vec.size() - 1)/2;
+  return vec[middle];
+}
+
+template<typename T>
+T my_median_unsorted(std::vector<T>& vec) {
   std::sort(vec.begin(), vec.end());  // input vec will be sorted while finding median
   std::size_t middle = (vec.size() == 0) ? 0 : (vec.size() - 1)/2;
-  return vec.at(middle);
+  return vec[middle];
 }
 
 
@@ -913,7 +955,7 @@ private:
       //int32_t road_quality = util.find_emtf_road_quality(ipt);
       int32_t road_quality = util.find_emtf_road_quality((ipt%9));  // using 18 patterns
       int32_t road_sort_code = util.find_emtf_road_sort_code(road_quality, road_hits_layers);
-      int32_t road_theta_median = my_median_overwrite_input(road_hits_thetas);
+      int32_t road_theta_median = my_median_unsorted(road_hits_thetas);
 
       //Road(int16_t vr_endcap, int16_t vr_sector, int16_t vr_ipt, int16_t vr_ieta, int16_t vr_iphi,
       //     const road_hits_t& vr_hits, int16_t vr_mode, int16_t vr_quality,
@@ -1002,10 +1044,202 @@ private:
 
 class RoadCleaning {
 public:
+  typedef const Road* RoadPtr;
+
   void run(const std::vector<Road>& roads, std::vector<Road>& clean_roads) const {
+    // Skip if no roads
+    if (roads.empty()) {
+      return;
+    }
+
+    // Create a map of road_id -> road
+    std::unordered_map<Road::road_id_t, RoadPtr, Road::Hasher> amap;
+
+    // and a (sorted) vector of road_id's
+    std::vector<Road::road_id_t> road_ids;
+
+    for (const auto& road : roads) {
+      Road::road_id_t road_id = road.id();
+      amap[road_id] = &road;
+      road_ids.push_back(road_id);
+    }
+
+    std::sort(road_ids.begin(), road_ids.end());
+
+    auto make_row_splits = [](auto first, auto last) {
+      // assume the input vector is sorted
+
+      auto is_adjacent = [](const Road::road_id_t& prev, const Road::road_id_t& curr) {
+        // adjacent if (x,y,z') == (x,y,z+1)
+        return ((prev[0] == curr[0]) &&
+                (prev[1] == curr[1]) &&
+                (prev[2] == curr[2]) &&
+                (prev[3] == curr[3]) &&
+                ((prev[4]+1) == curr[4]));
+      };
+
+      std::vector<std::size_t> row_splits;
+      row_splits.push_back(0);
+      if (first == last) {
+        return row_splits;
+      }
+
+      auto prev = first;
+      auto curr = first;
+      std::size_t i = 0;
+
+      ++curr;
+      ++i;
+
+      for (; curr != last; ++prev, ++curr, ++i) {
+        if (!is_adjacent(*prev, *curr)) {
+          row_splits.push_back(i);
+        }
+      }
+      row_splits.push_back(i);
+      return row_splits;
+    };
+
+    // Make road clusters (groups)
+    const std::vector<std::size_t>& splits = make_row_splits(road_ids.begin(), road_ids.end());
+    assert(splits.size() >= 2);
+
+    // Loop over groups, pick the road with best sort code in each group
+    std::vector<Road> tmp_clean_roads; // the "best" roads in each group
+    std::vector<std::pair<int32_t, int32_t> > tmp_clean_roads_groupinfo;  // keep track of the iphi range of each group
+
+    std::vector<Road::road_id_t> group; // a group of road_id's
+    int32_t best_sort_code = -1;        // keeps max sort code
+    std::vector<RoadPtr> best_roads;    // keeps all the roads sharing the max sort code
+
+    for (size_t igroup=0; igroup<(splits.size()-1); ++igroup) {
+      group.clear();
+      for (size_t i=splits[igroup]; i<splits[igroup+1]; ++i) {
+        assert(i < road_ids.size());
+        group.push_back(road_ids[i]);
+      }
+
+      best_sort_code = -1;
+      for (const auto& road_id : group) {
+        auto road_ptr = amap[road_id];
+        if (best_sort_code < road_ptr->sort_code) {
+          best_sort_code = road_ptr->sort_code;
+        }
+      }
+
+      best_roads.clear();
+      for (const auto& road_id : group) {
+        auto road_ptr = amap[road_id];
+        if (best_sort_code == road_ptr->sort_code) {
+          best_roads.push_back(road_ptr);
+        }
+      }
+
+      RoadPtr best_road = my_median_sorted(best_roads);
+
+      // Check consistency with BX=0
+      if (select_bx_zero(*best_road)) {
+        tmp_clean_roads.push_back(*best_road);
+
+        RoadPtr first_road = amap[group.front()];  // iphi range
+        RoadPtr last_road = amap[group.back()];    // iphi range
+        tmp_clean_roads_groupinfo.emplace_back(first_road->iphi, last_road->iphi);
+      }
+    }  // end loop over groups
+
+    if (tmp_clean_roads.empty())
+      return;
+
+    // Sort by 'sort code'
+    std::sort(tmp_clean_roads.begin(), tmp_clean_roads.end());
+
+    // Loop over the sorted roads, kill the siblings
+    for (size_t i=0; i<tmp_clean_roads.size(); ++i) {
+      bool keep = true;
+
+      // Check for intersection in the iphi range
+      for (size_t j=0; j<i; ++j) {
+        int32_t x1 = tmp_clean_roads_groupinfo[i].first;
+        int32_t x2 = tmp_clean_roads_groupinfo[i].second;
+        int32_t y1 = tmp_clean_roads_groupinfo[j].first;
+        int32_t y2 = tmp_clean_roads_groupinfo[j].second;
+
+        // No intersect between two ranges (x1, x2), (y1, y2): (x2 < y1) || (x1 > y2)
+        // Intersect: !((x2 < y1) || (x1 > y2)) = (x2 >= y1) and (x1 <= y2)
+        // Allow +/-2 due to extrapolation-to-EMTF error
+        if (((x2+2) >= y1) && ((x1-2) <= y2)) {
+          keep = false;
+          break;
+        }
+      }
+
+      // Do not share ME1/1, ME1/2, ME0, MB1, MB2
+      if (keep) {
+        using int32_t_pair = std::pair<int32_t, int32_t>;
+
+        auto make_hit_set = [](const auto& hits) {
+          std::set<int32_t_pair> s;
+          for (const auto& hit : hits) {
+            if ((hit.emtf_layer == 0) ||
+                (hit.emtf_layer == 1) ||
+                (hit.emtf_layer == 11) ||
+                (hit.emtf_layer == 12) ||
+                (hit.emtf_layer == 13) ) {
+              s.insert(std::make_pair(hit.emtf_layer, hit.emtf_phi));
+            }
+          }
+          return s;
+        };
+
+        const std::set<int32_t_pair>& s1 = make_hit_set(tmp_clean_roads[i].hits);
+        for (size_t j=0; j<i; ++j) {
+          const std::set<int32_t_pair>& s2 = make_hit_set(tmp_clean_roads[j].hits);
+
+          std::vector<int32_t_pair> v_intersection;
+          std::set_intersection(s1.begin(), s1.end(), s2.begin(), s2.end(), std::back_inserter(v_intersection));
+
+          if (!v_intersection.empty()) {  // has sharing
+            keep = false;
+            break;
+          }
+        }
+      }
+
+      // Finally, keep the road
+      if (keep) {
+        clean_roads.push_back(tmp_clean_roads[i]);
+      }
+    }  // end loop over tmp_clean_roads
     return;
   }
+
 private:
+  bool select_bx_zero(const Road& road) const {
+    int bx_counter1 = 0;  // count hits with BX <= -1
+    int bx_counter2 = 0;  // count hits with BX <= 0
+    int bx_counter3 = 0;  // count hits with BX > 0
+
+    std::set<int32_t> s;  // check if layer has been used
+
+    for (const auto& hit : road.hits) {
+      if (s.find(hit.emtf_layer) == s.end()) {  // !s.contains(hit.emtf_layer)
+        s.insert(hit.emtf_layer);
+        if (hit.bx <= -1) {
+          ++bx_counter1;
+        }
+        if (hit.bx <= 0) {
+          ++bx_counter2;
+        }
+        if (hit.bx > 0) {
+          ++bx_counter3;
+        }
+      }
+    }
+
+    //bool ret = (bx_counter1 < 2) && (bx_counter2 >= 2);
+    bool ret = (bx_counter1 <= 3) && (bx_counter2 >= 2) && (bx_counter3 <= 2);
+    return ret;
+  }
 };
 
 class RoadSlimming {
