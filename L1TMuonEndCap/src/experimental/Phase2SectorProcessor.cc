@@ -198,13 +198,13 @@ public:
 
 class Road {
 public:
-  typedef std::vector<Hit> road_hits_t;
+  using road_hits_t = std::vector<Hit>;
 
   // road_id = (endcap, sector, ipt, ieta, iphi)
-  typedef std::array<int32_t, 5> road_id_t;
+  using road_id_t = std::array<int32_t, 5>;
 
   road_id_t id() const {
-    road_id_t ret = {{endcap, sector, ipt, ieta, iphi}};
+    road_id_t ret {{endcap, sector, ipt, ieta, iphi}};
     return ret;
   }
 
@@ -226,7 +226,7 @@ public:
 
   explicit Road(int16_t vr_endcap, int16_t vr_sector, int16_t vr_ipt, int16_t vr_ieta, int16_t vr_iphi,
                 const road_hits_t& vr_hits, int16_t vr_mode, int16_t vr_quality,
-                int16_t vr_sort_code, int32_t vr_theta_median)
+                int16_t vr_sort_code, int32_t vr_phi_median, int32_t vr_theta_median)
   {
     endcap       = vr_endcap;
     sector       = vr_sector;
@@ -237,6 +237,7 @@ public:
     mode         = vr_mode;
     quality      = vr_quality;
     sort_code    = vr_sort_code;
+    phi_median   = vr_phi_median;
     theta_median = vr_theta_median;
   }
 
@@ -255,12 +256,13 @@ public:
   int16_t mode;
   int16_t quality;
   int16_t sort_code;
+  int32_t phi_median;
   int32_t theta_median;
 };
 
 class Track {
 public:
-  typedef std::vector<Hit> road_hits_t;
+  using road_hits_t = std::vector<Hit>;
 
   explicit Track(int16_t vt_endcap, int16_t vt_sector,
                  const road_hits_t& vt_hits, int16_t vt_mode, int16_t vt_quality, int16_t vt_zone,
@@ -302,9 +304,9 @@ public:
   float   glob_eta;
 };
 
-typedef std::array<float, (ROAD_LAYER_NVARS_P1 * NLAYERS) + ROAD_INFO_NVARS> Variable;
+using Variable = std::array<float, (ROAD_LAYER_NVARS_P1 * NLAYERS) + ROAD_INFO_NVARS>;
 
-typedef std::array<float, NPREDS> Prediction;
+using Prediction = std::array<float, NPREDS>;
 
 
 // _____________________________________________________________________________
@@ -456,6 +458,10 @@ public:
 
   int32_t find_pattern_x(int32_t emtf_phi) const {
     return (emtf_phi+16)/32;  // divide by 'quadstrip' unit (4 * 8)
+  }
+
+  int32_t find_pattern_x_inverse(int32_t x) const {
+    return (x*32);  // multiply by 'quadstrip' unit (4 * 8)
   }
 
   // Calculate transverse impact parameter, d0
@@ -752,11 +758,11 @@ public:
 
 private:
   // 3-D array of size [# types][# stations][# rings]
-  typedef std::array<std::array<std::array<int32_t, 5>, 5>, 5> lut_5_5_5_t;
+  using lut_5_5_5_t = std::array<std::array<std::array<int32_t, 5>, 5>, 5>;
   lut_5_5_5_t find_emtf_layer_lut;
 
   // 5-D array of size [# types][# stations][# rings][# zones][low, high]
-  typedef std::array<std::array<std::array<std::array<std::array<int32_t, 2>, 7>, 5>, 5>, 5> lut_5_5_5_7_2_t;
+  using lut_5_5_5_7_2_t = std::array<std::array<std::array<std::array<std::array<int32_t, 2>, 7>, 5>, 5>, 5>;
   lut_5_5_5_7_2_t find_emtf_zones_lut;
 };
 
@@ -783,8 +789,8 @@ public:
   // 4-D array of size [NLAYERS][NETA][NVARS][NPT]
   // Note: rearranged for cache-friendliness. In the original python script,
   // it's arranged as [NPT][NETA][NLAYERS][NVARS]
-  typedef std::array<std::array<std::array<std::array<int32_t, PATTERN_BANK_NPT>,
-      PATTERN_BANK_NVARS>, PATTERN_BANK_NETA>, PATTERN_BANK_NLAYERS> patternbank_t;
+  using patternbank_t = std::array<std::array<std::array<std::array<int32_t, PATTERN_BANK_NPT>,
+      PATTERN_BANK_NVARS>, PATTERN_BANK_NETA>, PATTERN_BANK_NLAYERS>;
 
   patternbank_t x_array;
 };
@@ -946,23 +952,22 @@ private:
         ((ieta == 6) && ((road_mode_mb1 == 3) || (road_mode_mb2 == 3) || (road_mode_me13 == 3))) )
     {
       std::vector<int32_t> road_hits_layers;
-      std::vector<int32_t> road_hits_thetas;
       for (const auto& hit : road_hits) {
         road_hits_layers.push_back(hit.emtf_layer);
-        road_hits_thetas.push_back(hit.emtf_theta);
       }
 
       //int32_t road_quality = util.find_emtf_road_quality(ipt);
       int32_t road_quality = util.find_emtf_road_quality((ipt%9));  // using 18 patterns
       int32_t road_sort_code = util.find_emtf_road_sort_code(road_quality, road_hits_layers);
-      int32_t road_theta_median = my_median_unsorted(road_hits_thetas);
+      int32_t road_phi_median = 0;   // to be determined later
+      int32_t road_theta_median = 0; // to be determined later
 
       //Road(int16_t vr_endcap, int16_t vr_sector, int16_t vr_ipt, int16_t vr_ieta, int16_t vr_iphi,
       //     const road_hits_t& vr_hits, int16_t vr_mode, int16_t vr_quality,
       //     int16_t vr_sort_code, int32_t vr_theta_median)
       sector_roads.emplace_back(road_id[0], road_id[1], road_id[2], road_id[3], road_id[4],
                                 road_hits, road_mode, road_quality,
-                                road_sort_code, road_theta_median);
+                                road_sort_code, road_phi_median, road_theta_median);
     }
     return;
   }
@@ -1025,7 +1030,7 @@ private:
 
           // Full range is 0 <= iphi <= 154. but a reduced range is sufficient (27% saving on patterns)
           if ((PATTERN_X_SEARCH_MIN <= iphi) && (iphi <= PATTERN_X_SEARCH_MAX)) {
-            Road::road_id_t road_id = {{0, 0, ipt, ieta, iphi}};  //CUIDADO: set endcap & sector to 0
+            Road::road_id_t road_id {{0, 0, ipt, ieta, iphi}};  //CUIDADO: set endcap & sector to 0
             amap[road_id].push_back(hit);
           }
         }
@@ -1044,7 +1049,7 @@ private:
 
 class RoadCleaning {
 public:
-  typedef const Road* RoadPtr;
+  using RoadPtr = const Road*;
 
   void run(const std::vector<Road>& roads, std::vector<Road>& clean_roads) const {
     // Skip if no roads
@@ -1104,7 +1109,7 @@ public:
     const std::vector<std::size_t>& splits = make_row_splits(road_ids.begin(), road_ids.end());
     assert(splits.size() >= 2);
 
-    // Loop over groups, pick the road with best sort code in each group
+    // Loop over the groups, pick the road with best sort code in each group
     std::vector<Road> tmp_clean_roads; // the "best" roads in each group
     std::vector<std::pair<int32_t, int32_t> > tmp_clean_roads_groupinfo;  // keep track of the iphi range of each group
 
@@ -1175,7 +1180,7 @@ public:
 
       // Do not share ME1/1, ME1/2, ME0, MB1, MB2
       if (keep) {
-        using int32_t_pair = std::pair<int32_t, int32_t>;
+        using int32_t_pair = std::pair<int32_t, int32_t>;  // emtf_layer, emtf_phi
 
         auto make_hit_set = [](const auto& hits) {
           std::set<int32_t_pair> s;
@@ -1245,9 +1250,78 @@ private:
 class RoadSlimming {
 public:
   void run(const std::vector<Road>& clean_roads, std::vector<Road>& slim_roads) const {
+    for (const auto& road : clean_roads) {
+      const int32_t ipt  = road.ipt;
+      const int32_t ieta = road.ieta;
+
+      // Retrieve the offset terms for each emtf_layer
+      std::array<int32_t, NLAYERS> patterns_xc;
+      for (size_t i=0; i<patterns_xc.size(); ++i) {
+        int32_t xc = bank.x_array[i][ieta][1][ipt];
+        patterns_xc[i] = util.find_pattern_x_inverse(xc);
+      }
+
+      // Find median phi and theta
+      std::vector<int32_t> road_hits_phis;
+      std::vector<int32_t> road_hits_thetas;
+      for (const auto& hit : road.hits) {
+        int32_t hit_lay = hit.emtf_layer;
+        int32_t phi_offset = patterns_xc[hit_lay];
+        road_hits_phis.push_back(hit.emtf_phi - phi_offset);
+        road_hits_thetas.push_back(hit.emtf_theta);
+      }
+
+      int32_t road_phi_median = my_median_unsorted(road_hits_phis);
+      int32_t road_theta_median = my_median_unsorted(road_hits_thetas);
+
+      // Loop over all the emtf_layer's, select unique hit for each emtf_layer
+      std::vector<Hit> slim_road_hits;
+
+      using int32_t_tuple = std::array<int32_t, 4>;  // ihit, dphi, dtheta, qual
+      std::vector<int32_t_tuple> sort_criteria;  // for sorting hits
+
+      auto sort_criteria_f = [](const int32_t_tuple& lhs, const int32_t_tuple& rhs) {
+        // (max qual, min dtheta, min dphi) is better
+        return std::make_tuple(-lhs[3], lhs[2], lhs[1]) < std::make_tuple(-rhs[3], rhs[2], rhs[1]);
+      };
+
+      for (size_t i=0; i<patterns_xc.size(); ++i) {
+        sort_criteria.clear();
+
+        int32_t hit_lay = i;
+        int32_t phi_offset = patterns_xc[hit_lay];
+
+        int32_t ihit = 0;
+
+        for (const auto& hit : road.hits) {
+          if (hit_lay == hit.emtf_layer) {
+            int32_t dphi   = std::abs(hit.emtf_phi - (road_phi_median + phi_offset));
+            int32_t dtheta = std::abs(hit.emtf_theta - road_theta_median);
+            int32_t qual   = std::abs(hit.emtf_qual);
+
+            int32_t_tuple atuple {{ihit, dphi, dtheta, qual}};
+            sort_criteria.emplace_back(atuple);
+          }
+          ++ihit;
+        }
+
+        // Find the best hit, which is (max qual, min dtheta, min dphi)
+        if (!sort_criteria.empty()) {
+          std::sort(sort_criteria.begin(), sort_criteria.end(), sort_criteria_f);
+          int32_t best_ihit = sort_criteria.front()[0];
+          slim_road_hits.emplace_back(road.hits[best_ihit]);
+        }
+      }
+
+      //Road(int16_t vr_endcap, int16_t vr_sector, int16_t vr_ipt, int16_t vr_ieta, int16_t vr_iphi,
+      //     const road_hits_t& vr_hits, int16_t vr_mode, int16_t vr_quality,
+      //     int16_t vr_sort_code, int32_t vr_theta_median)
+      slim_roads.emplace_back(road.endcap, road.sector, road.ipt, road.ieta, road.iphi,
+                              slim_road_hits, road.mode, road.quality,
+                              road.sort_code, road_phi_median, road_theta_median);
+    }  // end loop over clean_roads
     return;
   }
-private:
 };
 
 class PtAssignment {
