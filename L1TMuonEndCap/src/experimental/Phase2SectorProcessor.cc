@@ -130,12 +130,13 @@ void Phase2SectorProcessor::process(
 // Specific data formats
 // (adapted from rootpy_trackbuilding9.py)
 
-constexpr int NLAYERS = 16;  // 5 (CSC) + 4 (RPC) + 3 (GEM) + 4 (DT)
-constexpr int NPREDS = 2;    // pT, PU discr
+constexpr int NLAYERS = 16;      // 5 (CSC) + 4 (RPC) + 3 (GEM) + 4 (DT)
+constexpr int NFEATURES = 36;    // NN features
+constexpr int NPREDICTIONS = 2;  // NN outputs: pT, PU discr
 
-constexpr int ROAD_LAYER_NVARS = 10;  // each layer in the road carries 10 variables
+constexpr int ROAD_LAYER_NVARS = 9;  // each layer in the road carries 9 variables
 constexpr int ROAD_LAYER_NVARS_P1 = ROAD_LAYER_NVARS + 1;  // plus layer mask
-constexpr int ROAD_INFO_NVARS = 3;
+constexpr int ROAD_INFO_NVARS = 4;
 
 constexpr int PATTERN_BANK_NPT = 18;   // straightness
 constexpr int PATTERN_BANK_NETA = 7;   // zone
@@ -154,7 +155,7 @@ public:
                int16_t vh_endsec, int16_t vh_fr, int16_t vh_bx,
                int32_t vh_emtf_layer, int32_t vh_emtf_phi, int32_t vh_emtf_theta,
                int32_t vh_emtf_bend, int32_t vh_emtf_qual, int32_t vh_emtf_time,
-               int32_t vh_old_emtf_phi, int32_t vh_old_emtf_bend, int32_t vh_extra_emtf_theta,
+               int32_t vh_old_emtf_phi, int32_t vh_old_emtf_bend,
                int32_t vh_sim_tp, int32_t vh_ref)
   {
     type             = vh_type;
@@ -171,7 +172,6 @@ public:
     emtf_time        = vh_emtf_time;
     old_emtf_phi     = vh_old_emtf_phi;
     old_emtf_bend    = vh_old_emtf_bend;
-    extra_emtf_theta = vh_extra_emtf_theta;
     sim_tp           = vh_sim_tp;
     ref              = vh_ref;
   }
@@ -191,7 +191,6 @@ public:
   int32_t emtf_time;
   int32_t old_emtf_phi;
   int32_t old_emtf_bend;
-  int32_t extra_emtf_theta;
   int32_t sim_tp;
   int32_t ref;
 };
@@ -304,9 +303,14 @@ public:
   float   glob_eta;
 };
 
-using Variable = std::array<float, (ROAD_LAYER_NVARS_P1 * NLAYERS) + ROAD_INFO_NVARS>;
+//// A 'Variable' holds 164 values
+//using Variable = std::array<float, (ROAD_LAYER_NVARS_P1 * NLAYERS) + ROAD_INFO_NVARS>;
 
-using Prediction = std::array<float, NPREDS>;
+// A 'Feature' holds 36 values
+using Feature = std::array<float, NFEATURES>;
+
+// A 'Prediction' holds 2 values
+using Prediction = std::array<float, NPREDICTIONS>;
 
 
 // _____________________________________________________________________________
@@ -809,7 +813,6 @@ public:
     for (size_t ihit = 0; ihit < conv_hits.size(); ++ihit) {
       const EMTFHit& conv_hit = conv_hits.at(ihit);
 
-      int32_t dummy_extra_emtf_theta = 0;
       int32_t dummy_sim_tp = -1;
 
       if (util.is_emtf_legit_hit(conv_hit)) {
@@ -817,13 +820,13 @@ public:
         //    int16_t vh_endsec, int16_t vh_fr, int16_t vh_bx,
         //    int32_t vh_emtf_layer, int32_t vh_emtf_phi, int32_t vh_emtf_theta,
         //    int32_t vh_emtf_bend, int32_t vh_emtf_qual, int32_t vh_emtf_time,
-        //    int32_t vh_old_emtf_phi, int32_t vh_old_emtf_bend, int32_t vh_extra_emtf_theta,
+        //    int32_t vh_old_emtf_phi, int32_t vh_old_emtf_bend,
         //    int32_t vh_sim_tp, int32_t vh_ref)
         sector_hits.emplace_back(conv_hit.Subsystem(), conv_hit.Station(), conv_hit.Ring(),
             util.find_endsec(conv_hit), util.find_fr(conv_hit), conv_hit.BX(),
             util.find_emtf_layer(conv_hit), util.find_emtf_phi(conv_hit), util.find_emtf_theta(conv_hit),
             util.find_emtf_bend(conv_hit), util.find_emtf_qual(conv_hit), util.find_emtf_time(conv_hit),
-            util.find_emtf_old_phi(conv_hit), util.find_emtf_old_bend(conv_hit), dummy_extra_emtf_theta,
+            util.find_emtf_old_phi(conv_hit), util.find_emtf_old_bend(conv_hit),
             dummy_sim_tp, ihit);
 
         // Set sector_mode
@@ -1141,15 +1144,12 @@ public:
       }
 
       RoadPtr best_road = my_median_sorted(best_roads);
+      tmp_clean_roads.push_back(*best_road);
 
-      // Check consistency with BX=0
-      if (select_bx_zero(*best_road)) {
-        tmp_clean_roads.push_back(*best_road);
+      RoadPtr first_road = amap[group.front()];  // iphi range
+      RoadPtr last_road = amap[group.back()];    // iphi range
+      tmp_clean_roads_groupinfo.emplace_back(first_road->iphi, last_road->iphi);
 
-        RoadPtr first_road = amap[group.front()];  // iphi range
-        RoadPtr last_road = amap[group.back()];    // iphi range
-        tmp_clean_roads_groupinfo.emplace_back(first_road->iphi, last_road->iphi);
-      }
     }  // end loop over groups
 
     if (tmp_clean_roads.empty())
@@ -1210,9 +1210,11 @@ public:
         }
       }
 
-      // Finally, keep the road
+      // Finally, check consistency with BX=0
       if (keep) {
-        clean_roads.push_back(tmp_clean_roads[i]);
+        if (select_bx_zero(tmp_clean_roads[i])) {
+          clean_roads.push_back(tmp_clean_roads[i]);
+        }
       }
     }  // end loop over tmp_clean_roads
     return;
@@ -1250,6 +1252,8 @@ private:
 class RoadSlimming {
 public:
   void run(const std::vector<Road>& clean_roads, std::vector<Road>& slim_roads) const {
+
+    // Loop over roads
     for (const auto& road : clean_roads) {
       const int32_t ipt  = road.ipt;
       const int32_t ieta = road.ieta;
@@ -1327,15 +1331,38 @@ public:
 class PtAssignment {
 public:
   void run(const std::vector<Road>& slim_roads,
-           std::vector<Variable>& variables, std::vector<Prediction>& predictions) const {
+           std::vector<Feature>& features, std::vector<Prediction>& predictions) const {
+
+    // Loop over roads
+    for (const auto& road : slim_roads) {
+      Feature feature;
+      Prediction prediction;
+      feature.fill(0);
+      prediction.fill(0);
+      predict(road, feature, prediction);
+
+      features.push_back(feature);
+      predictions.push_back(prediction);
+    }  // end loop over slim_roads
+
+    assert(slim_roads.size() == features.size());
+    assert(slim_roads.size() == predictions.size());
     return;
   }
+
 private:
+  void encode(const Road& road, Feature& feature) const {
+    return;
+  }
+
+  void predict(const Road& road, Feature& feature, Prediction& prediction) const {
+    return;
+  }
 };
 
 class TrackProducer {
 public:
-  void run(const std::vector<Road>& slim_roads, const std::vector<Variable>& variables, const std::vector<Prediction>& predictions,
+  void run(const std::vector<Road>& slim_roads, const std::vector<Prediction>& predictions,
            std::vector<Track>& tracks) const {
     return;
   }
@@ -1366,15 +1393,16 @@ void Phase2SectorProcessor::build(
 ) const {
 
   std::vector<Road> roads, clean_roads, slim_roads;
-  std::vector<Variable> variables;
+  //std::vector<Variable> variables;
+  std::vector<Feature> features;
   std::vector<Prediction> predictions;
   std::vector<Track> tracks;
 
   recog.run(conv_hits, roads);
   clean.run(roads, clean_roads);
   slim.run(clean_roads, slim_roads);
-  assig.run(slim_roads, variables, predictions);
-  trkprod.run(slim_roads, variables, predictions, tracks);
+  assig.run(slim_roads, features, predictions);
+  trkprod.run(slim_roads, predictions, tracks);
   ghost.run(tracks, best_tracks);
 
   return;
