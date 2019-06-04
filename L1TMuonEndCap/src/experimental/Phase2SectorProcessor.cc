@@ -1,5 +1,7 @@
 #include "L1Trigger/L1TMuonEndCap/interface/experimental/Phase2SectorProcessor.h"
 
+#include "L1Trigger/L1TMuonEndCap/interface/TrackTools.h"
+
 #include "PhysicsTools/TensorFlow/interface/TensorFlow.h"
 
 
@@ -17,6 +19,7 @@ void Phase2SectorProcessor::configure(
     const GeometryTranslator* geom,
     const ConditionHelper* cond,
     const SectorProcessorLUT* lut,
+    PtAssignmentEngine* pt_assign_engine,
     // Sector processor config
     int verbose, int endcap, int sector, int bx,
     int bxShiftCSC, int bxShiftRPC, int bxShiftGEM,
@@ -28,10 +31,12 @@ void Phase2SectorProcessor::configure(
   assert(geom != nullptr);
   assert(cond != nullptr);
   assert(lut  != nullptr);
+  assert(pt_assign_engine != nullptr);
 
-  geom_       = geom;
-  cond_       = cond;
-  lut_        = lut;
+  geom_             = geom;
+  cond_             = cond;
+  lut_              = lut;
+  pt_assign_engine_ = pt_assign_engine;
 
   verbose_    = verbose;
   endcap_     = endcap;
@@ -90,7 +95,7 @@ void Phase2SectorProcessor::process(
   // Input
 
   EMTFHitCollection conv_hits;     // "converted" hits converted by primitive converter
-  EMTFTrackCollection best_tracks; // "best" tracks selected from all the zones
+  std::vector<Track> best_tracks;  // "best" tracks selected from all the zones. 'Track' is an internal class
 
   std::map<int, TriggerPrimitiveCollection> selected_dt_map;
   std::map<int, TriggerPrimitiveCollection> selected_csc_map;
@@ -117,14 +122,16 @@ void Phase2SectorProcessor::process(
   // ___________________________________________________________________________
   // Build
 
-  build(conv_hits, best_tracks);
+  build_tracks(conv_hits, best_tracks);
 
   // ___________________________________________________________________________
   // Output
 
-  out_hits.insert(out_hits.end(), conv_hits.begin(), conv_hits.end());
-  out_tracks.insert(out_tracks.end(), best_tracks.begin(), best_tracks.end());
+  EMTFTrackCollection best_emtf_tracks;
+  convert_tracks(conv_hits, best_tracks, best_emtf_tracks);
 
+  out_hits.insert(out_hits.end(), conv_hits.begin(), conv_hits.end());
+  out_tracks.insert(out_tracks.end(), best_emtf_tracks.begin(), best_emtf_tracks.end());
   return;
 }
 
@@ -825,9 +832,11 @@ public:
 
 static const PatternBank bank;
 
+// _____________________________________________________________________________
 class PatternRecognition {
 public:
-  void run(const EMTFHitCollection& conv_hits, std::vector<Road>& roads) const {
+  void run(int32_t endcap, int32_t sector,
+           const EMTFHitCollection& conv_hits, std::vector<Road>& roads) const {
 
     // Convert all the hits again and apply the filter to get the legit hits
     int32_t sector_mode = 0;
@@ -873,7 +882,7 @@ public:
     }
 
     // Apply patterns to the sector hits
-    apply_patterns(sector_hits, sector_roads);
+    apply_patterns(endcap, sector, sector_hits, sector_roads);
     roads.insert(roads.end(), sector_roads.begin(), sector_roads.end());
     return;
   }
@@ -1025,7 +1034,8 @@ private:
     return;
   }
 
-  void apply_patterns(const std::vector<Hit>& sector_hits, std::vector<Road>& sector_roads) const {
+  void apply_patterns(int32_t endcap, int32_t sector,
+                      const std::vector<Hit>& sector_hits, std::vector<Road>& sector_roads) const {
 
     // Create a map of road_id -> road_hits
     std::unordered_map<Road::road_id_t, Road::road_hits_t, Road::Hasher> amap;
@@ -1057,7 +1067,7 @@ private:
 
           // Full range is 0 <= iphi <= 154. but a reduced range is sufficient (27% saving on patterns)
           if ((PATTERN_X_SEARCH_MIN <= iphi) && (iphi <= PATTERN_X_SEARCH_MAX)) {
-            Road::road_id_t road_id {{0, 0, ipt, ieta, iphi}};  //CUIDADO: set endcap & sector to 0
+            Road::road_id_t road_id {{endcap, sector, ipt, ieta, iphi}};
             amap[road_id].push_back(hit);
           }
         }
@@ -1076,8 +1086,6 @@ private:
 
 class RoadCleaning {
 public:
-  using RoadPtr = const Road*;
-
   void run(const std::vector<Road>& roads, std::vector<Road>& clean_roads) const {
     // Skip if no roads
     if (roads.empty()) {
@@ -1085,6 +1093,7 @@ public:
     }
 
     // Create a map of road_id -> road
+    using RoadPtr = const Road*;
     std::unordered_map<Road::road_id_t, RoadPtr, Road::Hasher> amap;
 
     // and a (sorted) vector of road_id's
@@ -1200,38 +1209,38 @@ public:
           keep = false;
           break;
         }
-      }
+      }  // end inner loop over tmp_clean_roads[:i]
 
       // Do not share ME1/1, ME1/2, ME0, MB1, MB2
       if (keep) {
-        using int32_t_pair = std::pair<int32_t, int32_t>;  // emtf_layer, emtf_phi
+        using int32_t_tuple = std::tuple<int32_t, int32_t, int32_t>;  // endsec, emtf_layer, emtf_phi
 
         auto make_hit_set = [](const auto& hits) {
-          std::set<int32_t_pair> s;
+          std::set<int32_t_tuple> s;
           for (const auto& hit : hits) {
             if ((hit.emtf_layer == 0) ||
                 (hit.emtf_layer == 1) ||
                 (hit.emtf_layer == 11) ||
                 (hit.emtf_layer == 12) ||
                 (hit.emtf_layer == 13) ) {
-              s.insert(std::make_pair(hit.emtf_layer, hit.emtf_phi));
+              s.insert(std::make_tuple(hit.endsec, hit.emtf_layer, hit.emtf_phi));
             }
           }
           return s;
         };
 
-        const std::set<int32_t_pair>& s1 = make_hit_set(tmp_clean_roads[i].hits);
+        const std::set<int32_t_tuple>& s1 = make_hit_set(tmp_clean_roads[i].hits);
         for (size_t j=0; j<i; ++j) {
-          const std::set<int32_t_pair>& s2 = make_hit_set(tmp_clean_roads[j].hits);
+          const std::set<int32_t_tuple>& s2 = make_hit_set(tmp_clean_roads[j].hits);
 
-          std::vector<int32_t_pair> v_intersection;
+          std::vector<int32_t_tuple> v_intersection;
           std::set_intersection(s1.begin(), s1.end(), s2.begin(), s2.end(), std::back_inserter(v_intersection));
 
           if (!v_intersection.empty()) {  // has sharing
             keep = false;
             break;
           }
-        }
+        }  // end inner loop over tmp_clean_roads[:i]
       }
 
       // Finally, check consistency with BX=0
@@ -1305,12 +1314,20 @@ public:
       // Loop over all the emtf_layer's, select unique hit for each emtf_layer
       std::vector<Hit> slim_road_hits;
 
-      using int32_t_tuple = std::array<int32_t, 4>;  // ihit, dphi, dtheta, qual
+      using int32_t_tuple = std::tuple<int32_t, int32_t, int32_t, int32_t>;  // ihit, dphi, dtheta, qual
       std::vector<int32_t_tuple> sort_criteria;  // for sorting hits
 
       auto sort_criteria_f = [](const int32_t_tuple& lhs, const int32_t_tuple& rhs) {
         // (max qual, min dtheta, min dphi) is better
-        return std::make_tuple(-lhs[3], lhs[2], lhs[1]) < std::make_tuple(-rhs[3], rhs[2], rhs[1]);
+        //auto lhs0 = std::get<0>(lhs);
+        auto lhs1 = std::get<1>(lhs);
+        auto lhs2 = std::get<2>(lhs);
+        auto lhs3 = std::get<3>(lhs);
+        //auto rhs0 = std::get<0>(rhs);
+        auto rhs1 = std::get<1>(rhs);
+        auto rhs2 = std::get<2>(rhs);
+        auto rhs3 = std::get<3>(rhs);
+        return std::make_tuple(-lhs3, lhs2, lhs1) < std::make_tuple(-rhs3, rhs2, rhs1);
       };
 
       for (size_t i=0; i<patterns_xc.size(); ++i) {
@@ -1326,9 +1343,7 @@ public:
             int32_t dphi   = std::abs(hit.emtf_phi - (road_phi_median + phi_offset));
             int32_t dtheta = std::abs(hit.emtf_theta - road_theta_median);
             int32_t qual   = std::abs(hit.emtf_qual);
-
-            int32_t_tuple atuple {{ihit, dphi, dtheta, qual}};
-            sort_criteria.emplace_back(atuple);
+            sort_criteria.emplace_back(ihit, dphi, dtheta, qual);
           }
           ++ihit;
         }
@@ -1336,7 +1351,7 @@ public:
         // Find the best hit, which is (max qual, min dtheta, min dphi)
         if (!sort_criteria.empty()) {
           std::sort(sort_criteria.begin(), sort_criteria.end(), sort_criteria_f);
-          int32_t best_ihit = sort_criteria.front()[0];
+          int32_t best_ihit = std::get<0>(sort_criteria.front());
           slim_road_hits.emplace_back(road.hits[best_ihit]);
         }
       }
@@ -1529,7 +1544,7 @@ public:
     float x1 = float(binx+1) * s_step;
     float y0 = s_lut.at(x0);
     float y1 = s_lut.at(x1);
-    float y = (x - x0) / (x1 - x0) * (y1 - y0) + y0;
+    float y = (x - x0) / (x1 - x0) * (y1 - y0) + y0;  // trigger_pt
     return y;
   }
 
@@ -1603,10 +1618,156 @@ private:
 
 class GhostBusting {
 public:
-  void run(const std::vector<Track>& tracks, EMTFTrackCollection& best_tracks) const {
+  void run(std::vector<Track>& tracks) const {
+
+    std::vector<Track> tracks_after_gb;
+
+    // Sort by (zone, chi2)
+    // zone is reordered such that zone 6 has the lowest priority.
+    auto sort_tracks_f = [](const Track& lhs, const Track& rhs) {
+      // (max zone, max chi2) is better
+      return std::make_pair((lhs.zone+1) % 7, lhs.chi2) > std::make_pair((rhs.zone+1) % 7, rhs.chi2);
+    };
+    std::sort(tracks.begin(), tracks.end(), sort_tracks_f);
+
+    // Loop over the sorted tracks and remove duplicates (ghosts)
+    for (size_t i=0; i<tracks.size(); ++i) {
+      bool keep = true;
+
+      // Do not share ME1/1, ME1/2, ME0, MB1, MB2
+      //CUIDADO: not checking for neighbor hits
+      if (keep) {
+        using int32_t_tuple = std::tuple<int32_t, int32_t, int32_t>;  // endsec, emtf_layer, emtf_phi
+
+        auto make_hit_set = [](const auto& hits) {
+          std::set<int32_t_tuple> s;
+          for (const auto& hit : hits) {
+            if ((hit.emtf_layer == 0) ||
+                (hit.emtf_layer == 1) ||
+                (hit.emtf_layer == 11) ||
+                (hit.emtf_layer == 12) ||
+                (hit.emtf_layer == 13) ) {
+              s.insert(std::make_tuple(hit.endsec, hit.emtf_layer, hit.emtf_phi));
+            }
+          }
+          return s;
+        };
+
+        const std::set<int32_t_tuple>& s1 = make_hit_set(tracks[i].hits);
+        for (size_t j=0; j<i; ++j) {
+          const std::set<int32_t_tuple>& s2 = make_hit_set(tracks[j].hits);
+
+          std::vector<int32_t_tuple> v_intersection;
+          std::set_intersection(s1.begin(), s1.end(), s2.begin(), s2.end(), std::back_inserter(v_intersection));
+
+          if (!v_intersection.empty()) {  // has sharing
+            keep = false;
+            break;
+          }
+        }  // end inner loop over tracks[:i]
+      }
+
+      if (keep) {
+        tracks_after_gb.push_back(tracks[i]);
+      }
+    }  // end loop over tracks
+
+    std::swap(tracks, tracks_after_gb);
     return;
   }
-private:
+};
+
+class TrackConverter {
+public:
+  void run(const PtAssignmentEngineAux& the_aux, const EMTFHitCollection& conv_hits,
+           const std::vector<Track>& best_tracks, EMTFTrackCollection& best_emtf_tracks) const {
+
+    // Loop over tracks
+    for (const auto& track : best_tracks) {
+
+      // Create PtAssignment::aux()
+      auto aux = [the_aux](){ return the_aux; };
+
+      // Create the hit collection
+      EMTFHitCollection emtf_track_hits;
+      for (const auto& hit : track.hits) {
+        const EMTFHit& emtf_hit = conv_hits.at(hit.ref);
+        emtf_track_hits.push_back(emtf_hit);
+      }
+
+      // Create the PTLUT data
+      //CUIDADO: not filled
+      EMTFPtLUT ptlut_data = {};
+
+      // Create a track
+      EMTFTrack emtf_track;
+
+      // Setters
+      // Part 1: from src/PrimitiveMatching.cc
+      emtf_track.set_endcap     ( (track.endcap == 1) ? 1 : -1 );
+      emtf_track.set_sector     ( track.sector );
+      emtf_track.set_sector_idx ( (track.endcap == 1) ? (track.sector - 1) : (track.sector + 5) );
+      emtf_track.set_bx         ( 0 );
+      emtf_track.set_zone       ( track.zone );
+      //emtf_track.set_ph_num     ( road.Key_zhit() );
+      //emtf_track.set_ph_q       ( road.Quality_code() );
+      //emtf_track.set_rank       ( road.Quality_code() );
+      //emtf_track.set_winner     ( road.Winner() );
+      emtf_track.clear_Hits();
+      emtf_track.set_Hits( emtf_track_hits );
+
+      // Part 2: from src/AngleCalculation.cc
+      //emtf_track.set_rank     ( rank );
+      emtf_track.set_mode     ( track.mode );
+      //emtf_track.set_mode_inv ( mode_inv );
+      emtf_track.set_phi_fp   ( track.emtf_phi );
+      emtf_track.set_theta_fp ( track.emtf_theta );
+      emtf_track.set_PtLUT    ( ptlut_data );
+      emtf_track.set_phi_loc  ( emtf::calc_phi_loc_deg(emtf_track.Phi_fp()) );
+      emtf_track.set_phi_glob ( emtf::calc_phi_glob_deg(emtf_track.Phi_loc(), emtf_track.Sector()) );
+      emtf_track.set_theta    ( emtf::calc_theta_deg_from_int(emtf_track.Theta_fp()) );
+      emtf_track.set_eta      ( emtf::calc_eta_from_theta_deg(emtf_track.Theta(), emtf_track.Endcap()) );
+      //emtf_track.clear_Hits();
+      //emtf_track.set_Hits( tmp_hits );
+      //emtf_track.set_first_bx  ( first_bx );
+      //emtf_track.set_second_bx ( second_bx );
+
+      // Part 3: from src/PtAssignment.cc
+      //emtf_track.set_PtLUT    ( ptlut_data );
+      emtf_track.set_pt_XML ( track.xml_pt );
+      emtf_track.set_pt     ( track.pt );
+      emtf_track.set_charge ( track.q );
+      //
+      int gmt_pt  = aux().getGMTPt(emtf_track.Pt());
+      int gmt_phi = aux().getGMTPhiV2(emtf_track.Phi_fp());
+      int gmt_eta = aux().getGMTEta(emtf_track.Theta_fp(), emtf_track.Endcap());
+      bool promoteMode7 = false;
+      int modeQualVer = 2;
+      int gmt_quality = aux().getGMTQuality(emtf_track.Mode(), emtf_track.Theta_fp(), promoteMode7, modeQualVer);
+      int charge = 0;
+      if (emtf_track.Charge() == 1)
+        charge = 1;
+      int charge_valid = 1;
+      if (emtf_track.Charge() == 0)
+        charge_valid = 0;
+      std::pair<int, int> gmt_charge = std::make_pair(charge, charge_valid);
+      emtf_track.set_gmt_pt           ( gmt_pt );
+      emtf_track.set_gmt_phi          ( gmt_phi );
+      emtf_track.set_gmt_eta          ( gmt_eta );
+      emtf_track.set_gmt_quality      ( gmt_quality );
+      emtf_track.set_gmt_charge       ( gmt_charge.first );
+      emtf_track.set_gmt_charge_valid ( gmt_charge.second );
+
+      // Part 4: from src/BestTrackSelection.cc
+      emtf_track.set_track_num ( best_emtf_tracks.size() );
+      //emtf_track.set_winner ( o );
+      //emtf_track.set_bx ( second_bx );
+
+      // Finally
+      best_emtf_tracks.push_back(emtf_track);
+    }  // end loop over tracks
+    return;
+  }
 };
 
 static const PatternRecognition recog;
@@ -1615,28 +1776,46 @@ static const RoadSlimming slim;
 static const PtAssignment assig;
 static const TrackProducer trkprod;
 static const GhostBusting ghost;
+static const TrackConverter trkconv;
 
 // _____________________________________________________________________________
-void Phase2SectorProcessor::build(
+void Phase2SectorProcessor::build_tracks(
     // Input
     const EMTFHitCollection& conv_hits,
     // Output
-    EMTFTrackCollection& best_tracks
+    std::vector<Track>& best_tracks
 ) const {
-
+  // Containers for each sector
   std::vector<Road> roads, clean_roads, slim_roads;
-  //std::vector<Variable> variables;
   std::vector<Feature> features;
   std::vector<Prediction> predictions;
   std::vector<Track> tracks;
 
-  recog.run(conv_hits, roads);
+  // Run the algorithms
+  recog.run(endcap_, sector_, conv_hits, roads);
   clean.run(roads, clean_roads);
   slim.run(clean_roads, slim_roads);
   assig.run(slim_roads, features, predictions);
   trkprod.run(slim_roads, predictions, tracks);
-  ghost.run(tracks, best_tracks);
 
+  best_tracks.insert(best_tracks.end(), tracks.begin(), tracks.end());  // best_tracks collects tracks from all sectors
+  if (endcap_ == 2 && sector_ == 6) {  // using the last sector processor as uGMT to do ghost busting
+    ghost.run(best_tracks);
+  }
+  return;
+}
+
+// _____________________________________________________________________________
+void Phase2SectorProcessor::convert_tracks(
+    // Input
+    const EMTFHitCollection& conv_hits,
+    const std::vector<Track>& best_tracks,
+    // Output
+    EMTFTrackCollection& best_emtf_tracks
+) const {
+  if (endcap_ == 2 && sector_ == 6) {  // using the last sector processor to convert and output the tracks (after ghost busting)
+    trkconv.run(pt_assign_engine_->aux(), conv_hits, best_tracks, best_emtf_tracks);
+  }
   return;
 }
 

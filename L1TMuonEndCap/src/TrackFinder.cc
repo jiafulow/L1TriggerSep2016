@@ -215,6 +215,7 @@ void TrackFinder::process(
           &geometry_translator_,
           &condition_helper_,
           &sector_processor_lut_,
+          pt_assign_engine_.get(),
           verbose_, endcap, sector, bx,
           bxShiftCSC, bxShiftRPC, bxShiftGEM,
           era_

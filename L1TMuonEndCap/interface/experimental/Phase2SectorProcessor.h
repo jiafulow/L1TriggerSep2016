@@ -30,12 +30,17 @@
 //#include "L1Trigger/L1TMuonEndCap/interface/GeometryTranslator.h"
 #include "L1Trigger/L1TMuonEndCap/interface/ConditionHelper.h"
 #include "L1Trigger/L1TMuonEndCap/interface/SectorProcessorLUT.h"
+#include "L1Trigger/L1TMuonEndCap/interface/PtAssignmentEngine.h"
+//#include "L1Trigger/L1TMuonEndCap/interface/PtAssignmentEngine2016.h"
+//#include "L1Trigger/L1TMuonEndCap/interface/PtAssignmentEngine2017.h"
 
 #include "L1Trigger/L1TMuonEndCap/interface/PrimitiveSelection.h"
 #include "L1Trigger/L1TMuonEndCap/interface/PrimitiveConversion.h"
 
 
 namespace experimental {
+
+class Track;  // internal class
 
 class Phase2SectorProcessor {
 public:
@@ -44,6 +49,7 @@ public:
       const GeometryTranslator* geom,
       const ConditionHelper* cond,
       const SectorProcessorLUT* lut,
+      PtAssignmentEngine* pt_assign_engine,
       // Sector processor config
       int verbose, int endcap, int sector, int bx,
       int bxShiftCSC, int bxShiftRPC, int bxShiftGEM,
@@ -60,11 +66,19 @@ public:
   ) const;
 
 private:
-  void build(
-    // Input
-    const EMTFHitCollection& conv_hits,
-    // Output
-    EMTFTrackCollection& best_tracks
+  void build_tracks(
+      // Input
+      const EMTFHitCollection& conv_hits,
+      // Output
+      std::vector<Track>& best_tracks
+  ) const;
+
+  void convert_tracks(
+      // Input
+      const EMTFHitCollection& conv_hits,
+      const std::vector<Track>& best_tracks,
+      // Output
+      EMTFTrackCollection& best_emtf_tracks
   ) const;
 
   const GeometryTranslator* geom_;
@@ -72,6 +86,8 @@ private:
   const ConditionHelper* cond_;
 
   const SectorProcessorLUT* lut_;
+
+  PtAssignmentEngine* pt_assign_engine_;
 
   int verbose_, endcap_, sector_, bx_,
       bxShiftCSC_, bxShiftRPC_, bxShiftGEM_;
