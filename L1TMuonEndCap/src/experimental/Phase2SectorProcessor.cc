@@ -1,5 +1,7 @@
 #include "L1Trigger/L1TMuonEndCap/interface/experimental/Phase2SectorProcessor.h"
 
+#include "PhysicsTools/TensorFlow/interface/TensorFlow.h"
+
 
 // _____________________________________________________________________________
 // This implements a TEMPORARY version of the Phase 2 EMTF sector processor.
@@ -132,7 +134,7 @@ void Phase2SectorProcessor::process(
 
 constexpr int NLAYERS = 16;      // 5 (CSC) + 4 (RPC) + 3 (GEM) + 4 (DT)
 constexpr int NFEATURES = 36;    // NN features
-constexpr int NPREDICTIONS = 2;  // NN outputs: pT, PU discr
+constexpr int NPREDICTIONS = 2;  // NN outputs: q/pT, PU discr
 
 constexpr int ROAD_LAYER_NVARS = 9;  // each layer in the road carries 9 variables
 constexpr int ROAD_LAYER_NVARS_P1 = ROAD_LAYER_NVARS + 1;  // plus layer mask
@@ -263,13 +265,16 @@ class Track {
 public:
   using road_hits_t = std::vector<Hit>;
 
-  explicit Track(int16_t vt_endcap, int16_t vt_sector,
+  explicit Track(int16_t vt_endcap, int16_t vt_sector, int16_t vt_ipt, int16_t vt_ieta, int16_t vt_iphi,
                  const road_hits_t& vt_hits, int16_t vt_mode, int16_t vt_quality, int16_t vt_zone,
                  float vt_xml_pt, float vt_pt, int16_t vt_q, int16_t vt_ndof, float vt_chi2,
-                 int32_t vt_emtf_phi, int32_t vt_emtf_theta, float vt_glob_phi, float vt_glob_eta)
+                 int32_t vt_emtf_phi, int32_t vt_emtf_theta)
   {
     endcap     = vt_endcap;
     sector     = vt_sector;
+    ipt        = vt_ipt;
+    ieta       = vt_ieta;
+    iphi       = vt_iphi;
     hits       = vt_hits;
     mode       = vt_mode;
     quality    = vt_quality;
@@ -281,13 +286,14 @@ public:
     chi2       = vt_chi2;
     emtf_phi   = vt_emtf_phi;
     emtf_theta = vt_emtf_theta;
-    glob_phi   = vt_glob_phi;
-    glob_eta   = vt_glob_eta;
   }
 
   // Properties
   int16_t endcap;
   int16_t sector;
+  int16_t ipt;
+  int16_t ieta;
+  int16_t iphi;
   road_hits_t hits;
   int16_t mode;
   int16_t quality;
@@ -299,8 +305,6 @@ public:
   float   chi2;
   int32_t emtf_phi;
   int32_t emtf_theta;
-  float   glob_phi;
-  float   glob_eta;
 };
 
 //// A 'Variable' holds 164 values
@@ -544,8 +548,8 @@ public:
       emtf_bend *= endcap;
       emtf_bend /= 2;  // from 1/32-strip unit to 1/16-strip unit
 
-    } else if (type == TriggerPrimitive::kGEM) {
-      emtf_bend *= endcap;
+    //} else if (type == TriggerPrimitive::kGEM) {
+    //  emtf_bend *= endcap;
 
     } else if (type == TriggerPrimitive::kME0) {
       emtf_bend = std::min(std::max(emtf_bend, -64), 63);  // currently in 1/2-strip unit
@@ -558,7 +562,7 @@ public:
         emtf_bend = std::min(std::max(emtf_bend, -512), 511);
       }
 
-    } else {  // type == TriggerPrimitive::kRPC
+    } else {  // (type == TriggerPrimitive::kRPC) || (type == TriggerPrimitive::kGEM)
       emtf_bend = 0;
     }
     return emtf_bend;
@@ -758,6 +762,26 @@ public:
 
   bool is_emtf_legit_hit(const EMTFHit& conv_hit) const {
     return is_emtf_legit_hit_check_bx(conv_hit) && is_emtf_legit_hit_check_phi(conv_hit);
+  }
+
+  int find_pt_bin(float x) const {
+    static const std::vector<float> v = {-0.49376795, -0.38895044, -0.288812, -0.19121648, -0.0810074, 0.0810074, 0.19121648, 0.288812, 0.38895044, 0.49376795};  // bin edges
+
+    x = (x < v.front()) ? (v.front()) : ((v.back() - 1e-5) < x ? (v.back() - 1e-5) : x);  // clip
+    unsigned ind = std::upper_bound(v.begin(), v.end(), x) - v.begin() - 1;
+    assert(ind < v.size());
+    return ind;
+  }
+
+  int find_eta_bin(float x) const {
+    static const std::vector<float> v = {0.8, 1.24, 1.56, 1.7, 1.8, 1.98, 2.16, 2.4};  // bin edges
+
+    x = std::abs(x);  // abs(eta)
+    x = (x < v.front()) ? (v.front()) : ((v.back() - 1e-5) < x ? (v.back() - 1e-5) : x);  // clip
+    unsigned ind = std::upper_bound(v.begin(), v.end(), x) - v.begin() - 1;
+    assert(ind < v.size());
+    ind = (v.size()-1) - ind;  // zone 0 starts at highest eta
+    return ind;
   }
 
 private:
@@ -1330,6 +1354,39 @@ public:
 
 class PtAssignment {
 public:
+  PtAssignment() {
+    std::string cmssw_base = std::getenv("CMSSW_BASE");
+    pbFileName = "/src/L1Trigger/L1TMuonEndCap/data/emtfpp_tf_graphs/model_graph.26.pb";
+    pbFileName = cmssw_base + pbFileName;
+    graphDef = tensorflow::loadGraphDef(pbFileName);
+    assert(graphDef != nullptr);
+    session = tensorflow::createSession(graphDef);
+    assert(session != nullptr);
+  }
+
+  // Destructor
+  ~PtAssignment() {
+    tensorflow::closeSession(session);
+    delete graphDef;
+  }
+
+  // Copy constructor
+  PtAssignment(const PtAssignment& other) {
+    graphDef = other.graphDef;
+    session = other.session;
+    pbFileName = other.pbFileName;
+  }
+
+  // Copy assignment
+  PtAssignment& operator=(const PtAssignment& other) {
+    if (this != &other) {
+      graphDef = other.graphDef;
+      session = other.session;
+      pbFileName = other.pbFileName;
+    }
+    return *this;
+  }
+
   void run(const std::vector<Road>& slim_roads,
            std::vector<Feature>& features, std::vector<Prediction>& predictions) const {
 
@@ -1339,8 +1396,8 @@ public:
       Prediction prediction;
       feature.fill(0);
       prediction.fill(0);
-      predict(road, feature, prediction);
 
+      predict(road, feature, prediction);
       features.push_back(feature);
       predictions.push_back(prediction);
     }  // end loop over slim_roads
@@ -1350,23 +1407,198 @@ public:
     return;
   }
 
-private:
-  void encode(const Road& road, Feature& feature) const {
+  void predict(const Road& road, Feature& feature, Prediction& prediction) const {
+    preprocessing(road, feature);
+    call_tensorflow(feature, prediction);
     return;
   }
 
-  void predict(const Road& road, Feature& feature, Prediction& prediction) const {
+private:
+  void preprocessing(const Road& road, Feature& feature) const {
+    static std::array<float, NLAYERS> x_phi;   // delta-phis = (raw phis - road_phi_median)
+    static std::array<float, NLAYERS> x_theta; // raw thetas
+    static std::array<float, NLAYERS> x_bend;
+    static std::array<float, NLAYERS> x_qual;
+    static std::array<float, NLAYERS> x_time;
+
+    // Initialize to zeros
+    x_phi.fill(0);
+    x_theta.fill(0);
+    x_bend.fill(0);
+    x_qual.fill(0);
+    x_time.fill(0);
+
+    // Set the values
+    for (const auto& hit : road.hits) {
+      int32_t hit_lay = hit.emtf_layer;
+      assert(std::abs(x_phi[hit_lay]) < 1e-7);   // sanity check
+      x_phi[hit_lay] = (hit.emtf_phi - road.phi_median);
+      assert(std::abs(x_theta[hit_lay]) < 1e-7); // sanity check
+      x_theta[hit_lay] = hit.emtf_theta;
+      assert(std::abs(x_bend[hit_lay]) < 1e-7);  // sanity check
+      x_bend[hit_lay] = hit.emtf_bend;
+      assert(std::abs(x_qual[hit_lay]) < 1e-7);  // sanity check
+      x_qual[hit_lay] = hit.emtf_qual;
+      assert(std::abs(x_time[hit_lay]) < 1e-7);  // sanity check
+      x_time[hit_lay] = hit.emtf_time;
+    }
+
+    // Pack the 36 variables
+    // 20 (CSC) + 8 (RPC) + 4 (GEM) + 4 (ME0)
+    feature = {{
+        x_phi  [0], x_phi  [1], x_phi  [2], x_phi  [3], x_phi  [4] , x_phi  [5],
+        x_phi  [6], x_phi  [7], x_phi  [8], x_phi  [9], x_phi  [10], x_phi  [11],
+        x_theta[0], x_theta[1], x_theta[2], x_theta[3], x_theta[4] , x_theta[5],
+        x_theta[6], x_theta[7], x_theta[8], x_theta[9], x_theta[10], x_theta[11],
+        x_bend [0], x_bend [1], x_bend [2], x_bend [3], x_bend [4] , x_bend [11],
+        x_qual [0], x_qual [1], x_qual [2], x_qual [3], x_qual [4] , x_qual [11]
+    }};
     return;
   }
+
+  void call_tensorflow(const Feature& feature, Prediction& prediction) const {
+    static tensorflow::Tensor input(tensorflow::DT_FLOAT, { 1, NFEATURES });
+    static std::vector<tensorflow::Tensor> outputs;
+    assert(feature.size() == NFEATURES);
+
+    float* d = input.flat<float>().data();
+    std::copy(feature.begin(), feature.end(), d);
+
+    tensorflow::Status status = session->Run({ { "input_1", input } }, { "regr/BiasAdd", "discr/Sigmoid" }, {}, &outputs);  // inputs, fetch_outputs, run_outputs, &outputs
+    if (!status.ok()) {
+      std::cout << status.ToString() << std::endl;
+    }
+    assert(status.ok());
+    assert(outputs.size() == 2);
+    assert(prediction.size() == NPREDICTIONS);
+
+    float reg_pt_scale = 100.;  // a scale factor applied to regression during training
+    prediction[0] = outputs[0].matrix<float>()(0, 0) / reg_pt_scale; // q/pT
+    prediction[1] = outputs[1].matrix<float>()(0, 0); // PU discr
+    return;
+  }
+
+  // TensorFlow components
+  tensorflow::GraphDef* graphDef;
+  tensorflow::Session* session;
+  std::string pbFileName;
 };
 
 class TrackProducer {
 public:
+  TrackProducer() {
+    discr_pt_cut = 8.;
+    discr_pt_cut_high = 14.;
+
+    s_min   = 0.;
+    s_max   = 60.;
+    s_nbins = 120;
+    s_step  = (s_max - s_min)/float(s_nbins);
+    s_lut   = {   1.8195,  1.5651,  1.6147,  1.8573,  2.2176,  2.6521,  3.1392,  3.6731,
+                  4.2603,  4.9059,  5.5810,  6.2768,  6.9787,  7.6670,  8.3289,  8.9703,
+                  9.6027, 10.2288, 10.8525, 11.4874, 12.1370, 12.8016, 13.4806, 14.1740,
+                 14.8822, 15.5927, 16.3161, 17.0803, 17.8854, 18.6790, 19.4369, 20.1713,
+                 20.9279, 21.6733, 22.3966, 23.0878, 23.7421, 24.3612, 24.9927, 25.6638,
+                 26.4131, 27.2467, 28.1087, 28.9682, 29.8129, 30.6270, 31.4258, 32.2671,
+                 33.1881, 34.2942, 35.4266, 36.4711, 37.5020, 38.4437, 39.2068, 39.8264,
+                 40.3814, 40.9442, 41.5449, 42.1736, 42.7892, 43.4046, 44.0388, 44.7361,
+                 45.5805, 46.6375, 47.7231, 48.6278, 49.3952, 50.1290, 50.8860, 51.6510,
+                 52.4043, 53.1551, 53.9053, 54.6554, 55.4054, 56.1554, 56.9053, 57.6552,
+                 58.4051, 59.1550, 59.9048, 60.6547, 61.4045, 62.1544, 62.9042, 63.6540,
+                 64.4039, 65.1537, 65.9036, 66.6534, 67.4032, 68.1531, 68.9029, 69.6527,
+                 70.4026, 71.1524, 71.9022, 72.6521, 73.4019, 74.1517, 74.9016, 75.6514,
+                 76.4012, 77.1511, 77.9009, 78.6507, 79.4006, 80.1504, 80.9002, 81.6501,
+                 82.3999, 83.1497, 83.8996, 84.6494, 85.3992, 86.1491, 86.8989, 87.6488};
+  }
+
+  float get_trigger_pt(float y_pred) const {
+    float xml_pt = std::abs(1.0/y_pred);
+    if (xml_pt <= 2.) {  // do not use the LUT if below 2 GeV
+      return xml_pt;
+    }
+
+    // digitize
+    float x = xml_pt;
+    x = (x < s_min) ? (s_min) : ((s_max - 1e-5) < x ? (s_max - 1e-5) : x);  // clip
+    x = (x - s_min) / (s_max - s_min) * float(s_nbins);  // convert to bin number
+    int binx = static_cast<int>(x);
+    binx = (binx == s_nbins-1) ? (binx-1) : binx;  // avoid boundary
+
+    // interpolate
+    float x0 = float(binx) * s_step;
+    float x1 = float(binx+1) * s_step;
+    float y0 = s_lut.at(x0);
+    float y1 = s_lut.at(x1);
+    float y = (x - x0) / (x1 - x0) * (y1 - y0) + y0;
+    return y;
+  }
+
+  bool pass_trigger(int ndof, int mode, int strg, int zone, int theta_median, float y_pred, float y_discr) const {
+    int ipt1 = strg;
+    int ipt2 = util.find_pt_bin(y_pred);
+    int quality1 = util.find_emtf_road_quality(ipt1);
+    int quality2 = util.find_emtf_road_quality(ipt2);
+    bool strg_ok = (quality2 <= (quality1+1));
+
+    float xml_pt = std::abs(1.0/y_pred);
+
+    // Apply cuts
+    bool trigger = false;
+    if (xml_pt > discr_pt_cut_high) { // >14 GeV
+      trigger = (y_discr > 0.9286); // 98.5% coverage
+    } else if (xml_pt > discr_pt_cut) { // 8-14 GeV
+      trigger = (y_discr > 0.7767); // 98.5% coverage
+    } else {  // < 8 GeV
+      trigger = (y_discr >= 0.) && strg_ok;
+    }
+    return trigger;
+  }
+
   void run(const std::vector<Road>& slim_roads, const std::vector<Prediction>& predictions,
            std::vector<Track>& tracks) const {
+
+    // Loop over roads & predictions
+    auto predictions_it = predictions.begin();
+
+    for (const auto& road : slim_roads) {
+      const auto& prediction = *predictions_it++;
+
+      float y_pred = prediction[0];
+      float y_discr = prediction[1];
+      int ndof = road.hits.size();
+      int strg = (road.ipt%9);  // using 18 patterns
+
+      bool passed = pass_trigger(ndof, road.mode, strg, road.ieta, road.theta_median, y_pred, y_discr);
+
+      if (passed) {
+        float xml_pt = std::abs(1.0/y_pred);
+        float pt = get_trigger_pt(y_pred);
+
+        int trk_q = (y_pred < 0) ? -1 : +1;
+        //Track(int16_t vt_endcap, int16_t vt_sector,
+        //      const road_hits_t& vt_hits, int16_t vt_mode, int16_t vt_quality, int16_t vt_zone,
+        //      float vt_xml_pt, float vt_pt, int16_t vt_q, int16_t vt_ndof, float vt_chi2,
+        //      int32_t vt_emtf_phi, int32_t vt_emtf_theta)
+        tracks.emplace_back(road.endcap, road.sector, road.ipt, road.ieta, road.iphi,
+                            road.hits, road.mode, road.quality, road.ieta,
+                            xml_pt, pt, trk_q, ndof, y_discr,
+                            road.phi_median, road.theta_median);
+      }
+    }  // end loop over slim_roads, predictions
     return;
   }
+
 private:
+  // Used for pass_trigger()
+  float discr_pt_cut;
+  float discr_pt_cut_high;
+
+  // Used for get_trigger_pt()
+  float s_min;
+  float s_max;
+  int   s_nbins;
+  float s_step;
+  std::vector<float> s_lut;
 };
 
 class GhostBusting {
