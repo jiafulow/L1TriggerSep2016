@@ -157,6 +157,13 @@ constexpr int PATTERN_X_SEARCH_MAX = 154-10+12;  // account for DT
 
 class Hit {
 public:
+  // id = (type, station, ring, endsec, fr, bx)
+  using hit_id_t = std::array<int32_t, 6>;
+  hit_id_t id() const {
+    hit_id_t ret {{type, station, ring, endsec, fr, bx}};
+    return ret;
+  }
+
   explicit Hit(int16_t vh_type, int16_t vh_station, int16_t vh_ring,
                int16_t vh_endsec, int16_t vh_fr, int16_t vh_bx,
                int32_t vh_emtf_layer, int32_t vh_emtf_phi, int32_t vh_emtf_theta,
@@ -205,9 +212,8 @@ class Road {
 public:
   using road_hits_t = std::vector<Hit>;
 
-  // road_id = (endcap, sector, ipt, ieta, iphi)
+  // id = (endcap, sector, ipt, ieta, iphi)
   using road_id_t = std::array<int32_t, 5>;
-
   road_id_t id() const {
     road_id_t ret {{endcap, sector, ipt, ieta, iphi}};
     return ret;
@@ -264,9 +270,16 @@ class Track {
 public:
   using road_hits_t = std::vector<Hit>;
 
+  // id = (endcap, sector, ipt, ieta, iphi)
+  using road_id_t = std::array<int32_t, 5>;
+  road_id_t id() const {
+    road_id_t ret {{endcap, sector, ipt, ieta, iphi}};
+    return ret;
+  }
+
   explicit Track(int16_t vt_endcap, int16_t vt_sector, int16_t vt_ipt, int16_t vt_ieta, int16_t vt_iphi,
                  const road_hits_t& vt_hits, int16_t vt_mode, int16_t vt_quality, int16_t vt_zone,
-                 float vt_xml_pt, float vt_pt, int16_t vt_q, int16_t vt_ndof, float vt_chi2,
+                 float vt_xml_pt, float vt_pt, int16_t vt_q, float vt_y_pred, float vt_y_discr,
                  int32_t vt_emtf_phi, int32_t vt_emtf_theta)
   {
     endcap     = vt_endcap;
@@ -281,8 +294,8 @@ public:
     xml_pt     = vt_xml_pt;
     pt         = vt_pt;
     q          = vt_q;
-    ndof       = vt_ndof;
-    chi2       = vt_chi2;
+    y_pred     = vt_y_pred;
+    y_discr    = vt_y_discr;
     emtf_phi   = vt_emtf_phi;
     emtf_theta = vt_emtf_theta;
   }
@@ -300,8 +313,8 @@ public:
   float   xml_pt;
   float   pt;
   int16_t q;
-  int16_t ndof;
-  float   chi2;
+  float   y_pred;
+  float   y_discr;
   int32_t emtf_phi;
   int32_t emtf_theta;
 };
@@ -468,7 +481,7 @@ public:
 
   int32_t find_endsec(const EMTFHit& conv_hit) const {
     int32_t endcap     = conv_hit.Endcap();
-    int32_t sector     = conv_hit.Sector();
+    int32_t sector     = conv_hit.PC_sector();
     return find_endsec(endcap, sector);
   }
 
@@ -588,21 +601,21 @@ public:
     int32_t ring       = conv_hit.Ring();
     int32_t endcap     = conv_hit.Endcap();
     int32_t bend       = conv_hit.Bend();
-
     int32_t fr         = find_fr(conv_hit);
 
     if (type == TriggerPrimitive::kCSC) {
       if (station == 1) {
         float bend_corr = 0.;
         if (ring == 1) {
-          bend_corr = ((static_cast<float>(1-fr) * -2.0832) + (static_cast<float>(fr) * 2.0497)) * bend;  // ME1/1b (r,f)
+          bend_corr = ((static_cast<float>(1-fr) * -2.0832) + (static_cast<float>(fr) * 2.0497));  // ME1/1b (r,f)
         } else if (ring == 4) {
-          bend_corr = ((static_cast<float>(1-fr) * -2.4640) + (static_cast<float>(fr) * 2.3886)) * bend;  // ME1/1a (r,f)
+          bend_corr = ((static_cast<float>(1-fr) * -2.4640) + (static_cast<float>(fr) * 2.3886));  // ME1/1a (r,f)
         } else if (ring == 2) {
-          bend_corr = ((static_cast<float>(1-fr) * -1.3774) + (static_cast<float>(fr) * 1.2447)) * bend;  // ME1/2 (r,f)
+          bend_corr = ((static_cast<float>(1-fr) * -1.3774) + (static_cast<float>(fr) * 1.2447));  // ME1/2 (r,f)
         } else {
           bend_corr = 0.;  // ME1/3 (r,f): no correction
         }
+        bend_corr *= bend;
         bend_corr *= endcap;
         emtf_phi += static_cast<int32_t>(std::round(bend_corr));
       } else {
@@ -848,13 +861,11 @@ static const PatternBank bank;
 
 class PatternRecognition {
 public:
-  void run(int32_t endcap, int32_t sector,
-           const EMTFHitCollection& conv_hits, std::vector<Road>& roads) const {
+  void run(int32_t endcap, int32_t sector, const EMTFHitCollection& conv_hits,
+           std::vector<Hit>& sector_hits, std::vector<Road>& sector_roads) const {
 
     // Convert all the hits again and apply the filter to get the legit hits
     int32_t sector_mode = 0;
-    std::vector<Hit> sector_hits;
-    std::vector<Road> sector_roads;
 
     for (size_t ihit = 0; ihit < conv_hits.size(); ++ihit) {
       const EMTFHit& conv_hit = conv_hits.at(ihit);
@@ -877,6 +888,7 @@ public:
 
         // Set sector_mode
         const Hit& hit = sector_hits.back();
+        assert(0 <= hit.endsec && hit.endsec <= 11);
         assert(hit.emtf_layer != -99);
 
         if (hit.type == TriggerPrimitive::kCSC) {
@@ -896,7 +908,11 @@ public:
 
     // Apply patterns to the sector hits
     apply_patterns(endcap, sector, sector_hits, sector_roads);
-    roads.insert(roads.end(), sector_roads.begin(), sector_roads.end());
+
+    auto sort_roads_f = [](const Road& lhs, const Road& rhs) {
+      return lhs.id() < rhs.id();
+    };
+    std::sort(sector_roads.begin(), sector_roads.end(), sort_roads_f);
     return;
   }
 
@@ -1043,6 +1059,7 @@ private:
       for (iphi = x0; iphi != (x1+1); ++iphi) {
         result.emplace_back(ipt, iphi);
       }
+      ++ipt;
     }
     return;
   }
@@ -1587,6 +1604,20 @@ public:
                  70.4026, 71.1524, 71.9022, 72.6521, 73.4019, 74.1517, 74.9016, 75.6514,
                  76.4012, 77.1511, 77.9009, 78.6507, 79.4006, 80.1504, 80.9002, 81.6501,
                  82.3999, 83.1497, 83.8996, 84.6494, 85.3992, 86.1491, 86.8989, 87.6488};
+    assert(s_lut.size() == (size_t) s_nbins);
+  }
+
+  int digitize(float x) const {
+    x = (x < s_min) ? (s_min) : ((s_max - 1e-5) < x ? (s_max - 1e-5) : x);  // clip
+    x = (x - s_min) / (s_max - s_min) * float(s_nbins);  // convert to bin number
+    int binx = static_cast<int>(x);
+    binx = (binx == s_nbins-1) ? (binx-1) : binx;  // avoid boundary
+    return binx;
+  }
+
+  float interpolate(float x, float x0, float x1, float y0, float y1) const {
+    float y = (x - x0) / (x1 - x0) * (y1 - y0) + y0;  // trigger_pt
+    return y;
   }
 
   float get_trigger_pt(float y_pred) const {
@@ -1595,20 +1626,13 @@ public:
       return xml_pt;
     }
 
-    // digitize
-    float x = xml_pt;
-    x = (x < s_min) ? (s_min) : ((s_max - 1e-5) < x ? (s_max - 1e-5) : x);  // clip
-    x = (x - s_min) / (s_max - s_min) * float(s_nbins);  // convert to bin number
-    int binx = static_cast<int>(x);
-    binx = (binx == s_nbins-1) ? (binx-1) : binx;  // avoid boundary
-
-    // interpolate
+    int binx = digitize(xml_pt);
     float x0 = float(binx) * s_step;
     float x1 = float(binx+1) * s_step;
-    float y0 = s_lut.at(x0);
-    float y1 = s_lut.at(x1);
-    float y = (x - x0) / (x1 - x0) * (y1 - y0) + y0;  // trigger_pt
-    return y;
+    float y0 = s_lut.at(binx);
+    float y1 = s_lut.at(binx+1);
+    float trg_pt = interpolate(xml_pt, x0, x1, y0, y1);
+    return trg_pt;
   }
 
   bool pass_trigger(int ndof, int mode, int strg, int zone, int theta_median, float y_pred, float y_discr) const {
@@ -1659,11 +1683,11 @@ public:
         int trk_q = (y_pred < 0) ? -1 : +1;
         //Track(int16_t vt_endcap, int16_t vt_sector, int16_t vt_ipt, int16_t vt_ieta, int16_t vt_iphi,
         //      const road_hits_t& vt_hits, int16_t vt_mode, int16_t vt_quality, int16_t vt_zone,
-        //      float vt_xml_pt, float vt_pt, int16_t vt_q, int16_t vt_ndof, float vt_chi2,
+        //      float vt_xml_pt, float vt_pt, int16_t vt_q, float vt_y_pred, float vt_y_discr,
         //      int32_t vt_emtf_phi, int32_t vt_emtf_theta)
         tracks.emplace_back(road.endcap, road.sector, road.ipt, road.ieta, road.iphi,
                             road.hits, mode, road.quality, zone,
-                            xml_pt, pt, trk_q, ndof, y_discr,
+                            xml_pt, pt, trk_q, y_pred, y_discr,
                             phi_median, theta_median);
       }
     }  // end loop over slim_roads, predictions
@@ -1693,13 +1717,13 @@ public:
 
     std::vector<Track> tracks_after_gb;
 
-    // Sort by (zone, chi2)
+    // Sort by (zone, y_discr)
     // zone is reordered such that zone 6 has the lowest priority.
     auto sort_tracks_f = [](const Track& lhs, const Track& rhs) {
-      // (max zone, max chi2) is better
+      // (max zone, max y_discr) is better
       auto lhs_zone = (lhs.zone+1) % 7;
       auto rhs_zone = (rhs.zone+1) % 7;
-      return std::tie(lhs_zone, lhs.chi2) > std::tie(rhs_zone, rhs.chi2);
+      return std::tie(lhs_zone, lhs.y_discr) > std::tie(rhs_zone, rhs.y_discr);
     };
     std::sort(tracks.begin(), tracks.end(), sort_tracks_f);
 
@@ -1708,7 +1732,7 @@ public:
       bool keep = true;
 
       // Do not share ME1/1, ME1/2, ME0, MB1, MB2
-      //CUIDADO: not checking for neighbor hits
+      // Need to check for neighbor sector hits
       if (keep) {
         using int32_t_pair = std::pair<int32_t, int32_t>;  // emtf_layer, emtf_phi
 
@@ -1720,7 +1744,18 @@ public:
                 (hit.emtf_layer == 11) ||
                 (hit.emtf_layer == 12) ||
                 (hit.emtf_layer == 13) ) {
-              s.insert(std::make_pair(hit.endsec*100 + hit.emtf_layer, hit.emtf_phi));
+
+              int32_t tmp_endsec = hit.endsec;
+              int32_t tmp_emtf_phi = hit.emtf_phi;
+              if (hit.emtf_phi < (22*60)) {  // is a neighbor hit
+                if ((hit.endsec == 0) || (hit.endsec == 6)) {
+                  tmp_endsec += 5;
+                } else if ((1 <= hit.endsec && hit.endsec <= 5) || (7 <= hit.endsec && hit.endsec <= 11)) {
+                  tmp_endsec -= 1;
+                }
+                tmp_emtf_phi += (60*60);
+              }
+              s.insert(std::make_pair(tmp_endsec*100 + hit.emtf_layer, tmp_emtf_phi));
             }
           }
           return s;
@@ -1865,21 +1900,28 @@ void Phase2SectorProcessor::build_tracks(
     std::vector<Track>& best_tracks
 ) const {
   // Containers for each sector
+  std::vector<Hit> hits;
   std::vector<Road> roads, clean_roads, slim_roads;
   std::vector<Feature> features;
   std::vector<Prediction> predictions;
   std::vector<Track> tracks;
 
   // Run the algorithms
-  recog.run(endcap_, sector_, conv_hits, roads);
+  recog.run(endcap_, sector_, conv_hits, hits, roads);
   clean.run(roads, clean_roads);
   slim.run(clean_roads, slim_roads);
   assig.run(slim_roads, features, predictions);
   trkprod.run(slim_roads, predictions, tracks);
 
-  best_tracks.insert(best_tracks.end(), tracks.begin(), tracks.end());  // best_tracks collects tracks from all sectors
+  best_tracks.insert(best_tracks.end(), tracks.begin(), tracks.end());  // best_tracks collects tracks from all sectors (CUIDADO: doesn't work!)
   if (endcap_ == 2 && sector_ == 6) {  // using the last sector processor as uGMT to do ghost busting
     ghost.run(best_tracks);
+  }
+
+  // Debug
+  bool debug = true;
+  if (debug) {
+    debug_tracks(hits, roads, clean_roads, slim_roads, tracks);
   }
   return;
 }
@@ -1893,10 +1935,106 @@ void Phase2SectorProcessor::convert_tracks(
     // Output
     EMTFTrackCollection& best_emtf_tracks
 ) const {
-  if (endcap_ == 2 && sector_ == 6) {  // using the last sector processor to convert and output the tracks (after ghost busting)
-    trkconv.run(pt_assign_engine_->aux(), conv_hits, best_tracks, best_emtf_tracks);
-  }
+  // Run the algorithms
+  trkconv.run(pt_assign_engine_->aux(), conv_hits, best_tracks, best_emtf_tracks);
   return;
+}
+
+// _____________________________________________________________________________
+void Phase2SectorProcessor::debug_tracks(
+    // Input
+    const std::vector<Hit>& hits,
+    const std::vector<Road>& roads,
+    const std::vector<Road>& clean_roads,
+    const std::vector<Road>& slim_roads,
+    const std::vector<Track>& tracks
+) const {
+  size_t i = 0;
+  size_t j = 0;
+
+  std::cout << "SP e:" << endcap_ << " s:" << sector_ << " has "
+      << hits.size() << " hits, " << roads.size() << " roads, "
+      << clean_roads.size() << " clean roads, " << tracks.size() << " tracks"
+      << std::endl;
+
+  i = 0;
+  for (const auto& hit : hits) {
+    const auto& id = hit.id();
+    std::cout << ".. hit " << i++ << " id: (" << id[0] << ", "
+        << id[1] << ", " << id[2] << ", " << id[3] << ", "
+        << id[4] << ", " << id[5] << ") lay: " << hit.emtf_layer
+        << " ph: " << hit.emtf_phi << " (" << util.find_pattern_x(hit.emtf_phi)
+        << ") th: " << hit.emtf_theta << " bd: " << hit.emtf_bend
+        << " ql: " << hit.emtf_qual << " tp: " << hit.sim_tp << std::endl;
+  }
+
+  i = 0;
+  for (const auto& road : roads) {
+    const auto& id = road.id();
+    std::cout << ".. road " << i++ << " id: (" << id[0] << ", "
+        << id[1] << ", " << id[2] << ", " << id[3] << ", "
+        << id[4] << ") nhits: " << road.hits.size()
+        << " mode: " << road.mode << " qual: " << road.quality
+        << " sort: " << road.sort_code << std::endl;
+  }
+
+  i = 0;
+  for (const auto& road : clean_roads) {
+    const auto& id = road.id();
+    std::cout << ".. croad " << i++ << " id: (" << id[0] << ", "
+        << id[1] << ", " << id[2] << ", " << id[3] << ", "
+        << id[4] << ") nhits: " << road.hits.size()
+        << " mode: " << road.mode << " qual: " << road.quality
+        << " sort: " << road.sort_code << std::endl;
+
+    j = 0;
+    for (const auto& hit : road.hits) {
+      const auto& hit_id = hit.id();
+      std::cout << ".. .. hit " << j++ << " id: (" << hit_id[0] << ", "
+          << hit_id[1] << ", " << hit_id[2] << ", " << hit_id[3] << ", "
+          << hit_id[4] << ", " << hit_id[5] << ") lay: " << hit.emtf_layer
+          << " ph: " << hit.emtf_phi << " th: " << hit.emtf_theta << std::endl;
+    }
+  }
+
+  i = 0;
+  for (const auto& road : slim_roads) {
+    const auto& id = road.id();
+    std::cout << ".. sroad " << i++ << " id: (" << id[0] << ", "
+        << id[1] << ", " << id[2] << ", " << id[3] << ", "
+        << id[4] << ") nhits: " << road.hits.size()
+        << " mode: " << road.mode << " qual: " << road.quality
+        << " sort: " << road.sort_code << std::endl;
+
+    j = 0;
+    for (const auto& hit : road.hits) {
+      const auto& hit_id = hit.id();
+      std::cout << ".. .. hit " << j++ << " id: (" << hit_id[0] << ", "
+          << hit_id[1] << ", " << hit_id[2] << ", " << hit_id[3] << ", "
+          << hit_id[4] << ", " << hit_id[5] << ") lay: " << hit.emtf_layer
+          << " ph: " << hit.emtf_phi << " th: " << hit.emtf_theta << std::endl;
+    }
+  }
+
+  i = 0;
+  for (const auto& trk : tracks) {
+    const auto& id = trk.id();
+    std::cout << ".. trk " << i++ << " id: (" << id[0] << ", "
+        << id[1] << ", " << id[2] << ", " << id[3] << ", "
+        << id[4] << ") nhits: " << trk.hits.size()
+        << " mode: " << trk.mode << " pt: " << trk.pt
+        << " y_pred: " << trk.y_pred << " y_discr: " << trk.y_discr
+        << std::endl;
+
+    j = 0;
+    for (const auto& hit : trk.hits) {
+      const auto& hit_id = hit.id();
+      std::cout << ".. .. hit " << j++ << " id: (" << hit_id[0] << ", "
+          << hit_id[1] << ", " << hit_id[2] << ", " << hit_id[3] << ", "
+          << hit_id[4] << ", " << hit_id[5] << ") lay: " << hit.emtf_layer
+          << " ph: " << hit.emtf_phi << " th: " << hit.emtf_theta << std::endl;
+    }
+  }
 }
 
 }  // namespace experimental

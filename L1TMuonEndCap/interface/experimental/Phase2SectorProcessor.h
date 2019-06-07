@@ -40,7 +40,9 @@
 
 namespace experimental {
 
-class Track;  // internal class
+class Hit;   // internal class
+class Road;  // internal class
+class Track; // internal class
 
 class Phase2SectorProcessor {
 public:
@@ -79,6 +81,15 @@ private:
       const std::vector<Track>& best_tracks,
       // Output
       EMTFTrackCollection& best_emtf_tracks
+  ) const;
+
+  void debug_tracks(
+      // Input
+      const std::vector<Hit>& hits,
+      const std::vector<Road>& roads,
+      const std::vector<Road>& clean_roads,
+      const std::vector<Road>& slim_roads,
+      const std::vector<Track>& tracks
   ) const;
 
   const GeometryTranslator* geom_;
