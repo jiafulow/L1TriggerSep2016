@@ -113,11 +113,20 @@ void Phase2SectorProcessor::process(
   prim_sel.process(RPCTag(), muon_primitives, selected_rpc_map);
   prim_sel.process(GEMTag(), muon_primitives, selected_gem_map);
   prim_sel.process(ME0Tag(), muon_primitives, selected_me0_map);
-  prim_sel.merge(selected_dt_map, selected_csc_map, selected_rpc_map, selected_gem_map, selected_me0_map, selected_prim_map);
+  prim_sel.merge_no_truncate(selected_dt_map, selected_csc_map, selected_rpc_map, selected_gem_map, selected_me0_map, selected_prim_map);
 
   // Convert trigger primitives into "converted" hits
   // A converted hit consists of integer representations of phi, theta, and zones
   prim_conv.process(selected_prim_map, conv_hits);
+
+  {
+    // Clear the input maps to save memory
+    selected_dt_map.clear();
+    selected_csc_map.clear();
+    selected_rpc_map.clear();
+    selected_gem_map.clear();
+    selected_me0_map.clear();
+  }
 
   // ___________________________________________________________________________
   // Build

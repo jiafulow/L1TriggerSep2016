@@ -527,6 +527,7 @@ void TriggerPrimitive::print(std::ostream& out) const {
     out << "Time          : " << _me0.time << std::endl;
     out << "DeltaPhi      : " << _me0.bend << std::endl;
     out << "Pad           : " << _me0.pad << std::endl;
+    break;
   default:
     throw cms::Exception("Invalid Subsytem")
       << "The specified subsystem for this track stub is out of range"

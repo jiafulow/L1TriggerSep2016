@@ -28,6 +28,12 @@ void L1TMuonEndCapTrackProducer::produce(edm::Event& iEvent, const edm::EventSet
   // Main EMTF emulator process, produces tracks from hits in each sector in each event
   track_finder_->process(iEvent, iSetup, *out_hits_tmp, *out_tracks);
 
+#ifdef PHASE_TWO_TRIGGER
+  // Do not apply ZeroSuppression
+  for (const auto& h : *out_hits_tmp) {
+    out_hits->push_back( h );
+  }
+#else
   // Apply ZeroSuppression: Only save RPC hits if there is at least one CSC LCT in the sector
   std::array<bool, 12> has_csc_arr;
   has_csc_arr.fill(false);
@@ -44,6 +50,7 @@ void L1TMuonEndCapTrackProducer::produce(edm::Event& iEvent, const edm::EventSet
       out_hits->push_back( h );
     }
   }
+#endif
 
   // // Fill collection of emulated CPPFDigis
   // for (const auto& h : *out_hits_ZS) {
