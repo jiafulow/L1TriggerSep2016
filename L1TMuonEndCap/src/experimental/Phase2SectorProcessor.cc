@@ -199,22 +199,22 @@ public:
   }
 
   // Properties
-  int16_t type;
-  int16_t station;
-  int16_t ring;
-  int16_t endsec;
-  int16_t fr;
-  int16_t bx;
-  int32_t emtf_layer;
-  int32_t emtf_phi;
-  int32_t emtf_theta;
-  int32_t emtf_bend;
-  int32_t emtf_qual;
-  int32_t emtf_time;
-  int32_t old_emtf_phi;
-  int32_t old_emtf_bend;
-  int32_t sim_tp;
-  int32_t ref;
+  int16_t type;           // DT=0,CSC=1,RPC=2,GEM=3,ME0=4
+  int16_t station;        // 1 to 4
+  int16_t ring;           // 1 to 4
+  int16_t endsec;         // 0 to 5: endcap 1 sector 1-6; 6 to 11: endcap 2 sector 1-6
+  int16_t fr;             // 0: rear CSC chamber; 1: front CSC chamber
+  int16_t bx;             // -3 to 3
+  int32_t emtf_layer;     // 0 to 4: CSC stations; 5 to 8: RPC stations; 9 to 11: GEM stations; 12 to 15: DT stations
+  int32_t emtf_phi;       // 13-bit integer (0 to 8191)
+  int32_t emtf_theta;     // 7-bit integer (0 to 127)
+  int32_t emtf_bend;      // 6-bit integer (0 to 63) if no DT; 10-bit integer (-512 to 511) with DT
+  int32_t emtf_qual;      // 1 to 6: number of layers in CSC or ME0; includes sign: +/- for F/R
+  int32_t emtf_time;      // not currently used
+  int32_t old_emtf_phi;   // used only for sotfware
+  int32_t old_emtf_bend;  // used only for software
+  int32_t sim_tp;         // used only for software
+  int32_t ref;            // used only for software
 };
 
 class Road {
@@ -262,17 +262,17 @@ public:
   }
 
   // Properties
-  int16_t endcap;
-  int16_t sector;
-  int16_t ipt;
-  int16_t ieta;
-  int16_t iphi;
-  road_hits_t hits;
-  int16_t mode;
-  int16_t quality;
-  int16_t sort_code;
-  int32_t phi_median;
-  int32_t theta_median;
+  int16_t endcap;         // 1: positive; 2: negative
+  int16_t sector;         // 1 to 6
+  int16_t ipt;            // 0 to 8: prompt; 9 to 17: displaced
+  int16_t ieta;           // 0 to 6: zone 0-6
+  int16_t iphi;           // 0 to 159: quadstrip number
+  road_hits_t hits;       // hits that belong to this road
+  int16_t mode;           // 4-bit word: see create_road()
+  int16_t quality;        // 0 to 9: see find_emtf_road_quality()
+  int16_t sort_code;      // 10-bit word: see find_emtf_road_sort_code()
+  int32_t phi_median;     // 13-bit integer (0 to 8191): median phi of the hits
+  int32_t theta_median;   // 7-bit integer (0 to 127): median theta of the hits
 };
 
 class Track {
@@ -310,22 +310,22 @@ public:
   }
 
   // Properties
-  int16_t endcap;
-  int16_t sector;
-  int16_t ipt;
-  int16_t ieta;
-  int16_t iphi;
-  road_hits_t hits;
-  int16_t mode;
-  int16_t quality;
-  int16_t zone;
-  float   xml_pt;
-  float   pt;
-  int16_t q;
-  float   y_pred;
-  float   y_discr;
-  int32_t emtf_phi;
-  int32_t emtf_theta;
+  int16_t endcap;         // 1: positive; 2: negative
+  int16_t sector;         // 1 to 6
+  int16_t ipt;            // 0 to 8: prompt; 9 to 17: displaced
+  int16_t ieta;           // 0 to 6: zone 0-6
+  int16_t iphi;           // 0 to 159: quadstrip number
+  road_hits_t hits;       // hits that belong to this road
+  int16_t mode;           // 4-bit word: see create_road()
+  int16_t quality;        // 0 to 9: see find_emtf_road_quality()
+  int16_t zone;           // 0 to 6: zone 0-6. Same as ieta.
+  float   xml_pt;         // track pt, before scaling to 90% eff WP.
+  float   pt;             // track pt, after scaling to 90% eff WP.
+  int16_t q;              // track charge.
+  float   y_pred;         // track curvature q/pt (from NN).
+  float   y_discr;        // track PU discr (from NN).
+  int32_t emtf_phi;       // 13-bit integer (0 to 8191): median phi of the hits. Same as Road::phi_median.
+  int32_t emtf_theta;     // 7-bit integer (0 to 127): median theta of the hits. Same as Road::theta_median.
 };
 
 // A 'Feature' holds 36 values
@@ -494,12 +494,16 @@ public:
     return find_endsec(endcap, sector);
   }
 
+  // A coarse-graining operation
+  // divide by 'quadstrip' unit (4 * 8), and adjust for rounding
   int32_t find_pattern_x(int32_t emtf_phi) const {
-    return (emtf_phi+16)/32;  // divide by 'quadstrip' unit (4 * 8)
+    return (emtf_phi+16)/32;
   }
 
+  // Undo the coarse-graining operation
+  // multiply by 'quadstrip' unit (4 * 8)
   int32_t find_pattern_x_inverse(int32_t x) const {
-    return (x*32);  // multiply by 'quadstrip' unit (4 * 8)
+    return (x*32);
   }
 
   // Calculate transverse impact parameter, d0
@@ -746,7 +750,8 @@ public:
   }
 
   bool is_emtf_muopen(int mode) const {
-    static const std::set<int> s {3,5,6,9,7,10,12,11,13,14,15};
+    //static const std::set<int> s {3,5,6,9,7,10,12,11,13,14,15};
+    static const std::set<int> s {5,6,9,7,10,12,11,13,14,15};  // remove 3-4
     return (s.find(mode) != s.end());  // s.contains(mode);
   }
 
@@ -855,8 +860,10 @@ constexpr PatternBank bank;
 // vector<Hit>, where Hit is a simple data struct. A set of 18 patterns is
 // used for each zone and for each 'quadstrip'. The pattern matching is done by
 // comparing the phi value of each hit to the window encoded for the station of
-// the hit in a pattern. When a pattern fires, a road is produced. The output
-// of this class is a vector<Road>, which contains all the roads.
+// the hit in a pattern. When a pattern fires, a road is produced. A road
+// contains information about the pattern that fires and the hits that
+// belong to the road. The output of this class is a vector<Road>, which
+// contains all the roads.
 // In this C++ version, the pattern matching is done with some trick to speed
 // up software processing. It is not the logic meant to be implemented in
 // firmware, but it should give the same results.
@@ -865,6 +872,9 @@ class PatternRecognition {
 public:
   void run(int32_t endcap, int32_t sector, const EMTFHitCollection& conv_hits,
            std::vector<Hit>& sector_hits, std::vector<Road>& sector_roads) const {
+
+    // Optimize for CPU processing?
+    bool optimize_for_cpu = false;
 
     // Convert all the hits again and apply the filter to get the legit hits
     int32_t sector_mode = 0;
@@ -893,24 +903,33 @@ public:
         assert(0 <= hit.endsec && hit.endsec <= 11);
         assert(hit.emtf_layer != -99);
 
-        if (hit.type == TriggerPrimitive::kCSC) {
-          sector_mode |= (1 << (4 - hit.station));
-        } else if (hit.type == TriggerPrimitive::kME0) {
-          sector_mode |= (1 << (4 - 1));
-        } else if (hit.type == TriggerPrimitive::kDT) {
-          sector_mode |= (1 << (4 - 1));
+        if (optimize_for_cpu) {
+          if (hit.type == TriggerPrimitive::kCSC) {
+            sector_mode |= (1 << (4 - hit.station));
+          } else if (hit.type == TriggerPrimitive::kME0) {
+            sector_mode |= (1 << (4 - 1));
+          } else if (hit.type == TriggerPrimitive::kDT) {
+            sector_mode |= (1 << (4 - 1));
+          }
         }
       }
     }  // end loop over conv_hits
 
     // Provide early exit if no hit in stations 1&2 (check CSC, ME0, DT)
-    if (!util.is_emtf_singlehit(sector_mode) && !util.is_emtf_singlehit_me2(sector_mode)) {
-      return;
+    if (optimize_for_cpu) {
+      if (!util.is_emtf_singlehit(sector_mode) && !util.is_emtf_singlehit_me2(sector_mode)) {
+        return;
+      }
     }
 
     // Apply patterns to the sector hits
-    apply_patterns(endcap, sector, sector_hits, sector_roads);
+    if (optimize_for_cpu) {
+      apply_patterns(endcap, sector, sector_hits, sector_roads);
+    } else {
+      apply_patterns_unoptimized(endcap, sector, sector_hits, sector_roads);
+    }
 
+    // Sort the roads according to the road_id
     constexpr auto sort_roads_f = [](const Road& lhs, const Road& rhs) {
       return lhs.id() < rhs.id();
     };
@@ -922,6 +941,12 @@ private:
   void create_road(const Road::road_id_t road_id, const Road::road_hits_t road_hits, std::vector<Road>& sector_roads) const {
 
     // Find road modes
+    // 'road_mode' is a 4-bit word where each bit indicates whether a hit was found in one of the 4 stations
+    // |bit| 3 | 2 | 1 | 0 |
+    // |---|---|---|---|---|
+    // |st | 1 | 2 | 3 | 4 |
+    // 'road_mode_csc' is like 'road_mode' but only considers the CSC stations. The other road modes are used to add specific rules
+    // for different zones.
     int road_mode          = 0;
     int road_mode_csc      = 0;
     int road_mode_me0      = 0;  // zones 0,1
@@ -1096,6 +1121,7 @@ private:
           iphi         = (hit_x - iphi);
           int32_t ieta = hit_zone;
 
+          // 'x' is the unit used in the patterns
           // Full range is 0 <= iphi <= 154. but a reduced range is sufficient (27% saving on patterns)
           if ((PATTERN_X_SEARCH_MIN <= iphi) && (iphi <= PATTERN_X_SEARCH_MAX)) {
             Road::road_id_t road_id {{endcap, sector, ipt, ieta, iphi}};
@@ -1113,6 +1139,60 @@ private:
     }
     return;
   }
+
+  void apply_patterns_unoptimized(int32_t endcap, int32_t sector,
+                                  const std::vector<Hit>& sector_hits, std::vector<Road>& sector_roads) const {
+
+    // Loop over all zones
+    for (int32_t ieta = 0; ieta != PATTERN_BANK_NETA; ++ieta) {
+      if (ieta == 6) {  // For now, ignore zone 6
+        continue;
+      }
+
+      // Loop over all hits, find the ones that belong to this station and this zone
+      std::vector<Hit> zone_hits;
+      for (const auto& hit : sector_hits) {
+        //int32_t hit_lay = hit.emtf_layer;
+        //int32_t hit_x   = util.find_pattern_x(hit.emtf_phi);
+        const auto& hit_zones = util.find_emtf_zones(hit);
+
+        for (const auto& hit_zone : hit_zones) {
+          if (hit_zone == ieta) {
+            zone_hits.push_back(hit);
+          }
+        }  // end loop over hit_zones
+      }  // end loop over sector_hits
+
+      // Now loop over all the different shapes (straightness)
+      for (int32_t ipt = 0; ipt != PATTERN_BANK_NPT; ++ipt) {
+
+        // 'x' is the unit used in the patterns
+        // Full range is 0 <= iphi <= 154. but a reduced range is sufficient (27% saving on patterns)
+        for (int32_t iphi = PATTERN_X_SEARCH_MIN; iphi != (PATTERN_X_SEARCH_MAX+1); ++iphi) {
+          Road::road_id_t road_id {{endcap, sector, ipt, ieta, iphi}};
+          Road::road_hits_t road_hits;
+
+          for (const auto& hit : zone_hits) {
+            int32_t hit_lay = hit.emtf_layer;
+            int32_t hit_x   = util.find_pattern_x(hit.emtf_phi);
+
+            int32_t iphi_low  = bank.x_array[hit_lay][ieta][0][ipt];
+            int32_t iphi_high = bank.x_array[hit_lay][ieta][2][ipt];
+
+            if ((iphi + iphi_low <= hit_x) && (hit_x <= iphi + iphi_high)) {
+              road_hits.push_back(hit);
+            }
+          }
+
+          if (!road_hits.empty()) {
+            create_road(road_id, road_hits, sector_roads);  // only valid roads are being appended to sector_roads
+          }
+        }  // end loop over x
+      }  // end loop over all the different shapes (straightness)
+    }  // end loop over all zones
+
+    return;
+  }
 };
 
 // RoadCleaning class removes ghost roads.
@@ -1121,17 +1201,34 @@ private:
 // phi, so they appear to be clustered. We want to pick only one road out of
 // the cluster. The roads are ranked by a sort code, which consists of the hit
 // composition and the pattern straightness. The ghost cleaning should be
-// aggressive enough, but not too aggressive that di-muon efficiency is
+// aggressive enough, but not too aggressive such that di-muon efficiency is
 // affected. At the end, a check of consistency with BX=0 is also applied.
 // The output of this classis the subset of roads that are not identified as
 // ghosts.
-// In this C++ version, a more complicated algorithm is implemented to be more
-// aggressive. But it might not be implementable in firmware. A simple local
-// maximum finding algorithm, as in the current EMTF, might suffice.
+// In this C++ version, a more complicated algorithm is implemented, which uses
+// clustering to do aggressive cleaning. But it might not be implementable
+// in firmware. A simple local maximum finding algorithm should also work
+// although the results are slightly different (not fully tested).
 
 class RoadCleaning {
 public:
   void run(const std::vector<Road>& roads, std::vector<Road>& clean_roads) const {
+
+    // Optimize for CPU processing?
+    bool optimize_for_cpu = false;
+
+    if (optimize_for_cpu) {
+      apply_cleaning(roads, clean_roads);
+    } else {
+      apply_cleaning_unoptimized(roads, clean_roads);
+    }
+
+    apply_additional_cleaning(clean_roads);
+    return;
+  }
+
+private:
+  void apply_cleaning(const std::vector<Road>& roads, std::vector<Road>& clean_roads) const {
     // Skip if no roads
     if (roads.empty()) {
       return;
@@ -1230,7 +1327,6 @@ public:
       RoadPtr first_road = amap[group.front()];  // iphi range
       RoadPtr last_road = amap[group.back()];    // iphi range
       tmp_clean_roads_groupinfo.emplace_back(first_road->iphi, last_road->iphi);
-
     }  // end loop over groups
 
     if (tmp_clean_roads.empty())
@@ -1245,23 +1341,25 @@ public:
 
       // Check for intersection in the iphi range
       for (size_t j=0; j<i; ++j) {
-        const auto& group_i = tmp_clean_roads_groupinfo[ind[i]];
-        const auto& group_j = tmp_clean_roads_groupinfo[ind[j]];
-        int32_t x1 = group_i.first;
-        int32_t x2 = group_i.second;
-        int32_t y1 = group_j.first;
-        int32_t y2 = group_j.second;
+        if (tmp_clean_roads[i].ieta == tmp_clean_roads[j].ieta) {  // same zone
+          const auto& group_i = tmp_clean_roads_groupinfo[ind[i]];
+          const auto& group_j = tmp_clean_roads_groupinfo[ind[j]];
+          int32_t x1 = group_i.first;
+          int32_t x2 = group_i.second;
+          int32_t y1 = group_j.first;
+          int32_t y2 = group_j.second;
 
-        // No intersect between two ranges (x1, x2), (y1, y2): (x2 < y1) || (x1 > y2)
-        // Intersect: !((x2 < y1) || (x1 > y2)) = (x2 >= y1) and (x1 <= y2)
-        // Allow +/-2 due to extrapolation-to-EMTF error
-        if (((x2+2) >= y1) && ((x1-2) <= y2)) {
-          keep = false;
-          break;
+          // No intersect between two ranges (x1, x2), (y1, y2): (x2 < y1) || (x1 > y2)
+          // Intersect: !((x2 < y1) || (x1 > y2)) = (x2 >= y1) and (x1 <= y2)
+          // Allow +/-2 due to extrapolation-to-EMTF error
+          if (((x2+2) >= y1) && ((x1-2) <= y2)) {
+            keep = false;
+            break;
+          }
         }
       }  // end inner loop over tmp_clean_roads[:i]
 
-      // Do not share ME1/1, ME1/2, ME0, MB1, MB2
+      // Do not share ME1/1, ME1/2, RE1/2, GE1/1, ME0, MB1, MB2
       if (keep) {
         using int32_t_pair = std::pair<int32_t, int32_t>;  // emtf_layer, emtf_phi
 
@@ -1270,6 +1368,8 @@ public:
           for (const auto& hit : hits) {
             if ((hit.emtf_layer == 0) ||
                 (hit.emtf_layer == 1) ||
+                (hit.emtf_layer == 5) ||
+                (hit.emtf_layer == 9) ||
                 (hit.emtf_layer == 11) ||
                 (hit.emtf_layer == 12) ||
                 (hit.emtf_layer == 13) ) {
@@ -1294,18 +1394,124 @@ public:
         }  // end inner loop over tmp_clean_roads[:i]
       }
 
-      // Finally, check consistency with BX=0
       if (keep) {
         const auto& road_i = tmp_clean_roads[ind[i]];
-        if (select_bx_zero(road_i)) {
-          clean_roads.push_back(road_i);
-        }
+        clean_roads.push_back(road_i);
       }
-    }  // end loop over tmp_clean_roads
+    }  // end loop over tmp_clean_roads.size()
     return;
   }
 
-private:
+  void apply_cleaning_unoptimized(const std::vector<Road>& roads, std::vector<Road>& clean_roads) const {
+    std::vector<bool> roads_mask(roads.size(), true);  // true: keep the road
+
+    for (int32_t ieta = 0; ieta != PATTERN_BANK_NETA; ++ieta) {
+      if (ieta == 6) {  // For now, ignore zone 6
+        continue;
+      }
+
+      // Fill the quality codes
+      std::array<int, PATTERN_X_SEARCH_MAX+1> quality_codes;
+      quality_codes.fill(0);
+
+      for (const auto& road : roads) {
+        if (road.ieta == ieta) {
+          int this_code = road.sort_code;
+          if (quality_codes.at(road.iphi) < this_code) {
+            quality_codes.at(road.iphi) = this_code;
+          }
+        }
+      }
+
+      // Check if this quality code is the (local) maximum
+      size_t iroad = 0;
+      for (const auto& road : roads) {
+        if (road.ieta == ieta) {
+          int this_code = road.sort_code;
+
+          // Center quality is the current one
+          int qc = quality_codes.at(road.iphi);
+          // Left and right qualities are the neighbors
+          // Protect against the right end and left end special cases
+          int qr = (road.iphi == PATTERN_X_SEARCH_MAX) ? 0 : quality_codes.at(road.iphi+1);
+          int ql = (road.iphi == 0) ? 0 : quality_codes.at(road.iphi-1);
+
+          // Cancellation conditions
+          if ((this_code <= ql) || (this_code < qr) || (this_code < qc)) {  // this pattern is lower quality than neighbors
+            roads_mask.at(iroad) = false;  // cancel
+          }
+        }
+        ++iroad;
+      }
+    }
+
+    // Do the cancellation
+    std::vector<Road> tmp_clean_roads;
+    std::vector<int32_t> tmp_clean_roads_sortcode;
+    {
+      size_t iroad = 0;
+      for (const auto& road : roads) {
+        if (roads_mask.at(iroad) == true) {
+          tmp_clean_roads.push_back(road);
+          tmp_clean_roads_sortcode.push_back(road.sort_code);
+        }
+        ++iroad;
+      }
+    }
+
+    if (tmp_clean_roads.empty())
+      return;
+
+    // Sort by 'sort code'
+    const std::vector<size_t>& ind = my_argsort(tmp_clean_roads_sortcode, true);  // sort reverse
+
+    // Loop over the sorted roads, kill the siblings
+    for (size_t i=0; i<tmp_clean_roads.size(); ++i) {
+      bool keep = true;
+
+      // Do not share ME1/1, ME1/2, RE1/2, GE1/1, ME0, MB1, MB2
+      if (keep) {
+        using int32_t_pair = std::pair<int32_t, int32_t>;  // emtf_layer, emtf_phi
+
+        constexpr auto make_hit_set = [](const auto& hits) {
+          std::set<int32_t_pair> s;
+          for (const auto& hit : hits) {
+            if ((hit.emtf_layer == 0) ||
+                (hit.emtf_layer == 1) ||
+                (hit.emtf_layer == 5) ||
+                (hit.emtf_layer == 9) ||
+                (hit.emtf_layer == 11) ||
+                (hit.emtf_layer == 12) ||
+                (hit.emtf_layer == 13) ) {
+              s.insert(std::make_pair(hit.endsec*100 + hit.emtf_layer, hit.emtf_phi));
+            }
+          }
+          return s;
+        };
+
+        const auto& road_i = tmp_clean_roads[ind[i]];
+        const std::set<int32_t_pair>& s1 = make_hit_set(road_i.hits);
+        for (size_t j=0; j<i; ++j) {
+          const auto& road_j = tmp_clean_roads[ind[j]];
+          const std::set<int32_t_pair>& s2 = make_hit_set(road_j.hits);
+
+          std::vector<int32_t_pair> v_intersection;
+          std::set_intersection(s1.begin(), s1.end(), s2.begin(), s2.end(), std::back_inserter(v_intersection));
+          if (!v_intersection.empty()) {  // has sharing
+            keep = false;
+            break;
+          }
+        }  // end inner loop over tmp_clean_roads[:i]
+      }
+
+      if (keep) {
+        const auto& road_i = tmp_clean_roads[ind[i]];
+        clean_roads.push_back(road_i);
+      }
+    }  // end loop over tmp_clean_roads.size()
+    return;
+  }
+
   bool select_bx_zero(const Road& road) const {
     int bx_counter1 = 0;  // count hits with BX <= -1
     int bx_counter2 = 0;  // count hits with BX == 0
@@ -1329,6 +1535,19 @@ private:
     //bool ret = (bx_counter1 < 2) && (bx_counter2 >= 2);
     bool ret = (bx_counter1 <= 3) && (bx_counter2 >= 2) && (bx_counter3 <= 2);
     return ret;
+  }
+
+  void apply_additional_cleaning(std::vector<Road>& clean_roads) const {
+    // Finally, check consistency with BX=0
+    std::vector<Road> tmp_clean_roads;
+    std::swap(tmp_clean_roads, clean_roads);
+
+    for (const auto& road_i : tmp_clean_roads) {
+      if (select_bx_zero(road_i)) {
+        clean_roads.push_back(road_i);
+      }
+    }
+    return;
   }
 };
 
@@ -1362,7 +1581,8 @@ public:
         patterns_xc[i] = util.find_pattern_x_inverse(xc);
       }
 
-      // Find median phi and theta
+      // Find the median phi and theta
+      // Note: they do not have to be exact. An approximation is good enough, provided that it is stable against outliers.
       std::vector<int32_t> road_hits_phis;
       std::transform(road.hits.begin(), road.hits.end(), std::back_inserter(road_hits_phis),
           [&patterns_xc](const auto& hit) -> int32_t { return (hit.emtf_phi - patterns_xc[hit.emtf_layer]); });
@@ -1731,7 +1951,7 @@ public:
     for (size_t i=0; i<tracks.size(); ++i) {
       bool keep = true;
 
-      // Do not share ME1/1, ME1/2, ME0, MB1, MB2
+      // Do not share ME1/1, ME1/2, RE1/2, GE1/1, ME0, MB1, MB2
       // Need to check for neighbor sector hits
       if (keep) {
         using int32_t_pair = std::pair<int32_t, int32_t>;  // emtf_layer, emtf_phi
@@ -1741,6 +1961,8 @@ public:
           for (const auto& hit : hits) {
             if ((hit.emtf_layer == 0) ||
                 (hit.emtf_layer == 1) ||
+                (hit.emtf_layer == 5) ||
+                (hit.emtf_layer == 9) ||
                 (hit.emtf_layer == 11) ||
                 (hit.emtf_layer == 12) ||
                 (hit.emtf_layer == 13) ) {
