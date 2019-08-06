@@ -866,6 +866,9 @@ public:
   void run(int32_t endcap, int32_t sector, const EMTFHitCollection& conv_hits,
            std::vector<Hit>& sector_hits, std::vector<Road>& sector_roads) const {
 
+    // Optimize for CPU processing?
+    bool optimize_for_cpu = false;
+
     // Convert all the hits again and apply the filter to get the legit hits
     int32_t sector_mode = 0;
 
@@ -893,24 +896,33 @@ public:
         assert(0 <= hit.endsec && hit.endsec <= 11);
         assert(hit.emtf_layer != -99);
 
-        if (hit.type == TriggerPrimitive::kCSC) {
-          sector_mode |= (1 << (4 - hit.station));
-        } else if (hit.type == TriggerPrimitive::kME0) {
-          sector_mode |= (1 << (4 - 1));
-        } else if (hit.type == TriggerPrimitive::kDT) {
-          sector_mode |= (1 << (4 - 1));
+        if (optimize_for_cpu) {
+          if (hit.type == TriggerPrimitive::kCSC) {
+            sector_mode |= (1 << (4 - hit.station));
+          } else if (hit.type == TriggerPrimitive::kME0) {
+            sector_mode |= (1 << (4 - 1));
+          } else if (hit.type == TriggerPrimitive::kDT) {
+            sector_mode |= (1 << (4 - 1));
+          }
         }
       }
     }  // end loop over conv_hits
 
     // Provide early exit if no hit in stations 1&2 (check CSC, ME0, DT)
-    if (!util.is_emtf_singlehit(sector_mode) && !util.is_emtf_singlehit_me2(sector_mode)) {
-      return;
+    if (optimize_for_cpu) {
+      if (!util.is_emtf_singlehit(sector_mode) && !util.is_emtf_singlehit_me2(sector_mode)) {
+        return;
+      }
     }
 
     // Apply patterns to the sector hits
-    apply_patterns(endcap, sector, sector_hits, sector_roads);
+    if (optimize_for_cpu) {
+      apply_patterns(endcap, sector, sector_hits, sector_roads);
+    } else {
+      apply_patterns_unoptimized(endcap, sector, sector_hits, sector_roads);
+    }
 
+    // Sort the roads according to the road_id
     constexpr auto sort_roads_f = [](const Road& lhs, const Road& rhs) {
       return lhs.id() < rhs.id();
     };
@@ -922,6 +934,12 @@ private:
   void create_road(const Road::road_id_t road_id, const Road::road_hits_t road_hits, std::vector<Road>& sector_roads) const {
 
     // Find road modes
+    // 'road_mode' is a 4-bit word where each bit indicates whether a hit was found in one of the 4 stations
+    // |bit| 3 | 2 | 1 | 0 |
+    // |---|---|---|---|---|
+    // |st | 1 | 2 | 3 | 4 |
+    // 'road_mode_csc' is like 'road_mode' but only considers the CSC stations. The other road modes are used to add specific rules
+    // for different zones.
     int road_mode          = 0;
     int road_mode_csc      = 0;
     int road_mode_me0      = 0;  // zones 0,1
@@ -1096,6 +1114,7 @@ private:
           iphi         = (hit_x - iphi);
           int32_t ieta = hit_zone;
 
+          // 'x' is the unit used in the patterns
           // Full range is 0 <= iphi <= 154. but a reduced range is sufficient (27% saving on patterns)
           if ((PATTERN_X_SEARCH_MIN <= iphi) && (iphi <= PATTERN_X_SEARCH_MAX)) {
             Road::road_id_t road_id {{endcap, sector, ipt, ieta, iphi}};
@@ -1111,6 +1130,60 @@ private:
       const Road::road_hits_t& road_hits = kv.second;
       create_road(road_id, road_hits, sector_roads);  // only valid roads are being appended to sector_roads
     }
+    return;
+  }
+
+  void apply_patterns_unoptimized(int32_t endcap, int32_t sector,
+                                  const std::vector<Hit>& sector_hits, std::vector<Road>& sector_roads) const {
+
+    // Loop over all zones
+    for (int32_t ieta = 0; ieta != PATTERN_BANK_NETA; ++ieta) {
+      if (ieta == 6) {  // For now, ignore zone 6
+        continue;
+      }
+
+      // Loop over all hits, find the ones that belong to this station and this zone
+      std::vector<Hit> zone_hits;
+      for (const auto& hit : sector_hits) {
+        //int32_t hit_lay = hit.emtf_layer;
+        //int32_t hit_x   = util.find_pattern_x(hit.emtf_phi);
+        const auto& hit_zones = util.find_emtf_zones(hit);
+
+        for (const auto& hit_zone : hit_zones) {
+          if (hit_zone == ieta) {
+            zone_hits.push_back(hit);
+          }
+        }  // end loop over hit_zones
+      }  // end loop over sector_hits
+
+      // Now loop over all the different shapes (straightness)
+      for (int32_t ipt = 0; ipt != PATTERN_BANK_NPT; ++ipt) {
+
+        // 'x' is the unit used in the patterns
+        // Full range is 0 <= iphi <= 154. but a reduced range is sufficient (27% saving on patterns)
+        for (int32_t iphi = PATTERN_X_SEARCH_MIN; iphi != (PATTERN_X_SEARCH_MAX+1); ++iphi) {
+          Road::road_id_t road_id {{endcap, sector, ipt, ieta, iphi}};
+          Road::road_hits_t road_hits;
+
+          for (const auto& hit : zone_hits) {
+            int32_t hit_lay = hit.emtf_layer;
+            int32_t hit_x   = util.find_pattern_x(hit.emtf_phi);
+
+            int32_t iphi_low  = bank.x_array[hit_lay][ieta][0][ipt];
+            int32_t iphi_high = bank.x_array[hit_lay][ieta][2][ipt];
+
+            if ((iphi + iphi_low <= hit_x) && (hit_x <= iphi + iphi_high)) {
+              road_hits.push_back(hit);
+            }
+          }
+
+          if (!road_hits.empty()) {
+            create_road(road_id, road_hits, sector_roads);  // only valid roads are being appended to sector_roads
+          }
+        }  // end loop over x
+      }  // end loop over all the different shapes (straightness)
+    }  // end loop over all zones
+
     return;
   }
 };
