@@ -199,22 +199,22 @@ public:
   }
 
   // Properties
-  int16_t type;
-  int16_t station;
-  int16_t ring;
-  int16_t endsec;
-  int16_t fr;
-  int16_t bx;
-  int32_t emtf_layer;
-  int32_t emtf_phi;
-  int32_t emtf_theta;
-  int32_t emtf_bend;
-  int32_t emtf_qual;
-  int32_t emtf_time;
-  int32_t old_emtf_phi;
-  int32_t old_emtf_bend;
-  int32_t sim_tp;
-  int32_t ref;
+  int16_t type;           // DT=0,CSC=1,RPC=2,GEM=3,ME0=4
+  int16_t station;        // 1 to 4
+  int16_t ring;           // 1 to 4
+  int16_t endsec;         // 0 to 5: endcap 1 sector 1-6; 6 to 11: endcap 2 sector 1-6
+  int16_t fr;             // 0: rear CSC chamber; 1: front CSC chamber
+  int16_t bx;             // -3 to 3
+  int32_t emtf_layer;     // 0 to 4: CSC stations; 5 to 8: RPC stations; 9 to 11: GEM stations; 12 to 15: DT stations
+  int32_t emtf_phi;       // 13-bit integer (0 to 8191)
+  int32_t emtf_theta;     // 7-bit integer (0 to 127)
+  int32_t emtf_bend;      // 6-bit integer (0 to 63) if no DT; 10-bit integer (-512 to 511) with DT
+  int32_t emtf_qual;      // 1 to 6: number of layers in CSC or ME0; includes sign: +/- for F/R
+  int32_t emtf_time;      // not currently used
+  int32_t old_emtf_phi;   // used only for sotfware
+  int32_t old_emtf_bend;  // used only for software
+  int32_t sim_tp;         // used only for software
+  int32_t ref;            // used only for software
 };
 
 class Road {
@@ -262,17 +262,17 @@ public:
   }
 
   // Properties
-  int16_t endcap;
-  int16_t sector;
-  int16_t ipt;
-  int16_t ieta;
-  int16_t iphi;
-  road_hits_t hits;
-  int16_t mode;
-  int16_t quality;
-  int16_t sort_code;
-  int32_t phi_median;
-  int32_t theta_median;
+  int16_t endcap;         // 1: positive; 2: negative
+  int16_t sector;         // 1 to 6
+  int16_t ipt;            // 0 to 8: prompt; 9 to 17: displaced
+  int16_t ieta;           // 0 to 6: zone 0-6
+  int16_t iphi;           // 0 to 159: quadstrip number
+  road_hits_t hits;       // hits that belong to this road
+  int16_t mode;           // 4-bit word: see create_road()
+  int16_t quality;        // 0 to 9: see find_emtf_road_quality()
+  int16_t sort_code;      // 10-bit word: see find_emtf_road_sort_code()
+  int32_t phi_median;     // 13-bit integer (0 to 8191): median phi of the hits
+  int32_t theta_median;   // 7-bit integer (0 to 127): median theta of the hits
 };
 
 class Track {
@@ -310,22 +310,22 @@ public:
   }
 
   // Properties
-  int16_t endcap;
-  int16_t sector;
-  int16_t ipt;
-  int16_t ieta;
-  int16_t iphi;
-  road_hits_t hits;
-  int16_t mode;
-  int16_t quality;
-  int16_t zone;
-  float   xml_pt;
-  float   pt;
-  int16_t q;
-  float   y_pred;
-  float   y_discr;
-  int32_t emtf_phi;
-  int32_t emtf_theta;
+  int16_t endcap;         // 1: positive; 2: negative
+  int16_t sector;         // 1 to 6
+  int16_t ipt;            // 0 to 8: prompt; 9 to 17: displaced
+  int16_t ieta;           // 0 to 6: zone 0-6
+  int16_t iphi;           // 0 to 159: quadstrip number
+  road_hits_t hits;       // hits that belong to this road
+  int16_t mode;           // 4-bit word: see create_road()
+  int16_t quality;        // 0 to 9: see find_emtf_road_quality()
+  int16_t zone;           // 0 to 6: zone 0-6. Same as ieta.
+  float   xml_pt;         // track pt, before scaling to 90% eff WP.
+  float   pt;             // track pt, after scaling to 90% eff WP.
+  int16_t q;              // track charge.
+  float   y_pred;         // track curvature q/pt (from NN).
+  float   y_discr;        // track PU discr (from NN).
+  int32_t emtf_phi;       // 13-bit integer (0 to 8191): median phi of the hits. Same as Road::phi_median.
+  int32_t emtf_theta;     // 7-bit integer (0 to 127): median theta of the hits. Same as Road::theta_median.
 };
 
 // A 'Feature' holds 36 values
