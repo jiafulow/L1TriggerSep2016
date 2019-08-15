@@ -494,12 +494,16 @@ public:
     return find_endsec(endcap, sector);
   }
 
+  // A coarse-graining operation
+  // divide by 'quadstrip' unit (4 * 8), and adjust for rounding
   int32_t find_pattern_x(int32_t emtf_phi) const {
-    return (emtf_phi+16)/32;  // divide by 'quadstrip' unit (4 * 8)
+    return (emtf_phi+16)/32;
   }
 
+  // Undo the coarse-graining operation
+  // multiply by 'quadstrip' unit (4 * 8)
   int32_t find_pattern_x_inverse(int32_t x) const {
-    return (x*32);  // multiply by 'quadstrip' unit (4 * 8)
+    return (x*32);
   }
 
   // Calculate transverse impact parameter, d0
@@ -746,7 +750,8 @@ public:
   }
 
   bool is_emtf_muopen(int mode) const {
-    static const std::set<int> s {3,5,6,9,7,10,12,11,13,14,15};
+    //static const std::set<int> s {3,5,6,9,7,10,12,11,13,14,15};
+    static const std::set<int> s {5,6,9,7,10,12,11,13,14,15};  // remove 3-4
     return (s.find(mode) != s.end());  // s.contains(mode);
   }
 
@@ -855,8 +860,10 @@ constexpr PatternBank bank;
 // vector<Hit>, where Hit is a simple data struct. A set of 18 patterns is
 // used for each zone and for each 'quadstrip'. The pattern matching is done by
 // comparing the phi value of each hit to the window encoded for the station of
-// the hit in a pattern. When a pattern fires, a road is produced. The output
-// of this class is a vector<Road>, which contains all the roads.
+// the hit in a pattern. When a pattern fires, a road is produced. A road
+// contains information about the pattern that fires and the hits that
+// belong to the road. The output of this class is a vector<Road>, which
+// contains all the roads.
 // In this C++ version, the pattern matching is done with some trick to speed
 // up software processing. It is not the logic meant to be implemented in
 // firmware, but it should give the same results.
@@ -1435,7 +1442,8 @@ public:
         patterns_xc[i] = util.find_pattern_x_inverse(xc);
       }
 
-      // Find median phi and theta
+      // Find the median phi and theta
+      // Note: they do not have to be exact. An approximation is good enough, provided that it is stable against outliers.
       std::vector<int32_t> road_hits_phis;
       std::transform(road.hits.begin(), road.hits.end(), std::back_inserter(road_hits_phis),
           [&patterns_xc](const auto& hit) -> int32_t { return (hit.emtf_phi - patterns_xc[hit.emtf_layer]); });
