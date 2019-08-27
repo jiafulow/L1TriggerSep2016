@@ -1201,17 +1201,34 @@ private:
 // phi, so they appear to be clustered. We want to pick only one road out of
 // the cluster. The roads are ranked by a sort code, which consists of the hit
 // composition and the pattern straightness. The ghost cleaning should be
-// aggressive enough, but not too aggressive that di-muon efficiency is
+// aggressive enough, but not too aggressive such that di-muon efficiency is
 // affected. At the end, a check of consistency with BX=0 is also applied.
 // The output of this classis the subset of roads that are not identified as
 // ghosts.
-// In this C++ version, a more complicated algorithm is implemented to be more
-// aggressive. But it might not be implementable in firmware. A simple local
-// maximum finding algorithm, as in the current EMTF, might suffice.
+// In this C++ version, a more complicated algorithm is implemented, which uses
+// clustering to do aggressive cleaning. But it might not be implementable
+// in firmware. A simple local maximum finding algorithm should also work
+// although the results are slightly different (not fully tested).
 
 class RoadCleaning {
 public:
   void run(const std::vector<Road>& roads, std::vector<Road>& clean_roads) const {
+
+    // Optimize for CPU processing?
+    bool optimize_for_cpu = false;
+
+    if (optimize_for_cpu) {
+      apply_cleaning(roads, clean_roads);
+    } else {
+      apply_cleaning_unoptimized(roads, clean_roads);
+    }
+
+    apply_additional_cleaning(clean_roads);
+    return;
+  }
+
+private:
+  void apply_cleaning(const std::vector<Road>& roads, std::vector<Road>& clean_roads) const {
     // Skip if no roads
     if (roads.empty()) {
       return;
@@ -1310,7 +1327,6 @@ public:
       RoadPtr first_road = amap[group.front()];  // iphi range
       RoadPtr last_road = amap[group.back()];    // iphi range
       tmp_clean_roads_groupinfo.emplace_back(first_road->iphi, last_road->iphi);
-
     }  // end loop over groups
 
     if (tmp_clean_roads.empty())
@@ -1325,23 +1341,25 @@ public:
 
       // Check for intersection in the iphi range
       for (size_t j=0; j<i; ++j) {
-        const auto& group_i = tmp_clean_roads_groupinfo[ind[i]];
-        const auto& group_j = tmp_clean_roads_groupinfo[ind[j]];
-        int32_t x1 = group_i.first;
-        int32_t x2 = group_i.second;
-        int32_t y1 = group_j.first;
-        int32_t y2 = group_j.second;
+        if (tmp_clean_roads[i].ieta == tmp_clean_roads[j].ieta) {  // same zone
+          const auto& group_i = tmp_clean_roads_groupinfo[ind[i]];
+          const auto& group_j = tmp_clean_roads_groupinfo[ind[j]];
+          int32_t x1 = group_i.first;
+          int32_t x2 = group_i.second;
+          int32_t y1 = group_j.first;
+          int32_t y2 = group_j.second;
 
-        // No intersect between two ranges (x1, x2), (y1, y2): (x2 < y1) || (x1 > y2)
-        // Intersect: !((x2 < y1) || (x1 > y2)) = (x2 >= y1) and (x1 <= y2)
-        // Allow +/-2 due to extrapolation-to-EMTF error
-        if (((x2+2) >= y1) && ((x1-2) <= y2)) {
-          keep = false;
-          break;
+          // No intersect between two ranges (x1, x2), (y1, y2): (x2 < y1) || (x1 > y2)
+          // Intersect: !((x2 < y1) || (x1 > y2)) = (x2 >= y1) and (x1 <= y2)
+          // Allow +/-2 due to extrapolation-to-EMTF error
+          if (((x2+2) >= y1) && ((x1-2) <= y2)) {
+            keep = false;
+            break;
+          }
         }
       }  // end inner loop over tmp_clean_roads[:i]
 
-      // Do not share ME1/1, ME1/2, ME0, MB1, MB2
+      // Do not share ME1/1, ME1/2, RE1/2, GE1/1, ME0, MB1, MB2
       if (keep) {
         using int32_t_pair = std::pair<int32_t, int32_t>;  // emtf_layer, emtf_phi
 
@@ -1350,6 +1368,8 @@ public:
           for (const auto& hit : hits) {
             if ((hit.emtf_layer == 0) ||
                 (hit.emtf_layer == 1) ||
+                (hit.emtf_layer == 5) ||
+                (hit.emtf_layer == 9) ||
                 (hit.emtf_layer == 11) ||
                 (hit.emtf_layer == 12) ||
                 (hit.emtf_layer == 13) ) {
@@ -1374,18 +1394,124 @@ public:
         }  // end inner loop over tmp_clean_roads[:i]
       }
 
-      // Finally, check consistency with BX=0
       if (keep) {
         const auto& road_i = tmp_clean_roads[ind[i]];
-        if (select_bx_zero(road_i)) {
-          clean_roads.push_back(road_i);
-        }
+        clean_roads.push_back(road_i);
       }
-    }  // end loop over tmp_clean_roads
+    }  // end loop over tmp_clean_roads.size()
     return;
   }
 
-private:
+  void apply_cleaning_unoptimized(const std::vector<Road>& roads, std::vector<Road>& clean_roads) const {
+    std::vector<bool> roads_mask(roads.size(), true);  // true: keep the road
+
+    for (int32_t ieta = 0; ieta != PATTERN_BANK_NETA; ++ieta) {
+      if (ieta == 6) {  // For now, ignore zone 6
+        continue;
+      }
+
+      // Fill the quality codes
+      std::array<int, PATTERN_X_SEARCH_MAX+1> quality_codes;
+      quality_codes.fill(0);
+
+      for (const auto& road : roads) {
+        if (road.ieta == ieta) {
+          int this_code = road.sort_code;
+          if (quality_codes.at(road.iphi) < this_code) {
+            quality_codes.at(road.iphi) = this_code;
+          }
+        }
+      }
+
+      // Check if this quality code is the (local) maximum
+      size_t iroad = 0;
+      for (const auto& road : roads) {
+        if (road.ieta == ieta) {
+          int this_code = road.sort_code;
+
+          // Center quality is the current one
+          int qc = quality_codes.at(road.iphi);
+          // Left and right qualities are the neighbors
+          // Protect against the right end and left end special cases
+          int qr = (road.iphi == PATTERN_X_SEARCH_MAX) ? 0 : quality_codes.at(road.iphi+1);
+          int ql = (road.iphi == 0) ? 0 : quality_codes.at(road.iphi-1);
+
+          // Cancellation conditions
+          if ((this_code <= ql) || (this_code < qr) || (this_code < qc)) {  // this pattern is lower quality than neighbors
+            roads_mask.at(iroad) = false;  // cancel
+          }
+        }
+        ++iroad;
+      }
+    }
+
+    // Do the cancellation
+    std::vector<Road> tmp_clean_roads;
+    std::vector<int32_t> tmp_clean_roads_sortcode;
+    {
+      size_t iroad = 0;
+      for (const auto& road : roads) {
+        if (roads_mask.at(iroad) == true) {
+          tmp_clean_roads.push_back(road);
+          tmp_clean_roads_sortcode.push_back(road.sort_code);
+        }
+        ++iroad;
+      }
+    }
+
+    if (tmp_clean_roads.empty())
+      return;
+
+    // Sort by 'sort code'
+    const std::vector<size_t>& ind = my_argsort(tmp_clean_roads_sortcode, true);  // sort reverse
+
+    // Loop over the sorted roads, kill the siblings
+    for (size_t i=0; i<tmp_clean_roads.size(); ++i) {
+      bool keep = true;
+
+      // Do not share ME1/1, ME1/2, RE1/2, GE1/1, ME0, MB1, MB2
+      if (keep) {
+        using int32_t_pair = std::pair<int32_t, int32_t>;  // emtf_layer, emtf_phi
+
+        constexpr auto make_hit_set = [](const auto& hits) {
+          std::set<int32_t_pair> s;
+          for (const auto& hit : hits) {
+            if ((hit.emtf_layer == 0) ||
+                (hit.emtf_layer == 1) ||
+                (hit.emtf_layer == 5) ||
+                (hit.emtf_layer == 9) ||
+                (hit.emtf_layer == 11) ||
+                (hit.emtf_layer == 12) ||
+                (hit.emtf_layer == 13) ) {
+              s.insert(std::make_pair(hit.endsec*100 + hit.emtf_layer, hit.emtf_phi));
+            }
+          }
+          return s;
+        };
+
+        const auto& road_i = tmp_clean_roads[ind[i]];
+        const std::set<int32_t_pair>& s1 = make_hit_set(road_i.hits);
+        for (size_t j=0; j<i; ++j) {
+          const auto& road_j = tmp_clean_roads[ind[j]];
+          const std::set<int32_t_pair>& s2 = make_hit_set(road_j.hits);
+
+          std::vector<int32_t_pair> v_intersection;
+          std::set_intersection(s1.begin(), s1.end(), s2.begin(), s2.end(), std::back_inserter(v_intersection));
+          if (!v_intersection.empty()) {  // has sharing
+            keep = false;
+            break;
+          }
+        }  // end inner loop over tmp_clean_roads[:i]
+      }
+
+      if (keep) {
+        const auto& road_i = tmp_clean_roads[ind[i]];
+        clean_roads.push_back(road_i);
+      }
+    }  // end loop over tmp_clean_roads.size()
+    return;
+  }
+
   bool select_bx_zero(const Road& road) const {
     int bx_counter1 = 0;  // count hits with BX <= -1
     int bx_counter2 = 0;  // count hits with BX == 0
@@ -1409,6 +1535,19 @@ private:
     //bool ret = (bx_counter1 < 2) && (bx_counter2 >= 2);
     bool ret = (bx_counter1 <= 3) && (bx_counter2 >= 2) && (bx_counter3 <= 2);
     return ret;
+  }
+
+  void apply_additional_cleaning(std::vector<Road>& clean_roads) const {
+    // Finally, check consistency with BX=0
+    std::vector<Road> tmp_clean_roads;
+    std::swap(tmp_clean_roads, clean_roads);
+
+    for (const auto& road_i : tmp_clean_roads) {
+      if (select_bx_zero(road_i)) {
+        clean_roads.push_back(road_i);
+      }
+    }
+    return;
   }
 };
 
@@ -1812,7 +1951,7 @@ public:
     for (size_t i=0; i<tracks.size(); ++i) {
       bool keep = true;
 
-      // Do not share ME1/1, ME1/2, ME0, MB1, MB2
+      // Do not share ME1/1, ME1/2, RE1/2, GE1/1, ME0, MB1, MB2
       // Need to check for neighbor sector hits
       if (keep) {
         using int32_t_pair = std::pair<int32_t, int32_t>;  // emtf_layer, emtf_phi
@@ -1822,6 +1961,8 @@ public:
           for (const auto& hit : hits) {
             if ((hit.emtf_layer == 0) ||
                 (hit.emtf_layer == 1) ||
+                (hit.emtf_layer == 5) ||
+                (hit.emtf_layer == 9) ||
                 (hit.emtf_layer == 11) ||
                 (hit.emtf_layer == 12) ||
                 (hit.emtf_layer == 13) ) {
