@@ -151,7 +151,7 @@ void Phase2SectorProcessor::process(
 
 constexpr int NLAYERS = 16;      // 5 (CSC) + 4 (RPC) + 3 (GEM) + 4 (DT)
 constexpr int NFEATURES = 36;    // NN features
-constexpr int NPREDICTIONS = 2;  // NN outputs: q/pT, PU discr
+constexpr int NPREDICTIONS = 9;  // NN outputs
 
 constexpr int PATTERN_BANK_NPT = 18;   // straightness
 constexpr int PATTERN_BANK_NETA = 7;   // zone
@@ -160,8 +160,8 @@ constexpr int PATTERN_BANK_NVARS = 3;  // min, med, max
 
 constexpr int PATTERN_X_CENTRAL = 31;  // pattern bin number 31 is the central
 constexpr int PATTERN_X_SEARCH_MIN = 33;
-//constexpr int PATTERN_X_SEARCH_MAX = 154-10;
-constexpr int PATTERN_X_SEARCH_MAX = 154-10+12;  // account for DT
+constexpr int PATTERN_X_SEARCH_MAX = 154-10;
+//constexpr int PATTERN_X_SEARCH_MAX = 154-10+12;  // account for DT
 
 
 class Hit {
@@ -262,7 +262,7 @@ public:
   }
 
   // Properties
-  int16_t endcap;         // 1: positive; 2: negative
+  int16_t endcap;         // +1: positive; -1: negative
   int16_t sector;         // 1 to 6
   int16_t ipt;            // 0 to 8: prompt; 9 to 17: displaced
   int16_t ieta;           // 0 to 6: zone 0-6
@@ -287,9 +287,9 @@ public:
   }
 
   explicit Track(int16_t vt_endcap, int16_t vt_sector, int16_t vt_ipt, int16_t vt_ieta, int16_t vt_iphi,
-                 const road_hits_t& vt_hits, int16_t vt_mode, int16_t vt_quality, int16_t vt_zone,
+                 const road_hits_t& vt_hits, int16_t vt_mode, int16_t vt_quality, int16_t vt_sort_code,
                  float vt_xml_pt, float vt_pt, int16_t vt_q, float vt_y_pred, float vt_y_discr,
-                 int32_t vt_emtf_phi, int32_t vt_emtf_theta)
+                 float vt_y_displ, float vt_d0_displ, int32_t vt_emtf_phi, int32_t vt_emtf_theta)
   {
     endcap     = vt_endcap;
     sector     = vt_sector;
@@ -299,18 +299,20 @@ public:
     hits       = vt_hits;
     mode       = vt_mode;
     quality    = vt_quality;
-    zone       = vt_zone;
+    sort_code  = vt_sort_code;
     xml_pt     = vt_xml_pt;
     pt         = vt_pt;
     q          = vt_q;
     y_pred     = vt_y_pred;
     y_discr    = vt_y_discr;
+    y_displ    = vt_y_displ;
+    d0_displ   = vt_d0_displ;
     emtf_phi   = vt_emtf_phi;
     emtf_theta = vt_emtf_theta;
   }
 
   // Properties
-  int16_t endcap;         // 1: positive; 2: negative
+  int16_t endcap;         // +1: positive; -1: negative
   int16_t sector;         // 1 to 6
   int16_t ipt;            // 0 to 8: prompt; 9 to 17: displaced
   int16_t ieta;           // 0 to 6: zone 0-6
@@ -318,12 +320,14 @@ public:
   road_hits_t hits;       // hits that belong to this road
   int16_t mode;           // 4-bit word: see create_road()
   int16_t quality;        // 0 to 9: see find_emtf_road_quality()
-  int16_t zone;           // 0 to 6: zone 0-6. Same as ieta.
+  int16_t sort_code;      // 10-bit word: see find_emtf_road_sort_code()
   float   xml_pt;         // track pt, before scaling to 90% eff WP.
   float   pt;             // track pt, after scaling to 90% eff WP.
   int16_t q;              // track charge.
   float   y_pred;         // track curvature q/pt (from NN).
   float   y_discr;        // track PU discr (from NN).
+  float   y_displ;        // track curvature q/pt without vertex constraint (from NN).
+  float   d0_displ;       // track transverse impact parameter (from NN).
   int32_t emtf_phi;       // 13-bit integer (0 to 8191): median phi of the hits. Same as Road::phi_median.
   int32_t emtf_theta;     // 7-bit integer (0 to 127): median theta of the hits. Same as Road::theta_median.
 };
@@ -712,21 +716,22 @@ public:
     // Next 9 patterns for displaced muons: -1/14 <= q/pT <= +1/14, -120 <= d0 <= 120
     // Total is 18 patterns.
     // ipt   0  1  2  3  4  5  6  7  8
-    // strg  1  3  5  7  9  7  5  3  1
+    // strg  5  6  7  8  9  8  7  6  5
     // ipt   9 10 11 12 13 14 15 16 17
-    // strg  0  2  4  6  8  6  4  2  0
-    static const int32_t lut[PATTERN_BANK_NPT] = {1,3,5,7,9,7,5,3,1,0,2,4,6,8,6,4,2,0};
+    // strg  0  1  2  3  4  3  2  1  0
+    static const int32_t lut[PATTERN_BANK_NPT] = {5,6,7,8,9,8,7,6,5,0,1,2,3,4,3,2,1,0};
+    assert((0 <= ipt) && (ipt < PATTERN_BANK_NPT));
     return lut[ipt];
   }
 
   // Decide EMTF road sort code (by hit composition)
   int32_t find_emtf_road_sort_code(int32_t road_quality, const std::vector<int32_t>& road_hits_layers) const {
-    // 10   9      8      7    6      5    4    3..0
-    //      ME1/1  ME1/2  ME2         ME3  ME4  qual
-    //                         RE1&2  RE3  RE4
-    // ME0         GE1/1       GE2/1
-    // MB1  MB2                MB3&4
-    static const int32_t lut[NLAYERS] = {9,8,7,5,4,6,6,5,4,8,6,10,10,9,6,6};
+    // 12   11     10     9      8      7      6      5      4      3..0
+    //      ME1/1  ME1/2  ME2    ME3    ME4                         qual
+    //                                                RE1&2  RE3&4
+    // ME0                                     GE1/1  GE2/1
+    // MB1  MB2                                MB3&4
+    static const int32_t lut[NLAYERS] = {11,10,9,8,7,5,5,4,4,6,5,12,12,11,6,6};
 
     int32_t sort_code = 0;
     for (const auto& hit_lay : road_hits_layers) {
@@ -736,6 +741,119 @@ public:
     assert((0 <= road_quality) && (road_quality < 16));
     sort_code |= road_quality;
     return sort_code;
+  }
+
+  // Decide EMTF road mode
+  int32_t find_emtf_road_mode(const std::vector<Hit>& road_hits) const {
+    // 'road_mode' is a 4-bit word where each bit indicates whether a hit was
+    // found in one of the 4 stations
+    // |bit| 3 | 2 | 1 | 0 |
+    // |---|---|---|---|---|
+    // |st | 1 | 2 | 3 | 4 |
+    int32_t road_mode = 0;
+    for (const auto& hit : road_hits) {
+      int32_t station = hit.station;
+      road_mode |= (1 << (4 - station));
+    }
+    return road_mode;
+  }
+
+  // Decide EMTF road accept
+  bool find_emtf_road_accept(int32_t road_zone, const std::vector<Hit>& road_hits) const {
+    // The other road modes are used to add specific rules for different zones.
+    int road_mode          = 0;
+    int road_mode_csc      = 0;
+    int road_mode_me0      = 0;  // zones 0,1
+    int road_mode_me12     = 0;  // zone 4
+    int road_mode_csc_me12 = 0;  // zone 4
+    int road_mode_mb1      = 0;  // zone 6
+    int road_mode_mb2      = 0;  // zone 6
+    int road_mode_me13     = 0;  // zone 6
+    //int road_mode_me22     = 0;  // zone 6
+
+    for (const auto& hit : road_hits) {
+      int32_t type    = hit.type;
+      int32_t station = hit.station;
+      int32_t ring    = hit.ring;
+      int32_t bx      = hit.bx;
+      road_mode |= (1 << (4 - station));
+
+      if ((type == TriggerPrimitive::kCSC) || (type == TriggerPrimitive::kME0)) {
+        road_mode_csc |= (1 << (4 - station));
+      }
+
+      if ((type == TriggerPrimitive::kME0) && (bx == 0)) {
+        road_mode_me0 |= (1 << 1);
+      } else if ((type == TriggerPrimitive::kCSC) && (station == 1) && ((ring == 1) || (ring == 4)) && (bx == 0)) {
+        road_mode_me0 |= (1 << 0);
+      }
+
+      if ((type == TriggerPrimitive::kCSC) && (station == 1) && ((ring == 2) || (ring == 3))) {  // pretend as station 2
+        road_mode_me12 |= (1 << (4 - 2));
+      } else if ((type == TriggerPrimitive::kRPC) && (station == 1) && ((ring == 2) || (ring == 3))) {  // pretend as station 2
+        road_mode_me12 |= (1 << (4 - 2));
+      } else {
+        road_mode_me12 |= (1 << (4 - station));
+      }
+
+      if ((type == TriggerPrimitive::kCSC) && (station == 1) && ((ring == 2) || (ring == 3))) {  // pretend as station 2
+        road_mode_csc_me12 |= (1 << (4 - 2));
+      } else if (type == TriggerPrimitive::kCSC) {
+        road_mode_csc_me12 |= (1 << (4 - station));
+      }
+
+      if ((type == TriggerPrimitive::kDT) && (station == 1)) {
+        road_mode_mb1 |= (1 << 1);
+      } else if ((type == TriggerPrimitive::kDT) && (station >= 2)) {
+        road_mode_mb1 |= (1 << 0);
+      } else if ((type == TriggerPrimitive::kCSC) && (station >= 1) && ((ring == 2) || (ring == 3))) {
+        road_mode_mb1 |= (1 << 0);
+      } else if ((type == TriggerPrimitive::kRPC) && (station >= 1) && ((ring == 2) || (ring == 3))) {
+        road_mode_mb1 |= (1 << 0);
+      }
+
+      if ((type == TriggerPrimitive::kDT) && (station == 2)) {
+        road_mode_mb2 |= (1 << 1);
+      } else if ((type == TriggerPrimitive::kDT) && (station >= 3)) {
+        road_mode_mb2 |= (1 << 0);
+      } else if ((type == TriggerPrimitive::kCSC) && (station >= 1) && ((ring == 2) || (ring == 3))) {
+        road_mode_mb2 |= (1 << 0);
+      } else if ((type == TriggerPrimitive::kRPC) && (station >= 1) && ((ring == 2) || (ring == 3))) {
+        road_mode_mb2 |= (1 << 0);
+      }
+
+      if ((type == TriggerPrimitive::kCSC) && (station == 1) && ((ring == 2) || (ring == 3))) {
+        road_mode_me13 |= (1 << 1);
+      } else if ((type == TriggerPrimitive::kCSC) && (station >= 2) && ((ring == 2) || (ring == 3))) {
+        road_mode_me13 |= (1 << 0);
+      } else if ((type == TriggerPrimitive::kRPC) && (station == 1) && ((ring == 2) || (ring == 3))) {
+        road_mode_me13 |= (1 << 1);
+      } else if ((type == TriggerPrimitive::kRPC) && (station >= 2) && ((ring == 2) || (ring == 3))) {
+        road_mode_me13 |= (1 << 0);
+      }
+
+      //if ((type == TriggerPrimitive::kCSC) && (station == 2) && ((ring == 2) || (ring == 3))) {
+      //  road_mode_me22 |= (1 << 1);
+      //} else if ((type == TriggerPrimitive::kCSC) && (station >= 3) && ((ring == 2) || (ring == 3))) {
+      //  road_mode_me22 |= (1 << 0);
+      //} else if ((type == TriggerPrimitive::kRPC) && (station == 2) && ((ring == 2) || (ring == 3))) {
+      //  road_mode_me22 |= (1 << 1);
+      //} else if ((type == TriggerPrimitive::kRPC) && (station >= 3) && ((ring == 2) || (ring == 3))) {
+      //  road_mode_me22 |= (1 << 0);
+      //}
+    }  // end loop over road_hits
+
+    // Apply SingleMu requirement
+    // + (zones 0,1) any road with ME0 and ME1
+    // + (zone 4) any road with ME1/1, ME1/2 + one more station
+    // + (zone 5) any road with 2 stations
+    // + (zone 6) any road with MB1+MB2, MB1+MB3, MB1+ME1/3, MB1+ME2/2, MB2+MB3, MB2+ME1/3, MB2+ME2/2, ME1/3+ME2/2
+    bool accept = ((is_emtf_singlemu(road_mode) && is_emtf_muopen(road_mode_csc)) ||
+        (((road_zone == 0) || (road_zone == 1)) && (road_mode_me0 == 3)) ||
+        ((road_zone == 4) && is_emtf_singlemu(road_mode_me12) && is_emtf_muopen(road_mode_csc_me12)) ||
+        ((road_zone == 5) && is_emtf_doublemu(road_mode) && is_emtf_muopen(road_mode_csc)) ||
+        ((road_zone == 6) && ((road_mode_mb1 == 3) || (road_mode_mb2 == 3) || (road_mode_me13 == 3))) );
+    return accept;
   }
 
   bool is_emtf_singlemu(int mode) const {
@@ -874,7 +992,11 @@ public:
            std::vector<Hit>& sector_hits, std::vector<Road>& sector_roads) const {
 
     // Optimize for CPU processing?
-    bool optimize_for_cpu = false;
+    bool optimize_for_cpu = true;
+
+    // Use endcap = +1 or -1
+    if (endcap == 2)
+      endcap = -1;
 
     // Convert all the hits again and apply the filter to get the legit hits
     int32_t sector_mode = 0;
@@ -939,115 +1061,17 @@ public:
 
 private:
   void create_road(const Road::road_id_t road_id, const Road::road_hits_t road_hits, std::vector<Road>& sector_roads) const {
-
-    // Find road modes
-    // 'road_mode' is a 4-bit word where each bit indicates whether a hit was found in one of the 4 stations
-    // |bit| 3 | 2 | 1 | 0 |
-    // |---|---|---|---|---|
-    // |st | 1 | 2 | 3 | 4 |
-    // 'road_mode_csc' is like 'road_mode' but only considers the CSC stations. The other road modes are used to add specific rules
-    // for different zones.
-    int road_mode          = 0;
-    int road_mode_csc      = 0;
-    int road_mode_me0      = 0;  // zones 0,1
-    int road_mode_me12     = 0;  // zone 4
-    int road_mode_csc_me12 = 0;  // zone 4
-    int road_mode_mb1      = 0;  // zone 6
-    int road_mode_mb2      = 0;  // zone 6
-    int road_mode_me13     = 0;  // zone 6
-    //int road_mode_me22     = 0;  // zone 6
-
-    for (const auto& hit : road_hits) {
-      int32_t type    = hit.type;
-      int32_t station = hit.station;
-      int32_t ring    = hit.ring;
-      int32_t bx      = hit.bx;
-      road_mode |= (1 << (4 - station));
-
-      if ((type == TriggerPrimitive::kCSC) || (type == TriggerPrimitive::kME0)) {
-        road_mode_csc |= (1 << (4 - station));
-      }
-
-      if ((type == TriggerPrimitive::kME0) && (bx == 0)) {
-        road_mode_me0 |= (1 << 1);
-      } else if ((type == TriggerPrimitive::kCSC) && (station == 1) && ((ring == 1) || (ring == 4)) && (bx == 0)) {
-        road_mode_me0 |= (1 << 0);
-      }
-
-      if ((type == TriggerPrimitive::kCSC) && (station == 1) && ((ring == 2) || (ring == 3))) {  // pretend as station 2
-        road_mode_me12 |= (1 << (4 - 2));
-      } else if ((type == TriggerPrimitive::kRPC) && (station == 1) && ((ring == 2) || (ring == 3))) {  // pretend as station 2
-        road_mode_me12 |= (1 << (4 - 2));
-      } else {
-        road_mode_me12 |= (1 << (4 - station));
-      }
-
-      if ((type == TriggerPrimitive::kCSC) && (station == 1) && ((ring == 2) || (ring == 3))) {  // pretend as station 2
-        road_mode_csc_me12 |= (1 << (4 - 2));
-      } else if (type == TriggerPrimitive::kCSC) {
-        road_mode_csc_me12 |= (1 << (4 - station));
-      }
-
-      if ((type == TriggerPrimitive::kDT) && (station == 1)) {
-        road_mode_mb1 |= (1 << 1);
-      } else if ((type == TriggerPrimitive::kDT) && (station >= 2)) {
-        road_mode_mb1 |= (1 << 0);
-      } else if ((type == TriggerPrimitive::kCSC) && (station >= 1) && ((ring == 2) || (ring == 3))) {
-        road_mode_mb1 |= (1 << 0);
-      } else if ((type == TriggerPrimitive::kRPC) && (station >= 1) && ((ring == 2) || (ring == 3))) {
-        road_mode_mb1 |= (1 << 0);
-      }
-
-      if ((type == TriggerPrimitive::kDT) && (station == 2)) {
-        road_mode_mb2 |= (1 << 1);
-      } else if ((type == TriggerPrimitive::kDT) && (station >= 3)) {
-        road_mode_mb2 |= (1 << 0);
-      } else if ((type == TriggerPrimitive::kCSC) && (station >= 1) && ((ring == 2) || (ring == 3))) {
-        road_mode_mb2 |= (1 << 0);
-      } else if ((type == TriggerPrimitive::kRPC) && (station >= 1) && ((ring == 2) || (ring == 3))) {
-        road_mode_mb2 |= (1 << 0);
-      }
-
-      if ((type == TriggerPrimitive::kCSC) && (station == 1) && ((ring == 2) || (ring == 3))) {
-        road_mode_me13 |= (1 << 1);
-      } else if ((type == TriggerPrimitive::kCSC) && (station >= 2) && ((ring == 2) || (ring == 3))) {
-        road_mode_me13 |= (1 << 0);
-      } else if ((type == TriggerPrimitive::kRPC) && (station == 1) && ((ring == 2) || (ring == 3))) {
-        road_mode_me13 |= (1 << 1);
-      } else if ((type == TriggerPrimitive::kRPC) && (station >= 2) && ((ring == 2) || (ring == 3))) {
-        road_mode_me13 |= (1 << 0);
-      }
-
-      //if ((type == TriggerPrimitive::kCSC) && (station == 2) && ((ring == 2) || (ring == 3))) {
-      //  road_mode_me22 |= (1 << 1);
-      //} else if ((type == TriggerPrimitive::kCSC) && (station >= 3) && ((ring == 2) || (ring == 3))) {
-      //  road_mode_me22 |= (1 << 0);
-      //} else if ((type == TriggerPrimitive::kRPC) && (station == 2) && ((ring == 2) || (ring == 3))) {
-      //  road_mode_me22 |= (1 << 1);
-      //} else if ((type == TriggerPrimitive::kRPC) && (station >= 3) && ((ring == 2) || (ring == 3))) {
-      //  road_mode_me22 |= (1 << 0);
-      //}
-    }  // end loop over road_hits
-
-    // Create road
     int32_t ipt  = road_id[2];  // road_id = (endcap, sector, ipt, ieta, iphi)
     int32_t ieta = road_id[3];
 
-    // Apply SingleMu requirement
-    // + (zones 0,1) any road with ME0 and ME1
-    // + (zone 4) any road with ME1/1, ME1/2 + one more station
-    // + (zone 5) any road with 2 stations
-    // + (zone 6) any road with MB1+MB2, MB1+MB3, MB1+ME1/3, MB1+ME2/2, MB2+MB3, MB2+ME1/3, MB2+ME2/2, ME1/3+ME2/2
-    if ((util.is_emtf_singlemu(road_mode) && util.is_emtf_muopen(road_mode_csc)) ||
-        (((ieta == 0) || (ieta == 1)) && (road_mode_me0 == 3)) ||
-        ((ieta == 4) && util.is_emtf_singlemu(road_mode_me12) && util.is_emtf_muopen(road_mode_csc_me12)) ||
-        ((ieta == 5) && util.is_emtf_doublemu(road_mode) && util.is_emtf_muopen(road_mode_csc)) ||
-        ((ieta == 6) && ((road_mode_mb1 == 3) || (road_mode_mb2 == 3) || (road_mode_me13 == 3))) )
-    {
+    // Check whether the road is OK
+    bool accept = util.find_emtf_road_accept(ieta, road_hits);
+    if (accept) {
       std::vector<int32_t> road_hits_layers;
       std::transform(road_hits.begin(), road_hits.end(), std::back_inserter(road_hits_layers),
           [](const auto& hit) -> int32_t { return hit.emtf_layer; });
 
+      int32_t road_mode = util.find_emtf_road_mode(road_hits);
       int32_t road_quality = util.find_emtf_road_quality(ipt);
       int32_t road_sort_code = util.find_emtf_road_sort_code(road_quality, road_hits_layers);
       int32_t road_phi_median = 0;   // to be determined later
@@ -1122,7 +1146,7 @@ private:
           int32_t ieta = hit_zone;
 
           // 'x' is the unit used in the patterns
-          // Full range is 0 <= iphi <= 154. but a reduced range is sufficient (27% saving on patterns)
+          // Full range is 0 <= iphi <= 160. but a reduced range is sufficient (27% saving on patterns)
           if ((PATTERN_X_SEARCH_MIN <= iphi) && (iphi <= PATTERN_X_SEARCH_MAX)) {
             Road::road_id_t road_id {{endcap, sector, ipt, ieta, iphi}};
             amap[road_id].push_back(hit);
@@ -1167,7 +1191,7 @@ private:
       for (int32_t ipt = 0; ipt != PATTERN_BANK_NPT; ++ipt) {
 
         // 'x' is the unit used in the patterns
-        // Full range is 0 <= iphi <= 154. but a reduced range is sufficient (27% saving on patterns)
+        // Full range is 0 <= iphi <= 160. but a reduced range is sufficient (27% saving on patterns)
         for (int32_t iphi = PATTERN_X_SEARCH_MIN; iphi != (PATTERN_X_SEARCH_MAX+1); ++iphi) {
           Road::road_id_t road_id {{endcap, sector, ipt, ieta, iphi}};
           Road::road_hits_t road_hits;
@@ -1215,7 +1239,7 @@ public:
   void run(const std::vector<Road>& roads, std::vector<Road>& clean_roads) const {
 
     // Optimize for CPU processing?
-    bool optimize_for_cpu = false;
+    bool optimize_for_cpu = true;
 
     if (optimize_for_cpu) {
       apply_cleaning(roads, clean_roads);
@@ -1341,7 +1365,7 @@ private:
 
       // Check for intersection in the iphi range
       for (size_t j=0; j<i; ++j) {
-        if (tmp_clean_roads[i].ieta == tmp_clean_roads[j].ieta) {  // same zone
+        if (tmp_clean_roads[ind[i]].ieta == tmp_clean_roads[ind[j]].ieta) {  // same zone
           const auto& group_i = tmp_clean_roads_groupinfo[ind[i]];
           const auto& group_j = tmp_clean_roads_groupinfo[ind[j]];
           int32_t x1 = group_i.first;
@@ -1533,8 +1557,64 @@ private:
     }
 
     //bool ret = (bx_counter1 < 2) && (bx_counter2 >= 2);
-    bool ret = (bx_counter1 <= 3) && (bx_counter2 >= 2) && (bx_counter3 <= 2);
+    bool ret = (bx_counter1 <= 2) && (bx_counter2 >= 2) && (bx_counter3 <= 2);
     return ret;
+  }
+
+  bool select_theta_aligned(Road& road) const {  // pass by reference to modify road.hits
+    std::vector<int32_t> road_hits_thetas;
+    std::transform(road.hits.begin(), road.hits.end(), std::back_inserter(road_hits_thetas),
+        [](const auto& hit) -> int32_t { return hit.emtf_theta; });
+    int32_t road_theta_median = my_median_unsorted(road_hits_thetas);
+
+    std::vector<Hit> tmp_road_hits;
+    for (const auto& hit : road.hits) {
+      int32_t type    = hit.type;
+      int32_t station = hit.station;
+      int32_t ring    = hit.ring;
+
+      int32_t dtheta = std::abs(hit.emtf_theta - road_theta_median);
+      int32_t cut = 12;
+      if (type == TriggerPrimitive::kCSC) {
+        if (station == 1) {
+          cut = 4;
+        } else {
+          cut = 2;
+        }
+      } else if (type == TriggerPrimitive::kRPC) {
+        if (ring == 1) {
+          cut = 2;
+        } else {
+          cut = 8;
+        }
+      } else if (type == TriggerPrimitive::kGEM) {
+        cut = 6;
+      } else if (type == TriggerPrimitive::kME0) {
+        cut = 4;
+      } else {
+        cut = 12;
+      }
+
+      if (road.quality >= 5) {
+        if (dtheta <= cut) {
+          tmp_road_hits.push_back(hit);
+        }
+      } else {
+        if (dtheta <= (cut*2)) {
+          tmp_road_hits.push_back(hit);
+        }
+      }
+    }
+
+    // Overwrite road hits
+    std::swap(road.hits, tmp_road_hits);
+
+    // Overwrite road mode
+    road.mode = util.find_emtf_road_mode(road.hits);
+
+    // Check whether the road is OK, after the road hits are overwritten
+    bool accept = util.find_emtf_road_accept(road.ieta, road.hits);
+    return accept;
   }
 
   void apply_additional_cleaning(std::vector<Road>& clean_roads) const {
@@ -1542,8 +1622,8 @@ private:
     std::vector<Road> tmp_clean_roads;
     std::swap(tmp_clean_roads, clean_roads);
 
-    for (const auto& road_i : tmp_clean_roads) {
-      if (select_bx_zero(road_i)) {
+    for (auto&& road_i : tmp_clean_roads) {
+      if (select_bx_zero(road_i) && select_theta_aligned(road_i)) {
         clean_roads.push_back(road_i);
       }
     }
@@ -1653,11 +1733,10 @@ class PtAssignment {
 public:
   explicit PtAssignment() {
     std::string cmssw_base = std::getenv("CMSSW_BASE");
-    //pbFileName = "/src/L1Trigger/L1TMuonEndCap/data/emtfpp_tf_graphs/model_graph.26.pb";
-    pbFileName = "/src/L1Trigger/L1TMuonEndCap/data/emtfpp_tf_graphs/model_graph.27.pb";
+    pbFileName = "/src/L1Trigger/L1TMuonEndCap/data/emtfpp_tf_graphs/model_graph.29.pb";
     pbFileName = cmssw_base + pbFileName;
-    inputName = "input_1";
-    outputNames = {"regr/BiasAdd", "discr/Sigmoid"};
+    inputName = "batch_normalization_1_input";
+    outputNames = {"dense_4/BiasAdd"};
 
     graphDef = tensorflow::loadGraphDef(pbFileName);
     assert(graphDef != nullptr);
@@ -1769,12 +1848,58 @@ private:
     float* d = input.flat<float>().data();
     std::copy(feature.begin(), feature.end(), d);
     tensorflow::run(session, { { inputName, input } }, outputNames, &outputs);
-    assert(outputs.size() == NPREDICTIONS);
+    assert(outputs.size() == 1);
     assert(prediction.size() == NPREDICTIONS);
 
     const float reg_pt_scale = 100.;  // a scale factor applied to regression during training
-    prediction.at(0) = outputs[0].matrix<float>()(0, 0) / reg_pt_scale; // q/pT
-    prediction.at(1) = outputs[1].matrix<float>()(0, 0); // PU discr
+    const float reg_dxy_scale = 0.4;  // a scale factor applied to regression during training
+
+    auto relu = [&](float x) {
+      // ReLU(x) = max(0, x)
+      return (x >= 0.) ? x : 0;
+    };
+    auto softplus = [&](float x) {
+      // Softplus f(x) = log(1+exp(x))
+      return relu(x) + std::log1p(std::exp(-std::abs(x)));
+    };
+    auto get_loc = [&](float loc) {
+      float c = std::log(std::expm1(0.5 * reg_pt_scale));  // shifted to 2 GeV
+      loc = loc + c;
+      loc = (loc < 1./500 * reg_pt_scale) ? (1./500 * reg_pt_scale) : loc;
+      return loc;
+    };
+    auto get_sign = [&](float sign) {
+      return (sign >= 0.) ? 1 : -1;
+    };
+    auto get_loc_dxy = [&](float loc) {
+      return loc;
+    };
+    auto get_sign_dxy = [&](float sign) {
+      return 1e0;
+    };
+    auto get_scale = [&](float scale) {
+      return 1e-5 + softplus(0.01 * scale);
+    };
+
+    prediction.at(0) = get_loc(outputs[0].matrix<float>()(0, 0));
+    prediction.at(1) = get_sign(outputs[0].matrix<float>()(0, 1));
+    prediction.at(2) = get_scale(outputs[0].matrix<float>()(0, 2));
+    prediction.at(3) = get_loc(outputs[0].matrix<float>()(0, 3));
+    prediction.at(4) = get_sign(outputs[0].matrix<float>()(0, 4));
+    prediction.at(5) = get_scale(outputs[0].matrix<float>()(0, 5));
+    prediction.at(6) = get_loc_dxy(outputs[0].matrix<float>()(0, 6));
+    prediction.at(7) = get_sign_dxy(outputs[0].matrix<float>()(0, 7));
+    prediction.at(8) = get_scale(outputs[0].matrix<float>()(0, 8));
+
+    // Remove scale factor used during training
+    prediction.at(0) /= reg_pt_scale;
+    prediction.at(3) /= reg_pt_scale;
+    prediction.at(6) /= reg_dxy_scale;
+
+    // Include sign
+    prediction.at(0) *= prediction.at(1);
+    prediction.at(3) *= prediction.at(4);
+    prediction.at(6) *= prediction.at(7);
     return;
   }
 
@@ -1805,22 +1930,38 @@ public:
     s_max   = 60.;
     s_nbins = 120;
     s_step  = (s_max - s_min)/float(s_nbins);
-    s_lut   = {{  2.4605,  2.0075,  1.9042,  2.0762,  2.4325,  2.9043,  3.4101,  3.9232,
-                  4.4403,  4.9856,  5.5775,  6.2036,  6.8515,  7.5126,  8.1807,  8.8570,
-                  9.5343, 10.2031, 10.8651, 11.5340, 12.2164, 12.9187, 13.6537, 14.4093,
-                 15.1559, 15.8731, 16.5513, 17.2402, 17.9719, 18.7379, 19.5292, 20.3469,
-                 21.1514, 21.9302, 22.6964, 23.4417, 24.1086, 24.7471, 25.4113, 26.1038,
-                 26.7868, 27.4820, 28.2311, 29.0478, 29.9305, 30.8285, 31.6537, 32.3950,
-                 33.1279, 33.8928, 34.6529, 35.4154, 36.2441, 37.1817, 38.2494, 39.2588,
-                 40.1019, 40.8765, 41.6557, 42.4564, 43.2505, 44.0659, 44.9429, 45.8573,
-                 46.7469, 47.6586, 48.6987, 49.6689, 50.3389, 50.9753, 51.7242, 52.4922,
-                 53.2630, 54.0344, 54.8061, 55.5778, 56.3496, 57.1213, 57.8931, 58.6648,
-                 59.4366, 60.2083, 60.9800, 61.7518, 62.5235, 63.2953, 64.0670, 64.8387,
-                 65.6104, 66.3822, 67.1539, 67.9256, 68.6974, 69.4691, 70.2408, 71.0125,
-                 71.7843, 72.5560, 73.3277, 74.0995, 74.8712, 75.6429, 76.4146, 77.1864,
-                 77.9581, 78.7298, 79.5015, 80.2733, 81.0450, 81.8167, 82.5884, 83.3602,
-                 84.1319, 84.9036, 85.6754, 86.4471, 87.2188, 87.9905, 88.7623, 89.5340}};
+    s_lut   = {{  1.8219,  1.5725,  1.6237,  1.8672,  2.2298,  2.6692,  3.1724,  3.7226,
+                  4.3005,  4.8945,  5.4972,  6.1065,  6.7217,  7.3443,  7.9797,  8.6255,
+                  9.2779,  9.9339, 10.5868, 11.2340, 11.8745, 12.5056, 13.1352, 13.7707,
+                 14.3985, 15.0216, 15.6519, 16.2946, 16.9297, 17.5598, 18.1981, 18.8567,
+                 19.5345, 20.2317, 20.9849, 21.7932, 22.5650, 23.2764, 23.9233, 24.5326,
+                 25.1879, 25.9589, 26.8144, 27.6406, 28.3182, 28.9110, 29.4817, 30.0894,
+                 30.8001, 31.5674, 32.3055, 33.0457, 33.8479, 34.6975, 35.4941, 36.2179,
+                 36.9157, 37.6592, 38.5602, 39.6237, 40.7733, 41.9798, 43.2775, 44.6862,
+                 45.9872, 46.8917, 47.5905, 48.2057, 48.8099, 49.4649, 50.1705, 50.8610,
+                 51.5614, 52.2918, 53.0282, 53.7657, 54.5035, 55.2414, 55.9793, 56.7173,
+                 57.4553, 58.1933, 58.9314, 59.6694, 60.4074, 61.1454, 61.8834, 62.6214,
+                 63.3594, 64.0973, 64.8353, 65.5733, 66.3113, 67.0493, 67.7873, 68.5253,
+                 69.2633, 70.0012, 70.7392, 71.4772, 72.2152, 72.9532, 73.6912, 74.4292,
+                 75.1671, 75.9051, 76.6431, 77.3811, 78.1191, 78.8571, 79.5950, 80.3330,
+                 81.0710, 81.8090, 82.5470, 83.2849, 84.0229, 84.7609, 85.4989, 86.2369}};
+    s_lut_wp50 = {{1.8124,  1.6471,  1.6755,  1.8367,  2.0737,  2.3461,  2.6370,  2.9560,
+                  3.3248,  3.7365,  4.1760,  4.6336,  5.1040,  5.5834,  6.0695,  6.5604,
+                  7.0554,  7.5540,  8.0544,  8.5545,  9.0529,  9.5514, 10.0488, 10.5407,
+                 11.0263, 11.5075, 11.9870, 12.4668, 12.9474, 13.4297, 13.9161, 14.4090,
+                 14.9068, 15.4037, 15.8966, 16.3903, 16.8852, 17.3796, 17.8709, 18.3599,
+                 18.8473, 19.3375, 19.8375, 20.3540, 20.8927, 21.4490, 21.9967, 22.5160,
+                 23.0021, 23.4527, 23.8652, 24.2528, 24.6402, 25.0503, 25.4903, 25.9606,
+                 26.4660, 27.0031, 27.5589, 28.1126, 28.6454, 29.1493, 29.6322, 30.1029,
+                 30.5670, 31.0276, 31.4843, 31.9233, 32.3456, 32.7724, 33.2167, 33.6778,
+                 34.1510, 34.6287, 35.1127, 35.6217, 36.1572, 36.7039, 37.2606, 37.8230,
+                 38.3763, 38.9074, 39.4167, 39.9213, 40.4378, 40.9845, 41.5990, 42.2614,
+                 42.9157, 43.5348, 44.1085, 44.6446, 45.1498, 45.6289, 46.0819, 46.5207,
+                 46.9573, 47.3828, 47.7878, 48.1767, 48.5567, 48.9351, 49.3208, 49.7180,
+                 50.1278, 50.5593, 51.0135, 51.4887, 51.9777, 52.4705, 52.9646, 53.4593,
+                 53.9542, 54.4493, 54.9446, 55.4399, 55.9353, 56.4307, 56.9261, 57.4215}};
     assert(s_lut.size() == (size_t) s_nbins);
+    assert(s_lut_wp50.size() == (size_t) s_nbins);
   }
 
   int digitize(float x) const {
@@ -1851,27 +1992,73 @@ public:
     return trg_pt;
   }
 
-  bool pass_trigger(int ndof, int mode, int strg, int zone, int theta_median, float y_pred, float y_discr) const {
-    int ipt1 = strg;
-    int ipt2 = util.find_pt_bin(y_pred);
-    int quality1 = util.find_emtf_road_quality(ipt1);
-    int quality2 = util.find_emtf_road_quality(ipt2);
-    bool strg_ok = (quality2 <= (quality1+1));
-
+  float get_trigger_pt_wp50(float y_pred) const {
     float xml_pt = std::abs(1.0/y_pred);
-
-    // Apply cuts
-    bool trigger = false;
-    if (xml_pt > discr_pt_cut_high) {       // >14 GeV (98.5% coverage)
-      trigger = (y_discr > 0.9600);
-    } else if (xml_pt > discr_pt_cut_med) { // 8-14 GeV (98.5% coverage)
-      trigger = (y_discr > 0.8932);
-    } else if (xml_pt > discr_pt_cut_low) { // 4-8 GeV (99.0% coverage)
-      trigger = (y_discr > 0.2000);
-    } else {
-      trigger = (y_discr >= 0.) && strg_ok;
+    if (xml_pt <= 2.) {  // do not use the LUT if below 2 GeV
+      return xml_pt;
     }
+
+    int binx = digitize(xml_pt);
+    float x0 = float(binx) * s_step;
+    float x1 = float(binx+1) * s_step;
+    float y0 = s_lut_wp50.at(binx);
+    float y1 = s_lut_wp50.at(binx+1);
+    float trg_pt = interpolate(xml_pt, x0, x1, y0, y1);
+    return trg_pt;
+  }
+
+  bool pass_trigger(int ndof, int mode, int strg, int zone, int theta_median, float y_pred, float y_discr, float d0_pred) const {
+    //int ipt1 = strg;
+    //int ipt2 = util.find_pt_bin(y_pred);
+    //int quality1 = util.find_emtf_road_quality(ipt1);
+    //int quality2 = util.find_emtf_road_quality(ipt2);
+    //bool strg_ok = (quality2 <= (quality1+1));
+    float xml_pt = std::abs(1.0/y_pred);
+    bool trigger = false;
+    if (xml_pt > discr_pt_cut_high) {       // >14 GeV
+      trigger = (std::abs(d0_pred) < 20.);
+    } else if (xml_pt > discr_pt_cut_med) { // 8-14 GeV
+      trigger = (std::abs(d0_pred) < 25.);
+    } else if (xml_pt > discr_pt_cut_low) { // 4-8 GeV
+      trigger = (std::abs(d0_pred) < 30.);
+    } else {
+      trigger = (y_discr >= 0.);
+    }
+
+    //// OBSOLETE since v3
+    //// Apply cuts
+    //bool trigger = false;
+    //if (xml_pt > discr_pt_cut_high) {       // >14 GeV (98.5% coverage)
+    //  trigger = (y_discr > 0.9600);
+    //} else if (xml_pt > discr_pt_cut_med) { // 8-14 GeV (98.5% coverage)
+    //  trigger = (y_discr > 0.8932);
+    //} else if (xml_pt > discr_pt_cut_low) { // 4-8 GeV (99.0% coverage)
+    //  trigger = (y_discr > 0.2000);
+    //} else {
+    //  trigger = (y_discr >= 0.) && strg_ok;
+    //}
     return trigger;
+  }
+
+  float theta_to_eta_f(int theta_int) const {
+    static const std::vector<float> theta_to_eta_lut = {
+      2.599, 2.566, 2.534, 2.503, 2.473, 2.444, 2.415, 2.388, 2.361, 2.334,
+      2.309, 2.284, 2.259, 2.236, 2.212, 2.190, 2.167, 2.145, 2.124, 2.103,
+      2.083, 2.063, 2.043, 2.024, 2.005, 1.986, 1.968, 1.950, 1.932, 1.915,
+      1.898, 1.881, 1.864, 1.848, 1.832, 1.816, 1.800, 1.785, 1.770, 1.755,
+      1.740, 1.726, 1.711, 1.697, 1.683, 1.670, 1.656, 1.642, 1.629, 1.616,
+      1.603, 1.590, 1.578, 1.565, 1.553, 1.541, 1.529, 1.517, 1.505, 1.493,
+      1.482, 1.470, 1.459, 1.448, 1.436, 1.425, 1.415, 1.404, 1.393, 1.382,
+      1.372, 1.362, 1.351, 1.341, 1.331, 1.321, 1.311, 1.301, 1.291, 1.282,
+      1.272, 1.262, 1.253, 1.244, 1.234, 1.225, 1.216, 1.207, 1.198, 1.189,
+      1.180, 1.171, 1.162, 1.154, 1.145, 1.136, 1.128, 1.119, 1.111, 1.103,
+      1.094, 1.086, 1.078, 1.070, 1.062, 1.054, 1.046, 1.038, 1.030, 1.022,
+      1.014, 1.007, 0.999, 0.991, 0.984, 0.976, 0.969, 0.961, 0.954, 0.946,
+      0.939, 0.932, 0.924, 0.917, 0.910, 0.903, 0.896, 0.888, 0.881, 0.874,
+      0.867, 0.860, 0.853, 0.847, 0.840, 0.833, 0.826, 0.819, 0.813, 0.806,
+      0.799, 0.793, 0.786, 0.779, 0.773, 0.766, 0.760, 0.753, 0.747, 0.741
+    };
+    return theta_to_eta_lut.at(theta_int);
   }
 
   void run(const std::vector<Road>& slim_roads, const std::vector<Prediction>& predictions,
@@ -1884,29 +2071,35 @@ public:
       const auto& prediction = *predictions_it++;
 
       float y_pred     = prediction[0];
-      float y_discr    = prediction[1];
+      float y_discr    = 1.0;  // OBSOLETE since v3
+      float d1_pred    = prediction[3];
+      float d0_pred    = prediction[6];
       int ndof         = road.hits.size();
       int mode         = road.mode;
       int strg         = road.ipt;
       int zone         = road.ieta;
       int phi_median   = road.phi_median;
       int theta_median = road.theta_median;
+      float eta        = theta_to_eta_f(theta_median);  // absolute eta
 
-      bool passed = pass_trigger(ndof, mode, strg, zone, theta_median, y_pred, y_discr);
+      bool passed = pass_trigger(ndof, mode, strg, zone, theta_median, y_pred, y_discr, d0_pred);
 
       if (passed) {
         float xml_pt = std::abs(1.0/y_pred);
         float pt = get_trigger_pt(y_pred);
+        if ((2.15 <= eta) && (eta <= 2.25)) {
+          pt = get_trigger_pt_wp50(y_pred);
+        }
 
         int trk_q = (y_pred < 0) ? -1 : +1;
         //Track(int16_t vt_endcap, int16_t vt_sector, int16_t vt_ipt, int16_t vt_ieta, int16_t vt_iphi,
-        //      const road_hits_t& vt_hits, int16_t vt_mode, int16_t vt_quality, int16_t vt_zone,
+        //      const road_hits_t& vt_hits, int16_t vt_mode, int16_t vt_quality, int16_t vt_sort_code,
         //      float vt_xml_pt, float vt_pt, int16_t vt_q, float vt_y_pred, float vt_y_discr,
-        //      int32_t vt_emtf_phi, int32_t vt_emtf_theta)
+        //      float vt_y_displ, float vt_d0_displ, int32_t vt_emtf_phi, int32_t vt_emtf_theta)
         tracks.emplace_back(road.endcap, road.sector, road.ipt, road.ieta, road.iphi,
-                            road.hits, mode, road.quality, zone,
+                            road.hits, mode, road.quality, road.sort_code,
                             xml_pt, pt, trk_q, y_pred, y_discr,
-                            phi_median, theta_median);
+                            d1_pred, d0_pred, phi_median, theta_median);
       }
     }  // end loop over slim_roads, predictions
     return;
@@ -1923,8 +2116,8 @@ private:
   float s_max {0.};
   int   s_nbins {0};
   float s_step {0.};
-  //std::vector<float> s_lut;
   std::array<float, 120> s_lut {};
+  std::array<float, 120> s_lut_wp50 {};
 };
 
 // GhostBusting class remove ghost tracks.
@@ -1937,13 +2130,20 @@ public:
 
     std::vector<Track> tracks_after_gb;
 
-    // Sort by (zone, y_discr)
-    // zone is reordered such that zone 6 has the lowest priority.
+    //// OBSOLETE since v3
+    //// Sort by (zone, y_discr)
+    //// zone is reordered such that zone 6 has the lowest priority.
+    //constexpr auto sort_tracks_f = [](const Track& lhs, const Track& rhs) {
+    //  // (max zone, max y_discr) is better
+    //  auto lhs_zone = (lhs.zone+1) % 7;
+    //  auto rhs_zone = (rhs.zone+1) % 7;
+    //  return std::tie(lhs_zone, lhs.y_discr) > std::tie(rhs_zone, rhs.y_discr);
+    //};
+    //std::sort(tracks.begin(), tracks.end(), sort_tracks_f);
+
+    // Sort by 'sort code'
     constexpr auto sort_tracks_f = [](const Track& lhs, const Track& rhs) {
-      // (max zone, max y_discr) is better
-      auto lhs_zone = (lhs.zone+1) % 7;
-      auto rhs_zone = (rhs.zone+1) % 7;
-      return std::tie(lhs_zone, lhs.y_discr) > std::tie(rhs_zone, rhs.y_discr);
+      return lhs.sort_code > rhs.sort_code;
     };
     std::sort(tracks.begin(), tracks.end(), sort_tracks_f);
 
@@ -2040,11 +2240,11 @@ public:
 
       // Setters
       // Part 1: from src/PrimitiveMatching.cc
-      emtf_track.set_endcap     ( (track.endcap == 1) ? 1 : -1 );
+      emtf_track.set_endcap     ( track.endcap );
       emtf_track.set_sector     ( track.sector );
       emtf_track.set_sector_idx ( (track.endcap == 1) ? (track.sector - 1) : (track.sector + 5) );
       emtf_track.set_bx         ( 0 );
-      emtf_track.set_zone       ( track.zone );
+      emtf_track.set_zone       ( track.ieta );
       //emtf_track.set_ph_num     ( road.Key_zhit() );
       //emtf_track.set_ph_q       ( road.Quality_code() );
       //emtf_track.set_rank       ( road.Quality_code() );
@@ -2073,6 +2273,9 @@ public:
       emtf_track.set_pt_XML ( track.xml_pt );
       emtf_track.set_pt     ( track.pt );
       emtf_track.set_charge ( track.q );
+      emtf_track.set_invpt_prompt( track.y_pred );
+      emtf_track.set_invpt_displ ( track.y_displ );
+      emtf_track.set_d0_displ    ( track.d0_displ );
       //
       int gmt_pt  = aux().getGMTPt(emtf_track.Pt());
       int gmt_phi = aux().getGMTPhiV2(emtf_track.Phi_fp());
