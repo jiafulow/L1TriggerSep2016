@@ -14,10 +14,10 @@
 #include "DataFormats/L1TMuon/interface/CPPFDigi.h"
 #include "DataFormats/RPCRecHit/interface/RPCRecHit.h"
 #include "DataFormats/RPCRecHit/interface/RPCRecHitCollection.h"
-#include "DataFormats/GEMDigi/interface/GEMPadDigi.h"
-#include "DataFormats/GEMDigi/interface/GEMPadDigiCollection.h"
-#include "DataFormats/GEMRecHit/interface/ME0Segment.h"
-#include "DataFormats/GEMRecHit/interface/ME0SegmentCollection.h"
+#include "DataFormats/GEMDigi/interface/GEMPadDigiCluster.h"
+#include "DataFormats/GEMDigi/interface/GEMPadDigiClusterCollection.h"
+#include "DataFormats/GEMDigi/interface/ME0TriggerDigi.h"
+#include "DataFormats/GEMDigi/interface/ME0TriggerDigiCollection.h"
 
 
 namespace emtf {
@@ -56,13 +56,13 @@ namespace emtf {
   };
 
   struct GEMTag {
-    typedef GEMPadDigi           digi_type;
-    typedef GEMPadDigiCollection digi_collection;
+    typedef GEMPadDigiCluster           digi_type;
+    typedef GEMPadDigiClusterCollection digi_collection;
   };
 
   struct ME0Tag {
-    typedef ME0Segment           digi_type;       // rechit actually
-    typedef ME0SegmentCollection digi_collection; // rechit actually
+    typedef ME0TriggerDigi           digi_type;
+    typedef ME0TriggerDigiCollection digi_collection;
   };
 
 }  //  namespace emtf

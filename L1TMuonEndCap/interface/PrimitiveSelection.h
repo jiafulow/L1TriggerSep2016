@@ -8,7 +8,7 @@ class PrimitiveSelection {
 public:
   void configure(
       int verbose, int endcap, int sector, int bx,
-      int bxShiftCSC, int bxShiftRPC, int bxShiftGEM,
+      int bxShiftCSC, int bxShiftRPC, int bxShiftGEM, int bxShiftME0,
       bool includeNeighbor, bool duplicateTheta,
       bool bugME11Dupes
   );
@@ -111,7 +111,7 @@ public:
 private:
   int verbose_, endcap_, sector_, bx_;
 
-  int bxShiftCSC_, bxShiftRPC_, bxShiftGEM_;
+  int bxShiftCSC_, bxShiftRPC_, bxShiftGEM_, bxShiftME0_;
 
   bool includeNeighbor_, duplicateTheta_;
 

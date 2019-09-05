@@ -56,6 +56,7 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
   auto bxShiftCSC  = iConfig.getParameter<int>("CSCInputBXShift");
   auto bxShiftRPC  = iConfig.getParameter<int>("RPCInputBXShift");
   auto bxShiftGEM  = iConfig.getParameter<int>("GEMInputBXShift");
+  auto bxShiftME0  = iConfig.getParameter<int>("ME0InputBXShift");
 
   const auto& spPCParams16 = config_.getParameter<edm::ParameterSet>("spPCParams16");
   auto zoneBoundaries     = spPCParams16.getParameter<std::vector<int> >("ZoneBoundaries");
@@ -107,7 +108,7 @@ TrackFinder::TrackFinder(const edm::ParameterSet& iConfig, edm::ConsumesCollecto
           &sector_processor_lut_,
           pt_assign_engine_.get(),
           verbose_, endcap, sector,
-          minBX, maxBX, bxWindow, bxShiftCSC, bxShiftRPC, bxShiftGEM,
+          minBX, maxBX, bxWindow, bxShiftCSC, bxShiftRPC, bxShiftGEM, bxShiftME0,
           era_,
           zoneBoundaries, zoneOverlap,
           includeNeighbor, duplicateTheta, fixZonePhi, useNewZones, fixME11Edges,
@@ -191,7 +192,7 @@ void TrackFinder::process(
   // Reload pT LUT if necessary
   pt_assign_engine_->load(condition_helper_.get_pt_lut_version(), &(condition_helper_.getForest()));
 
-  if (era_ == "Phase2_timing") {
+  if (era_ == "Phase2" || era_ == "Phase2_timing") {
     for (int endcap = emtf::MIN_ENDCAP; endcap <= emtf::MAX_ENDCAP; ++endcap) {
       for (int sector = emtf::MIN_TRIGSECTOR; sector <= emtf::MAX_TRIGSECTOR; ++sector) {
         auto minBX      = config_.getParameter<int>("MinBX");
@@ -200,6 +201,7 @@ void TrackFinder::process(
         auto bxShiftCSC = config_.getParameter<int>("CSCInputBXShift");
         auto bxShiftRPC = config_.getParameter<int>("RPCInputBXShift");
         auto bxShiftGEM = config_.getParameter<int>("GEMInputBXShift");
+        auto bxShiftME0 = config_.getParameter<int>("ME0InputBXShift");
         int delayBX   = bxWindow - 1;
         // For now, only consider BX=0
         minBX = 0;
@@ -214,7 +216,7 @@ void TrackFinder::process(
             &sector_processor_lut_,
             pt_assign_engine_.get(),
             verbose_, endcap, sector, bx,
-            bxShiftCSC, bxShiftRPC, bxShiftGEM,
+            bxShiftCSC, bxShiftRPC, bxShiftGEM, bxShiftME0,
             era_
           );
           expt_sp.process(

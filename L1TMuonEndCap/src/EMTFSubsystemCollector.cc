@@ -196,7 +196,6 @@ void EMTFSubsystemCollector::extractPrimitives(
   for (const auto& digi : *cppfDigis) {
     out.emplace_back(digi.rpcId(), digi);
   }
-
   return;
 }
 
@@ -224,18 +223,20 @@ void EMTFSubsystemCollector::extractPrimitives(
     }
   }
 
-  // 1. Cluster GEM pads.
-  TriggerPrimitiveCollection clus_muon_primitives;
-  cluster_gem(muon_primitives, clus_muon_primitives);
+  // NOTE: Since Sep 2019, do not clusterize and declusterize.
+
+  // 1. Clusterize GEM pads.
+  //TriggerPrimitiveCollection clus_muon_primitives;
+  //cluster_gem(muon_primitives, clus_muon_primitives);
 
   // 2. Declusterize GEM pads.
   //    - Reject clusters with width > 8 pads. Then, for each of the 2 layers, declusterize a maximum of 8 pad clusters.
-  TriggerPrimitiveCollection declus_muon_primitives;
-  declusterize_gem(clus_muon_primitives, declus_muon_primitives);
+  //TriggerPrimitiveCollection declus_muon_primitives;
+  //declusterize_gem(clus_muon_primitives, declus_muon_primitives);
 
   // 3. Make GEM copads.
   TriggerPrimitiveCollection copad_muon_primitives;
-  make_copad_gem(declus_muon_primitives, copad_muon_primitives);
+  make_copad_gem(muon_primitives, copad_muon_primitives);
 
   // Output
   std::copy(copad_muon_primitives.begin(), copad_muon_primitives.end(), std::back_inserter(out));
@@ -291,26 +292,14 @@ void EMTFSubsystemCollector::extractPrimitives(
   edm::Handle<ME0Tag::digi_collection> me0Digis;
   iEvent.getByToken(token, me0Digis);
 
-  auto segment = me0Digis->begin();
-  auto segend  = me0Digis->end();
-  for( ; segment != segend; ++segment ) {
-    // Debug
-    //std::cout << "segment id: " << segment->me0DetId() << " lp: " << segment->localPosition() << " ld: " << segment->localDirection() << " time: " << segment->time() << " bend: " << segment->deltaPhi() << " chi2: " << segment->chi2() / float(segment->nRecHits()*2 - 4) << std::endl;
-    //for (auto rechit = segment->specificRecHits().begin(); rechit != segment->specificRecHits().end(); ++rechit) {
-    //  std::cout << "rechit id: " << rechit->me0Id() << " lp: " << rechit->localPosition() << " err: " << rechit->localPositionError() << " tof: " << rechit->tof() << " pad: " << tp_geom->getME0Geometry().etaPartition(rechit->me0Id())->pad(rechit->localPosition()) << std::endl;
-    //}
-
-    //out.emplace_back((*segment).me0DetId(), *segment, tp_geom->getME0Geometry());  // does not work because me0DetId is missing the eta partition number
-
-    assert(!(*segment).specificRecHits().empty());  // must contain at least 1 rechit
-    ME0DetId detid = (*segment).me0DetId();
-    if (detid.roll() == 0 || detid.layer() == 0) {
-      auto rechit_it = (*segment).specificRecHits().begin();
-      std::advance(rechit_it, (*segment).specificRecHits().size()/2);  // pick the median
-      int key_me0_layer = 3;  // use layer 3 as the key layer
-      detid = ME0DetId(rechit_it->me0Id().region(), key_me0_layer, rechit_it->me0Id().chamber(), rechit_it->me0Id().roll());
+  auto chamber = me0Digis->begin();
+  auto chend   = me0Digis->end();
+  for( ; chamber != chend; ++chamber ) {
+    auto digi = (*chamber).second.first;
+    auto dend = (*chamber).second.second;
+    for( ; digi != dend; ++digi ) {
+      out.emplace_back((*chamber).first,*digi);
     }
-    out.emplace_back(detid, *segment, tp_geom->getME0Geometry());
   }
   return;
 }
@@ -525,23 +514,20 @@ void EMTFSubsystemCollector::declusterize_gem(TriggerPrimitiveCollection& clus_m
   copy_n_if(clus_muon_primitives.begin(), clus_muon_primitives.end(), maxClusters, std::back_inserter(tmp_clus_muon_primitives), gem_cluster_layer2_select);
 
   // 3. Declusterize
-  //declus_muon_primitives.clear();
-  //
-  //TriggerPrimitiveCollection::const_iterator tp_it  = tmp_clus_muon_primitives.begin();
-  //TriggerPrimitiveCollection::const_iterator tp_end = tmp_clus_muon_primitives.end();
-  //
-  //for (; tp_it != tp_end; ++tp_it) {
-  //  for (uint16_t pad = tp_it->getGEMData().pad_low; pad != tp_it->getGEMData().pad_hi+1; ++pad) {
-  //    TriggerPrimitive new_tp = *tp_it;  // make a copy
-  //    new_tp.accessGEMData().pad     = pad;
-  //    new_tp.accessGEMData().pad_low = pad;
-  //    new_tp.accessGEMData().pad_hi  = pad;
-  //    declus_muon_primitives.push_back(new_tp);
-  //  }
-  //}
+  declus_muon_primitives.clear();
 
-  // Dec 2018: do not declusterize
-  declus_muon_primitives = std::move(tmp_clus_muon_primitives);
+  TriggerPrimitiveCollection::const_iterator tp_it  = tmp_clus_muon_primitives.begin();
+  TriggerPrimitiveCollection::const_iterator tp_end = tmp_clus_muon_primitives.end();
+
+  for (; tp_it != tp_end; ++tp_it) {
+    for (uint16_t pad = tp_it->getGEMData().pad_low; pad != tp_it->getGEMData().pad_hi+1; ++pad) {
+      TriggerPrimitive new_tp = *tp_it;  // make a copy
+      new_tp.accessGEMData().pad     = pad;
+      new_tp.accessGEMData().pad_low = pad;
+      new_tp.accessGEMData().pad_hi  = pad;
+      declus_muon_primitives.push_back(new_tp);
+    }
+  }
 }
 
 void EMTFSubsystemCollector::make_copad_gem(TriggerPrimitiveCollection& declus_muon_primitives, TriggerPrimitiveCollection& copad_muon_primitives) const {
@@ -639,7 +625,6 @@ void EMTFSubsystemCollector::make_copad_gem(TriggerPrimitiveCollection& declus_m
       // make a new coincidence pad digi
       if (has_copad) {
         copad_muon_primitives.push_back(*p);
-        copad_muon_primitives.back().accessGEMData().bend = bend;  // overwrites the bend
       }
     }  // end loop over pads
   }  // end loop over in_pads_layer1

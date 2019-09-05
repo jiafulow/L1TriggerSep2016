@@ -10,7 +10,7 @@ void PrimitiveConversion::configure(
     const GeometryTranslator* tp_geom,
     const SectorProcessorLUT* lut,
     int verbose, int endcap, int sector, int bx,
-    int bxShiftCSC, int bxShiftRPC, int bxShiftGEM,
+    int bxShiftCSC, int bxShiftRPC, int bxShiftGEM, int bxShiftME0,
     const std::vector<int>& zoneBoundaries, int zoneOverlap,
     bool duplicateTheta, bool fixZonePhi, bool useNewZones, bool fixME11Edges,
     bool bugME11Dupes
@@ -29,6 +29,7 @@ void PrimitiveConversion::configure(
   bxShiftCSC_      = bxShiftCSC;
   bxShiftRPC_      = bxShiftRPC;
   bxShiftGEM_      = bxShiftGEM;
+  bxShiftME0_      = bxShiftME0;
 
   zoneBoundaries_  = zoneBoundaries;
   zoneOverlap_     = zoneOverlap;
@@ -786,7 +787,7 @@ void PrimitiveConversion::convert_gem(
   //conv_hit.set_wire          ( tp_data.keywire );
   conv_hit.set_quality       ( tp_quality );
   conv_hit.set_pattern       ( 0 );  // arbitrary
-  conv_hit.set_bend          ( tp_data.bend );
+  //conv_hit.set_bend          ( tp_data.bend );
   conv_hit.set_time          ( 0. );  // No fine resolution timing
   //conv_hit.set_alct_quality  ( tp_data.alct_quality );
   //conv_hit.set_clct_quality  ( tp_data.clct_quality );
@@ -903,12 +904,13 @@ void PrimitiveConversion::convert_me0(
   int tp_endcap    = (tp_region == -1) ? 2 : tp_region;
   int tp_station   = tp_detId.station();
   int tp_ring      = 1;  // tp_detId.ring() does not exist
-  int tp_roll      = tp_detId.roll();
+  //int tp_roll      = tp_detId.roll();
   //int tp_layer     = tp_detId.layer();
   int tp_chamber   = tp_detId.chamber();
 
   int tp_bx        = tp_data.bx;
-  int tp_pad       = tp_data.pad;
+  int tp_pad       = tp_data.phiposition;
+  int tp_partition = tp_data.partition;
 
   // The ME0 geometry is similar to ME2/1, so I use tp_station = 2, tp_ring = 1
   // when calling get_trigger_sector() and get_trigger_csc_ID()
@@ -929,12 +931,12 @@ void PrimitiveConversion::convert_me0(
   // Set properties
   conv_hit.SetME0DetId       ( tp_detId );
 
-  conv_hit.set_bx            ( tp_bx + bxShiftGEM_ );
+  conv_hit.set_bx            ( tp_bx + bxShiftME0_ );
   conv_hit.set_subsystem     ( TriggerPrimitive::kME0 );
   conv_hit.set_endcap        ( (tp_endcap == 2) ? -1 : tp_endcap );
   conv_hit.set_station       ( tp_station );
   conv_hit.set_ring          ( tp_ring );
-  conv_hit.set_roll          ( tp_roll );
+  conv_hit.set_roll          ( tp_partition );
   conv_hit.set_chamber       ( tp_chamber );
   conv_hit.set_sector        ( tp_sector );
   conv_hit.set_subsector     ( tp_subsector );
@@ -955,9 +957,9 @@ void PrimitiveConversion::convert_me0(
   //conv_hit.set_strip_low     ( tp_strip );
   //conv_hit.set_strip_hi      ( tp_strip );
   //conv_hit.set_wire          ( tp_data.keywire );
-  conv_hit.set_quality       ( tp_data.nhits );
+  conv_hit.set_quality       ( tp_data.quality );
   conv_hit.set_pattern       ( 0 );  // arbitrary
-  conv_hit.set_bend          ( static_cast<int>(std::round(tp_data.bend)) );
+  conv_hit.set_bend          ( tp_data.deltaphi * (tp_data.bend == 0 ? 1 : -1) );
   conv_hit.set_time          ( 0. );  // No fine resolution timing
   //conv_hit.set_alct_quality  ( tp_data.alct_quality );
   //conv_hit.set_clct_quality  ( tp_data.clct_quality );

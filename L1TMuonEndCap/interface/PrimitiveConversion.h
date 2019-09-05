@@ -12,7 +12,7 @@ public:
       const GeometryTranslator* tp_geom,
       const SectorProcessorLUT* lut,
       int verbose, int endcap, int sector, int bx,
-      int bxShiftCSC, int bxShiftRPC, int bxShiftGEM,
+      int bxShiftCSC, int bxShiftRPC, int bxShiftGEM, int bxShiftME0,
       const std::vector<int>& zoneBoundaries, int zoneOverlap,
       bool duplicateTheta, bool fixZonePhi, bool useNewZones, bool fixME11Edges,
       bool bugME11Dupes
@@ -90,7 +90,7 @@ private:
 
   int verbose_, endcap_, sector_, bx_;
 
-  int bxShiftCSC_, bxShiftRPC_, bxShiftGEM_;
+  int bxShiftCSC_, bxShiftRPC_, bxShiftGEM_, bxShiftME0_;
 
   std::vector<int> zoneBoundaries_;
   int zoneOverlap_;

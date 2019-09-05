@@ -15,7 +15,7 @@ void SectorProcessor::configure(
     const SectorProcessorLUT* lut,
     PtAssignmentEngine* pt_assign_engine,
     int verbose, int endcap, int sector,
-    int minBX, int maxBX, int bxWindow, int bxShiftCSC, int bxShiftRPC, int bxShiftGEM,
+    int minBX, int maxBX, int bxWindow, int bxShiftCSC, int bxShiftRPC, int bxShiftGEM, int bxShiftME0,
     std::string era,
     const std::vector<int>& zoneBoundaries, int zoneOverlap,
     bool includeNeighbor, bool duplicateTheta, bool fixZonePhi, bool useNewZones, bool fixME11Edges,
@@ -47,6 +47,7 @@ void SectorProcessor::configure(
   bxShiftCSC_  = bxShiftCSC;
   bxShiftRPC_  = bxShiftRPC;
   bxShiftGEM_  = bxShiftGEM;
+  bxShiftME0_  = bxShiftME0;
 
   era_ = era;
 
@@ -455,7 +456,7 @@ void SectorProcessor::process(
           << ", endcap " << ((tp_detId.region() == -1) ? 2 : tp_detId.region())
           << ", station " << tp_detId.station() << ", ring " << tp_detId.ring()
           << ", chamber " << tp_detId.chamber() << ", roll " << tp_detId.roll() << ", layer " << tp_detId.layer()
-          << ", pad " << tp_it->getStrip() << ", pad_low " << tp_data.pad_low << ", pad_hi " << tp_data.pad_hi << ", bend " << tp_data.bend
+          << ", pad " << tp_it->getStrip() << ", pad_low " << tp_data.pad_low << ", pad_hi " << tp_data.pad_hi
           << std::endl;
       }  // end if GEM
     }  // end loop over muon_primitives
@@ -474,9 +475,8 @@ void SectorProcessor::process(
           << ", endcap " << ((tp_detId.region() == -1) ? 2 : tp_detId.region())
           << ", station " << 1 << ", ring " << 1
           << ", chamber " << tp_detId.chamber() << ", roll " << tp_detId.roll() << ", layer " << tp_detId.layer()
-          << ", pad " << tp_data.pad << ", bend " << tp_data.bend
-          << ", x " << tp_data.x << ", y " << tp_data.y << ", dirx " << tp_data.dirx << ", diry " << tp_data.diry
-          << ", time " << tp_data.time << ", nhits " << tp_data.nhits << ", chi2 " << tp_data.chi2
+          << ", phiposition " << tp_data.phiposition << ", deltaphi " << tp_data.deltaphi << ", bend " << tp_data.bend << ", quality " << tp_data.quality
+          << ", partition " << tp_data.partition
           << std::endl;
       }  // end if ME0
     }  // end loop over muon_primitives
@@ -562,7 +562,7 @@ void SectorProcessor::process_single_bx(
   PrimitiveSelection prim_sel;
   prim_sel.configure(
       verbose_, endcap_, sector_, bx,
-      bxShiftCSC_, bxShiftRPC_, bxShiftGEM_,
+      bxShiftCSC_, bxShiftRPC_, bxShiftGEM_, bxShiftME0_,
       includeNeighbor_, duplicateTheta_,
       bugME11Dupes_
   );
@@ -571,7 +571,7 @@ void SectorProcessor::process_single_bx(
   prim_conv.configure(
       tp_geom_, lut_,
       verbose_, endcap_, sector_, bx,
-      bxShiftCSC_, bxShiftRPC_, bxShiftGEM_,
+      bxShiftCSC_, bxShiftRPC_, bxShiftGEM_, bxShiftME0_,
       zoneBoundaries_, zoneOverlap_,
       duplicateTheta_, fixZonePhi_, useNewZones_, fixME11Edges_,
       bugME11Dupes_
