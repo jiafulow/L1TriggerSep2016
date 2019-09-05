@@ -28,8 +28,8 @@ simEmtfDigisMC = cms.EDProducer("L1TMuonEndCapTrackProducer",
     RPCInput  = cms.InputTag('simMuonRPCDigis'),
     RPCRecHitInput = cms.InputTag('rpcRecHits'),
     CPPFInput = cms.InputTag('simCPPFDigis'),  ## Cannot use in MC workflow, does not exist yet.  CPPFEnable set to False - AWB 01.06.18
-    GEMInput  = cms.InputTag('simMuonGEMPadDigis'),
-    ME0Input = cms.InputTag('me0TriggerPseudoDigis'),
+    GEMInput  = cms.InputTag('simMuonGEMPadDigiClusters'),
+    ME0Input = cms.InputTag('me0TriggerPseudoDigis105X'),
 
     # Run with CSC, RPC, GEM
     DTEnable = cms.bool(False),
@@ -52,6 +52,7 @@ simEmtfDigisMC = cms.EDProducer("L1TMuonEndCapTrackProducer",
     CSCInputBXShift = cms.int32(-8), # Shift applied to input CSC LCT primitives, to center at BX = 0
     RPCInputBXShift = cms.int32(0),
     GEMInputBXShift = cms.int32(0),
+    ME0InputBXShift = cms.int32(-8),
 
     # Sector processor primitive-conversion parameters
     spPCParams16 = cms.PSet(
@@ -130,7 +131,7 @@ simEmtfDigisData = simEmtfDigisMC.clone(
     CSCInput  = cms.InputTag('emtfStage2Digis'),
     RPCInput  = cms.InputTag('muonRPCDigis'),
     CPPFInput = cms.InputTag('emtfStage2Digis'),
-    GEMInput  = cms.InputTag('muonGEMPadDigis'),
+    GEMInput  = cms.InputTag('muonGEMPadDigiClusters'),
 
     CPPFEnable = cms.bool(True), # Use CPPF-emulated clustered RPC hits from CPPF as the RPC hits
 
