@@ -17,9 +17,6 @@
 // Author: L. Gray (FNAL)
 //
 
-#include <cstdint>
-#include <vector>
-#include <iostream>
 
 //DetId
 #include "DataFormats/DetId/interface/DetId.h"
@@ -46,13 +43,12 @@ namespace l1t {
 }
 
 // GEM digi types
-class GEMPadDigi;
+class GEMPadDigiCluster;
 class GEMDetId;
 
 // ME0 digi types
-class ME0Segment;
+class ME0TriggerDigi;
 class ME0DetId;
-class ME0Geometry;
 
 
 namespace L1TMuonEndCap {
@@ -99,10 +95,8 @@ namespace L1TMuonEndCap {
       uint16_t bx0;
       uint16_t syncErr;
       uint16_t cscID;
-
-      // Extra info for ALCT (wires) and CLCT (strips)
-      uint16_t alct_quality;
-      uint16_t clct_quality;
+      uint16_t alct_quality;  // Extra info for ALCT (wires)
+      uint16_t clct_quality;  // Extra info for CLCT (strips)
     };
 
     struct DTData {
@@ -133,27 +127,25 @@ namespace L1TMuonEndCap {
       int theta_quality;
     };
 
+    // See documentation in DataFormats/GEMDigi/interface/GEMPadDigiCluster.h
     struct GEMData {
-      GEMData() : pad(0), pad_low(0), pad_hi(0), bx(0), bend(0) {}
+      GEMData() : pad(0), pad_low(0), pad_hi(0), bx(0) {}
       uint16_t pad;
       uint16_t pad_low; // for use in clustering
       uint16_t pad_hi;  // for use in clustering
       int16_t bx;
-      int16_t bend;
     };
 
+    // See documentation in DataFormats/GEMDigi/interface/ME0TriggerDigi.h
     struct ME0Data {
-      ME0Data() : x(0.), y(0.), dirx(0.), diry(0.), chi2(0.), nhits(0), time(0.), bend(0.), bx(0), pad(0) {}
-      float x;
-      float y;
-      float dirx;
-      float diry;
-      float chi2;
-      int   nhits;
-      float time;
-      float bend;
-      int   bx;
-      int   pad;
+      ME0Data() : chamberid(0), quality(0), phiposition(0), partition(0), deltaphi(0), bend(0), bx(0) {}
+      uint16_t chamberid;
+      uint16_t quality;
+      uint16_t phiposition;
+      uint16_t partition;
+      uint16_t deltaphi;
+      uint16_t bend;
+      uint16_t bx;
     };
 
     //Persistency
@@ -183,32 +175,33 @@ namespace L1TMuonEndCap {
 
     // GEM
     TriggerPrimitive(const GEMDetId& detid,
-                     const GEMPadDigi& digi);
+                     const GEMPadDigiCluster& digi);
 
     // ME0
     TriggerPrimitive(const ME0DetId& detid,
-                     const ME0Segment& rechit,
-                     const ME0Geometry& geom);
+                     const ME0TriggerDigi& digi);
 
     //copy
     TriggerPrimitive(const TriggerPrimitive&);
-
     TriggerPrimitive& operator=(const TriggerPrimitive& tp);
     bool operator==(const TriggerPrimitive& tp) const;
 
     // return the subsystem we belong to
-    const subsystem_type subsystem() const { return _subsystem; }
+    subsystem_type subsystem() const { return _subsystem; }
 
-    const double getCMSGlobalEta() const { return _eta; }
-    void   setCMSGlobalEta(const double eta) { _eta = eta; }
-    const double getCMSGlobalPhi() const { return _phi; }
-    void   setCMSGlobalPhi(const double phi) { _phi = phi; }
-    const double getCMSGlobalRho() const { return _rho; }
-    void   setCMSGlobalRho(const double rho) { _rho = rho; }
+    void setCMSGlobalEta(const double eta) { _eta = eta; }
+    double getCMSGlobalEta() const { return _eta; }
 
-    const GlobalPoint getCMSGlobalPoint() const { double theta = 2. * atan( exp(-_eta) );
-      return GlobalPoint( GlobalPoint::Cylindrical( _rho, _phi, _rho/tan(theta)) ); };
+    void setCMSGlobalPhi(const double phi) { _phi = phi; }
+    double getCMSGlobalPhi() const { return _phi; }
 
+    void setCMSGlobalRho(const double rho) { _rho = rho; }
+    double getCMSGlobalRho() const { return _rho; }
+
+    GlobalPoint getCMSGlobalPoint() const {
+      double theta = 2. * std::atan( std::exp(-_eta) );
+      return GlobalPoint( GlobalPoint::Cylindrical( _rho, _phi, _rho/std::tan(theta) ) );
+    }
 
     // this is the relative bending angle with respect to the
     // current phi position.
@@ -226,11 +219,11 @@ namespace L1TMuonEndCap {
     void setGEMData(const GEMData& gem) { _gem = gem; }
     void setME0Data(const ME0Data& me0) { _me0 = me0; }
 
-    const DTData  getDTData()  const { return _dt;  }
-    const CSCData getCSCData() const { return _csc; }
-    const RPCData getRPCData() const { return _rpc; }
-    const GEMData getGEMData() const { return _gem; }
-    const ME0Data getME0Data() const { return _me0; }
+    DTData  getDTData()  const { return _dt;  }
+    CSCData getCSCData() const { return _csc; }
+    RPCData getRPCData() const { return _rpc; }
+    GEMData getGEMData() const { return _gem; }
+    ME0Data getME0Data() const { return _me0; }
 
     DTData&  accessDTData()  { return _dt; }
     CSCData& accessCSCData() { return _csc; }
@@ -239,14 +232,14 @@ namespace L1TMuonEndCap {
     ME0Data& accessME0Data() { return _me0; }
 
     // consistent accessors to common information
-    const int getBX() const;
-    const int getStrip() const;
-    const int getWire() const;
-    const int getPattern() const;
-    const DetId rawId() const {return _id;};
+    int getBX() const;
+    int getStrip() const;
+    int getWire() const;
+    int getPattern() const;
+    DetId rawId() const {return _id;};
 
-    const unsigned getGlobalSector() const { return _globalsector; }
-    const unsigned getSubSector() const { return _subsector; }
+    unsigned getGlobalSector() const { return _globalsector; }
+    unsigned getSubSector() const { return _subsector; }
 
     void print(std::ostream&) const;
 

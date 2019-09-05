@@ -7,8 +7,8 @@
 #include "DataFormats/RPCDigi/interface/RPCDigi.h"
 #include "DataFormats/RPCRecHit/interface/RPCRecHit.h"
 #include "DataFormats/L1TMuon/interface/CPPFDigi.h"
-#include "DataFormats/GEMDigi/interface/GEMPadDigi.h"
-#include "DataFormats/GEMRecHit/interface/ME0Segment.h"
+#include "DataFormats/GEMDigi/interface/GEMPadDigiCluster.h"
+#include "DataFormats/GEMDigi/interface/ME0TriggerDigi.h"
 
 // detector ID types
 #include "DataFormats/MuonDetId/interface/DTChamberId.h"
@@ -17,7 +17,7 @@
 #include "DataFormats/MuonDetId/interface/GEMDetId.h"
 #include "DataFormats/MuonDetId/interface/ME0DetId.h"
 
-#include "Geometry/GEMGeometry/interface/ME0Geometry.h"
+#include <iostream>
 
 
 using namespace L1TMuonEndCap;
@@ -122,6 +122,8 @@ TriggerPrimitive::TriggerPrimitive(const CSCDetId& detid,
   _csc.bx0     = digi.getBX0();
   _csc.syncErr = digi.getSyncErr();
   _csc.cscID   = digi.getCSCID();
+  _csc.alct_quality = digi.getALCT().getQuality();
+  _csc.clct_quality = digi.getCLCT().getQuality();
 
   // Use ME1/1a --> ring 4 convention
   const bool is_me11a = (detid.station() == 1 && detid.ring() == 1 && digi.getStrip() >= 128);
@@ -129,12 +131,6 @@ TriggerPrimitive::TriggerPrimitive(const CSCDetId& detid,
     _id = CSCDetId(detid.endcap(), detid.station(), 4, detid.chamber(), detid.layer());
     _csc.strip = digi.getStrip() - 128;
   }
-
-  CSCCorrelatedLCTDigi digi_clone = digi; // Necessary to get around const qualifier
-  CSCALCTDigi alct = digi_clone.getALCT();
-  CSCCLCTDigi clct = digi_clone.getCLCT();
-  _csc.alct_quality = alct.getQuality();
-  _csc.clct_quality = clct.getQuality();
 }
 
 // constructor from RPC data
@@ -202,50 +198,31 @@ TriggerPrimitive::TriggerPrimitive(const RPCDetId& detid,
 
 // constructor from GEM data
 TriggerPrimitive::TriggerPrimitive(const GEMDetId& detid,
-                                   const GEMPadDigi& digi):
+                                   const GEMPadDigiCluster& digi):
   _id(detid),
   _subsystem(TriggerPrimitive::kGEM) {
   calculateGlobalSector(detid,_globalsector,_subsector);
   _eta = 0.; _phi = 0.; _rho = 0.; _theta = 0.;
-  // Since CMSSW_10_3_0, GEMPadDigi pad number counts from 0. If the new digitizer is used,
-  // we need to add 1 to the pad number, so that it counts from 1 like RPC. For now, assume
-  // the old digitizer, because I am using the PhaseIIFall17D samples.
-  _gem.pad = digi.pad();
-  //_gem.pad = digi.pad() + 1; //FIXME: new digitizer
-  _gem.pad_low = _gem.pad;
-  _gem.pad_hi = _gem.pad;
+  _gem.pad = digi.pads().front() + ((digi.pads().size() - 1) / 2);
+  _gem.pad_low = digi.pads().front();
+  _gem.pad_hi = digi.pads().front() + digi.pads().size() - 1;
   _gem.bx = digi.bx();
-  _gem.bend = 0;
 }
 
 // constructor from ME0 data
 TriggerPrimitive::TriggerPrimitive(const ME0DetId& detid,
-                                   const ME0Segment& rechit,
-                                   const ME0Geometry& geom):
+                                   const ME0TriggerDigi& digi):
   _id(detid),
   _subsystem(TriggerPrimitive::kME0) {
   calculateGlobalSector(detid,_globalsector,_subsector);
   _eta = 0.; _phi = 0.; _rho = 0.; _theta = 0.;
-  _me0.x = rechit.localPosition().x();  //FIXME: change to half-strip resolution
-  _me0.y = rechit.localPosition().y();
-  _me0.dirx = rechit.localDirection().x();
-  _me0.diry = rechit.localDirection().y();
-  _me0.chi2 = rechit.chi2();
-  _me0.nhits = rechit.nRecHits();
-  _me0.time = rechit.time();
-  _me0.bend = std::round(rechit.deltaPhi()/(M_PI/9/768));  // half-strip or 1/4-pad unit (20/768 deg)  //FIXME: change to 1/4-strip resolution
-  _me0.pad = 0;
-  {
-    // ME0 convert x to pad
-    const ME0EtaPartition* roll = geom.etaPartition(detid);
-    assert(roll != nullptr);  // failed to get ME0 roll
-    const LocalPoint lp(_me0.x, 0., 0.);
-    float pad_f = roll->pad(lp);
-    _me0.pad = static_cast<int>(std::ceil(pad_f));
-    if (_me0.pad == 0)
-      _me0.pad = 1;
-  }
-  _me0.bx = static_cast<int>(std::round(_me0.time/25.));  // 1BX = 25ns
+  _me0.chamberid = digi.getChamberid();
+  _me0.quality = digi.getQuality();
+  _me0.phiposition = digi.getPhiposition();
+  _me0.partition = digi.getPartition();
+  _me0.deltaphi = digi.getDeltaphi();
+  _me0.bend = digi.getBend();
+  _me0.bx = digi.getBX();
 }
 
 // copy constructor
@@ -348,22 +325,18 @@ bool TriggerPrimitive::operator==(const TriggerPrimitive& tp) const {
               this->_gem.pad_low == tp._gem.pad_low &&
               this->_gem.pad_hi == tp._gem.pad_hi &&
               this->_gem.bx == tp._gem.bx &&
-              this->_gem.bend == tp._gem.bend &&
               this->_id == tp._id &&
               this->_subsystem == tp._subsystem &&
               this->_globalsector == tp._globalsector &&
               this->_subsector == tp._subsector );
   case kME0:
-    return  ( isclose(this->_me0.x, tp._me0.x) &&        // floating-point
-              isclose(this->_me0.y, tp._me0.y) &&        // floating-point
-              isclose(this->_me0.dirx, tp._me0.dirx) &&  // floating-point
-              isclose(this->_me0.diry, tp._me0.diry) &&  // floating-point
-              isclose(this->_me0.chi2, tp._me0.chi2) &&  // floating-point
-              this->_me0.nhits == tp._me0.nhits &&
-              isclose(this->_me0.time, tp._me0.time) &&  // floating-point
-              isclose(this->_me0.bend, tp._me0.bend) &&  // floating-point
+    return  ( this->_me0.chamberid == tp._me0.chamberid &&
+              this->_me0.quality == tp._me0.quality &&
+              this->_me0.phiposition == tp._me0.phiposition &&
+              this->_me0.partition == tp._me0.partition &&
+              this->_me0.deltaphi == tp._me0.deltaphi &&
+              this->_me0.bend == tp._me0.bend &&
               this->_me0.bx == tp._me0.bx &&
-              this->_me0.pad == tp._me0.pad &&
               this->_id == tp._id &&
               this->_subsystem == tp._subsystem &&
               this->_globalsector == tp._globalsector &&
@@ -377,7 +350,7 @@ bool TriggerPrimitive::operator==(const TriggerPrimitive& tp) const {
 }
 
 // _____________________________________________________________________________
-const int TriggerPrimitive::getBX() const {
+int TriggerPrimitive::getBX() const {
   switch(_subsystem) {
   case kDT:
     return _dt.bx;
@@ -397,7 +370,7 @@ const int TriggerPrimitive::getBX() const {
   return -1;
 }
 
-const int TriggerPrimitive::getStrip() const {
+int TriggerPrimitive::getStrip() const {
   switch(_subsystem) {
   case kDT:
     return _dt.radialAngle;
@@ -408,7 +381,7 @@ const int TriggerPrimitive::getStrip() const {
   case kGEM:
     return _gem.pad;
   case kME0:
-    return _me0.pad;
+    return _me0.phiposition;
   default:
     throw cms::Exception("Invalid Subsytem")
       << "The specified subsystem for this track stub is out of range"
@@ -417,7 +390,7 @@ const int TriggerPrimitive::getStrip() const {
   return -1;
 }
 
-const int TriggerPrimitive::getWire() const {
+int TriggerPrimitive::getWire() const {
   switch(_subsystem) {
   case kDT:
     return _dt.theta_bti_group;
@@ -437,7 +410,7 @@ const int TriggerPrimitive::getWire() const {
   return -1;
 }
 
-const int TriggerPrimitive::getPattern() const {
+int TriggerPrimitive::getPattern() const {
   switch(_subsystem) {
   case kDT:
     return -1;
@@ -491,13 +464,15 @@ void TriggerPrimitive::print(std::ostream& out) const {
     out << "BX0           : " << _csc.bx0 << std::endl;
     out << "Sync Error    : " << _csc.syncErr << std::endl;
     out << "CSCID         : " << _csc.cscID << std::endl;
+    out << "ALCT Quality  : " << _csc.alct_quality << std::endl;
+    out << "CLCT Quality  : " << _csc.clct_quality << std::endl;
     break;
   case kRPC:
     out << detId<RPCDetId>() << std::endl;
     out << "Local BX      : " << _rpc.bx << std::endl;
     out << "Strip         : " << _rpc.strip << std::endl;
-    out << "Strip Low     : " << _rpc.strip_low << std::endl;
-    out << "Strip High    : " << _rpc.strip_hi << std::endl;
+    out << "Strip low     : " << _rpc.strip_low << std::endl;
+    out << "Strip high    : " << _rpc.strip_hi << std::endl;
     out << "Integer phi   : " << _rpc.phi_int << std::endl;
     out << "Integer theta : " << _rpc.theta_int << std::endl;
     out << "EMTF sector   : " << _rpc.emtf_sector << std::endl;
@@ -511,22 +486,18 @@ void TriggerPrimitive::print(std::ostream& out) const {
     out << detId<GEMDetId>() << std::endl;
     out << "Local BX      : " << _gem.bx << std::endl;
     out << "Pad           : " << _gem.pad << std::endl;
-    out << "Pad Low       : " << _gem.pad_low << std::endl;
-    out << "Pad High      : " << _gem.pad_hi << std::endl;
-    out << "Bend          : " << _gem.bend << std::endl;
+    out << "Pad low       : " << _gem.pad_low << std::endl;
+    out << "Pad high      : " << _gem.pad_hi << std::endl;
     break;
   case kME0:
     out << detId<ME0DetId>() << std::endl;
     out << "Local BX      : " << _me0.bx << std::endl;
-    out << "Local x       : " << _me0.x << std::endl;
-    out << "Local y       : " << _me0.y << std::endl;
-    out << "Local dir x   : " << _me0.dirx << std::endl;
-    out << "Local dir y   : " << _me0.diry << std::endl;
-    out << "Chi2          : " << _me0.chi2 << std::endl;
-    out << "NHits         : " << _me0.nhits << std::endl;
-    out << "Time          : " << _me0.time << std::endl;
-    out << "DeltaPhi      : " << _me0.bend << std::endl;
-    out << "Pad           : " << _me0.pad << std::endl;
+    out << "Chamber id    : " << _me0.chamberid << std::endl;
+    out << "Quality       : " << _me0.quality << std::endl;
+    out << "Phiposition   : " << _me0.phiposition << std::endl;
+    out << "Partition     : " << _me0.partition << std::endl;
+    out << "Deltaphi      : " << _me0.deltaphi << std::endl;
+    out << "Bend          : " << _me0.bend << std::endl;
     break;
   default:
     throw cms::Exception("Invalid Subsytem")
