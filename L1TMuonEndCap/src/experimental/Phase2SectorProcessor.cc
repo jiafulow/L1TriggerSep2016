@@ -22,7 +22,7 @@ void Phase2SectorProcessor::configure(
     PtAssignmentEngine* pt_assign_engine,
     // Sector processor config
     int verbose, int endcap, int sector, int bx,
-    int bxShiftCSC, int bxShiftRPC, int bxShiftGEM,
+    int bxShiftCSC, int bxShiftRPC, int bxShiftGEM, int bxShiftME0,
     std::string era
 ) {
   assert(emtf::MIN_ENDCAP <= endcap && endcap <= emtf::MAX_ENDCAP);
@@ -46,6 +46,7 @@ void Phase2SectorProcessor::configure(
   bxShiftCSC_ = bxShiftCSC;
   bxShiftRPC_ = bxShiftRPC;
   bxShiftGEM_ = bxShiftGEM;
+  bxShiftME0_ = bxShiftME0;
 
   era_        = era;
 }
@@ -76,7 +77,7 @@ void Phase2SectorProcessor::process(
   PrimitiveSelection prim_sel;
   prim_sel.configure(
       verbose_, endcap_, sector_, bx_,
-      bxShiftCSC_, bxShiftRPC_, bxShiftGEM_,
+      bxShiftCSC_, bxShiftRPC_, bxShiftGEM_, bxShiftME0_,
       includeNeighbor, duplicateTheta,
       bugME11Dupes
   );
@@ -85,7 +86,7 @@ void Phase2SectorProcessor::process(
   prim_conv.configure(
       geom_, lut_,
       verbose_, endcap_, sector_, bx_,
-      bxShiftCSC_, bxShiftRPC_, bxShiftGEM_,
+      bxShiftCSC_, bxShiftRPC_, bxShiftGEM_, bxShiftME0_,
       zoneBoundaries, zoneOverlap,
       duplicateTheta, fixZonePhi, useNewZones, fixME11Edges,
       bugME11Dupes

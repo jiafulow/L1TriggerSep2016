@@ -54,7 +54,7 @@ public:
       PtAssignmentEngine* pt_assign_engine,
       // Sector processor config
       int verbose, int endcap, int sector, int bx,
-      int bxShiftCSC, int bxShiftRPC, int bxShiftGEM,
+      int bxShiftCSC, int bxShiftRPC, int bxShiftGEM, int bxShiftME0,
       std::string era
   );
 
@@ -101,7 +101,7 @@ private:
   PtAssignmentEngine* pt_assign_engine_;
 
   int verbose_, endcap_, sector_, bx_,
-      bxShiftCSC_, bxShiftRPC_, bxShiftGEM_;
+      bxShiftCSC_, bxShiftRPC_, bxShiftGEM_, bxShiftME0_;
 
   std::string era_;
 };

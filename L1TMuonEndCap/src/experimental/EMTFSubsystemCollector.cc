@@ -32,7 +32,7 @@ void EMTFSubsystemCollector::extractPrimitives(
   iEvent.getByToken(token2, cscCompDigis);
 
   // My comparator digi fitter
-  std::unique_ptr<EMTFCSCComparatorDigiFitter> emtf_fitter = std::make_unique<EMTFCSCComparatorDigiFitter>();
+  auto emtf_fitter = std::make_unique<EMTFCSCComparatorDigiFitter>();
 
   // Loop over chambers
   auto chamber = cscDigis->begin();
@@ -101,13 +101,13 @@ void EMTFSubsystemCollector::extractPrimitives(
         if (!x.empty())
           ++nhitlayers;
       }
-      if (nhitlayers < 3) {
-        edm::LogWarning("L1T") << "EMTF CSC format error in station " << detid.station() << ", ring " << detid.ring()
-            << ": nhitlayers = " << nhitlayers << " (min = 3)";
-        continue;
-      }
+      //if (nhitlayers < 3) {
+      //  edm::LogWarning("L1T") << "EMTF CSC format error in station " << detid.station() << ", ring " << detid.ring()
+      //      << ": nhitlayers = " << nhitlayers << " (min = 3)";
+      //  continue;
+      //}
 
-      const EMTFCSCComparatorDigiFitter::FitResult& res = emtf_fitter->fit(compDigisAllLayers, stagger, tmp_strip);
+      const auto& res = emtf_fitter->fit(compDigisAllLayers, stagger, tmp_strip);
       //std::cout << "fit result: " << res.position << " " << res.slope << " " << res.chi2 << " halfStrip: " << tmp_strip << std::endl;
 
       // Find half-strip after fit
