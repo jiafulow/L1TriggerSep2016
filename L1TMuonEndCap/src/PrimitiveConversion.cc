@@ -982,22 +982,10 @@ void PrimitiveConversion::convert_me0(
     int fph = emtf::calc_phi_loc_int(glob_phi, conv_hit.PC_sector());
     int th  = emtf::calc_theta_int(glob_theta, conv_hit.Endcap());
 
-    bool fix_me0_phi_edge = true;
-    if (fix_me0_phi_edge) {
-      // The ME0 chamber 1 starts at -10 deg. The CSC chamber 1 starts at -5 deg.
-      // This 5 deg difference unfortunately causes the local phi coord to go
-      // out of bound. This is because the local phi 0 is set to the CSC chamber
-      // edge minus 22 deg to accommodate for the neighbor chamber. However, it
-      // is possible for the ME0 neighbor chamber to go to as far as the CSC
-      // chamber edge minus 25 deg.
-      double loc = emtf::calc_phi_loc_deg_from_glob(glob_phi, conv_hit.PC_sector());
-      if ((loc + 22.) < 0.&& (loc + 27.) > 0.)
-        fph = 0;
-      else if ((loc + 360. + 22.) < 0.&& (loc + 360. + 27.) > 0.)
-        fph = 0;
-
+    bool fix_me0_theta_edge = true;
+    if (fix_me0_theta_edge) {
       // The ME0 extends to eta of 2.8 or theta of 7.0 deg. But integer theta
-      // starts from theta of 8.5 deg.
+      // only starts at theta of 8.5 deg.
       if (th < 0)
         th = 0;
     }

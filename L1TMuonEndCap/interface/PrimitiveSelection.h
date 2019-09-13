@@ -88,13 +88,13 @@ public:
   // ME0 functions
   int select_me0(const TriggerPrimitive& muon_primitive) const;
 
-  bool is_in_sector_me0(int tp_endcap, int tp_sector) const;
+  bool is_in_sector_me0(int tp_endcap, int tp_sector, int tp_csc_ID, int tp_pad) const;
 
-  bool is_in_neighbor_sector_me0(int tp_endcap, int tp_sector, int tp_csc_ID) const;
+  bool is_in_neighbor_sector_me0(int tp_endcap, int tp_sector, int tp_csc_ID, int tp_pad) const;
 
   bool is_in_bx_me0(int tp_bx) const;
 
-  int get_index_me0(int tp_endcap, int tp_sector, int tp_subsector, int tp_station, int tp_csc_ID, int tp_bx) const;
+  int get_index_me0(int tp_endcap, int tp_sector, int tp_subsector, int tp_station, int tp_csc_ID, int tp_pad, int tp_bx) const;
 
   // DT functions
   int select_dt(const TriggerPrimitive& muon_primitive) const;
