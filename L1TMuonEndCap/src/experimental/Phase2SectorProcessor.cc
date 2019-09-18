@@ -394,7 +394,7 @@ std::vector<size_t> my_argsort(const std::vector<T>& v, bool reverse=false) {
   std::vector<size_t> indices(v.size());
   std::iota(indices.begin(), indices.end(), 0);
   auto sort_f = [&v](size_t i, size_t j) { return v[i] < v[j]; };
-  std::sort(indices.begin(), indices.end(), sort_f);
+  std::stable_sort(indices.begin(), indices.end(), sort_f);
   if (reverse) {
     std::reverse(indices.begin(), indices.end());
   }
@@ -591,6 +591,7 @@ public:
     //  emtf_bend *= endcap;
 
     } else if (type == TriggerPrimitive::kME0) {
+      emtf_bend = static_cast<int32_t>(std::round(static_cast<float>(emtf_bend) * 0.5));
       emtf_bend = std::min(std::max(emtf_bend, -64), 63);  // currently in 1/2-strip unit
 
     } else if (type == TriggerPrimitive::kDT) {
@@ -1855,30 +1856,30 @@ private:
     const float reg_pt_scale = 100.;  // a scale factor applied to regression during training
     const float reg_dxy_scale = 0.4;  // a scale factor applied to regression during training
 
-    auto relu = [&](float x) {
+    auto relu = [&](double x) {
       // ReLU(x) = max(0, x)
       return (x >= 0.) ? x : 0;
     };
-    auto softplus = [&](float x) {
+    auto softplus = [&](double x) {
       // Softplus f(x) = log(1+exp(x))
       return relu(x) + std::log1p(std::exp(-std::abs(x)));
     };
-    auto get_loc = [&](float loc) {
-      float c = std::log(std::expm1(0.5 * reg_pt_scale));  // shifted to 2 GeV
+    auto get_loc = [&](double loc) {
+      double c = std::log(std::expm1(0.5 * reg_pt_scale));  // shifted to 2 GeV
       loc = loc + c;
       loc = (loc < 1./500 * reg_pt_scale) ? (1./500 * reg_pt_scale) : loc;
       return loc;
     };
-    auto get_sign = [&](float sign) {
+    auto get_sign = [&](double sign) {
       return (sign >= 0.) ? 1 : -1;
     };
-    auto get_loc_dxy = [&](float loc) {
+    auto get_loc_dxy = [&](double loc) {
       return loc;
     };
-    auto get_sign_dxy = [&](float sign) {
+    auto get_sign_dxy = [&](double sign) {
       return 1e0;
     };
-    auto get_scale = [&](float scale) {
+    auto get_scale = [&](double scale) {
       return 1e-5 + softplus(0.01 * scale);
     };
 
