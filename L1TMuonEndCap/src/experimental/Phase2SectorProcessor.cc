@@ -2576,24 +2576,13 @@ private:
 
 class GhostBusting {
 public:
-  void run(std::vector<Track>& tracks) const {
+  void run(EMTFTrackCollection& tracks) const {
 
-    std::vector<Track> tracks_after_gb;
-
-    //// OBSOLETE since v3
-    //// Sort by (zone, y_discr)
-    //// zone is reordered such that zone 6 has the lowest priority.
-    //constexpr auto sort_tracks_f = [](const Track& lhs, const Track& rhs) {
-    //  // (max zone, max y_discr) is better
-    //  auto lhs_zone = (lhs.zone+1) % 7;
-    //  auto rhs_zone = (rhs.zone+1) % 7;
-    //  return std::tie(lhs_zone, lhs.y_discr) > std::tie(rhs_zone, rhs.y_discr);
-    //};
-    //std::sort(tracks.begin(), tracks.end(), sort_tracks_f);
+    EMTFTrackCollection tracks_after_gb;
 
     // Sort by 'sort code'
-    constexpr auto sort_tracks_f = [](const Track& lhs, const Track& rhs) {
-      return lhs.sort_code > rhs.sort_code;
+    constexpr auto sort_tracks_f = [](const EMTFTrack& lhs, const EMTFTrack& rhs) {
+      return lhs.Winner() > rhs.Winner();  // EMTFTrack::Winner() was hacked to store Track::sort_code
     };
     std::sort(tracks.begin(), tracks.end(), sort_tracks_f);
 
@@ -2606,38 +2595,41 @@ public:
       if (keep) {
         using int32_t_pair = std::pair<int32_t, int32_t>;  // emtf_layer, emtf_phi
 
-        constexpr auto make_hit_set = [](const auto& hits) {
+        constexpr auto make_hit_set = [](const auto& conv_hits) {
           std::set<int32_t_pair> s;
-          for (const auto& hit : hits) {
-            if ((hit.emtf_layer == 0) ||
-                (hit.emtf_layer == 1) ||
-                (hit.emtf_layer == 5) ||
-                (hit.emtf_layer == 9) ||
-                (hit.emtf_layer == 11) ||
-                (hit.emtf_layer == 12) ||
-                (hit.emtf_layer == 13) ) {
+          for (const auto& conv_hit : conv_hits) {
+            int hit_emtf_layer = util.find_emtf_layer(conv_hit);
+            if ((hit_emtf_layer == 0) ||
+                (hit_emtf_layer == 1) ||
+                (hit_emtf_layer == 5) ||
+                (hit_emtf_layer == 9) ||
+                (hit_emtf_layer == 11) ||
+                (hit_emtf_layer == 12) ||
+                (hit_emtf_layer == 13) ) {
 
-              int32_t tmp_endsec = hit.endsec;
-              int32_t tmp_emtf_phi = hit.emtf_phi;
-              if (hit.emtf_phi < (22*60)) {  // is a neighbor hit
-                if ((hit.endsec == 0) || (hit.endsec == 6)) {
+              int32_t hit_endsec = util.find_endsec(conv_hit);
+              int32_t hit_emtf_phi = util.find_emtf_phi(conv_hit);
+              int32_t tmp_endsec = hit_endsec;
+              int32_t tmp_emtf_phi = hit_emtf_phi;
+              if (hit_emtf_phi < (22*60)) {  // is a neighbor hit
+                if ((hit_endsec == 0) || (hit_endsec == 6)) {
                   tmp_endsec += 5;
-                } else if ((1 <= hit.endsec && hit.endsec <= 5) || (7 <= hit.endsec && hit.endsec <= 11)) {
+                } else if ((1 <= hit_endsec && hit_endsec <= 5) || (7 <= hit_endsec && hit_endsec <= 11)) {
                   tmp_endsec -= 1;
                 }
                 tmp_emtf_phi += (60*60);
               }
-              s.insert(std::make_pair(tmp_endsec*100 + hit.emtf_layer, tmp_emtf_phi));
+              s.insert(std::make_pair(tmp_endsec*100 + hit_emtf_layer, tmp_emtf_phi));
             }
           }
           return s;
         };
 
         const auto& track_i = tracks[i];
-        const std::set<int32_t_pair>& s1 = make_hit_set(track_i.hits);
+        const std::set<int32_t_pair>& s1 = make_hit_set(track_i.Hits());
         for (size_t j=0; j<i; ++j) {
           const auto& track_j = tracks[j];
-          const std::set<int32_t_pair>& s2 = make_hit_set(track_j.hits);
+          const std::set<int32_t_pair>& s2 = make_hit_set(track_j.Hits());
 
           std::vector<int32_t_pair> v_intersection;
           std::set_intersection(s1.begin(), s1.end(), s2.begin(), s2.end(), std::back_inserter(v_intersection));
@@ -2699,6 +2691,7 @@ public:
       //emtf_track.set_ph_q       ( road.Quality_code() );
       //emtf_track.set_rank       ( road.Quality_code() );
       //emtf_track.set_winner     ( road.Winner() );
+      emtf_track.set_winner     ( track.sort_code ); // hacked to store Track::sort_code
       emtf_track.clear_Hits();
       emtf_track.set_Hits( emtf_track_hits );
 
@@ -2794,10 +2787,7 @@ void Phase2SectorProcessor::build_tracks(
   assig.run(slim_roads, features, predictions);
   trkprod.run(slim_roads, predictions, tracks);
 
-  best_tracks.insert(best_tracks.end(), tracks.begin(), tracks.end());  // best_tracks collects tracks from all sectors (CUIDADO: doesn't work!)
-  if (endcap_ == 2 && sector_ == 6) {  // using the last sector processor as uGMT to do ghost busting
-    ghost.run(best_tracks);
-  }
+  best_tracks.insert(best_tracks.end(), tracks.begin(), tracks.end());
 
   // Debug
   bool debug = false;
@@ -2917,6 +2907,16 @@ void Phase2SectorProcessor::debug_tracks(
           << " ph: " << hit.emtf_phi << " th: " << hit.emtf_theta << std::endl;
     }
   }
+}
+
+// _____________________________________________________________________________
+void Phase2SectorProcessor::ghost_busting(
+    // Input & output
+    EMTFTrackCollection& best_emtf_tracks
+) const {
+  // Run the algorithms
+  ghost.run(best_emtf_tracks);
+  return;
 }
 
 }  // namespace experimental
