@@ -38,4 +38,16 @@ def customise(process):
         pass
     else:
         process.load('L1Trigger.L1TMuonEndCap.me0TriggerPseudoDigis105X_cff')
+
+    ## Backward compatibility with 10_4_0
+    process.muonGEMDigiTask = cms.Task(process.simMuonGEMDigis, process.simMuonGEMPadDigis, process.simMuonGEMPadDigiClusters)
+    process.muonME0RealDigiTask = cms.Task(process.simMuonME0Digis, process.simMuonME0PadDigis, process.simMuonME0PadDigiClusters)
+    process.muonME0PseudoDigiTask = cms.Task(process.simMuonME0PseudoDigis, process.simMuonME0PseudoReDigis)
+    process.muonME0DigiTask = cms.Task(process.muonME0RealDigiTask, process.muonME0PseudoDigiTask)
+    process.muonME0DigiTask.add(process.me0TriggerPseudoDigiTask105X)
+    process.muonDigiTask = cms.Task(process.simMuonCSCDigis, process.simMuonDTDigis, process.simMuonRPCDigis, process.muonGEMDigiTask, process.muonME0DigiTask)
+    process.muonDigi = cms.Sequence(process.muonDigiTask)
+    #process.SimL1TMuonCommonTask = cms.Task(process.simDtTriggerPrimitiveDigis, process.simCscTriggerPrimitiveDigis)
+    process.SimL1TMuonCommonTask = cms.Task(process.simDtTriggerPrimitiveDigis, process.simCscTriggerPrimitiveDigis, process.rpcRecHits)
+    process.SimL1TMuonCommon = cms.Sequence(process.SimL1TMuonCommonTask)
     return process
